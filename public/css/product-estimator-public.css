@@ -1,0 +1,382 @@
+/**
+ * Public styles for the Product Estimator plugin
+ */
+
+/* Container Styles */
+.product-estimator-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 1.5rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+/* Header Styles */
+.estimator-header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.estimator-header h2 {
+    font-size: 1.8rem;
+    margin: 0 0 0.5rem;
+    color: #2c3338;
+}
+
+.estimator-description {
+    color: #646970;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* Form Styles */
+.estimator-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #2c3338;
+}
+
+.form-group label.required::after {
+    content: '*';
+    color: #d63638;
+    margin-left: 0.25rem;
+}
+
+.field-description {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #646970;
+}
+
+/* Input Styles */
+.estimator-form select,
+.estimator-form input[type="number"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    font-size: 1rem;
+    line-height: 1.5;
+    transition: border-color 0.15s ease-in-out;
+}
+
+.estimator-form select:focus,
+.estimator-form input[type="number"]:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: none;
+}
+
+.estimator-form input.error {
+    border-color: #d63638;
+}
+
+/* Options Group Styles */
+.options-group {
+    background: #f0f0f1;
+    padding: 1.5rem;
+    border-radius: 4px;
+    margin-top: 1.5rem;
+}
+
+.options-group h3 {
+    margin: 0 0 1rem;
+    font-size: 1.2rem;
+    color: #2c3338;
+}
+
+.option-group {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #c3c4c7;
+}
+
+.option-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.option-group-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+    color: #2c3338;
+}
+
+.option-item {
+    margin-bottom: 0.75rem;
+}
+
+.option-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.option-title {
+    flex-grow: 1;
+}
+
+.option-price {
+    color: #2271b1;
+    font-weight: 600;
+}
+
+.option-description {
+    margin-left: 1.75rem;
+    font-size: 0.875rem;
+    color: #646970;
+}
+
+/* Results Styles */
+.calculation-results {
+    background: #f0f6fc;
+    padding: 1.5rem;
+    border-radius: 4px;
+    margin-top: 1.5rem;
+}
+
+.result-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.result-table th,
+.result-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #c3c4c7;
+}
+
+.result-table tr:last-child th,
+.result-table tr:last-child td {
+    border-bottom: none;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* Button Styles */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.calculate-button,
+.reset-button,
+.download-pdf {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+}
+
+.calculate-button {
+    background: #2271b1;
+    color: #fff;
+}
+
+.calculate-button:hover {
+    background: #135e96;
+}
+
+.reset-button {
+    background: #f0f0f1;
+    color: #2c3338;
+}
+
+.reset-button:hover {
+    background: #dcdcde;
+}
+
+.download-pdf {
+    background: #00a32a;
+    color: #fff;
+}
+
+.download-pdf:hover {
+    background: #008a20;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #2271b1;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: 1rem;
+    color: #2c3338;
+    font-weight: 500;
+}
+
+/* Error Messages */
+.error-messages {
+    background: #fcf0f1;
+    border-left: 4px solid #d63638;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.error-content {
+    color: #2c3338;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Tooltip Styles */
+.estimator-tooltip {
+    position: absolute;
+    z-index: 1000;
+    background: #1e1e1e;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    max-width: 200px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tooltip-arrow {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    margin-left: -6px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid #1e1e1e;
+}
+
+/* Animations */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Styles */
+@media screen and (max-width: 600px) {
+    .product-estimator-container {
+        padding: 1rem;
+        margin: 1rem;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .calculate-button,
+    .reset-button,
+    .download-pdf {
+        width: 100%;
+    }
+
+    .option-label {
+        flex-wrap: wrap;
+    }
+
+    .option-price {
+        width: 100%;
+        margin-left: 1.75rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .product-estimator-container {
+        box-shadow: none;
+        padding: 0;
+    }
+
+    .form-actions,
+    .loading-overlay {
+        display: none;
+    }
+
+    .calculation-results {
+        background: none;
+        padding: 0;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .product-estimator-container {
+        background: #2c3338;
+        color: #fff;
+    }
+
+    .estimator-header h2 {
+        color: #fff;
+    }
+
+    .form-group label {
+        color: #fff;
+    }
+
+    .options-group,
+    .calculation-results {
+        background: #1e1e1e;
+    }
+
+    .option-group-title {
+        color: #fff;
+    }
+
+    .result-table th,
+    .result-table td {
+        border-color: #50575e;
+    }
+
+    .reset-button {
+        background: #50575e;
+        color: #fff;
+    }
+
+    .error-messages {
+        background: #2c1315;
+    }
+
+    .error-content {
+        color: #fff;
+    }
+}

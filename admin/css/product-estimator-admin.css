@@ -1,0 +1,255 @@
+/**
+ * Admin styles for the Product Estimator plugin
+ */
+
+/* General Admin Styles */
+.product-estimator-admin-wrapper {
+    margin: 20px 0;
+    max-width: 1200px;
+}
+
+/* Tab Navigation */
+.nav-tab-wrapper {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ccc;
+}
+
+.nav-tab {
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+}
+
+.nav-tab:focus {
+    box-shadow: none;
+    outline: thin solid #2271b1;
+}
+
+/* Tab Content */
+.tab-content {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-top: none;
+}
+
+/* Form Styling */
+.product-estimator-form {
+    max-width: 800px;
+}
+
+.form-table th {
+    width: 200px;
+    padding: 20px 10px 20px 0;
+}
+
+.form-table td {
+    padding: 20px 10px;
+}
+
+/* Input Fields */
+.product-estimator-form input[type="text"],
+.product-estimator-form input[type="email"],
+.product-estimator-form input[type="number"],
+.product-estimator-form select {
+    min-width: 250px;
+}
+
+.product-estimator-form input.small-text {
+    min-width: 80px;
+}
+
+/* Field Errors */
+.field-error {
+    color: #d63638;
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+}
+
+input.error {
+    border-color: #d63638;
+}
+
+/* Calculations Table */
+.calculations-wrapper {
+    margin-top: 20px;
+}
+
+.wp-list-table {
+    margin-top: 10px;
+}
+
+.wp-list-table th {
+    font-weight: 600;
+}
+
+.wp-list-table td {
+    vertical-align: middle;
+}
+
+/* Reports Section */
+.reports-wrapper {
+    margin-top: 20px;
+}
+
+.report-filters {
+    background: #f0f0f1;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.report-filters form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.report-filters select,
+.report-filters input[type="date"] {
+    margin-right: 10px;
+}
+
+.report-content {
+    min-height: 400px;
+    position: relative;
+}
+
+#report-placeholder {
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ccc;
+}
+
+/* Loading State */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.loading::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-left: 10px;
+    border: 2px solid #2271b1;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Chart Container */
+#reportChart {
+    height: 400px;
+    margin-top: 20px;
+}
+
+.report-summary {
+    background: #f0f0f1;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.report-summary h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+/* Notice Styling */
+.notice {
+    margin: 20px 0;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+    .form-table td {
+        padding: 10px;
+    }
+
+    .product-estimator-form input[type="text"],
+    .product-estimator-form input[type="email"],
+    .product-estimator-form input[type="number"],
+    .product-estimator-form select {
+        min-width: 100%;
+    }
+
+    .report-filters form {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .report-filters select,
+    .report-filters input[type="date"] {
+        width: 100%;
+        margin-right: 0;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .tab-content {
+        background: #2c3338;
+        border-color: #2c3338;
+    }
+
+    #report-placeholder {
+        background: #2c3338;
+        border-color: #2c3338;
+    }
+
+    .report-summary,
+    .report-filters {
+        background: #2c3338;
+    }
+
+    .nav-tab {
+        background: #2c3338;
+        border-color: #50575e;
+        color: #fff;
+    }
+
+    .nav-tab-active {
+        background: #2271b1;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    select {
+        background: #2c3338;
+        color: #fff;
+        border-color: #50575e;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .nav-tab-wrapper,
+    .report-filters,
+    .submit {
+        display: none;
+    }
+
+    .product-estimator-admin-wrapper {
+        margin: 0;
+    }
+
+    .tab-content {
+        border: none;
+        padding: 0;
+    }
+
+    #reportChart {
+        height: 300px;
+        page-break-inside: avoid;
+    }
+}

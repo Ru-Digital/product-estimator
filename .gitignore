@@ -1,0 +1,115 @@
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor Files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.komodoproject
+.komodotools/
+*.code-workspace
+.project
+.settings/
+.classpath
+*.swp
+*.swo
+*~
+
+# Development & Build Files
+node_modules/
+vendor/
+composer.lock
+package-lock.json
+yarn.lock
+.sass-cache/
+*.css.map
+*.js.map
+.phpunit.result.cache
+
+# WordPress Plugin Specifics
+/languages/*.mo
+/languages/*.po
+!/languages/product-estimator.pot
+.wp-env.json
+.wp-env.override.json
+
+# Build & Distribution
+dist/
+build/
+*.zip
+*.tar.gz
+*.rar
+
+# Logs & Backups
+*.log
+error_log
+debug.log
+backup/
+backups/
+*.bak
+*.sql
+*.sql.gz
+
+# Environment Files
+.env
+.env.*
+!.env.example
+wp-config.php
+
+# Testing & Coverage
+/coverage/
+/tests/coverage/
+.phpunit.cache/
+.phpcs.cache
+.php_cs.cache
+.php-cs-fixer.cache
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Generated Documentation
+/docs/phpdoc/
+/docs/phpunit/
+/docs/coverage/
+
+# Plugin-specific exclusions
+/assets/compiled/
+/public/uploads/
+/admin/reports/
+.product-estimator-cache/
+
+# Security & Sensitive Files
+*.pem
+*.key
+*.crt
+*.csr
+*.der
+*.p7b
+*.p7c
+*.p12
+*.pfx
+*.sst
+
+# Allow these files even if ignored above
+!.gitignore
+!.gitkeep
+!.editorconfig
+!.eslintrc
+!.eslintignore
+!.prettierrc
+!.stylelintrc
+!composer.json
+!package.json
+!webpack.config.js
+!phpunit.xml
+!phpcs.xml

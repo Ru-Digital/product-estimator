@@ -1,0 +1,146 @@
+@import 'variables';
+@import 'mixins';
+
+.product-estimator-admin {
+  padding: $spacing-md;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  // Header
+  &__header {
+    margin-bottom: $spacing-lg;
+
+    h1 {
+      font-size: 1.8rem;
+      margin: 0 0 $spacing-sm;
+      color: $text-primary;
+    }
+  }
+
+  // Navigation
+  &__nav {
+    margin-bottom: $spacing-md;
+    border-bottom: 1px solid $border-color;
+
+    .nav-tab {
+      margin-left: $spacing-xs;
+      margin-right: $spacing-xs;
+
+      &--active {
+        border-bottom-color: $color-primary;
+      }
+    }
+  }
+
+  // Content
+  &__content {
+    @include card;
+    padding: $spacing-lg;
+  }
+
+  // Forms
+  &__form {
+    max-width: 800px;
+
+    .form-table {
+      th {
+        width: 200px;
+        padding: $spacing-md $spacing-sm;
+      }
+
+      td {
+        padding: $spacing-md $spacing-sm;
+      }
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    select {
+      @include input-base;
+      max-width: 25rem;
+    }
+
+    .description {
+      color: $text-secondary;
+      font-size: 0.875rem;
+      margin-top: $spacing-xs;
+    }
+  }
+
+  // Buttons
+  &__button {
+    &--primary {
+      @include button-primary;
+    }
+
+    &--secondary {
+      @include button-secondary;
+    }
+  }
+
+  // Tables
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: $spacing-md;
+
+    th, td {
+      padding: $spacing-sm;
+      text-align: left;
+      border-bottom: 1px solid $border-color;
+    }
+
+    th {
+      font-weight: 600;
+      color: $text-primary;
+    }
+  }
+
+  // Responsive
+  @include responsive($breakpoint-md) {
+    &__form {
+      .form-table {
+        th {
+          width: 100%;
+          display: block;
+          padding-bottom: 0;
+        }
+
+        td {
+          display: block;
+          padding-top: $spacing-xs;
+        }
+      }
+    }
+  }
+
+  // Dark mode
+  @include dark-mode {
+    &__content {
+      background: $bg-dark;
+      border-color: lighten($bg-dark, 10%);
+    }
+
+    &__form {
+      input[type="text"],
+      input[type="number"],
+      input[type="email"],
+      select {
+        background: $bg-dark;
+        color: $text-light;
+        border-color: lighten($bg-dark, 20%);
+
+        &:focus {
+          border-color: $color-primary;
+        }
+      }
+    }
+
+    &__table {
+      th, td {
+        border-color: lighten($bg-dark, 10%);
+      }
+    }
+  }
+}

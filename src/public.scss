@@ -1,0 +1,280 @@
+@import 'variables';
+@import 'mixins';
+
+.product-estimator {
+  max-width: 800px;
+  margin: 2rem auto;
+  font-family: $font-family-base;
+
+  // Header
+  &__header {
+    text-align: center;
+    margin-bottom: $spacing-xl;
+
+    h2 {
+      font-size: 1.8rem;
+      margin: 0 0 $spacing-sm;
+      color: $text-primary;
+    }
+
+    p {
+      color: $text-secondary;
+      margin: 0;
+    }
+  }
+
+  // Form
+  &__form {
+    @include card;
+    padding: $spacing-lg;
+  }
+
+  // Form Groups
+  &__group {
+    margin-bottom: $spacing-lg;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: $spacing-sm;
+      font-weight: 600;
+      color: $text-primary;
+
+      &.required::after {
+        content: '*';
+        color: $color-danger;
+        margin-left: $spacing-xs;
+      }
+    }
+
+    .description {
+      display: block;
+      margin-top: $spacing-xs;
+      font-size: 0.875rem;
+      color: $text-secondary;
+    }
+  }
+
+  // Inputs
+  &__input {
+    @include input-base;
+
+    &--error {
+      border-color: $color-danger;
+
+      &:focus {
+        border-color: $color-danger;
+        box-shadow: 0 0 0 1px $color-danger;
+      }
+    }
+  }
+
+  // Options
+  &__options {
+    background: $bg-secondary;
+    padding: $spacing-lg;
+    border-radius: $border-radius;
+    margin-top: $spacing-lg;
+
+    h3 {
+      margin: 0 0 $spacing-md;
+      font-size: 1.2rem;
+      color: $text-primary;
+    }
+  }
+
+  &__option-group {
+    margin-bottom: $spacing-lg;
+    padding-bottom: $spacing-lg;
+    border-bottom: 1px solid $border-color;
+
+    &:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+  }
+
+  &__option-item {
+    margin-bottom: $spacing-sm;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      font-weight: normal;
+      cursor: pointer;
+
+      input[type="checkbox"] {
+        margin: 0;
+      }
+    }
+
+    .option-price {
+      margin-left: auto;
+      color: $color-primary;
+      font-weight: 600;
+    }
+  }
+
+  // Results
+  &__results {
+    background: lighten($color-info, 35%);
+    padding: $spacing-lg;
+    border-radius: $border-radius;
+    margin-top: $spacing-lg;
+    display: none;
+
+    &--visible {
+      display: block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+
+      tr {
+        border-bottom: 1px solid rgba($color-info, 0.2);
+
+        &:last-child {
+          border-bottom: none;
+          font-weight: 700;
+          font-size: 1.1rem;
+        }
+      }
+
+      th, td {
+        padding: $spacing-sm;
+        text-align: left;
+
+        &:last-child {
+          text-align: right;
+        }
+      }
+    }
+  }
+
+  // Buttons
+  &__actions {
+    display: flex;
+    gap: $spacing-sm;
+    margin-top: $spacing-lg;
+  }
+
+  &__button {
+    &--primary {
+      @include button-primary;
+    }
+
+    &--secondary {
+      @include button-secondary;
+    }
+  }
+
+  // Loading State
+  &__loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba($bg-primary, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: $z-index-modal;
+    display: none;
+
+    &--visible {
+      display: flex;
+    }
+
+    &-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid $bg-secondary;
+      border-top-color: $color-primary;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  // Error Messages
+  &__error {
+    background: lighten($color-danger, 35%);
+    border-left: 4px solid $color-danger;
+    padding: $spacing-md;
+    margin-top: $spacing-lg;
+    color: darken($color-danger, 10%);
+    display: none;
+
+    &--visible {
+      display: block;
+    }
+  }
+
+  // Responsive Design
+  @include responsive($breakpoint-md) {
+    margin: $spacing-md;
+
+    &__form {
+      padding: $spacing-md;
+    }
+
+    &__actions {
+      flex-direction: column;
+    }
+
+    &__button {
+      width: 100%;
+    }
+  }
+
+  // Dark Mode
+  @include dark-mode {
+    &__form {
+      background: $bg-dark;
+      border-color: lighten($bg-dark, 10%);
+    }
+
+    &__input {
+      background: $bg-dark;
+      color: $text-light;
+      border-color: lighten($bg-dark, 20%);
+
+      &:focus {
+        border-color: $color-primary;
+      }
+    }
+
+    &__options {
+      background: lighten($bg-dark, 5%);
+    }
+
+    &__results {
+      background: rgba($color-info, 0.1);
+    }
+
+    &__error {
+      background: rgba($color-danger, 0.1);
+    }
+
+    label, h2, h3 {
+      color: $text-light;
+    }
+
+    .description {
+      color: darken($text-light, 20%);
+    }
+  }
+}
+
+// Animations
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

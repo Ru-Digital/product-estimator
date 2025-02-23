@@ -1,0 +1,210 @@
+// Button base styles
+@mixin button-base {
+  display: inline-block;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  font-size: $font-size-base;
+  font-weight: 500;
+  line-height: $line-height-base;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: $transition-base;
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+}
+
+// Button variants
+@mixin button-primary {
+  @include button-base;
+  background-color: $color-primary;
+  color: $bg-primary;
+
+  &:hover,
+  &:focus {
+    background-color: $color-secondary;
+  }
+}
+
+@mixin button-secondary {
+  @include button-base;
+  background-color: $bg-secondary;
+  color: $text-primary;
+  border-color: $border-color;
+
+  &:hover,
+  &:focus {
+    background-color: darken($bg-secondary, 5%);
+  }
+}
+
+// Form input base
+@mixin input-base {
+  width: 100%;
+  padding: $input-padding-y $input-padding-x;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  font-family: $font-family-base;
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+  transition: $transition-base;
+
+  &:focus {
+    outline: none;
+    border-color: $border-focus;
+    box-shadow: 0 0 0 $focus-ring-width $focus-ring-color;
+  }
+
+  &:disabled {
+    background-color: $bg-secondary;
+    cursor: not-allowed;
+  }
+}
+
+// Card styles
+@mixin card {
+  background-color: $bg-primary;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  box-shadow: $box-shadow;
+}
+
+// Typography
+@mixin heading-1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  font-weight: 600;
+  margin-bottom: $spacing-md;
+}
+
+@mixin heading-2 {
+  font-size: 1.75rem;
+  line-height: 1.3;
+  font-weight: 600;
+  margin-bottom: $spacing-md;
+}
+
+@mixin heading-3 {
+  font-size: 1.5rem;
+  line-height: 1.4;
+  font-weight: 600;
+  margin-bottom: $spacing-sm;
+}
+
+// Responsive breakpoints
+@mixin responsive($breakpoint) {
+  @media screen and (max-width: $breakpoint) {
+    @content;
+  }
+}
+
+// Dark mode support
+@mixin dark-mode {
+  @media (prefers-color-scheme: dark) {
+    @content;
+  }
+}
+
+// Grid system
+@mixin make-container {
+  width: 100%;
+  padding-right: ($grid-gutter-width / 2);
+  padding-left: ($grid-gutter-width / 2);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+@mixin make-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: ($grid-gutter-width / -2);
+  margin-left: ($grid-gutter-width / -2);
+}
+
+@mixin make-col($size) {
+  flex: 0 0 percentage($size / $grid-columns);
+  max-width: percentage($size / $grid-columns);
+  padding-right: ($grid-gutter-width / 2);
+  padding-left: ($grid-gutter-width / 2);
+}
+
+// Accessibility
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Focus styles
+@mixin focus-ring {
+  outline: none;
+  box-shadow: 0 0 0 $focus-ring-width $focus-ring-color;
+}
+
+// Truncate text
+@mixin text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Flexbox utilities
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Loading spinner
+@mixin spinner($size: 24px, $color: $color-primary) {
+  width: $size;
+  height: $size;
+  border: 2px solid rgba($color, 0.2);
+  border-top-color: $color;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+// Transitions
+@mixin transition($properties...) {
+  $transitions: ();
+  @each $property in $properties {
+    $transitions: append($transitions, $property $animation-duration-base ease-in-out, comma);
+  }
+  transition: $transitions;
+}
+
+// Media queries for retina displays
+@mixin retina {
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    @content;
+  }
+}
+
+// WordPress admin bar spacing
+@mixin admin-bar-spacing {
+  .admin-bar & {
+    @media screen and (min-width: $breakpoint-sm) {
+      margin-top: $wp-admin-bar-height;
+    }
+    @media screen and (max-width: $breakpoint-sm) {
+      margin-top: $wp-admin-bar-height-mobile;
+    }
+  }
+}

@@ -1,0 +1,272 @@
+# Copyright (C) 2025 RU Digital
+# This file is distributed under the GPL2.
+msgid ""
+msgstr ""
+"Project-Id-Version: Product Estimator 1.0.3\n"
+"Report-Msgid-Bugs-To: https://github.com/Ru-Digital/product-estimator/issues\n"
+"POT-Creation-Date: 2025-02-21 10:00:00+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"X-Generator: WP-CLI 2.8.1\n"
+"X-Domain: product-estimator\n"
+
+#. Plugin Name of the plugin
+msgid "Product Estimator"
+msgstr ""
+
+#. Plugin URI of the plugin
+msgid "https://github.com/Ru-Digital/product-estimator"
+msgstr ""
+
+#. Description of the plugin
+msgid "A customizable product estimation tool for WordPress."
+msgstr ""
+
+#. Author of the plugin
+msgid "RU Digital"
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://rudigital.com.au"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:82
+msgid "Product Estimator Settings"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:83
+msgid "Settings"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:124
+msgid "General Settings"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:131
+msgid "Currency"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:141
+msgid "US Dollar ($)"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:142
+msgid "Euro (€)"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:143
+msgid "British Pound (£)"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:144
+msgid "Australian Dollar ($)"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:157
+msgid "Decimal Points"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:169
+msgid "Number of decimal points to display in calculations"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:177
+msgid "Logging"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:186
+msgid "Enable calculation logging"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:189
+msgid "Log all calculations for reporting purposes"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:197
+msgid "Notifications"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:206
+msgid "Enable email notifications"
+msgstr ""
+
+#: includes/admin/class-product-estimator-admin.php:209
+msgid "Send email notifications for new calculations"
+msgstr ""
+
+#: includes/class-activator.php:89
+msgid "This plugin requires WordPress version 5.0 or higher."
+msgstr ""
+
+#: includes/class-activator.php:100
+msgid "This plugin requires PHP version 7.4 or higher."
+msgstr ""
+
+#: includes/class-activator.php:117
+msgid "This plugin requires the following PHP extensions: %s"
+msgstr ""
+
+#: includes/class-activator.php:129
+msgid "Upload directory is not writable. Please check your permissions."
+msgstr ""
+
+#: public/partials/product-estimator-display.php:43
+msgid "Product Type"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:47
+msgid "Select a product type"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:72
+msgid "Choose the type of product you need"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:78
+msgid "Quantity"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:91
+msgid "Enter quantity (minimum: %1$d, maximum: %2$d)"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:100
+msgid "Additional Options"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:111
+msgid "Base Price:"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:115
+msgid "Options:"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:119
+msgid "Quantity:"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:123
+msgid "Total:"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:142
+msgid "Reset"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:147
+msgid "Download PDF"
+msgstr ""
+
+#: public/partials/product-estimator-display.php:156
+msgid "Calculating..."
+msgstr ""
+
+#. JavaScript strings
+#: assets/js/product-estimator-public.js:238
+msgid "An error occurred."
+msgstr ""
+
+#: assets/js/product-estimator-public.js:239
+msgid "This field is required."
+msgstr ""
+
+#: assets/js/product-estimator-public.js:240
+msgid "Please enter a valid number."
+msgstr ""
+
+#: assets/js/product-estimator-public.js:241
+msgid "Value must be greater than %s."
+msgstr ""
+
+#: assets/js/product-estimator-public.js:242
+msgid "Value must be less than %s."
+msgstr ""
+
+#: assets/js/product-estimator-public.js:245
+msgid "Settings saved successfully."
+msgstr ""
+
+#: assets/js/product-estimator-public.js:246
+msgid "Calculation completed."
+msgstr ""
+
+#: assets/js/product-estimator-public.js:249
+msgid "Are you sure you want to delete this item?"
+msgstr ""
+
+#: assets/js/product-estimator-public.js:250
+msgid "Are you sure you want to reset all settings?"
+msgstr ""
+
+#: assets/js/product-estimator-public.js:254
+msgid "Calculate"
+msgstr ""
+
+#: assets/js/product-estimator-public.js:255
+msgid "Calculating..."
+msgstr ""
+
+#: assets/js/product-estimator-public.js:256
+msgid "Save Changes"
+msgstr ""
+
+#: assets/js/product-estimator-public.js:257
+msgid "Saving..."
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:26
+msgid "Recent Calculations"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:31
+msgid "Date"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:32
+msgid "User"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:33
+msgid "Data"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:34
+msgid "Result"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:45
+msgid "Guest"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:55
+msgid "No calculations found."
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:64
+msgid "Usage Reports"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:74
+msgid "Daily"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:75
+msgid "Weekly"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:76
+msgid "Monthly"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:82
+msgid "Generate Report"
+msgstr ""
+
+#: admin/partials/product-estimator-admin-display.php:91
+msgid "Select report parameters and click Generate Report."
+msgstr ""

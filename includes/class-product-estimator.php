@@ -1,34 +1,155 @@
 <?php
+namespace RuDigital\ProductEstimator\Includes;
 
-class Product_Estimator {
+/**
+ * Register all actions and filters for the plugin.
+ *
+ * Maintain a list of all hooks that are registered throughout
+ * the plugin, and register them with the WordPress API. Call the
+ * run function to execute the list of actions and filters.
+ *
+ * @since      1.0.0
+ * @package    Product_Estimator
+ * @subpackage Product_Estimator/includes
+ */
+class Loader {
+
+    /**
+     * The array of actions registered with WordPress.
+     *
+     * @since    1.0.0
+     * @access   protected
+     * @var      array    $actions    The actions registered with WordPress to fire when the plugin loads.
+     */
+    protected $actions;
+
+    /**
+     * The array of filters registered with WordPress.
+     *
+     * @since    1.0.0
+     * @access   protected
+     * @var      array    $filters    The filters registered with WordPress to fire when the plugin loads.
+     */
+    protected $filters;
+
+    /**
+     * The array of shortcodes registered with WordPress.
+     *
+     * @since    1.0.0
+     * @access   protected
+     * @var      array    $shortcodes    The shortcodes registered with WordPress.
+     */
+    protected $shortcodes;
+
+    /**
+     * Initialize the collections used to maintain the actions, filters, and shortcodes.
+     *
+     * @since    1.0.0
+     */
     public function __construct() {
-        add_action('admin_menu', array($this, 'add_plugin_menu'));
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
+        $this->actions = array();
+        $this->filters = array();
+        $this->shortcodes = array();
     }
 
-    public function add_plugin_menu() {
-        add_menu_page(
-            'Product Estimator Settings',
-            'Product Estimator',
-            'manage_options',
-            'product-estimator',
-            array($this, 'plugin_settings_page'),
-            'dashicons-calculator',
-            25
+    /**
+     * Add a new action to the collection to be registered with WordPress.
+     *
+     * @since    1.0.0
+     * @param    string    $hook             The name of the WordPress action that is being registered.
+     * @param    object    $component        A reference to the instance of the object on which the action is defined.
+     * @param    string    $callback         The name of the function definition on the $component.
+     * @param    int       $priority         Optional. The priority at which the function should be fired. Default is 10.
+     * @param    int       $accepted_args    Optional. The number of arguments that should be passed to the $callback. Default is 1.
+     */
+    public function add_action($hook, $component, $callback, $priority = 10, $accepted_args = 1) {
+        $this->actions = $this->add($this->actions, $hook, $component, $callback, $priority, $accepted_args);
+    }
+
+    /**
+     * Add a new filter to the collection to be registered with WordPress.
+     *
+     * @since    1.0.0
+     * @param    string    $hook             The name of the WordPress filter that is being registered.
+     * @param    object    $component        A reference to the instance of the object on which the filter is defined.
+     * @param    string    $callback         The name of the function definition on the $component.
+     * @param    int       $priority         Optional. The priority at which the function should be fired. Default is 10.
+     * @param    int       $accepted_args    Optional. The number of arguments that should be passed to the $callback. Default is 1.
+     */
+    public function add_filter($hook, $component, $callback, $priority = 10, $accepted_args = 1) {
+        $this->filters = $this->add($this->filters, $hook, $component, $callback, $priority, $accepted_args);
+    }
+
+    /**
+     * Add a new shortcode to the collection to be registered with WordPress
+     *
+     * @since    1.0.0
+     * @param    string    $tag              The name of the shortcode.
+     * @param    object    $component        A reference to the instance of the object on which the shortcode is defined.
+     * @param    string    $callback         The name of the function that defines the shortcode.
+     */
+    public function add_shortcode($tag, $component, $callback) {
+        $this->shortcodes = $this->add($this->shortcodes, $tag, $component, $callback, null, null);
+    }
+
+    /**
+     * A utility function that is used to register the actions and hooks into a single
+     * collection.
+     *
+     * @since    1.0.0
+     * @access   private
+     * @param    array     $hooks            The collection of hooks that is being registered (that is, actions or filters).
+     * @param    string    $hook             The name of the WordPress filter that is being registered.
+     * @param    object    $component        A reference to the instance of the object on which the filter is defined.
+     * @param    string    $callback         The name of the function definition on the $component.
+     * @param    int       $priority         The priority at which the function should be fired.
+     * @param    int       $accepted_args    The number of arguments that should be passed to the $callback.
+     * @return   array                       The collection of actions and filters registered with WordPress.
+     */
+    private function add($hooks, $hook, $component, $callback, $priority, $accepted_args) {
+        $hooks[] = array(
+            'hook'          => $hook,
+            'component'     => $component,
+            'callback'      => $callback,
+            'priority'      => $priority,
+            'accepted_args' => $accepted_args
         );
+
+        return $hooks;
     }
 
-    public function plugin_settings_page() {
-        echo "<h1>Product Estimator Settings</h1>";
-        echo "<p>Customize your estimator settings here.</p>";
-    }
-
-    public function enqueue_scripts() {
-        wp_enqueue_style('product-estimator-css', plugin_dir_url(__FILE__) . '../assets/css/style.css');
-        wp_enqueue_script('product-estimator-js', plugin_dir_url(__FILE__) . '../assets/js/script.js', array('jquery'), false, true);
-    }
-
+    /**
+     * Register the filters, actions, and shortcodes with WordPress.
+     *
+     * @since    1.0.0
+     */
     public function run() {
-        // Any additional initialization code
+        // Register filters
+        foreach ($this->filters as $hook) {
+            add_filter(
+                $hook['hook'],
+                array($hook['component'], $hook['callback']),
+                $hook['priority'],
+                $hook['accepted_args']
+            );
+        }
+
+        // Register actions
+        foreach ($this->actions as $hook) {
+            add_action(
+                $hook['hook'],
+                array($hook['component'], $hook['callback']),
+                $hook['priority'],
+                $hook['accepted_args']
+            );
+        }
+
+        // Register shortcodes
+        foreach ($this->shortcodes as $shortcode) {
+            add_shortcode(
+                $shortcode['hook'],
+                array($shortcode['component'], $shortcode['callback'])
+            );
+        }
     }
 }

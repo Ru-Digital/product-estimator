@@ -24,7 +24,6 @@ if (!defined('ABSPATH')) {
 }
 
 // Include the main class file
-require_once plugin_dir_path(__FILE__) . 'includes/class-product-estimator.php';
 
 // Plugin Constants
 define('PRODUCT_ESTIMATOR_VERSION', '1.0.3');
@@ -39,21 +38,39 @@ if (file_exists(dirname(__FILE__) . '/vendor/autoload.php')) {
 
 // Custom autoloader for our namespaced classes
 spl_autoload_register(function ($class) {
+    // Base namespace for the plugin
     $prefix = 'RuDigital\\ProductEstimator\\';
-    $base_dir = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/';
+    $base_dir = PRODUCT_ESTIMATOR_PLUGIN_DIR;
 
+    // Does the class use the namespace prefix?
     $len = strlen($prefix);
     if (strncmp($prefix, $class, $len) !== 0) {
         return;
     }
 
+    // Get the relative class name
     $relative_class = substr($class, $len);
-    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
 
+    // Convert namespace separators to directory separators
+    // and prepend 'class-' to the filename
+    $file = $base_dir . str_replace('\\', '/', $relative_class);
+    $file = preg_replace('/([^\/]+)$/', 'class-$1', $file);
+    $file = strtolower($file) . '.php';
+
+    // If the file exists, require it
     if (file_exists($file)) {
         require $file;
     }
 });
+
+// Include the main class files - Move these after constants and autoloader
+require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-loader.php';
+require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-i18n.php';
+require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-product-estimator.php';
+require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-product-estimator-admin.php';
+require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-product-estimator-public.php';
+
+
 
 // Activation/Deactivation hooks
 register_activation_hook(__FILE__, array('RuDigital\\ProductEstimator\\Includes\\Activator', 'activate'));
@@ -72,7 +89,8 @@ function run_product_estimator() {
     }
 
     try {
-        $plugin = new Includes\ProductEstimator();
+        $loader = new \RuDigital\ProductEstimator\Includes\Loader();
+        $plugin = new \RuDigital\ProductEstimator\Includes\ProductEstimator();
         $plugin->run();
     } catch (\Exception $e) {
         if (WP_DEBUG === true) {

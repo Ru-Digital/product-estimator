@@ -69,8 +69,27 @@ require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-i18n.php';
 require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-product-estimator.php';
 require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-product-estimator-admin.php';
 require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-product-estimator-public.php';
+require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/integration/class-product-display.php';
+require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/integration/class-woocommerce-integration.php';
 
+/**
+ * Check if WooCommerce is active
+ *
+ * @return bool
+ */
+function is_woocommerce_active() {
+    $active_plugins = apply_filters('active_plugins', get_option('active_plugins'));
+    if (is_multisite()) {
+        $active_plugins = array_merge($active_plugins, get_site_option('active_sitewide_plugins', array()));
+    }
+    return in_array('woocommerce/woocommerce.php', $active_plugins) || array_key_exists('woocommerce/woocommerce.php', $active_plugins);
+}
 
+// Initialize WooCommerce integration if WooCommerce is active
+if (is_woocommerce_active()) {
+    $wc_integration = new \RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration();
+    $product_display = new \RuDigital\ProductEstimator\Includes\Frontend\ProductDisplay();
+}
 
 // Activation/Deactivation hooks
 register_activation_hook(__FILE__, array('RuDigital\\ProductEstimator\\Includes\\Activator', 'activate'));

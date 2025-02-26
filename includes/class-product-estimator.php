@@ -120,10 +120,6 @@ class ProductEstimator {
 
         // Register shortcodes
         $plugin_public->register_shortcodes();
-
-        // Register AJAX handlers
-        $this->loader->add_action('wp_ajax_calculate_estimate', $plugin_public, 'handle_estimate_calculation');
-        $this->loader->add_action('wp_ajax_nopriv_calculate_estimate', $plugin_public, 'handle_estimate_calculation');
     }
 
     /**

@@ -71,41 +71,6 @@ function product_estimator_get_currency_symbol($currency = '') {
 }
 
 /**
- * Log calculation to database
- *
- * @since 1.0.0
- * @param array $data Calculation data
- * @param float $result Calculation result
- * @return int|false The number of rows inserted, or false on error
- */
-function product_estimator_log_calculation($data, $result) {
-    $settings = product_estimator_get_settings();
-
-    if (!$settings['enable_logging']) {
-        return false;
-    }
-
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'product_estimator_calculations';
-
-    return $wpdb->insert(
-        $table_name,
-        array(
-            'user_id' => get_current_user_id(),
-            'calculation_data' => maybe_serialize($data),
-            'result' => $result,
-            'time' => current_time('mysql')
-        ),
-        array(
-            '%d',
-            '%s',
-            '%f',
-            '%s'
-        )
-    );
-}
-
-/**
  * Send notification email
  *
  * @since 1.0.0
@@ -139,41 +104,6 @@ function product_estimator_send_notification($data, $result) {
     return wp_mail($to, $subject, $message, $headers);
 }
 
-/**
- * Validate calculation inputs
- *
- * @since 1.0.0
- * @param array $data Input data
- * @return array|WP_Error Validated data or WP_Error on failure
- */
-function product_estimator_validate_calculation($data) {
-    $settings = product_estimator_get_settings();
-    $errors = new WP_Error();
-
-    // Validate quantity
-    $quantity = isset($data['quantity']) ? absint($data['quantity']) : 0;
-    if ($quantity < $settings['minimum_quantity'] || $quantity > $settings['maximum_quantity']) {
-        $errors->add(
-            'invalid_quantity',
-            sprintf(
-                __('Quantity must be between %d and %d', 'product-estimator'),
-                $settings['minimum_quantity'],
-                $settings['maximum_quantity']
-            )
-        );
-    }
-
-    // Validate product
-    if (empty($data['product_type'])) {
-        $errors->add('missing_product', __('Please select a product type', 'product-estimator'));
-    }
-
-    if ($errors->has_errors()) {
-        return $errors;
-    }
-
-    return array_merge($data, array('quantity' => $quantity));
-}
 
 /**
  * Check if debug mode is enabled

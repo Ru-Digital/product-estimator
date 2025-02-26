@@ -33,8 +33,22 @@
     },
     "autoload": {
         "psr-4": {
-            "RuDigital\\ProductEstimator\\": "includes/"
+            "RuDigital\\ProductEstimator\\Includes\\": "includes/"
         },
+        "classmap": [
+            "includes/frontend/class-shortcodes.php",
+            "includes/frontend/class-product-estimator-modal.php",
+            "includes/frontend/class-product-display.php",
+            "includes/frontend/class-product-estimator-public.php",
+            "includes/integration/class-woocommerce-integration.php",
+            "includes/admin/class-product-estimator-settings.php",
+            "includes/admin/class-product-estimator-admin.php",
+            "includes/class-activator.php",
+            "includes/class-product-estimator.php",
+            "includes/class-i18n.php",
+            "includes/class-deactivator.php",
+            "includes/class-loader.php"
+        ],
         "files": [
             "includes/functions.php"
         ]

@@ -1,149 +1,87 @@
 <?php
+// includes/admin/partials/product-estimator-admin-settings.php
+
 /**
- * Template for the plugin settings page.
+ * Provide an admin area view for the plugin settings
  *
- * @link       https://rudigital.com.au
+ * This file is used to markup the admin-facing settings page.
+ *
  * @since      1.0.0
- *
  * @package    Product_Estimator
- * @subpackage Product_Estimator/includes/admin/partials
+ * @subpackage Product_Estimator/admin/partials
+ *
+ * @var string $plugin_name The name/ID of the plugin
  */
 
 // If this file is called directly, abort.
 if (!defined('WPINC')) {
     die;
 }
-
-// Get plugin settings
-$options = get_option('product_estimator_settings');
 ?>
 
 <div class="wrap">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
-    <form method="post" action="options.php" class="product-estimator-form">
-        <?php
-        settings_fields('product_estimator_options');
-        do_settings_sections('product-estimator');
-        ?>
+    <?php settings_errors(); ?>
 
-        <table class="form-table" role="presentation">
-            <!-- Currency Settings -->
-            <tr>
-                <th scope="row">
-                    <label for="currency"><?php esc_html_e('Currency', 'product-estimator'); ?></label>
-                </th>
-                <td>
-                    <select name="product_estimator_settings[currency]" id="currency">
-                        <?php
-                        $currencies = array(
-                            'USD' => __('US Dollar ($)', 'product-estimator'),
-                            'EUR' => __('Euro (€)', 'product-estimator'),
-                            'GBP' => __('British Pound (£)', 'product-estimator'),
-                            'AUD' => __('Australian Dollar ($)', 'product-estimator')
-                        );
+    <div class="product-estimator-admin-wrapper">
+        <!-- Navigation Tabs -->
+        <nav class="nav-tab-wrapper">
+            <a href="#general" class="nav-tab nav-tab-active" data-tab="general">
+                <?php esc_html_e('General Settings', 'product-estimator'); ?>
+            </a>
+            <a href="#netsuite" class="nav-tab" data-tab="netsuite">
+                <?php esc_html_e('NetSuite Integration', 'product-estimator'); ?>
+            </a>
+            <a href="#notifications" class="nav-tab" data-tab="notifications">
+                <?php esc_html_e('Notifications', 'product-estimator'); ?>
+            </a>
+        </nav>
 
-                        foreach ($currencies as $code => $name) {
-                            printf(
-                                '<option value="%s" %s>%s</option>',
-                                esc_attr($code),
-                                selected($options['currency'], $code, false),
-                                esc_html($name)
-                            );
-                        }
-                        ?>
-                    </select>
-                    <p class="description"><?php esc_html_e('Select the currency for product estimates', 'product-estimator'); ?></p>
-                </td>
-            </tr>
+        <form method="post" action="options.php" class="product-estimator-form">
+            <?php
+            settings_fields($plugin_name . '_options');
+            ?>
 
-            <!-- Decimal Points -->
-            <tr>
-                <th scope="row">
-                    <label for="decimal_points"><?php esc_html_e('Decimal Points', 'product-estimator'); ?></label>
-                </th>
-                <td>
-                    <input type="number"
-                           id="decimal_points"
-                           name="product_estimator_settings[decimal_points]"
-                           value="<?php echo esc_attr($options['decimal_points']); ?>"
-                           class="small-text"
-                           min="0"
-                           max="4">
-                    <p class="description"><?php esc_html_e('Number of decimal points to display in calculations', 'product-estimator'); ?></p>
-                </td>
-            </tr>
+            <!-- General Settings Tab -->
+            <div id="general" class="tab-content active">
+                <?php
+                do_settings_sections($plugin_name);
+                ?>
+            </div>
 
-            <!-- Logging Settings -->
-            <tr>
-                <th scope="row"><?php esc_html_e('Logging', 'product-estimator'); ?></th>
-                <td>
-                    <fieldset>
-                        <label for="enable_logging">
-                            <input type="checkbox"
-                                   id="enable_logging"
-                                   name="product_estimator_settings[enable_logging]"
-                                   value="1"
-                                <?php checked(isset($options['enable_logging']) ? $options['enable_logging'] : 0); ?>>
-                            <?php esc_html_e('Enable calculation logging', 'product-estimator'); ?>
-                        </label>
-                        <p class="description"><?php esc_html_e('Log all calculations for reporting purposes', 'product-estimator'); ?></p>
-                    </fieldset>
-                </td>
-            </tr>
+            <!-- NetSuite Tab -->
+            <div id="netsuite" class="tab-content" style="display: none;">
+                <?php
+                do_settings_sections($plugin_name . '_netsuite');
+                ?>
+            </div>
 
-            <!-- Email Notifications -->
-            <tr>
-                <th scope="row"><?php esc_html_e('Email Notifications', 'product-estimator'); ?></th>
-                <td>
-                    <fieldset>
-                        <label for="enable_notifications">
-                            <input type="checkbox"
-                                   id="enable_notifications"
-                                   name="product_estimator_settings[enable_notifications]"
-                                   value="1"
-                                <?php checked(isset($options['enable_notifications']) ? $options['enable_notifications'] : 0); ?>>
-                            <?php esc_html_e('Enable email notifications', 'product-estimator'); ?>
-                        </label>
-                        <p class="description"><?php esc_html_e('Send email notifications for new estimates', 'product-estimator'); ?></p>
-                    </fieldset>
-                </td>
-            </tr>
+            <!-- Notifications Tab -->
+            <div id="notifications" class="tab-content" style="display: none;">
+                <?php
+                do_settings_sections($plugin_name . '_notifications');
+                ?>
+            </div>
 
-            <!-- Notification Email -->
-            <tr>
-                <th scope="row">
-                    <label for="notification_email"><?php esc_html_e('Notification Email', 'product-estimator'); ?></label>
-                </th>
-                <td>
-                    <input type="email"
-                           id="notification_email"
-                           name="product_estimator_settings[notification_email]"
-                           value="<?php echo esc_attr(isset($options['notification_email']) ? $options['notification_email'] : get_option('admin_email')); ?>"
-                           class="regular-text">
-                    <p class="description"><?php esc_html_e('Email address for notifications', 'product-estimator'); ?></p>
-                </td>
-            </tr>
-
-            <!-- Data Preservation -->
-            <tr>
-                <th scope="row"><?php esc_html_e('Data Settings', 'product-estimator'); ?></th>
-                <td>
-                    <fieldset>
-                        <label for="preserve_data">
-                            <input type="checkbox"
-                                   id="preserve_data"
-                                   name="product_estimator_settings[preserve_data]"
-                                   value="1"
-                                <?php checked(isset($options['preserve_data']) ? $options['preserve_data'] : 0); ?>>
-                            <?php esc_html_e('Preserve data on uninstall', 'product-estimator'); ?>
-                        </label>
-                        <p class="description"><?php esc_html_e('Keep all plugin data when uninstalling', 'product-estimator'); ?></p>
-                    </fieldset>
-                </td>
-            </tr>
-        </table>
-
-        <?php submit_button(); ?>
-    </form>
+            <?php submit_button(); ?>
+        </form>
+    </div>
 </div>
+
+<script>
+    jQuery(document).ready(function($) {
+        // Tab switching functionality
+        $('.nav-tab').on('click', function(e) {
+            e.preventDefault();
+
+            // Update active tab
+            $('.nav-tab').removeClass('nav-tab-active');
+            $(this).addClass('nav-tab-active');
+
+            // Show correct content
+            $('.tab-content').hide();
+            $('#' + $(this).data('tab')).show();
+        });
+    });
+</script>

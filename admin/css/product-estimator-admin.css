@@ -70,56 +70,6 @@ input.error {
     border-color: #d63638;
 }
 
-/* Calculations Table */
-.calculations-wrapper {
-    margin-top: 20px;
-}
-
-.wp-list-table {
-    margin-top: 10px;
-}
-
-.wp-list-table th {
-    font-weight: 600;
-}
-
-.wp-list-table td {
-    vertical-align: middle;
-}
-
-/* Reports Section */
-.reports-wrapper {
-    margin-top: 20px;
-}
-
-.report-filters {
-    background: #f0f0f1;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-}
-
-.report-filters form {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.report-filters select,
-.report-filters input[type="date"] {
-    margin-right: 10px;
-}
-
-.report-content {
-    min-height: 400px;
-    position: relative;
-}
-
-#report-placeholder {
-    padding: 20px;
-    background: #fff;
-    border: 1px solid #ccc;
-}
 
 /* Loading State */
 .loading {
@@ -146,23 +96,7 @@ input.error {
     }
 }
 
-/* Chart Container */
-#reportChart {
-    height: 400px;
-    margin-top: 20px;
-}
 
-.report-summary {
-    background: #f0f0f1;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-}
-
-.report-summary h3 {
-    margin-top: 0;
-    margin-bottom: 10px;
-}
 
 /* Notice Styling */
 .notice {
@@ -197,7 +131,7 @@ input.error {
 /* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
     .tab-content {
-        background: #2c3338;
+        background: #fff;
         border-color: #2c3338;
     }
 
@@ -248,8 +182,4 @@ input.error {
         padding: 0;
     }
 
-    #reportChart {
-        height: 300px;
-        page-break-inside: avoid;
-    }
 }

@@ -1,0 +1,174 @@
+/**
+ * Modal styles for the Product Estimator plugin
+ */
+
+/* Modal Base */
+.product-estimator-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999999;
+  overflow: hidden;
+}
+
+.product-estimator-modal.open {
+  display: block;
+}
+
+/* Modal Overlay */
+.product-estimator-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+/* Modal Container */
+.product-estimator-modal-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Modal Header */
+.product-estimator-modal-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.product-estimator-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #2c3338;
+}
+
+/* Modal Close Button */
+.product-estimator-modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #000;
+  opacity: 0.5;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-estimator-modal-close:hover {
+  opacity: 0.75;
+}
+
+/* Modal Content */
+.product-estimator-modal-form-container {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Modal Loading Indicator */
+.product-estimator-modal-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.product-estimator-modal-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #2271b1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.product-estimator-modal-loading .loading-text {
+  margin-top: 15px;
+  font-weight: 500;
+}
+
+/* Prevent body scrolling when modal is open */
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 600px) {
+  .product-estimator-modal-container {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .product-estimator-modal-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .product-estimator-modal-form-container {
+    padding: 15px;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .product-estimator-modal-container {
+    background-color: #2c3338;
+  }
+
+  .product-estimator-modal-header {
+    border-color: #1e1e1e;
+  }
+
+  .product-estimator-modal-header h2 {
+    color: #fff;
+  }
+
+  .product-estimator-modal-close {
+    color: #fff;
+  }
+
+  .product-estimator-modal-loading {
+    background-color: rgba(44, 51, 56, 0.8);
+  }
+
+  .product-estimator-modal-loading .loading-text {
+    color: #fff;
+  }
+}

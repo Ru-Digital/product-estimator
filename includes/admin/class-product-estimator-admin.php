@@ -35,9 +35,13 @@ class ProductEstimatorAdmin {
      * @param    string    $plugin_name    The name of this plugin.
      * @param    string    $version        The version of this plugin.
      */
+
     public function __construct($plugin_name, $version) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
+
+        // Initialize settings
+        $this->settings = new ProductEstimatorSettings($plugin_name, $version);
     }
 
     /**
@@ -147,12 +151,16 @@ class ProductEstimatorAdmin {
      * @since    1.0.0
      */
     public function display_plugin_admin_settings() {
+        // Set up variables needed by the template
+        $plugin_name = $this->plugin_name;
+        $version = $this->version;
+
         // Fix the path to point to the correct location
         $template_path = plugin_dir_path(dirname(dirname(__FILE__))) .
             'includes/admin/partials/product-estimator-admin-settings.php';
 
         if (file_exists($template_path)) {
-            include_once $template_path;
+            require $template_path;
         } else {
             wp_die(__('Settings template file not found:', 'product-estimator') . ' ' . $template_path);
         }

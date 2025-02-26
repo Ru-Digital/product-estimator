@@ -1,6 +1,7 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes\Frontend;
 
+
 /**
  * The public-facing functionality of the plugin.
  *
@@ -93,6 +94,7 @@ class ProductEstimatorPublic {
      */
     public function register_shortcodes() {
         add_shortcode('product_estimator', array($this, 'render_estimator'));
+        add_shortcode('estimator_button', array($this, 'render_estimator_button'));
     }
 
     /**
@@ -120,6 +122,43 @@ class ProductEstimatorPublic {
         include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-display.php';
 
         // Return the buffered content
+        return ob_get_clean();
+    }
+
+    /**
+     * Render the "Add to estimator" button
+     *
+     * @since    1.0.4
+     * @param    array    $atts    Shortcode attributes.
+     * @return   string   Button HTML.
+     */
+    public function render_estimator_button($atts = array()) {
+        $atts = shortcode_atts(
+            array(
+                'text' => __('Add to estimator', 'product-estimator'),
+                'class' => '',
+                'product_id' => 0,
+            ),
+            $atts,
+            'estimator_button'
+        );
+
+        $classes = 'product-estimator-button';
+        if (!empty($atts['class'])) {
+            $classes .= ' ' . esc_attr($atts['class']);
+        }
+
+        $product_attr = '';
+        if (!empty($atts['product_id'])) {
+            $product_attr = ' data-product-id="' . esc_attr($atts['product_id']) . '"';
+        }
+
+        ob_start();
+        ?>
+        <button type="button" class="<?php echo esc_attr($classes); ?> single_add_to_estimator_button"<?php echo $product_attr; ?>>
+            <?php echo esc_html($atts['text']); ?>
+        </button>
+        <?php
         return ob_get_clean();
     }
 

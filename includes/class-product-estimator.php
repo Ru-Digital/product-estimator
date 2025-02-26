@@ -3,8 +3,7 @@ namespace RuDigital\ProductEstimator\Includes;
 
 use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
 use RuDigital\ProductEstimator\Includes\Frontend\ProductEstimatorPublic;
-use RuDigital\ProductEstimator\Includes\I18n;
-
+use RuDigital\ProductEstimator\Includes\Frontend\ProductEstimatorModal;
 
 /**
  * The core plugin class.
@@ -63,6 +62,7 @@ class ProductEstimator {
         $this->set_locale();
         $this->define_admin_hooks();
         $this->define_public_hooks();
+        $this->define_modal_hooks();
     }
 
     /**
@@ -124,6 +124,18 @@ class ProductEstimator {
         // Register AJAX handlers
         $this->loader->add_action('wp_ajax_calculate_estimate', $plugin_public, 'handle_estimate_calculation');
         $this->loader->add_action('wp_ajax_nopriv_calculate_estimate', $plugin_public, 'handle_estimate_calculation');
+    }
+
+    /**
+     * Register all of the hooks related to the modal functionality
+     *
+     * @since    1.0.4
+     * @access   private
+     */
+    private function define_modal_hooks() {
+        $modal = new ProductEstimatorModal($this->get_plugin_name(), $this->get_version());
+
+        // The hooks are registered in the constructor of the ProductEstimatorModal class
     }
 
     /**

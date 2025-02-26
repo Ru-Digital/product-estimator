@@ -197,7 +197,7 @@ input.error {
 /* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
     .tab-content {
-        background: #2c3338;
+        background: #fff;
         border-color: #2c3338;
     }
 

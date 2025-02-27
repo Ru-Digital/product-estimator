@@ -186,3 +186,25 @@ add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) 
     return $links;
 });
 
+if (!defined('ABSPATH')) exit; // Exit if accessed directly
+
+// Function to add the estimator button to the menu
+namespace RuDigital\ProductEstimator;
+
+if (!defined('ABSPATH')) exit; // Exit if accessed directly
+
+// Function to add the estimator button to the menu
+function add_estimator_button_to_menu($items, $args) {
+    if (isset($args->theme_location) && $args->theme_location === 'main_menu') {
+        $estimator_button = '<li class="menu-item product-estimator-menu-item">
+            <a href="#" class="product-estimator-button">Estimator</a>
+        </li>';
+        $items .= $estimator_button; // Append the button at the end of the menu
+    }
+    return $items;
+}
+
+// Ensure function is referenced correctly within the namespace
+add_filter('wp_nav_menu_items', 'RuDigital\\ProductEstimator\\add_estimator_button_to_menu', 10, 2);
+
+

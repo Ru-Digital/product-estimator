@@ -561,31 +561,7 @@
 
     // If we're on a regular content page with shortcode buttons but no modal
     if ($('.product-estimator-button').length && !$('#product-estimator-modal').length) {
-      console.log('Found estimator buttons outside containers, adding modal to page'); // Debug log
 
-      // Add modal HTML to page if not already present
-      $('body').append(`
-        <div id="product-estimator-modal" class="product-estimator-modal">
-            <div class="product-estimator-modal-overlay"></div>
-            <div class="product-estimator-modal-container">
-                <button class="product-estimator-modal-close" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-                <div class="product-estimator-modal-header">
-                    <h2>Product Estimator</h2>
-                </div>
-                <div class="product-estimator-modal-content">
-                    <div class="product-estimator-modal-loading" style="display: none;">
-                        <div class="loading-spinner"></div>
-                        <div class="loading-text">Loading...</div>
-                    </div>
-                    <div class="product-estimator-modal-form-container">
-                        <!-- Form will be loaded here via AJAX -->
-                    </div>
-                </div>
-            </div>
-        </div>
-      `);
 
       // Initialize the modal
       if (typeof window.ProductEstimatorModal === 'function') {
@@ -621,33 +597,6 @@
         window.productEstimatorModalInstance.openModal(productId);
       } else {
         console.warn('Modal instance not available for button click'); // Debug log
-
-        // If the modal instance doesn't exist yet, create it dynamically
-        if (!$('#product-estimator-modal').length) {
-          // Add modal HTML to page if not already present
-          $('body').append(`
-            <div id="product-estimator-modal" class="product-estimator-modal">
-                <div class="product-estimator-modal-overlay"></div>
-                <div class="product-estimator-modal-container">
-                    <button class="product-estimator-modal-close" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                    <div class="product-estimator-modal-header">
-                        <h2>Product Estimator</h2>
-                    </div>
-                    <div class="product-estimator-modal-content">
-                        <div class="product-estimator-modal-loading" style="display: none;">
-                            <div class="loading-spinner"></div>
-                            <div class="loading-text">Loading...</div>
-                        </div>
-                        <div class="product-estimator-modal-form-container">
-                            <!-- Form will be loaded here via AJAX -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-          `);
-        }
 
         $.getScript(productEstimatorPublic.plugin_url + 'public/js/product-estimator-modal.js')
           .done(function() {

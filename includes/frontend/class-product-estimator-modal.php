@@ -125,9 +125,9 @@ class ProductEstimatorModal {
      */
     public function render_modal() {
         // Only render modal if we're on a product page or the shortcode is used
-        if (is_product() || $this->is_shortcode_used()) {
+//        if (is_product() || $this->is_shortcode_used()) {
             include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
-        }
+//        }
     }
 
     /**

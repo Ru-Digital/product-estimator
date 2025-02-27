@@ -1,4 +1,6 @@
 <?php
+namespace RuDigital\ProductEstimator\Includes\Frontend;
+
 /**
  * Modal Implementation for Product Estimator
  *
@@ -7,13 +9,7 @@
  *
  * @since      1.0.4
  * @package    Product_Estimator
- * @subpackage Product_Estimator/public
- */
-
-namespace RuDigital\ProductEstimator\Includes\Frontend;
-
-/**
- * Modal Implementation Class
+ * @subpackage Product_Estimator/includes/frontend
  */
 class ProductEstimatorModal {
 
@@ -66,36 +62,59 @@ class ProductEstimatorModal {
      * @since    1.0.4
      */
     public function enqueue_assets() {
-        // Enqueue modal styles
-        wp_enqueue_style(
-            $this->plugin_name . '-modal',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-modal.css',
-            array(),
-            $this->version
-        );
+        // Only enqueue if we're on a product page or the shortcode is used
+        if (is_product() || $this->is_shortcode_used()) {
+            // Enqueue modal styles
+            wp_enqueue_style(
+                $this->plugin_name . '-modal',
+                PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-modal.css',
+                array(),
+                $this->version
+            );
 
-        // Enqueue modal scripts
-        wp_enqueue_script(
-            $this->plugin_name . '-modal',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-modal.js',
-            array('jquery'),
-            $this->version,
-            true
-        );
+            // Enqueue modal scripts
+            wp_enqueue_script(
+                $this->plugin_name . '-modal',
+                PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-modal.js',
+                array('jquery'),
+                $this->version,
+                true
+            );
 
-        // Localize the script
-        wp_localize_script(
-            $this->plugin_name . '-modal',
-            'productEstimatorModal',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('product_estimator_modal_nonce'),
-                'i18n' => array(
-                    'loading' => __('Loading estimator...', 'product-estimator'),
-                    'error' => __('Error loading estimator. Please try again.', 'product-estimator'),
-                    'close' => __('Close', 'product-estimator')
+            // Localize the script
+            wp_localize_script(
+                $this->plugin_name . '-modal',
+                'productEstimatorVars',
+                array(
+                    'ajax_url' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('product_estimator_nonce'),
+                    'estimator_url' => esc_url(home_url('/estimator/')),
+                    'i18n' => array(
+                        'loading' => __('Loading estimator...', 'product-estimator'),
+                        'error' => __('Error loading estimator. Please try again.', 'product-estimator'),
+                        'close' => __('Close', 'product-estimator')
+                    )
                 )
-            )
+            );
+        }
+    }
+
+    /**
+     * Check if the estimator shortcode is used on the current page
+     *
+     * @since    1.0.4
+     * @return   boolean  True if shortcode is used
+     */
+    private function is_shortcode_used() {
+        global $post;
+
+        if (!is_singular() || !$post) {
+            return false;
+        }
+
+        return (
+            has_shortcode($post->post_content, 'estimator_button') ||
+            has_shortcode($post->post_content, 'product_estimator')
         );
     }
 
@@ -105,26 +124,10 @@ class ProductEstimatorModal {
      * @since    1.0.4
      */
     public function render_modal() {
-        ?>
-        <div id="product-estimator-modal" class="product-estimator-modal" style="display: none;">
-            <div class="product-estimator-modal-overlay"></div>
-            <div class="product-estimator-modal-container">
-                <div class="product-estimator-modal-header">
-                    <h2><?php esc_html_e('Product Estimator', 'product-estimator'); ?></h2>
-                    <button type="button" class="product-estimator-modal-close" aria-label="<?php esc_attr_e('Close', 'product-estimator'); ?>">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="product-estimator-modal-content">
-                    <div class="product-estimator-modal-loading">
-                        <div class="product-estimator-spinner"></div>
-                        <p><?php esc_html_e('Loading estimator...', 'product-estimator'); ?></p>
-                    </div>
-                    <div class="product-estimator-modal-form-container"></div>
-                </div>
-            </div>
-        </div>
-        <?php
+        // Only render modal if we're on a product page or the shortcode is used
+        if (is_product() || $this->is_shortcode_used()) {
+            include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
+        }
     }
 
     /**
@@ -172,19 +175,55 @@ class ProductEstimatorModal {
      */
     public function get_estimator_form() {
         // Check nonce
-        check_ajax_referer('product_estimator_modal_nonce', 'nonce');
+        check_ajax_referer('product_estimator_nonce', 'nonce');
 
         // Get product ID if provided
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
         $is_variation = isset($_POST['is_variation']) && $_POST['is_variation'] == 'true';
 
-        // Get the estimator form
+        // Start output buffer to capture form HTML
         ob_start();
 
-        // If your plugin is using a frontend class to handle the estimator display
-        $public_class = new ProductEstimatorPublic($this->plugin_name, $this->version);
+        // If we have a product ID, handle it accordingly
+        if ($product_id > 0) {
+            // Create a product instance
+            $product = wc_get_product($product_id);
 
-        // Pass the atts to the render method
+            if (!$product) {
+                wp_send_json_error(array(
+                    'message' => __('Product not found', 'product-estimator')
+                ));
+                return;
+            }
+
+            // Check if estimator is enabled for this product
+            if (!$this->is_estimator_enabled($product_id)) {
+                wp_send_json_error(array(
+                    'message' => __('Estimator is not enabled for this product', 'product-estimator')
+                ));
+                return;
+            }
+        }
+
+        // Render the estimator form
+        $this->render_estimator_form($product_id, $is_variation);
+
+        // Get the form HTML
+        $html = ob_get_clean();
+
+        // Send the response
+        wp_send_json_success(array('html' => $html));
+    }
+
+    /**
+     * Render the estimator form
+     *
+     * @since    1.0.4
+     * @param    int      $product_id    Product ID
+     * @param    boolean  $is_variation  Whether this is a variation
+     */
+    private function render_estimator_form($product_id = 0, $is_variation = false) {
+        // Pass the correct parameters to the template
         $atts = array(
             'title' => __('Product Estimate', 'product-estimator'),
             'button_text' => __('Calculate', 'product-estimator'),
@@ -193,22 +232,27 @@ class ProductEstimatorModal {
 
         // If this is a variation, handle it differently
         if ($is_variation && $product_id > 0) {
-            if (function_exists('wc_get_product')) {
-                $variation = wc_get_product($product_id);
-                if ($variation && $variation->is_type('variation')) {
-                    $parent_id = $variation->get_parent_id();
-
-                    // Add variation info to the attributes
-                    $atts['parent_id'] = $parent_id;
-                    $atts['variation_id'] = $product_id;
-                }
+            $variation = wc_get_product($product_id);
+            if ($variation && $variation->is_type('variation')) {
+                $parent_id = $variation->get_parent_id();
+                $atts['parent_id'] = $parent_id;
+                $atts['variation_id'] = $product_id;
             }
         }
 
-        echo $public_class->render_estimator($atts);
+        // Render the estimator display template
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-display.php';
+    }
 
-        $html = ob_get_clean();
-
-        wp_send_json_success(array('html' => $html));
+    /**
+     * Check if estimator is enabled for a product
+     *
+     * @since    1.0.4
+     * @param    int      $product_id    Product ID
+     * @return   boolean  True if estimator is enabled
+     */
+    private function is_estimator_enabled($product_id) {
+        // Use the static method from WoocommerceIntegration class
+        return \RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::is_estimator_enabled($product_id);
     }
 }

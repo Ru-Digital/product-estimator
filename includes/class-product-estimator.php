@@ -130,8 +130,6 @@ class ProductEstimator {
      */
     private function define_modal_hooks() {
         $modal = new ProductEstimatorModal($this->get_plugin_name(), $this->get_version());
-
-        // The hooks are registered in the constructor of the ProductEstimatorModal class
     }
 
     /**
@@ -173,4 +171,5 @@ class ProductEstimator {
     public function get_version() {
         return $this->version;
     }
+
 }

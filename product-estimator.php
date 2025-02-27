@@ -20,6 +20,11 @@
 
 namespace RuDigital\ProductEstimator;
 
+use function add_action;
+use function wp_localize_script;
+use function admin_url;
+use function wp_create_nonce;
+
 // Exit if accessed directly
 if (!defined('ABSPATH')) {
     exit;
@@ -67,6 +72,62 @@ if (file_exists(dirname(__FILE__) . '/vendor/autoload.php')) {
 require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/functions.php';
 
 /**
+ * Localize scripts with global plugin data
+ */
+function product_estimator_enqueue_scripts() {
+    // Register and enqueue jQuery explicitly
+    wp_enqueue_script('jquery');
+
+    // Register modal script
+    wp_register_script(
+        'product-estimator-modal',
+        PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-modal.js',
+        array('jquery'),
+        PRODUCT_ESTIMATOR_VERSION,
+        true
+    );
+    wp_enqueue_script('product-estimator-modal');
+
+    // Register public script with modal dependency
+    wp_register_script(
+        'product-estimator-public',
+        PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-public.js',
+        array('jquery', 'product-estimator-modal'),
+        PRODUCT_ESTIMATOR_VERSION,
+        true
+    );
+    wp_enqueue_script('product-estimator-public');
+
+    // Localize script
+    wp_localize_script(
+        'product-estimator-public',
+        'productEstimatorPublic',
+        array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('product_estimator_nonce'),
+            'plugin_url' => PRODUCT_ESTIMATOR_PLUGIN_URL,
+            'estimator_url' => home_url('/estimator/'),
+            'enableTooltips' => true,
+            'i18n' => array(
+                'loading' => __('Loading estimator...', 'product-estimator'),
+                'error' => __('Error loading estimator. Please try again.', 'product-estimator'),
+                'error_loading_options' => __('Error loading options.', 'product-estimator'),
+                'error_calculation' => __('Error calculating estimate.', 'product-estimator'),
+                'error_adding' => __('Error adding product to estimator.', 'product-estimator'),
+                'close' => __('Close', 'product-estimator')
+            )
+        )
+    );
+}
+
+// Register function globally
+add_action('wp_enqueue_scripts', '\RuDigital\ProductEstimator\product_estimator_enqueue_scripts', 999);
+
+// Hook into WordPress init
+add_action('plugins_loaded', 'RuDigital\\ProductEstimator\\run_product_estimator');
+
+
+/**
  * Check if WooCommerce is active
  *
  * @return bool
@@ -89,39 +150,25 @@ function is_woocommerce_active() {
  * @return void
  */
 function run_product_estimator() {
-    // Initialize error logging
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log('Product Estimator: Plugin initialization started');
+    // Load core classes
+    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-loader.php';
+    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-i18n.php';
+    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-activator.php';
+    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-deactivator.php';
+    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-product-estimator.php';
+
+    // Initialize shortcodes regardless of WooCommerce
+    $shortcodes = new \RuDigital\ProductEstimator\Includes\Frontend\Shortcodes();
+
+    // Initialize WooCommerce integration if WooCommerce is active
+    if (is_woocommerce_active()) {
+        $wc_integration = new \RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration();
+        $product_display = new \RuDigital\ProductEstimator\Includes\Frontend\ProductDisplay();
     }
 
-    try {
-        // Load core classes
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-loader.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-i18n.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-activator.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-deactivator.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-product-estimator.php';
-
-        // Initialize shortcodes regardless of WooCommerce
-        if (!class_exists('RuDigital\ProductEstimator\Includes\Frontend\Shortcodes')) {
-            error_log('Shortcodes class not found!', 0);
-        }
-        $shortcodes = new \RuDigital\ProductEstimator\Includes\Frontend\Shortcodes();
-
-        // Initialize WooCommerce integration if WooCommerce is active
-        if (is_woocommerce_active()) {
-            $wc_integration = new \RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration();
-            $product_display = new \RuDigital\ProductEstimator\Includes\Frontend\ProductDisplay();
-        }
-
-        // Initialize main plugin class
-        $plugin = new \RuDigital\ProductEstimator\Includes\ProductEstimator();
-        $plugin->run();
-    } catch (\Exception $e) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Product Estimator Error: ' . $e->getMessage());
-        }
-    }
+    // Initialize main plugin class
+    $plugin = new \RuDigital\ProductEstimator\Includes\ProductEstimator();
+    $plugin->run();
 }
 
 // Activation/Deactivation hooks
@@ -132,8 +179,10 @@ register_deactivation_hook(__FILE__, array('RuDigital\\ProductEstimator\\Include
 add_action('plugins_loaded', 'RuDigital\\ProductEstimator\\run_product_estimator');
 
 // Add plugin action links
+// Add plugin action links
 add_filter('plugin_action_links_' . plugin_basename(__FILE__), function($links) {
     $settings_link = '<a href="' . admin_url('admin.php?page=product-estimator') . '">' . __('Settings', 'product-estimator') . '</a>';
     array_unshift($links, $settings_link);
     return $links;
 });
+

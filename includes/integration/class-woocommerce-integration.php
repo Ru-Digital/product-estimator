@@ -1,6 +1,4 @@
 <?php
-// File: includes/integration/class-woocommerce-integration.php
-
 namespace RuDigital\ProductEstimator\Includes\Integration;
 
 /**

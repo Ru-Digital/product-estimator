@@ -1,6 +1,8 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes\Frontend;
 
+use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
+
 /**
  * Product Display Integration
  *
@@ -42,9 +44,14 @@ class ProductDisplay {
             return;
         }
 
+        // Only show button if estimator is enabled for this product
+        if (!WoocommerceIntegration::is_estimator_enabled($product->get_id())) {
+            return;
+        }
+
         ?>
         <button type="button"
-                class="single_add_to_estimator_button button alt"
+                class="single_add_to_estimator_button button alt open-estimator-modal"
                 data-product-id="<?php echo esc_attr($product->get_id()); ?>">
             <?php esc_html_e('Add to Estimator', 'product-estimator'); ?>
         </button>
@@ -127,6 +134,9 @@ class ProductDisplay {
      * Enqueue necessary scripts
      */
     public function enqueue_scripts() {
+        if (did_action('product_estimator_scripts_enqueued')) {
+            return;
+        }
         if (is_product()) {
             // Enqueue core estimator scripts
             wp_enqueue_script(

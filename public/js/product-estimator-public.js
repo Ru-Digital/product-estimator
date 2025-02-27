@@ -574,21 +574,23 @@
                 <div class="product-estimator-modal-header">
                     <h2>Product Estimator</h2>
                 </div>
-                <div class="product-estimator-modal-form-container">
-                    <!-- Form will be loaded here via AJAX -->
-                </div>
-                <div class="product-estimator-modal-loading" style="display: none;">
-                    <div class="loading-spinner"></div>
-                    <div class="loading-text">Loading...</div>
+                <div class="product-estimator-modal-content">
+                    <div class="product-estimator-modal-loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Loading...</div>
+                    </div>
+                    <div class="product-estimator-modal-form-container">
+                        <!-- Form will be loaded here via AJAX -->
+                    </div>
                 </div>
             </div>
         </div>
       `);
 
       // Initialize the modal
-      if (typeof ProductEstimatorModal !== 'undefined') {
+      if (typeof window.ProductEstimatorModal === 'function') {
         console.log('Initializing modal for shortcode buttons'); // Debug log
-        window.productEstimatorModalInstance = new ProductEstimatorModal();
+        window.productEstimatorModalInstance = new window.ProductEstimatorModal();
       } else {
         console.log('ProductEstimatorModal class not available, loading modal script'); // Debug log
 
@@ -596,6 +598,12 @@
         $.getScript(productEstimatorPublic.plugin_url + 'public/js/product-estimator-modal.js')
           .done(function() {
             console.log('Modal script loaded successfully'); // Debug log
+            // Wait a moment for the script to execute
+            setTimeout(function() {
+              if (typeof window.ProductEstimatorModal === 'function') {
+                window.productEstimatorModalInstance = new window.ProductEstimatorModal();
+              }
+            }, 200);
           })
           .fail(function() {
             console.error('Failed to load modal script'); // Debug log
@@ -614,10 +622,49 @@
       } else {
         console.warn('Modal instance not available for button click'); // Debug log
 
-        // Fallback: redirect to estimator page
-        if (productEstimatorPublic.estimator_url) {
-          window.location.href = productEstimatorPublic.estimator_url + '?product_id=' + productId;
+        // If the modal instance doesn't exist yet, create it dynamically
+        if (!$('#product-estimator-modal').length) {
+          // Add modal HTML to page if not already present
+          $('body').append(`
+            <div id="product-estimator-modal" class="product-estimator-modal">
+                <div class="product-estimator-modal-overlay"></div>
+                <div class="product-estimator-modal-container">
+                    <button class="product-estimator-modal-close" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <div class="product-estimator-modal-header">
+                        <h2>Product Estimator</h2>
+                    </div>
+                    <div class="product-estimator-modal-content">
+                        <div class="product-estimator-modal-loading" style="display: none;">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text">Loading...</div>
+                        </div>
+                        <div class="product-estimator-modal-form-container">
+                            <!-- Form will be loaded here via AJAX -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+          `);
         }
+
+        $.getScript(productEstimatorPublic.plugin_url + 'public/js/product-estimator-modal.js')
+          .done(function() {
+            // Create the modal instance and open it
+            window.productEstimatorModalInstance = new window.ProductEstimatorModal();
+            setTimeout(function() {
+              window.productEstimatorModalInstance.openModal(productId);
+            }, 100);
+          })
+          .fail(function() {
+            console.error('Failed to load modal script'); // Debug log
+
+            // Fallback: redirect to estimator page
+            if (productEstimatorPublic.estimator_url) {
+              window.location.href = productEstimatorPublic.estimator_url + '?product_id=' + productId;
+            }
+          });
       }
     });
   });

@@ -12,6 +12,68 @@
   bottom: 0;
   z-index: 999999;
   overflow: hidden;
+  color: #cdcdcd;
+}
+
+.product-estimator-modal .room-header {
+  display: flex;
+  align-items: center !important; /* Align text and button vertically */
+  gap: 10px; /* Adds space between the h2 and button */
+  margin-bottom: 10px;
+}
+
+.product-estimator-modal .add-room {
+  background: #00833F;
+  color: white;
+  border-radius: 3px;
+  padding: 0 15px;
+  font-size: 14px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.product-estimator-modal h2{
+  color:  #fff;
+  margin: 0;
+}
+
+
+.product-estimator-modal .accordion {
+  max-width: 500px;
+  margin: auto;
+}
+
+.product-estimator-modal .accordion-item {
+  background-color: white;
+  margin-bottom: 5px;
+  overflow: hidden;
+}
+
+.product-estimator-modal button.accordion-header {
+  width: 100%;
+  padding: 15px;
+  background-color: #00833F;
+  color: white;
+  border-left: none;
+  border-right: none;
+  border-bottom: 1px solid #33373d;
+  border-top: 1px solid #33373d;
+  outline: none;
+  border-radius: 0;
+  cursor: pointer;
+  text-align: left;
+  font-size: 16px;
+  transition: background 0.3s;
+}
+
+.product-estimator-modal button.accordion-header:hover {
+  background-color: #33373d;
+}
+
+.product-estimator-modal .accordion-content {
+  padding: 15px;
+  display: none;
+  background-color: #33373d;
 }
 
 .product-estimator-modal.open {
@@ -36,8 +98,8 @@
   left: 50%;
   transform: translate(-50%, -50%);
   width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
+  max-width: 1200px;
+  max-height: 95vh;
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -88,6 +150,108 @@
   padding: 20px;
   overflow-y: auto;
   flex: 1;
+}
+
+/* New Room Form */
+#room-form-wrapper {
+  font-family: Arial, sans-serif;
+  /*background-color: #f4f4f4;*/
+  display: flex;
+  flex-direction: column;
+  justify-content: left;
+  align-items: start;
+  /*height: 100vh;*/
+
+  text-align: center;
+
+}
+
+#room-form-wrapper h2 {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 24px;
+}
+
+#room-form-wrapper .room-form-container {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 350px;
+  text-align: center;
+  display: none; /* Initially hidden */
+  margin: 10px 0;
+
+}
+
+#room-form-wrapper .form-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+#room-form-wrapper .form-group label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+#room-form-wrapper .inline-group {
+  display: flex;
+  gap: 10px;
+}
+
+#room-form-wrapper .inline-group .form-group {
+  flex: 1;
+}
+
+#room-form-wrapper .inline-group .form-group input[type=number] {
+  max-width: 100% !important;
+}
+
+#room-form-wrapper .form-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+  text-align: center;
+}
+
+#room-form-wrapper .button-group {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+  gap: 10px;
+}
+
+#room-form-wrapper .button-group button {
+  flex: 1;
+  padding: 12px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+  width: 100%;
+}
+
+#room-form-wrapper .submit-btn {
+  background: #00833F;
+  color: white;
+}
+
+#room-form-wrapper .submit-btn:hover {
+  background: #00833F;
+}
+
+#room-form-wrapper .cancel-btn {
+  background: #ccc;
+  color: #333;
+}
+
+#room-form-wrapper .cancel-btn:hover {
+  background: #bbb;
 }
 
 /* Modal Loading Indicator */

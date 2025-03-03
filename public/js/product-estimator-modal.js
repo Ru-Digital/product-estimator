@@ -6,8 +6,13 @@ if (typeof window.ProductEstimatorModal === 'undefined') {
     constructor() {
       this.$modal = jQuery('.product-estimator-modal');
 
+
       this.$overlay = this.$modal.find('.product-estimator-modal-overlay');
       this.$closeButton = this.$modal.find('.product-estimator-modal-close');
+      this.$newRoomButton = this.$modal.find('.add-room');
+      this.$cancelRoomButton = this.$modal.find('.cancel-btn');
+      this.$newRoomFormContainer = this.$modal.find('.room-form-container');
+
 
       this.initEvents();
 
@@ -29,6 +34,14 @@ if (typeof window.ProductEstimatorModal === 'undefined') {
           self.closeModal();
         }
       });
+
+      this.$newRoomButton.on('click', function () {
+        self.showRoomForm();
+      })
+
+      this.$cancelRoomButton.on('click', function (event) {
+        self.hideRoomForm(event);
+      })
     }
 
     showLoading() {
@@ -55,6 +68,15 @@ if (typeof window.ProductEstimatorModal === 'undefined') {
     closeModal() {
       this.$modal.hide();
     }
+
+    showRoomForm() {
+      this.$newRoomFormContainer.slideDown(300);
+    }
+
+    hideRoomForm(event) {
+      event.preventDefault();
+      this.$newRoomFormContainer.slideUp(300);
+    }
   }
 
   // Assign to global scope
@@ -62,6 +84,15 @@ if (typeof window.ProductEstimatorModal === 'undefined') {
 }
 
 jQuery(document).ready(function($) {
+//
+//   $('.add-room').on('click', function(e) {
+//     $(".room-form-container").slideToggle(300); // Slide effect
+//   });
+//
+//   $('.cancel-room').on('click', function(e) {
+//       $(".room-form-container").hide(300); // Hide form when clicking "Cancel"
+//   });
+
   if (!window.productEstimatorModalInstance) {
     window.productEstimatorModalInstance = new ProductEstimatorModal();
   }
@@ -74,5 +105,18 @@ jQuery(document).ready(function($) {
   $(document).on('click', '.product-estimator-modal-close, .product-estimator-modal-overlay', function(e) {
     e.preventDefault();
     window.productEstimatorModalInstance.closeModal();
+  });
+});
+
+document.querySelectorAll(".product-estimator-modal .accordion-header").forEach(button => {
+  button.addEventListener("click", () => {
+    const content = button.nextElementSibling;
+    const isActive = content.style.display === "block";
+
+    document.querySelectorAll(".product-estimator-modal .accordion-content").forEach(item => {
+      item.style.display = "none"; // Hide all sections
+    });
+
+    content.style.display = isActive ? "none" : "block"; // Toggle current section
   });
 });

@@ -8,8 +8,24 @@
             <h2><?php esc_html_e('Product Estimator', 'product-estimator'); ?></h2>
         </div>
         <div class="product-estimator-modal-form-container">
-            <!-- Form will be loaded here via AJAX -->
-            TEST2
+            <h2>My Estimates</h2>
+            <div id="estimates">
+                <div class="estimate">
+                    <div id="rooms">
+                        <div class="room-header">
+                         <h2>Rooms</h2> <button id="add-room-btn" class="add-room">Add New Room</button>
+                        </div>
+                        <div id="room-form-wrapper">
+                            <div  class="room-form-container">
+                                <?php require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-room-form.php'; ?>
+                            </div>
+                        </div>
+                        <div id="room-list-wrapper">
+                            <?php require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-room-list.php'; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="product-estimator-modal-loading" style="display: none;">
             <div class="loading-spinner"></div>

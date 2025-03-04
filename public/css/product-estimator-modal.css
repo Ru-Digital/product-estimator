@@ -52,7 +52,7 @@
 .product-estimator-modal button.accordion-header {
   width: 100%;
   padding: 15px;
-  background-color: #00833F;
+  background-color: #4b4f57;
   color: white;
   border-left: none;
   border-right: none;
@@ -66,10 +66,13 @@
   transition: background 0.3s;
 }
 
+
 .product-estimator-modal button.accordion-header:hover {
   background-color: #33373d;
 }
-
+.product-estimator-modal button.accordion-header .room-name {
+  font-weight: bold;
+}
 .product-estimator-modal .accordion-content {
   padding: 15px;
   display: none;

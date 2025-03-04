@@ -56,10 +56,17 @@ if (typeof window.ProductEstimatorModal === 'undefined') {
       this.showLoading();
     }
 
-    openModal() {
+    openModal(productId = null) {
       this.loadRoomSelection();
       if (this.$modal.length) {
-        this.$modal.show();
+        if (productId) {
+          this.$modal.attr('data-product-id', productId); // Set product ID on modal
+          jQuery('#estimates').hide(); // Hide estimates section
+          jQuery('#room-selection-form-wrapper').show(); // Show room selection form
+        } else {
+          jQuery('#estimates').show(); // Show estimates section
+          jQuery('#room-selection-form-wrapper').hide(); // Hide room selection form
+        }
       } else {
         console.error('ProductEstimatorModal: Cannot open modal.');
       }
@@ -67,6 +74,7 @@ if (typeof window.ProductEstimatorModal === 'undefined') {
 
     closeModal() {
       this.$modal.hide();
+      this.$modal.removeAttr('data-product-id'); // Clear product ID when closing
     }
 
     showRoomForm() {
@@ -98,8 +106,11 @@ jQuery(document).ready(function($) {
   }
 
   $('.open-estimator-modal').on('click', function(e) {
-    e.preventDefault();
-    window.productEstimatorModalInstance.openModal();
+    // Get the product ID from the clicked button
+    let productId = $(this).data('product-id') || null; // Default to null if not present
+
+    // Open the modal and pass the product ID
+    window.productEstimatorModalInstance.openModal(productId);
   });
 
   $(document).on('click', '.product-estimator-modal-close, .product-estimator-modal-overlay', function(e) {

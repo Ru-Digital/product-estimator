@@ -29,6 +29,15 @@ class ProductEstimatorAdmin {
     private $version;
 
     /**
+     * The settings instance
+     *
+     * @since    1.0.0
+     * @access   private
+     * @var      ProductEstimatorSettings    $settings    The settings handler
+     */
+    private $settings;
+
+    /**
      * Initialize the class and set its properties.
      *
      * @since    1.0.0
@@ -39,7 +48,7 @@ class ProductEstimatorAdmin {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
 
-        // Initialize settings
+        // Properly initialize settings
         $this->settings = new ProductEstimatorSettings($plugin_name, $version);
     }
 
@@ -162,6 +171,199 @@ class ProductEstimatorAdmin {
             require $template_path;
         } else {
             wp_die(__('Settings template file not found:', 'product-estimator') . ' ' . $template_path);
+        }
+    }
+
+    /**
+     * Initialize WooCommerce product integration
+     *
+     * @since    1.0.0
+     */
+    public function init_woocommerce_integration() {
+        // Add estimator checkbox to simple products
+        add_action('woocommerce_product_options_pricing', array($this, 'add_estimator_checkbox_to_simple_product'));
+        add_action('woocommerce_process_product_meta', array($this, 'save_estimator_checkbox_for_simple_product'), 10, 1);
+
+        // Add estimator checkbox to product variations
+        add_action('woocommerce_product_after_variable_attributes', array($this, 'add_estimator_checkbox_to_variation'), 10, 3);
+        add_action('woocommerce_save_product_variation', array($this, 'save_estimator_checkbox_for_variation'), 10, 2);
+    }
+
+    /**
+     * Add estimator checkbox to simple products
+     */
+    public function add_estimator_checkbox_to_simple_product() {
+        woocommerce_wp_checkbox(array(
+            'id' => '_enable_product_estimator',
+            'label' => __('Enable Product Estimator', 'product-estimator'),
+            'description' => __('Allow this product to be added to the estimator', 'product-estimator')
+        ));
+    }
+
+    /**
+     * Save estimator checkbox for simple products
+     *
+     * @param int $post_id Product ID
+     */
+    public function save_estimator_checkbox_for_simple_product($post_id) {
+        $enable_estimator = isset($_POST['_enable_product_estimator']) ? 'yes' : 'no';
+        update_post_meta($post_id, '_enable_product_estimator', $enable_estimator);
+    }
+
+    /**
+     * Add estimator checkbox to product variations
+     *
+     * @param int $loop Variation loop index
+     * @param array $variation_data Variation data
+     * @param WP_Post $variation Variation post object
+     */
+    public function add_estimator_checkbox_to_variation($loop, $variation_data, $variation) {
+        woocommerce_wp_checkbox(array(
+            'id' => "_enable_product_estimator_variation_{$loop}",
+            'name' => "_enable_product_estimator_variation[{$loop}]",
+            'label' => __('Enable Product Estimator', 'product-estimator'),
+            'value' => get_post_meta($variation->ID, '_enable_product_estimator', true),
+            'description' => __('Allow this variation to be added to the estimator', 'product-estimator')
+        ));
+    }
+
+    /**
+     * Save estimator checkbox for product variations
+     *
+     * @param int $variation_id Variation ID
+     * @param int $loop Variation loop index
+     */
+    public function save_estimator_checkbox_for_variation($variation_id, $loop) {
+        $enable_estimator = isset($_POST['_enable_product_estimator_variation'][$loop]) ? 'yes' : 'no';
+        update_post_meta($variation_id, '_enable_product_estimator', $enable_estimator);
+    }
+
+    /**
+     * Add custom columns to product list
+     */
+    public function add_estimator_column_to_product_list($columns) {
+        $columns['product_estimator'] = __('Estimator', 'product-estimator');
+        return $columns;
+    }
+
+    /**
+     * Render custom column content
+     *
+     * @param string $column Column name
+     * @param int $post_id Product ID
+     */
+    public function render_estimator_column_content($column, $post_id) {
+        if ($column === 'product_estimator') {
+            $product = wc_get_product($post_id);
+
+            // Check if it's a variable product
+            if ($product->is_type('variable')) {
+                $variations_enabled = false;
+                foreach ($product->get_children() as $variation_id) {
+                    if (get_post_meta($variation_id, '_enable_product_estimator', true) === 'yes') {
+                        $variations_enabled = true;
+                        break;
+                    }
+                }
+
+                echo $variations_enabled
+                    ? '<span class="dashicons dashicons-yes" style="color:green;"></span>'
+                    : '<span class="dashicons dashicons-no" style="color:red;"></span>';
+            } else {
+                // Simple product
+                echo get_post_meta($post_id, '_enable_product_estimator', true) === 'yes'
+                    ? '<span class="dashicons dashicons-yes" style="color:green;"></span>'
+                    : '<span class="dashicons dashicons-no" style="color:red;"></span>';
+            }
+        }
+    }
+
+    /**
+     * Add custom bulk actions for enabling/disabling estimator
+     *
+     * @param array $bulk_actions Existing bulk actions
+     * @return array Modified bulk actions
+     */
+    public function add_estimator_bulk_actions($bulk_actions) {
+        $bulk_actions['enable_product_estimator'] = __('Enable Product Estimator', 'product-estimator');
+        $bulk_actions['disable_product_estimator'] = __('Disable Product Estimator', 'product-estimator');
+        return $bulk_actions;
+    }
+
+    /**
+     * Handle bulk actions for estimator
+     *
+     * @param string $redirect_to Redirect URL
+     * @param string $action Bulk action name
+     * @param array $post_ids Selected product IDs
+     * @return string Modified redirect URL
+     */
+    public function handle_estimator_bulk_actions($redirect_to, $action, $post_ids) {
+        $processed_ids = [];
+
+        switch ($action) {
+            case 'enable_product_estimator':
+                foreach ($post_ids as $post_id) {
+                    $product = wc_get_product($post_id);
+
+                    if ($product->is_type('variable')) {
+                        // Enable for all variations
+                        foreach ($product->get_children() as $variation_id) {
+                            update_post_meta($variation_id, '_enable_product_estimator', 'yes');
+                        }
+                    } else {
+                        update_post_meta($post_id, '_enable_product_estimator', 'yes');
+                    }
+
+                    $processed_ids[] = $post_id;
+                }
+                break;
+
+            case 'disable_product_estimator':
+                foreach ($post_ids as $post_id) {
+                    $product = wc_get_product($post_id);
+
+                    if ($product->is_type('variable')) {
+                        // Disable for all variations
+                        foreach ($product->get_children() as $variation_id) {
+                            update_post_meta($variation_id, '_enable_product_estimator', 'no');
+                        }
+                    } else {
+                        update_post_meta($post_id, '_enable_product_estimator', 'no');
+                    }
+
+                    $processed_ids[] = $post_id;
+                }
+                break;
+        }
+
+        // Add notice for processed products
+        if (!empty($processed_ids)) {
+            $redirect_to = add_query_arg([
+                'post_type' => 'product',
+                'bulk_estimator_processed' => count($processed_ids)
+            ], $redirect_to);
+        }
+
+        return $redirect_to;
+    }
+
+    /**
+     * Display admin notice after bulk action
+     */
+    public function display_bulk_action_notice() {
+        if (isset($_REQUEST['post_type']) &&
+            $_REQUEST['post_type'] === 'product' &&
+            isset($_REQUEST['bulk_estimator_processed'])
+        ) {
+            $count = intval($_REQUEST['bulk_estimator_processed']);
+            printf(
+                '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
+                sprintf(
+                    __('%d products updated with Product Estimator settings.', 'product-estimator'),
+                    $count
+                )
+            );
         }
     }
 }

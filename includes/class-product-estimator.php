@@ -1,175 +1,193 @@
 <?php
-namespace RuDigital\ProductEstimator\Includes;
+namespace RuDigital\ProductEstimator;
 
+use RuDigital\ProductEstimator\Includes\SessionHandler;
+use RuDigital\ProductEstimator\Includes\AjaxHandler;
+use RuDigital\ProductEstimator\Includes\Frontend\Shortcodes;
+use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
 use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
-use RuDigital\ProductEstimator\Includes\Frontend\ProductEstimatorPublic;
-use RuDigital\ProductEstimator\Includes\Frontend\ProductEstimatorModal;
 
 /**
- * The core plugin class.
+ * Main plugin class
  *
- * This is used to define internationalization, admin-specific hooks, and
- * public-facing site hooks.
+ * The core plugin class that initializes all components
  *
  * @since      1.0.0
- * @package    Product_Estimator
- * @subpackage Product_Estimator/includes
+ * @package    RuDigital\ProductEstimator
  */
 class ProductEstimator {
 
     /**
-     * The loader that's responsible for maintaining and registering all hooks that power
-     * the plugin.
+     * Plugin version
      *
-     * @since    1.0.0
-     * @access   protected
-     * @var      Loader    $loader    Maintains and registers all hooks for the plugin.
+     * @var string
      */
-    protected $loader;
+    private $version;
 
     /**
-     * The unique identifier of this plugin.
+     * Plugin name
      *
-     * @since    1.0.0
-     * @access   protected
-     * @var      string    $plugin_name    The string used to uniquely identify this plugin.
+     * @var string
      */
-    protected $plugin_name;
+    private $plugin_name;
 
     /**
-     * The current version of the plugin.
+     * Session handler
      *
-     * @since    1.0.0
-     * @access   protected
-     * @var      string    $version    The current version of the plugin.
+     * @var SessionHandler
      */
-    protected $version;
+    private $session;
 
     /**
-     * Define the core functionality of the plugin.
+     * AJAX handler
      *
-     * @since    1.0.0
+     * @var AjaxHandler
+     */
+    private $ajax_handler;
+
+    /**
+     * WooCommerce integration
+     *
+     * @var WoocommerceIntegration
+     */
+    private $wc_integration;
+
+    /**
+     * Initialize the class
      */
     public function __construct() {
-        if (defined('PRODUCT_ESTIMATOR_VERSION')) {
-            $this->version = PRODUCT_ESTIMATOR_VERSION;
-        } else {
-            $this->version = '1.0.0';
-        }
+        $this->version = defined('PRODUCT_ESTIMATOR_VERSION') ? PRODUCT_ESTIMATOR_VERSION : '1.0.0';
         $this->plugin_name = 'product-estimator';
 
-        $this->load_dependencies();
-        $this->set_locale();
-        $this->define_admin_hooks();
-        $this->define_public_hooks();
-        $this->define_modal_hooks();
+        // Initialize session handler (high priority)
+        $this->session = SessionHandler::getInstance();
+
+        add_action('init', array($this, 'initialize'), 20);
+        add_action('wp_enqueue_scripts', array($this, 'enqueueAssets'));
+        add_action('wp_footer', array($this, 'addModalToFooter'));
     }
 
     /**
-     * Load the required dependencies for this plugin.
-     *
-     * @since    1.0.0
-     * @access   private
+     * Initialize plugin components
      */
-    private function load_dependencies() {
-        $this->loader = new Loader();
+    public function initialize() {
+        // Include the AjaxHandler class file
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-ajax-handler.php';
+
+        // Initialize AJAX handler
+        $this->ajax_handler = new AjaxHandler();
+
+
+        // Initialize shortcodes
+        new Shortcodes($this->plugin_name, $this->version);
+
+        // Initialize WooCommerce integration if WooCommerce is active
+        if ($this->isWooCommerceActive()) {
+            $this->wc_integration = new WoocommerceIntegration();
+        }
+
+        // Initialize admin if in admin area
+        if (is_admin()) {
+            new ProductEstimatorAdmin($this->plugin_name, $this->version);
+        }
     }
 
     /**
-     * Define the locale for this plugin for internationalization.
-     *
-     * @since    1.0.0
-     * @access   private
+     * Enqueue frontend scripts and styles
      */
-    private function set_locale() {
-        $plugin_i18n = new I18n();
-        $this->loader->add_action('plugins_loaded', $plugin_i18n, 'load_plugin_textdomain');
+    public function enqueueAssets() {
+        // Register styles
+        wp_register_style(
+            $this->plugin_name . '-public',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-public.css',
+            array(),
+            $this->version
+        );
+
+        wp_register_style(
+            $this->plugin_name . '-modal',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-modal.css',
+            array(),
+            $this->version
+        );
+
+        // Register scripts
+        wp_register_script(
+            $this->plugin_name . '-modal',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-modal.js',
+            array('jquery'),
+            $this->version,
+            true
+        );
+
+        wp_register_script(
+            $this->plugin_name . '-public',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-public.js',
+            array('jquery', $this->plugin_name . '-modal'),
+            $this->version,
+            true
+        );
+
+        // Localize script
+        wp_localize_script(
+            $this->plugin_name . '-modal',
+            'productEstimatorVars',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('product_estimator_nonce'),
+                'plugin_url' => PRODUCT_ESTIMATOR_PLUGIN_URL,
+                'i18n' => array(
+                    'loading' => __('Loading...', 'product-estimator'),
+                    'error' => __('Error loading content. Please try again.', 'product-estimator'),
+                    'adding' => __('Adding product...', 'product-estimator'),
+                    'addError' => __('Error adding product. Please try again.', 'product-estimator'),
+                    'close' => __('Close', 'product-estimator')
+                )
+            )
+        );
+
+        // Enqueue on product pages or where shortcode is used
+        if (is_product() || $this->isShortcodePresent()) {
+            wp_enqueue_style($this->plugin_name . '-public');
+            wp_enqueue_style($this->plugin_name . '-modal');
+            wp_enqueue_script($this->plugin_name . '-modal');
+            wp_enqueue_script($this->plugin_name . '-public');
+        }
     }
 
     /**
-     * Register all of the hooks related to the admin area functionality
-     * of the plugin.
-     *
-     * @since    1.0.0
-     * @access   private
+     * Add the modal HTML to the footer
      */
-    private function define_admin_hooks() {
-        $plugin_admin = new ProductEstimatorAdmin($this->get_plugin_name(), $this->get_version());
-
-        $this->loader->add_action('admin_enqueue_scripts', $plugin_admin, 'enqueue_styles');
-        $this->loader->add_action('admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts');
-        $this->loader->add_action('admin_menu', $plugin_admin, 'add_plugin_admin_menu');
-
-        // Add settings link to plugins page
-        $plugin_basename = plugin_basename(PRODUCT_ESTIMATOR_PLUGIN_DIR . $this->plugin_name . '.php');
-        $this->loader->add_filter('plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links');
+    public function addModalToFooter() {
+        if (is_product() || $this->isShortcodePresent()) {
+            include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
+        }
     }
 
     /**
-     * Register all of the hooks related to the public-facing functionality
-     * of the plugin.
+     * Check if plugin shortcode is present on current page
      *
-     * @since    1.0.0
-     * @access   private
+     * @return bool Whether shortcode is present
      */
-    private function define_public_hooks() {
-        $plugin_public = new ProductEstimatorPublic($this->get_plugin_name(), $this->get_version());
+    private function isShortcodePresent() {
+        global $post;
 
-        $this->loader->add_action('wp_enqueue_scripts', $plugin_public, 'enqueue_styles');
-        $this->loader->add_action('wp_enqueue_scripts', $plugin_public, 'enqueue_scripts');
+        if (!is_a($post, 'WP_Post')) {
+            return false;
+        }
 
-        // Register shortcodes
-        $plugin_public->register_shortcodes();
+        return (
+            has_shortcode($post->post_content, 'product_estimator') ||
+            has_shortcode($post->post_content, 'estimator_button')
+        );
     }
 
     /**
-     * Register all of the hooks related to the modal functionality
+     * Check if WooCommerce is active
      *
-     * @since    1.0.4
-     * @access   private
+     * @return bool Whether WooCommerce is active
      */
-    private function define_modal_hooks() {
-        $modal = new ProductEstimatorModal($this->get_plugin_name(), $this->get_version());
+    private function isWooCommerceActive() {
+        return class_exists('WooCommerce');
     }
-
-    /**
-     * Run the loader to execute all of the hooks with WordPress.
-     *
-     * @since    1.0.0
-     */
-    public function run() {
-        $this->loader->run();
-    }
-
-    /**
-     * The name of the plugin used to uniquely identify it within the context of
-     * WordPress and to define internationalization functionality.
-     *
-     * @since     1.0.0
-     * @return    string    The name of the plugin.
-     */
-    public function get_plugin_name() {
-        return $this->plugin_name;
-    }
-
-    /**
-     * The reference to the class that orchestrates the hooks with the plugin.
-     *
-     * @since     1.0.0
-     * @return    Loader    Orchestrates the hooks of the plugin.
-     */
-    public function get_loader() {
-        return $this->loader;
-    }
-
-    /**
-     * Retrieve the version number of the plugin.
-     *
-     * @since     1.0.0
-     * @return    string    The version number of the plugin.
-     */
-    public function get_version() {
-        return $this->version;
-    }
-
 }

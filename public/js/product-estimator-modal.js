@@ -242,6 +242,22 @@
           () => this.handleRoomRemoval(estimateId, roomId)
         );
       });
+
+      // Estimate removal
+      $(document).on('click', '.remove-estimate', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent event bubbling
+
+        const $button = $(e.currentTarget);
+        const estimateId = $button.data('estimate-id');
+        const estimateName = $button.closest('.estimate-header').find('.estimate-name').text().trim();
+
+        this.showConfirmationDialog(
+          __('Delete Estimate', 'product-estimator'),
+          __('Are you sure you want to delete this entire estimate?', 'product-estimator') + ' "' + estimateName + '"',
+          () => this.handleEstimateRemoval(estimateId)
+        );
+      });
     }
 
     // Set up accordion functionality - SIMPLIFIED APPROACH
@@ -784,6 +800,38 @@
         },
         error: () => {
           alert('Error removing room. Please try again.');
+        },
+        complete: () => this.hideLoading()
+      });
+    }
+
+    /**
+     * Handle estimate removal
+     *
+     * @param {string} estimateId Estimate ID
+     */
+    handleEstimateRemoval(estimateId) {
+      this.showLoading();
+
+      $.ajax({
+        url: productEstimatorVars.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'remove_estimate',
+          nonce: productEstimatorVars.nonce,
+          estimate_id: estimateId
+        },
+        success: (response) => {
+          if (response.success) {
+            // Refresh estimates list
+            this.refreshEstimatesList();
+          } else {
+            // Show error
+            alert(response.data?.message || 'Error removing estimate');
+          }
+        },
+        error: () => {
+          alert('Error removing estimate. Please try again.');
         },
         complete: () => this.hideLoading()
       });

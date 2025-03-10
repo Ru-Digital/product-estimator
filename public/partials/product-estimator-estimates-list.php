@@ -20,7 +20,14 @@ $estimates = $session_handler->getEstimates();
 <?php if (!empty($estimates)): ?>
     <?php foreach($estimates as $estimate_id => $estimate): ?>
         <div class="estimate-section" data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
-            <h3 class="estimate-name"><?php echo esc_html($estimate['name']); ?></h3>
+            <div class="estimate-header">
+                <h3 class="estimate-name"><?php echo esc_html($estimate['name']); ?></h3>
+                <button class="remove-estimate"
+                        data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
+                        title="<?php esc_attr_e('Delete Estimate', 'product-estimator'); ?>">
+                    <span class="dashicons dashicons-trash"></span>
+                </button>
+            </div>
 
             <div id="rooms">
                 <div class="room-header">

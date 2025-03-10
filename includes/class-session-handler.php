@@ -360,4 +360,39 @@ class SessionHandler {
 
         return true;
     }
+
+    /**
+     * Remove an entire estimate
+     *
+     * @param string|int $estimate_id Estimate ID
+     * @return bool Success
+     */
+    public function removeEstimate($estimate_id)
+    {
+        // Ensure session is started
+        $this->startSession();
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('removeEstimate called');
+            error_log('Estimate ID: ' . print_r($estimate_id, true));
+        }
+
+        // Validate inputs
+        if (!isset($this->session_data['estimates'][$estimate_id])) {
+            error_log("Estimate $estimate_id not found");
+            return false;
+        }
+
+        // Remove the estimate
+        unset($this->session_data['estimates'][$estimate_id]);
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Estimate removed successfully');
+        }
+
+        return true;
+    }
+
 }

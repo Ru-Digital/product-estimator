@@ -646,3 +646,38 @@ body.modal-open {
     color: #f0f0f1;
   }
 }
+
+/* Estimate header with delete button */
+.estimate-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.estimate-header h3 {
+  margin: 0;
+}
+
+.remove-estimate {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.remove-estimate:hover {
+  color: #d63638;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .estimate-header h3 {
+    color: #f0f0f1;
+  }
+}

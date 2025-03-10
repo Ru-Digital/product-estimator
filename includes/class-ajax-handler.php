@@ -46,6 +46,9 @@ class AjaxHandler {
             add_action('wp_ajax_remove_room', array($this, 'removeRoom'));
             add_action('wp_ajax_nopriv_remove_room', array($this, 'removeRoom'));
 
+            add_action('wp_ajax_remove_estimate', array($this, 'removeEstimate'));
+            add_action('wp_ajax_nopriv_remove_estimate', array($this, 'removeEstimate'));
+
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Exception in AjaxHandler constructor: ' . $e->getMessage());
@@ -516,6 +519,51 @@ class AjaxHandler {
 
             wp_send_json_success([
                 'message' => __('Room and all its products removed successfully', 'product-estimator')
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => __('An error occurred while processing your request', 'product-estimator'),
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
+    /**
+     * Remove an entire estimate
+     */
+    public function removeEstimate()
+    {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        if (!isset($_POST['estimate_id'])) {
+            wp_send_json_error(['message' => __('Estimate ID is required', 'product-estimator')]);
+            return;
+        }
+
+        $estimate_id = sanitize_text_field($_POST['estimate_id']);
+
+        try {
+            // Get the estimate from session
+            $estimate = $this->session->getEstimate($estimate_id);
+
+            if (!$estimate) {
+                wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
+                return;
+            }
+
+            // Remove the estimate
+            $removed = $this->session->removeEstimate($estimate_id);
+
+            if (!$removed) {
+                wp_send_json_error(['message' => __('Failed to remove estimate', 'product-estimator')]);
+                return;
+            }
+
+            wp_send_json_success([
+                'message' => __('Estimate removed successfully', 'product-estimator')
             ]);
 
         } catch (\Exception $e) {

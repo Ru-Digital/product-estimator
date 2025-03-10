@@ -40,6 +40,12 @@ class AjaxHandler {
             add_action('wp_ajax_check_estimates_exist', array($this, 'checkEstimatesExist'));
             add_action('wp_ajax_nopriv_check_estimates_exist', array($this, 'checkEstimatesExist'));
 
+            add_action('wp_ajax_remove_product_from_room', array($this, 'removeProductFromRoom'));
+            add_action('wp_ajax_nopriv_remove_product_from_room', array($this, 'removeProductFromRoom'));
+
+            add_action('wp_ajax_remove_room', array($this, 'removeRoom'));
+            add_action('wp_ajax_nopriv_remove_room', array($this, 'removeRoom'));
+
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Exception in AjaxHandler constructor: ' . $e->getMessage());
@@ -409,5 +415,114 @@ class AjaxHandler {
         wp_send_json_success([
             'has_estimates' => $has_estimates
         ]);
+    }
+
+    /**
+     * Remove a product from a room
+     */
+    public function removeProductFromRoom()
+    {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        if (!isset($_POST['estimate_id']) || !isset($_POST['room_id']) || !isset($_POST['product_index'])) {
+            wp_send_json_error(['message' => __('Required parameters missing', 'product-estimator')]);
+            return;
+        }
+
+        $estimate_id = sanitize_text_field($_POST['estimate_id']);
+        $room_id = sanitize_text_field($_POST['room_id']);
+        $product_index = intval($_POST['product_index']);
+
+        try {
+            // Get the estimate from session
+            $estimate = $this->session->getEstimate($estimate_id);
+
+            if (!$estimate) {
+                wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
+                return;
+            }
+
+            // Check if the room exists
+            if (!isset($estimate['rooms'][$room_id])) {
+                wp_send_json_error(['message' => __('Room not found in this estimate', 'product-estimator')]);
+                return;
+            }
+
+            // Check if the product index is valid
+            if (!isset($estimate['rooms'][$room_id]['products'][$product_index])) {
+                wp_send_json_error(['message' => __('Product not found in this room', 'product-estimator')]);
+                return;
+            }
+
+            // Remove the product
+            $removed = $this->session->removeProductFromRoom($estimate_id, $room_id, $product_index);
+
+            if (!$removed) {
+                wp_send_json_error(['message' => __('Failed to remove product from room', 'product-estimator')]);
+                return;
+            }
+
+            wp_send_json_success([
+                'message' => __('Product removed successfully', 'product-estimator')
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => __('An error occurred while processing your request', 'product-estimator'),
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Remove a room from an estimate
+     */
+    public function removeRoom()
+    {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        if (!isset($_POST['estimate_id']) || !isset($_POST['room_id'])) {
+            wp_send_json_error(['message' => __('Required parameters missing', 'product-estimator')]);
+            return;
+        }
+
+        $estimate_id = sanitize_text_field($_POST['estimate_id']);
+        $room_id = sanitize_text_field($_POST['room_id']);
+
+        try {
+            // Get the estimate from session
+            $estimate = $this->session->getEstimate($estimate_id);
+
+            if (!$estimate) {
+                wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
+                return;
+            }
+
+            // Check if the room exists
+            if (!isset($estimate['rooms'][$room_id])) {
+                wp_send_json_error(['message' => __('Room not found in this estimate', 'product-estimator')]);
+                return;
+            }
+
+            // Remove the room
+            $removed = $this->session->removeRoom($estimate_id, $room_id);
+
+            if (!$removed) {
+                wp_send_json_error(['message' => __('Failed to remove room from estimate', 'product-estimator')]);
+                return;
+            }
+
+            wp_send_json_success([
+                'message' => __('Room and all its products removed successfully', 'product-estimator')
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => __('An error occurred while processing your request', 'product-estimator'),
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

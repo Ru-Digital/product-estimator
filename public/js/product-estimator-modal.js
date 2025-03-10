@@ -207,15 +207,53 @@
       $(document).on('keydown', (e) => {
         if (e.key === 'Escape') this.closeModal();
       });
+
+      // Product removal
+      $(document).on('click', '.remove-product', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent triggering accordion
+
+        const $button = $(e.currentTarget);
+        const estimateId = $button.data('estimate-id');
+        const roomId = $button.data('room-id');
+        const productIndex = $button.data('product-index');
+        const productName = $button.closest('.product-item').find('.product-name').text().trim();
+
+        this.showConfirmationDialog(
+          __('Remove Product', 'product-estimator'),
+          __('Are you sure you want to remove this product?', 'product-estimator') + ' "' + productName + '"',
+          () => this.handleProductRemoval(estimateId, roomId, productIndex)
+        );
+      });
+
+      // Room removal
+      $(document).on('click', '.remove-room', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent triggering accordion
+
+        const $button = $(e.currentTarget);
+        const estimateId = $button.data('estimate-id');
+        const roomId = $button.data('room-id');
+        const roomName = $button.closest('.accordion-item').find('.room-name').text().trim();
+
+        this.showConfirmationDialog(
+          __('Remove Room', 'product-estimator'),
+          __('Are you sure you want to remove this room and all its products?', 'product-estimator') + ' "' + roomName + '"',
+          () => this.handleRoomRemoval(estimateId, roomId)
+        );
+      });
     }
 
     // Set up accordion functionality - SIMPLIFIED APPROACH
     setupAccordion() {
-      // Direct click handler for accordion headers
+      // Use event delegation for accordion headers
       $(document).on('click', '.accordion-header', function(e) {
         e.preventDefault();
 
-        const $content = $(this).next('.accordion-content');
+        // Find the content associated with this header
+        // We need to look for the accordion-content that's a sibling of the parent wrapper
+        const $wrapper = $(this).closest('.accordion-header-wrapper');
+        const $content = $wrapper.next('.accordion-content');
 
         // Toggle the active class on the header
         $(this).toggleClass('active');
@@ -623,6 +661,133 @@
       this.$roomSelectionForm.removeAttr('data-estimate-id');
       this.$newRoomForm.removeAttr('data-estimate-id');
     }
+
+    /**
+     * Show confirmation dialog
+     *
+     * @param {string} title Dialog title
+     * @param {string} message Dialog message
+     * @param {Function} onConfirm Function to call on confirmation
+     */
+    showConfirmationDialog(title, message, onConfirm) {
+      // Remove any existing dialogs
+      $('.confirmation-dialog-overlay, .confirmation-dialog').remove();
+
+      // Create overlay
+      const $overlay = $('<div class="confirmation-dialog-overlay"></div>');
+
+      // Create dialog
+      const $dialog = $(`
+        <div class="confirmation-dialog">
+          <h3>${title}</h3>
+          <p>${message}</p>
+          <div class="confirmation-dialog-actions">
+            <button class="confirmation-dialog-cancel">${productEstimatorVars.i18n.cancel || 'Cancel'}</button>
+            <button class="confirmation-dialog-confirm">${productEstimatorVars.i18n.confirm || 'Confirm'}</button>
+          </div>
+        </div>
+      `);
+
+      // Add to body
+      $('body').append($overlay).append($dialog);
+
+      // Handle cancel
+      $('.confirmation-dialog-cancel').on('click', () => {
+        $overlay.remove();
+        $dialog.remove();
+      });
+
+      // Handle confirm
+      $('.confirmation-dialog-confirm').on('click', () => {
+        $overlay.remove();
+        $dialog.remove();
+        onConfirm();
+      });
+
+      // Handle click outside dialog
+      $overlay.on('click', () => {
+        $overlay.remove();
+        $dialog.remove();
+      });
+
+      // Handle escape key
+      $(document).one('keyup', (e) => {
+        if (e.key === 'Escape') {
+          $overlay.remove();
+          $dialog.remove();
+        }
+      });
+    }
+
+    /**
+     * Handle product removal
+     *
+     * @param {string} estimateId Estimate ID
+     * @param {string} roomId Room ID
+     * @param {number} productIndex Product index
+     */
+    handleProductRemoval(estimateId, roomId, productIndex) {
+      this.showLoading();
+
+      $.ajax({
+        url: productEstimatorVars.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'remove_product_from_room',
+          nonce: productEstimatorVars.nonce,
+          estimate_id: estimateId,
+          room_id: roomId,
+          product_index: productIndex
+        },
+        success: (response) => {
+          if (response.success) {
+            // Refresh estimates list
+            this.refreshEstimatesList();
+          } else {
+            // Show error
+            alert(response.data?.message || 'Error removing product');
+          }
+        },
+        error: () => {
+          alert('Error removing product. Please try again.');
+        },
+        complete: () => this.hideLoading()
+      });
+    }
+
+    /**
+     * Handle room removal
+     *
+     * @param {string} estimateId Estimate ID
+     * @param {string} roomId Room ID
+     */
+    handleRoomRemoval(estimateId, roomId) {
+      this.showLoading();
+
+      $.ajax({
+        url: productEstimatorVars.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'remove_room',
+          nonce: productEstimatorVars.nonce,
+          estimate_id: estimateId,
+          room_id: roomId
+        },
+        success: (response) => {
+          if (response.success) {
+            // Refresh estimates list
+            this.refreshEstimatesList();
+          } else {
+            // Show error
+            alert(response.data?.message || 'Error removing room');
+          }
+        },
+        error: () => {
+          alert('Error removing room. Please try again.');
+        },
+        complete: () => this.hideLoading()
+      });
+    }
   }
 
   // Initialize on document ready
@@ -674,6 +839,15 @@
       }
     });
   });
+
+  // Helper function for translations
+  function __(text, domain) {
+    // Check if we have translations available
+    if (productEstimatorVars && productEstimatorVars.i18n && productEstimatorVars.i18n[text]) {
+      return productEstimatorVars.i18n[text];
+    }
+    return text;
+  }
 
   // Expose class globally
   window.ProductEstimatorModal = ProductEstimatorModal;

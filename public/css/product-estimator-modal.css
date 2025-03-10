@@ -158,43 +158,34 @@
   border-bottom: none;
 }
 
-.accordion-header {
+/* Removal buttons styling */
+.accordion-header-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #eee;
+}
+
+.accordion-header-wrapper .accordion-header {
+  flex-grow: 1;
+  text-align: left;
+  background: transparent;
+  border: none;
   width: 100%;
   padding: 15px;
-  background-color: #f9f9f9;
   color: #333;
-  border: none;
-  text-align: left;
   font-size: 1rem;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
   transition: background 0.2s ease;
-  position: relative;
 }
 
-.accordion-header:hover {
+.accordion-header-wrapper .accordion-header:hover {
   background-color: #f0f0f0;
-}
-
-.accordion-header:after {
-  content: '+';
-  font-size: 18px;
-  font-weight: bold;
-  position: absolute;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  transition: transform 0.3s ease;
-}
-
-.accordion-header.active {
-  background-color: #f0f0f0;
-}
-
-.accordion-header.active:after {
-  content: '−';
 }
 
 .accordion-header .room-name {
@@ -204,6 +195,23 @@
 .accordion-header .room-dimensions {
   color: #666;
   font-size: 0.9rem;
+}
+
+.remove-room {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+  margin-right: 10px;
+}
+
+.remove-room:hover {
+  color: #d63638;
 }
 
 .accordion-content {
@@ -234,6 +242,8 @@
   border: 1px solid #eee;
   border-radius: 4px;
   margin-bottom: 10px;
+  position: relative;
+  padding-right: 30px; /* Make room for the remove button */
 }
 
 .product-item:last-child {
@@ -261,6 +271,25 @@
 .product-price {
   color: #00833F;
   font-weight: 600;
+}
+
+.remove-product {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.remove-product:hover {
+  color: #d63638;
 }
 
 /* Form Styles */
@@ -405,6 +434,68 @@
   padding: 15px 0;
 }
 
+/* Confirmation dialog */
+.confirmation-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 20px;
+  border-radius: 4px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  z-index: 1000000;
+  max-width: 400px;
+  width: 90%;
+}
+
+.confirmation-dialog h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.confirmation-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.confirmation-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999999;
+}
+
+.confirmation-dialog-cancel {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.confirmation-dialog-confirm {
+  background: #d63638;
+  color: white;
+}
+
+.confirmation-dialog button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Use dashicons for the remove icons */
+.dashicons-trash,
+.dashicons-no {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
 /* Animations */
 @keyframes spin {
   0% { transform: rotate(0deg); }
@@ -439,6 +530,20 @@ body.modal-open {
   .form-actions {
     flex-direction: column;
   }
+
+  .confirmation-dialog {
+    width: 95%;
+    max-width: 350px;
+  }
+
+  .confirmation-dialog-actions {
+    flex-direction: column;
+  }
+
+  .confirmation-dialog button {
+    width: 100%;
+    margin-bottom: 5px;
+  }
 }
 
 /* Dark Mode Support */
@@ -472,15 +577,11 @@ body.modal-open {
     border-color: #3c3c3c;
   }
 
-  .accordion-header {
+  .accordion-header-wrapper {
     background-color: #1e1e1e;
   }
 
-  .accordion-header:hover {
-    background-color: #333;
-  }
-
-  .accordion-header.active {
+  .accordion-header-wrapper .accordion-header:hover {
     background-color: #333;
   }
 
@@ -532,6 +633,16 @@ body.modal-open {
   }
 
   .loading-text {
+    color: #f0f0f1;
+  }
+
+  .confirmation-dialog {
+    background: #2c3338;
+    color: #f0f0f1;
+  }
+
+  .confirmation-dialog-cancel {
+    background: #3c3c3c;
     color: #f0f0f1;
   }
 }

@@ -271,4 +271,93 @@ class SessionHandler {
             'estimates' => $this->getEstimates()
         ];
     }
+
+    /**
+     * Remove a product from a room
+     *
+     * @param string|int $estimate_id Estimate ID
+     * @param string|int $room_id Room ID
+     * @param int $product_index Index of the product in the products array
+     * @return bool Success
+     */
+    public function removeProductFromRoom($estimate_id, $room_id, $product_index)
+    {
+        // Ensure session is started
+        $this->startSession();
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('removeProductFromRoom called');
+            error_log('Estimate ID: ' . print_r($estimate_id, true));
+            error_log('Room ID: ' . print_r($room_id, true));
+            error_log('Product Index: ' . print_r($product_index, true));
+        }
+
+        // Validate inputs
+        if (!isset($this->session_data['estimates'][$estimate_id])) {
+            error_log("Estimate $estimate_id not found");
+            return false;
+        }
+
+        if (!isset($this->session_data['estimates'][$estimate_id]['rooms'][$room_id])) {
+            error_log("Room $room_id not found in estimate $estimate_id");
+            return false;
+        }
+
+        if (!isset($this->session_data['estimates'][$estimate_id]['rooms'][$room_id]['products'][$product_index])) {
+            error_log("Product index $product_index not found in room $room_id");
+            return false;
+        }
+
+        // Remove the product from the array
+        array_splice($this->session_data['estimates'][$estimate_id]['rooms'][$room_id]['products'], $product_index, 1);
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Product removed successfully');
+        }
+
+        return true;
+    }
+
+    /**
+     * Remove a room from an estimate
+     *
+     * @param string|int $estimate_id Estimate ID
+     * @param string|int $room_id Room ID
+     * @return bool Success
+     */
+    public function removeRoom($estimate_id, $room_id)
+    {
+        // Ensure session is started
+        $this->startSession();
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('removeRoom called');
+            error_log('Estimate ID: ' . print_r($estimate_id, true));
+            error_log('Room ID: ' . print_r($room_id, true));
+        }
+
+        // Validate inputs
+        if (!isset($this->session_data['estimates'][$estimate_id])) {
+            error_log("Estimate $estimate_id not found");
+            return false;
+        }
+
+        if (!isset($this->session_data['estimates'][$estimate_id]['rooms'][$room_id])) {
+            error_log("Room $room_id not found in estimate $estimate_id");
+            return false;
+        }
+
+        // Remove the room
+        unset($this->session_data['estimates'][$estimate_id]['rooms'][$room_id]);
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Room removed successfully');
+        }
+
+        return true;
+    }
 }

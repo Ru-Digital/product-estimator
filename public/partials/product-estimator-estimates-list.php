@@ -33,20 +33,28 @@ $estimates = $session_handler->getEstimates();
                 <?php if (!empty($estimate['rooms'])): ?>
                     <div class="accordion">
                         <?php foreach($estimate['rooms'] as $room_id => $room): ?>
-                            <div class="accordion-item">
-                                <button class="accordion-header">
-                                    <span class="room-name"><?php echo esc_html($room['name']); ?>: </span>
-                                    <span class="room-dimensions">
-                                        <?php echo esc_html($room['width']); ?>m × <?php echo esc_html($room['length']); ?>m
-                                    </span>
-                                </button>
+                            <div class="accordion-item" data-room-id="<?php echo esc_attr($room_id); ?>">
+                                <div class="accordion-header-wrapper">
+                                    <button class="accordion-header">
+                                        <span class="room-name"><?php echo esc_html($room['name']); ?>: </span>
+                                        <span class="room-dimensions">
+                                            <?php echo esc_html($room['width']); ?>m × <?php echo esc_html($room['length']); ?>m
+                                        </span>
+                                    </button>
+                                    <button class="remove-room"
+                                            data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
+                                            data-room-id="<?php echo esc_attr($room_id); ?>"
+                                            title="<?php esc_attr_e('Remove Room', 'product-estimator'); ?>">
+                                        <span class="dashicons dashicons-trash"></span>
+                                    </button>
+                                </div>
                                 <div class="accordion-content">
                                     <?php if (!empty($room['products'])): ?>
                                         <div class="room-products">
                                             <h5><?php esc_html_e('Products', 'product-estimator'); ?></h5>
                                             <ul class="product-list">
-                                                <?php foreach($room['products'] as $product): ?>
-                                                    <li class="product-item">
+                                                <?php foreach($room['products'] as $product_index => $product): ?>
+                                                    <li class="product-item" data-product-index="<?php echo esc_attr($product_index); ?>">
                                                         <?php if (!empty($product['image'])): ?>
                                                             <img src="<?php echo esc_url($product['image']); ?>"
                                                                  alt="<?php echo esc_attr($product['name']); ?>"
@@ -59,6 +67,13 @@ $estimates = $session_handler->getEstimates();
                                                             <span class="product-price">
                                                                 <?php echo wc_price($product['price']); ?>
                                                             </span>
+                                                            <button class="remove-product"
+                                                                    data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
+                                                                    data-room-id="<?php echo esc_attr($room_id); ?>"
+                                                                    data-product-index="<?php echo esc_attr($product_index); ?>"
+                                                                    title="<?php esc_attr_e('Remove Product', 'product-estimator'); ?>">
+                                                                <span class="dashicons dashicons-no"></span>
+                                                            </button>
                                                         </div>
                                                     </li>
                                                 <?php endforeach; ?>

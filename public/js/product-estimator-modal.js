@@ -586,41 +586,27 @@
       if (productId) {
         this.$modal.attr('data-product-id', productId);
 
-        // Check if we have any existing estimates
-        $.ajax({
-          url: productEstimatorVars.ajax_url,
-          type: 'POST',
-          data: {
-            action: 'check_estimates_exist',
-            nonce: productEstimatorVars.nonce
-          },
-          success: (response) => {
-            if (response.success) {
-              if (response.data.has_estimates) {
-                // We have estimates, show the estimate selection form
-                this.$estimatesList.hide();
-                this.$estimateSelection.show();
-                this.$estimateSelectionForm.show();
-              } else {
-                // No estimates, show the new estimate form
-                this.$estimatesList.hide();
-                this.$estimateSelection.hide();
-                this.$newEstimateForm.show();
-              }
-            } else {
-              console.error('Error checking estimates:', response.data?.message);
-            }
-          },
-          error: (xhr, status, error) => {
-            console.error('AJAX error checking estimates:', status, error);
-          },
-          complete: () => {
-            this.hideLoading();
+        // Always refresh the estimates data when opening the modal
+        this.refreshEstimatesData(() => {
+          // Check if we have any existing estimates after refreshing
+          if (this.hasEstimates) {
+            // We have estimates, show the estimate selection form
+            this.$estimatesList.hide();
+            this.$estimateSelection.show();
+            this.$estimateSelectionForm.show();
+          } else {
+            // No estimates, show the new estimate form
+            this.$estimatesList.hide();
+            this.$estimateSelection.hide();
+            this.$newEstimateForm.show();
           }
+          this.hideLoading();
         });
       } else {
         // Just show estimates list
-        this.refreshEstimatesList();
+        this.refreshEstimatesList(() => {
+          this.hideLoading();
+        });
       }
 
       // Show the modal
@@ -628,6 +614,62 @@
       $('body').addClass('modal-open');
     }
 
+    refreshEstimatesData(callback) {
+      $.ajax({
+        url: productEstimatorVars.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'get_estimates_data',
+          nonce: productEstimatorVars.nonce
+        },
+        success: (response) => {
+          if (response.success) {
+            // Update the estimates dropdown
+            const $dropdown = $('#estimate-dropdown');
+            $dropdown.empty();
+            $dropdown.append('<option value="">' +
+              productEstimatorVars.i18n.select_estimate + '</option>');
+
+            this.hasEstimates = false;
+
+            if (response.data.estimates && response.data.estimates.length > 0) {
+              this.hasEstimates = true;
+
+              // Populate the dropdown with estimates
+              response.data.estimates.forEach(estimate => {
+                const roomCount = estimate.rooms ? Object.keys(estimate.rooms).length : 0;
+                const roomText = roomCount === 1 ?
+                  '1 room' : roomCount + ' rooms';
+
+                $dropdown.append(
+                  '<option value="' + estimate.id + '">' +
+                  estimate.name + ' (' + roomText + ')' +
+                  '</option>'
+                );
+              });
+            }
+
+            // Call the callback if provided
+            if (typeof callback === 'function') {
+              callback();
+            }
+          } else {
+            console.error('Failed to get estimates data:', response.data?.message);
+            this.hasEstimates = false;
+            if (typeof callback === 'function') {
+              callback();
+            }
+          }
+        },
+        error: (xhr, status, error) => {
+          console.error('AJAX error when getting estimates data:', status, error);
+          this.hasEstimates = false;
+          if (typeof callback === 'function') {
+            callback();
+          }
+        }
+      });
+    }
     refreshEstimatesList(callback) {
       this.showLoading();
 
@@ -754,6 +796,9 @@
       // Clear any stored data attributes
       this.$roomSelectionForm.removeAttr('data-estimate-id');
       this.$newRoomForm.removeAttr('data-estimate-id');
+
+      // Reset hasEstimates flag
+      this.hasEstimates = false;
 
       // Reset submitting flags on all forms
       $('#estimate-selection-form').data('submitting', false);

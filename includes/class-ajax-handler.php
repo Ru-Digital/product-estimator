@@ -49,6 +49,9 @@ class AjaxHandler {
             add_action('wp_ajax_remove_estimate', array($this, 'removeEstimate'));
             add_action('wp_ajax_nopriv_remove_estimate', array($this, 'removeEstimate'));
 
+            add_action('wp_ajax_get_estimates_data', array($this, 'getEstimatesData'));
+            add_action('wp_ajax_nopriv_get_estimates_data', array($this, 'getEstimatesData'));
+
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Exception in AjaxHandler constructor: ' . $e->getMessage());
@@ -285,6 +288,34 @@ class AjaxHandler {
         wp_send_json_success(array(
             'html' => $html
         ));
+    }
+
+    /**
+     * Get estimates data for dropdown
+     */
+    public function getEstimatesData() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Force session initialization
+        $this->session->startSession();
+
+        // Get all estimates
+        $estimates = $this->session->getEstimates();
+
+        // Format for the frontend
+        $formatted_estimates = [];
+        foreach ($estimates as $id => $estimate) {
+            $formatted_estimates[] = [
+                'id' => $id,
+                'name' => isset($estimate['name']) ? $estimate['name'] : __('Untitled Estimate', 'product-estimator'),
+                'rooms' => isset($estimate['rooms']) ? $estimate['rooms'] : []
+            ];
+        }
+
+        wp_send_json_success([
+            'estimates' => $formatted_estimates
+        ]);
     }
 
     /**

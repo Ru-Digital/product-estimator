@@ -1,4 +1,3 @@
-// Enhanced Product Estimator Modal
 (function($) {
   'use strict';
 
@@ -36,7 +35,7 @@
 
       // Initialize modal
       this.initEvents();
-      this.initAccordion();
+      this.setupAccordion();
 
       console.log('Product Estimator Modal initialized');
     }
@@ -56,7 +55,7 @@
 
         // Prevent submission if no estimate selected
         if (!selectedId) {
-          alert('Please select an estimate');
+          // alert('Please select an estimate');
           return;
         }
 
@@ -140,16 +139,12 @@
               // Show more detailed error if debug info is available
               if (response.data && response.data.debug) {
                 console.error('Debug info:', response.data.debug);
-                alert(`${errorMessage}\n\nDebug info: ${JSON.stringify(response.data.debug, null, 2)}`);
-              } else {
-                alert(errorMessage);
               }
             }
           },
           error: (xhr, status, error) => {
             console.error('AJAX error:', status, error);
             console.error('Response:', xhr.responseText);
-            alert('Error loading rooms. Please try again. Details: ' + error);
           },
           complete: () => {
             this.hideLoading();
@@ -214,20 +209,19 @@
       });
     }
 
-    initAccordion() {
-      // Initialize accordion functionality for rooms
+    // Set up accordion functionality - SIMPLIFIED APPROACH
+    setupAccordion() {
+      // Direct click handler for accordion headers
       $(document).on('click', '.accordion-header', function(e) {
-        e.preventDefault(); // Prevent default behavior
+        e.preventDefault();
 
-        const $header = $(this);
-        const $content = $header.next('.accordion-content');
-        const isVisible = $content.is(':visible');
+        const $content = $(this).next('.accordion-content');
 
-        // First close all accordion contents
-        $('.accordion-content').not($content).slideUp();
+        // Toggle the active class on the header
+        $(this).toggleClass('active');
 
-        // Then toggle the clicked one
-        if (isVisible) {
+        // Simply show/hide the content
+        if ($content.is(':visible')) {
           $content.slideUp();
         } else {
           $content.slideDown();
@@ -254,12 +248,12 @@
       console.log('Room dropdown value:', $('#room-dropdown').val());
 
       if (!roomId) {
-        alert('Please select a room from the dropdown.');
+        // alert('Please select a room from the dropdown.');
         return;
       }
 
       if (!productId) {
-        alert('No product selected.');
+        // alert('No product selected.');
         return;
       }
 
@@ -293,7 +287,7 @@
             // Make an additional request to get the latest session data
             this.refreshEstimatesList(() => {
               // Show success message
-              alert('Product added successfully!');
+              // alert('Product added successfully!');
             });
           } else {
             const errorMessage = response.data?.message || 'Error adding product to room';
@@ -302,16 +296,12 @@
             // Show more detailed error if debug info is available
             if (response.data && response.data.debug) {
               console.error('Debug info:', response.data.debug);
-              alert(`${errorMessage}\n\nDebug info: ${JSON.stringify(response.data.debug, null, 2)}`);
-            } else {
-              alert(errorMessage);
             }
           }
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
           console.error('Response:', xhr.responseText);
-          alert('Error adding product to room. Please try again. Details: ' + error);
         },
         complete: () => this.hideLoading()
       });
@@ -348,7 +338,7 @@
               // Just refresh the estimates list
               this.refreshEstimatesList(() => {
                 // Show success message
-                alert('Estimate created successfully!');
+                // alert('Estimate created successfully!');
 
                 // Hide the form
                 this.$newEstimateForm.hide();
@@ -356,11 +346,11 @@
               });
             }
           } else {
-            alert(response.data?.message || 'Error creating estimate');
+            // alert(response.data?.message || 'Error creating estimate');
           }
         },
         error: () => {
-          alert('Error creating estimate. Please try again.');
+          // alert('Error creating estimate. Please try again.');
         },
         complete: () => this.hideLoading()
       });
@@ -373,7 +363,7 @@
       const productId = this.$modal.attr('data-product-id');
 
       if (!estimateId) {
-        alert('No estimate selected for this room.');
+        // alert('No estimate selected for this room.');
         return;
       }
 
@@ -402,7 +392,7 @@
 
                 // Refresh the estimates list to show the updated data
                 this.refreshEstimatesList(() => {
-                  alert('Room created and product added successfully!');
+                  // alert('Room created and product added successfully!');
                   this.$estimatesList.show();
                 });
               } else {
@@ -424,22 +414,22 @@
                 this.$roomSelectionForm.attr('data-product-id', productId);
 
                 this.$roomSelectionForm.show();
-                alert('Room created. Please select the room to add the product.');
+                // alert('Room created. Please select the room to add the product.');
               }
             } else {
               // Just refresh the estimates list
               this.refreshEstimatesList(() => {
-                alert('Room added successfully!');
+                // alert('Room added successfully!');
                 this.$newRoomForm.hide();
                 this.$estimatesList.show();
               });
             }
           } else {
-            alert(response.data?.message || 'Error adding room');
+            // alert(response.data?.message || 'Error adding room');
           }
         },
         error: () => {
-          alert('Error adding room. Please try again.');
+          // alert('Error adding room. Please try again.');
         },
         complete: () => this.hideLoading()});
     }
@@ -486,11 +476,11 @@
                 this.$newEstimateForm.show();
               }
             } else {
-              alert(response.data?.message || 'Error checking estimates');
+              // alert(response.data?.message || 'Error checking estimates');
             }
           },
           error: () => {
-            alert('Error checking for existing estimates. Please try again.');
+            // alert('Error checking for existing estimates. Please try again.');
           },
           complete: () => {
             this.hideLoading();
@@ -506,7 +496,6 @@
       $('body').addClass('modal-open');
     }
 
-    // Add a method to refresh the estimates list
     refreshEstimatesList(callback) {
       this.showLoading();
 
@@ -526,9 +515,6 @@
             this.$estimateSelection.hide();
             this.$newEstimateForm.hide();
             this.$newRoomForm.hide();
-
-            // Re-initialize accordion
-            this.initAccordion();
           } else {
             console.error('Failed to refresh estimates list:', response.data?.message);
           }
@@ -682,7 +668,7 @@
             })
             .fail(function() {
               console.error('Failed to load modal script');
-              alert('Could not open estimator. Please refresh the page and try again.');
+              // alert('Could not open estimator. Please refresh the page and try again.');
             });
         }
       }

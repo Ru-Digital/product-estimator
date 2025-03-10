@@ -45,9 +45,20 @@
       this.$closeButton.on('click', () => this.closeModal());
       this.$overlay.on('click', () => this.closeModal());
 
+      // Make sure we remove any existing event handlers first to prevent duplicates
+      $(document).off('submit', '#estimate-selection-form');
+      $(document).off('submit', '#room-selection-form');
+      $(document).off('submit', '#new-estimate-form');
+      $(document).off('submit', '#new-room-form');
+
       // Handle estimate selection form submission
       $(document).on('submit', '#estimate-selection-form', (e) => {
         e.preventDefault();
+
+        // Prevent multiple submissions
+        const $form = $(e.currentTarget);
+        if ($form.data('submitting')) return;
+        $form.data('submitting', true);
 
         // Directly extract the value to avoid any jQuery oddities
         const dropdown = document.getElementById('estimate-dropdown');
@@ -55,7 +66,7 @@
 
         // Prevent submission if no estimate selected
         if (!selectedId) {
-          // alert('Please select an estimate');
+          $form.data('submitting', false);
           return;
         }
 
@@ -148,6 +159,7 @@
           },
           complete: () => {
             this.hideLoading();
+            $form.data('submitting', false);
           }
         });
       });
@@ -155,22 +167,55 @@
       // Handle room selection form submission
       $(document).on('submit', '#room-selection-form', (e) => {
         e.preventDefault();
+
+        // Prevent multiple submissions
+        const $form = $(e.currentTarget);
+        if ($form.data('submitting')) return;
+        $form.data('submitting', true);
+
         console.log('Room selection form submitted');
         this.handleRoomSelection();
+
+        // Reset submitting state after a short delay (safeguard)
+        setTimeout(() => {
+          $form.data('submitting', false);
+        }, 1000);
       });
 
       // Handle new estimate form submission
       $(document).on('submit', '#new-estimate-form', (e) => {
         e.preventDefault();
+
+        // Prevent multiple submissions
+        const $form = $(e.currentTarget);
+        if ($form.data('submitting')) return;
+        $form.data('submitting', true);
+
         console.log('New estimate form submitted');
         this.handleNewEstimateSubmission(e);
+
+        // Reset submitting state after a short delay (safeguard)
+        setTimeout(() => {
+          $form.data('submitting', false);
+        }, 1000);
       });
 
       // Handle new room form submission
       $(document).on('submit', '#new-room-form', (e) => {
         e.preventDefault();
+
+        // Prevent multiple submissions
+        const $form = $(e.currentTarget);
+        if ($form.data('submitting')) return;
+        $form.data('submitting', true);
+
         console.log('New room form submitted');
         this.handleNewRoomSubmission(e);
+
+        // Reset submitting state after a short delay (safeguard)
+        setTimeout(() => {
+          $form.data('submitting', false);
+        }, 1000);
       });
 
       // Handle "Add New Room" button click
@@ -263,7 +308,7 @@
     // Set up accordion functionality - SIMPLIFIED APPROACH
     setupAccordion() {
       // Use event delegation for accordion headers
-      $(document).on('click', '.accordion-header', function(e) {
+      $(document).off('click', '.accordion-header').on('click', '.accordion-header', function(e) {
         e.preventDefault();
 
         // Find the content associated with this header
@@ -365,6 +410,9 @@
       const formData = $(e.target).serialize();
       const productId = this.$modal.attr('data-product-id');
 
+      console.log('Submitting new estimate form with product ID:', productId);
+      console.log('Form data:', formData);
+
       this.showLoading();
 
       $.ajax({
@@ -377,36 +425,51 @@
           product_id: productId
         },
         success: (response) => {
+          console.log('AJAX response for new estimate:', response);
+
           if (response.success) {
             // Clear form
             $(e.target)[0].reset();
 
-            if (productId) {
-              // If we have a product ID, we need to show the room form for the new estimate
+            // Handle successful estimate creation
+            const estimateId = response.data.estimate_id;
+            console.log('Estimate created successfully with ID:', estimateId);
+
+            // Force a small delay to ensure DOM updates properly
+            setTimeout(() => {
+              // Hide ALL other views
+              this.$estimatesList.hide();
+              this.$estimateSelection.hide();
+              this.$estimateSelectionForm.hide();
+              this.$roomSelectionForm.hide();
               this.$newEstimateForm.hide();
 
-              // Set the estimate ID for the room form
-              this.$newRoomForm.attr('data-estimate-id', response.data.estimate_id);
-              this.$newRoomForm.show();
-            } else {
-              // Just refresh the estimates list
-              this.refreshEstimatesList(() => {
-                // Show success message
-                // alert('Estimate created successfully!');
+              if (productId) {
+                // Prepare room form
+                this.$newRoomForm.find('form')[0].reset(); // Reset any previous inputs
+                this.$newRoomForm.attr('data-estimate-id', estimateId);
+                this.$newRoomForm.attr('data-product-id', productId);
 
-                // Hide the form
-                this.$newEstimateForm.hide();
-                this.$estimatesList.show();
-              });
-            }
+                // Show room form with delay to ensure DOM is ready
+                this.$newRoomForm.show();
+                console.log('Room form should now be visible');
+              } else {
+                // Just refresh the estimates list
+                this.refreshEstimatesList();
+              }
+            }, 100);
           } else {
-            // alert(response.data?.message || 'Error creating estimate');
+            console.error('Error creating estimate:', response.data?.message);
+            alert('Error creating estimate: ' + (response.data?.message || 'Unknown error'));
           }
         },
-        error: () => {
-          // alert('Error creating estimate. Please try again.');
+        error: (xhr, status, error) => {
+          console.error('AJAX error creating estimate:', xhr.responseText);
+          alert('Error creating estimate. Please try again.');
         },
-        complete: () => this.hideLoading()
+        complete: () => {
+          this.hideLoading();
+        }
       });
     }
 
@@ -416,8 +479,13 @@
         this.$roomSelectionForm.attr('data-estimate-id');
       const productId = this.$modal.attr('data-product-id');
 
+      console.log('Submitting new room with estimate ID:', estimateId);
+      console.log('Product ID:', productId);
+      console.log('Form data:', formData);
+
       if (!estimateId) {
-        // alert('No estimate selected for this room.');
+        console.error('No estimate selected for this room.');
+        alert('No estimate selected for this room.');
         return;
       }
 
@@ -431,61 +499,71 @@
           nonce: productEstimatorVars.nonce,
           form_data: formData,
           estimate_id: estimateId,
-          product_id: productId // Pass the product ID if we're in the flow of adding a product
+          product_id: productId
         },
         success: (response) => {
+          console.log('AJAX response for new room:', response);
+
           if (response.success) {
             // Clear form
             $(e.target)[0].reset();
+            console.log('Room created successfully:', response.data);
 
-            if (productId) {
-              // If we have a product ID and it was successfully added
-              if (response.data.product_added) {
-                // Product was added to the new room
-                this.$newRoomForm.hide();
+            // Force a small delay to ensure DOM updates properly
+            setTimeout(() => {
+              // Hide ALL other views
+              this.$estimatesList.hide();
+              this.$estimateSelection.hide();
+              this.$estimateSelectionForm.hide();
+              this.$roomSelectionForm.hide();
+              this.$newRoomForm.hide();
+              this.$newEstimateForm.hide();
 
-                // Refresh the estimates list to show the updated data
+              if (productId) {
+                if (response.data.product_added) {
+                  // Product was added to the new room - refresh the estimates list
+                  this.refreshEstimatesList(() => {
+                    console.log('Refreshed estimates list after adding product to room');
+                    this.$estimatesList.show();
+                  });
+                } else {
+                  // Room was created but product wasn't added - show room selection
+                  const $roomSelect = $('#room-dropdown');
+                  $roomSelect.empty();
+                  $roomSelect.append(
+                    `<option value="${response.data.room_id}" selected>
+                  ${$('#room-name').val()} (${$('#room-width').val()}m x ${$('#room-length').val()}m)
+                </option>`
+                  );
+
+                  // Set the estimate and product IDs
+                  this.$roomSelectionForm.attr('data-estimate-id', estimateId);
+                  this.$roomSelectionForm.attr('data-product-id', productId);
+
+                  this.$roomSelectionForm.show();
+                  console.log('Room selection form should now be visible with the new room');
+                }
+              } else {
+                // Just refresh the estimates list
                 this.refreshEstimatesList(() => {
-                  // alert('Room created and product added successfully!');
+                  console.log('Refreshed estimates list after adding room');
                   this.$estimatesList.show();
                 });
-              } else {
-                // Room was created but product wasn't added
-                // Show room selection form to manually add the product
-                this.$newRoomForm.hide();
-
-                // Populate room dropdown with the newly created room
-                const $roomSelect = $('#room-dropdown');
-                $roomSelect.empty();
-                $roomSelect.append(
-                  `<option value="${response.data.room_id}">
-                    ${$('#room-name').val()} (${$('#room-width').val()}m x ${$('#room-length').val()}m)
-                  </option>`
-                );
-
-                // Set the estimate and product IDs
-                this.$roomSelectionForm.attr('data-estimate-id', estimateId);
-                this.$roomSelectionForm.attr('data-product-id', productId);
-
-                this.$roomSelectionForm.show();
-                // alert('Room created. Please select the room to add the product.');
               }
-            } else {
-              // Just refresh the estimates list
-              this.refreshEstimatesList(() => {
-                // alert('Room added successfully!');
-                this.$newRoomForm.hide();
-                this.$estimatesList.show();
-              });
-            }
+            }, 100);
           } else {
-            // alert(response.data?.message || 'Error adding room');
+            console.error('Error adding room:', response.data?.message);
+            alert('Error adding room: ' + (response.data?.message || 'Unknown error'));
           }
         },
-        error: () => {
-          // alert('Error adding room. Please try again.');
+        error: (xhr, status, error) => {
+          console.error('AJAX error adding room:', xhr.responseText);
+          alert('Error adding room. Please try again.');
         },
-        complete: () => this.hideLoading()});
+        complete: () => {
+          this.hideLoading();
+        }
+      });
     }
 
     openModal(productId = null) {
@@ -530,11 +608,11 @@
                 this.$newEstimateForm.show();
               }
             } else {
-              // alert(response.data?.message || 'Error checking estimates');
+              console.error('Error checking estimates:', response.data?.message);
             }
           },
-          error: () => {
-            // alert('Error checking for existing estimates. Please try again.');
+          error: (xhr, status, error) => {
+            console.error('AJAX error checking estimates:', status, error);
           },
           complete: () => {
             this.hideLoading();
@@ -573,8 +651,8 @@
             console.error('Failed to refresh estimates list:', response.data?.message);
           }
         },
-        error: () => {
-          console.error('AJAX error when refreshing estimates list');
+        error: (xhr, status, error) => {
+          console.error('AJAX error when refreshing estimates list:', status, error);
         },
         complete: () => {
           this.hideLoading();
@@ -676,6 +754,12 @@
       // Clear any stored data attributes
       this.$roomSelectionForm.removeAttr('data-estimate-id');
       this.$newRoomForm.removeAttr('data-estimate-id');
+
+      // Reset submitting flags on all forms
+      $('#estimate-selection-form').data('submitting', false);
+      $('#room-selection-form').data('submitting', false);
+      $('#new-estimate-form').data('submitting', false);
+      $('#new-room-form').data('submitting', false);
     }
 
     /**
@@ -761,11 +845,11 @@
             this.refreshEstimatesList();
           } else {
             // Show error
-            alert(response.data?.message || 'Error removing product');
+            console.error('Error removing product:', response.data?.message);
           }
         },
-        error: () => {
-          alert('Error removing product. Please try again.');
+        error: (xhr, status, error) => {
+          console.error('AJAX error removing product:', status, error);
         },
         complete: () => this.hideLoading()
       });
@@ -795,11 +879,11 @@
             this.refreshEstimatesList();
           } else {
             // Show error
-            alert(response.data?.message || 'Error removing room');
+            console.error('Error removing room:', response.data?.message);
           }
         },
-        error: () => {
-          alert('Error removing room. Please try again.');
+        error: (xhr, status, error) => {
+          console.error('AJAX error removing room:', status, error);
         },
         complete: () => this.hideLoading()
       });
@@ -827,11 +911,11 @@
             this.refreshEstimatesList();
           } else {
             // Show error
-            alert(response.data?.message || 'Error removing estimate');
+            console.error('Error removing estimate:', response.data?.message);
           }
         },
-        error: () => {
-          alert('Error removing estimate. Please try again.');
+        error: (xhr, status, error) => {
+          console.error('AJAX error removing estimate:', status, error);
         },
         complete: () => this.hideLoading()
       });
@@ -846,11 +930,16 @@
       return;
     }
 
-    // Ensure only one modal instance exists
-    if (!window.productEstimatorModalInstance) {
-      console.log('Creating new ProductEstimatorModal instance');
-      window.productEstimatorModalInstance = new ProductEstimatorModal();
+    // Clean up any existing instance
+    if (window.productEstimatorModalInstance) {
+      console.log('Cleaning up existing ProductEstimatorModal instance');
+      delete window.productEstimatorModalInstance;
+      window.productEstimatorModalInitialized = false;
     }
+
+    // Create a new modal instance
+    console.log('Creating new ProductEstimatorModal instance');
+    window.productEstimatorModalInstance = new ProductEstimatorModal();
 
     // Unbind any existing click handlers to prevent duplicates
     $(document).off('click', '.open-estimator-modal, .single_add_to_estimator_button, .product-estimator-button');

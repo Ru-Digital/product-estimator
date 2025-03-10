@@ -308,25 +308,39 @@ class AjaxHandler {
             return;
         }
 
-        // Create new estimate data
-        $estimate_data = [
-            'name' => sanitize_text_field($form_data['estimate_name']),
-            'created_at' => current_time('mysql'),
-            'rooms' => []
-        ];
+        try {
+            // Force session initialization
+            $this->session->startSession();
 
-        // Add estimate to session
-        $estimate_id = $this->session->addEstimate($estimate_data);
+            // Create new estimate data
+            $estimate_data = [
+                'name' => sanitize_text_field($form_data['estimate_name']),
+                'created_at' => current_time('mysql'),
+                'rooms' => []
+            ];
 
-        if (!$estimate_id) {
-            wp_send_json_error(['message' => __('Failed to create estimate', 'product-estimator')]);
-            return;
+            // Add estimate to session
+            $estimate_id = $this->session->addEstimate($estimate_data);
+
+            if (!$estimate_id && $estimate_id !== '0') { // Check for both false and non-zero values
+                wp_send_json_error(['message' => __('Failed to create estimate', 'product-estimator')]);
+                return;
+            }
+
+            // Debug log
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Estimate created with ID: ' . print_r($estimate_id, true));
+                error_log('Current session estimates: ' . print_r($this->session->getEstimates(), true));
+            }
+
+            wp_send_json_success([
+                'message' => __('Estimate created successfully', 'product-estimator'),
+                'estimate_id' => $estimate_id
+            ]);
+
+        } catch (Exception $e) {
+            wp_send_json_error(['message' => $e->getMessage()]);
         }
-
-        wp_send_json_success([
-            'message' => __('Estimate created successfully', 'product-estimator'),
-            'estimate_id' => $estimate_id
-        ]);
     }
 
     /**
@@ -363,47 +377,85 @@ class AjaxHandler {
             return;
         }
 
-        // Create room data
-        $room_data = [
-            'name' => sanitize_text_field($form_data['room_name']),
-            'width' => floatval($form_data['room_width']),
-            'length' => floatval($form_data['room_length']),
-            'products' => []
-        ];
+        try {
+            // Force session initialization
+            $this->session->startSession();
 
-        // Add room to estimate
-        $room_id = $this->session->addRoom($estimate_id, $room_data);
-
-        if (!$room_id) {
-            wp_send_json_error(['message' => __('Failed to add room to estimate', 'product-estimator')]);
-            return;
-        }
-
-        // If a product ID was provided, add it to the room
-        $product_added = false;
-        if ($product_id > 0) {
-            // Get product data
-            $product = wc_get_product($product_id);
-            if ($product) {
-                // Prepare product data
-                $product_data = [
-                    'id' => $product_id,
-                    'name' => $product->get_name(),
-                    'price' => $product->get_price(),
-                    'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
-                ];
-
-                // Add product to room
-                $product_added = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
+            // Debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Adding room to estimate ID: ' . $estimate_id);
+                error_log('Current estimates before room addition: ' . print_r($this->session->getEstimates(), true));
             }
-        }
 
-        wp_send_json_success([
-            'message' => __('Room added successfully', 'product-estimator'),
-            'estimate_id' => $estimate_id,
-            'room_id' => $room_id,
-            'product_added' => $product_added
-        ]);
+            // Create room data
+            $room_data = [
+                'name' => sanitize_text_field($form_data['room_name']),
+                'width' => floatval($form_data['room_width']),
+                'length' => floatval($form_data['room_length']),
+                'products' => []
+            ];
+
+            // Add room to estimate
+            $room_id = $this->session->addRoom($estimate_id, $room_data);
+
+            if (!$room_id && $room_id !== '0') { // Check for both false and non-zero string values
+                wp_send_json_error([
+                    'message' => __('Failed to add room to estimate', 'product-estimator'),
+                    'debug' => [
+                        'estimate_id' => $estimate_id,
+                        'room_data' => $room_data
+                    ]
+                ]);
+                return;
+            }
+
+            // Debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Room added with ID: ' . print_r($room_id, true));
+                error_log('Current estimates after room addition: ' . print_r($this->session->getEstimates(), true));
+            }
+
+            // If a product ID was provided, add it to the room
+            $product_added = false;
+            if ($product_id > 0) {
+                // Get product data
+                $product = wc_get_product($product_id);
+                if ($product) {
+                    // Prepare product data
+                    $product_data = [
+                        'id' => $product_id,
+                        'name' => $product->get_name(),
+                        'price' => $product->get_price(),
+                        'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
+                    ];
+
+                    // Add product to room
+                    $product_added = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
+
+                    // Debug logging
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Product added to room: ' . ($product_added ? 'true' : 'false'));
+                        if (!$product_added) {
+                            error_log('Failed to add product to room. Estimate ID: ' . $estimate_id . ', Room ID: ' . $room_id);
+                        }
+                    }
+                }
+            }
+
+            wp_send_json_success([
+                'message' => __('Room added successfully', 'product-estimator'),
+                'estimate_id' => $estimate_id,
+                'room_id' => $room_id,
+                'product_added' => $product_added
+            ]);
+
+        } catch (Exception $e) {
+            error_log('Exception in addNewRoom: ' . $e->getMessage());
+            wp_send_json_error([
+                'message' => __('An error occurred while processing your request', 'product-estimator'),
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**

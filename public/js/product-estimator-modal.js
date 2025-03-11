@@ -435,6 +435,9 @@
             const estimateId = response.data.estimate_id;
             console.log('Estimate created successfully with ID:', estimateId);
 
+            // Update our local state to reflect that we now have estimates
+            this.hasEstimates = true;
+
             // Force a small delay to ensure DOM updates properly
             setTimeout(() => {
               // Hide ALL other views
@@ -586,21 +589,24 @@
       if (productId) {
         this.$modal.attr('data-product-id', productId);
 
-        // Always refresh the estimates data when opening the modal
-        this.refreshEstimatesData(() => {
-          // Check if we have any existing estimates after refreshing
-          if (this.hasEstimates) {
-            // We have estimates, show the estimate selection form
-            this.$estimatesList.hide();
-            this.$estimateSelection.show();
-            this.$estimateSelectionForm.show();
-          } else {
-            // No estimates, show the new estimate form
-            this.$estimatesList.hide();
-            this.$estimateSelection.hide();
-            this.$newEstimateForm.show();
-          }
-          this.hideLoading();
+        // First check if there are any estimates in the session
+        this.checkEstimatesExist((hasEstimates) => {
+          // Always refresh the estimates data when opening the modal
+          this.refreshEstimatesData(() => {
+            // Check if we have any existing estimates after refreshing
+            if (this.hasEstimates) {
+              // We have estimates, show the estimate selection form
+              this.$estimatesList.hide();
+              this.$estimateSelection.show();
+              this.$estimateSelectionForm.show();
+            } else {
+              // No estimates, show the new estimate form
+              this.$estimatesList.hide();
+              this.$estimateSelection.hide();
+              this.$newEstimateForm.show();
+            }
+            this.hideLoading();
+          });
         });
       } else {
         // Just show estimates list
@@ -614,6 +620,44 @@
       $('body').addClass('modal-open');
     }
 
+    /**
+     * Check if any estimates exist in the session
+     * @param {Function} callback - Callback function with boolean result
+     */
+    checkEstimatesExist(callback) {
+      $.ajax({
+        url: productEstimatorVars.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'check_estimates_exist',
+          nonce: productEstimatorVars.nonce
+        },
+        success: (response) => {
+          if (response.success) {
+            // Update our local state
+            this.hasEstimates = response.data.has_estimates;
+
+            // Call the callback with the result
+            if (typeof callback === 'function') {
+              callback(response.data.has_estimates);
+            }
+          } else {
+            console.error('Failed to check if estimates exist:', response.data?.message);
+            this.hasEstimates = false;
+            if (typeof callback === 'function') {
+              callback(false);
+            }
+          }
+        },
+        error: (xhr, status, error) => {
+          console.error('AJAX error when checking estimates:', status, error);
+          this.hasEstimates = false;
+          if (typeof callback === 'function') {
+            callback(false);
+          }
+        }
+      });
+    }
     refreshEstimatesData(callback) {
       $.ajax({
         url: productEstimatorVars.ajax_url,
@@ -628,7 +672,7 @@
             const $dropdown = $('#estimate-dropdown');
             $dropdown.empty();
             $dropdown.append('<option value="">' +
-              productEstimatorVars.i18n.select_estimate + '</option>');
+              (productEstimatorVars.i18n.select_estimate || '-- Select an Estimate --') + '</option>');
 
             this.hasEstimates = false;
 
@@ -797,8 +841,8 @@
       this.$roomSelectionForm.removeAttr('data-estimate-id');
       this.$newRoomForm.removeAttr('data-estimate-id');
 
-      // Reset hasEstimates flag
-      this.hasEstimates = false;
+      // Note: We're not resetting hasEstimates here anymore
+      // We'll determine it from the AJAX calls
 
       // Reset submitting flags on all forms
       $('#estimate-selection-form').data('submitting', false);

@@ -3,6 +3,7 @@ namespace RuDigital\ProductEstimator;
 
 use RuDigital\ProductEstimator\Includes\SessionHandler;
 use RuDigital\ProductEstimator\Includes\AjaxHandler;
+use RuDigital\ProductEstimator\Includes\Frontend\ScriptHandler;
 use RuDigital\ProductEstimator\Includes\Frontend\Shortcodes;
 use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
 use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
@@ -77,6 +78,8 @@ class ProductEstimator {
         // Initialize AJAX handler
         $this->ajax_handler = new AjaxHandler();
 
+        // Initialize script handler for variation support
+        new ScriptHandler($this->plugin_name, $this->version);
 
         // Initialize shortcodes
         new Shortcodes($this->plugin_name, $this->version);

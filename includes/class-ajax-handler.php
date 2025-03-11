@@ -52,6 +52,9 @@ class AjaxHandler {
             add_action('wp_ajax_get_estimates_data', array($this, 'getEstimatesData'));
             add_action('wp_ajax_nopriv_get_estimates_data', array($this, 'getEstimatesData'));
 
+            add_action('wp_ajax_get_variation_estimator', array($this, 'getVariationEstimator'));
+            add_action('wp_ajax_nopriv_get_variation_estimator', array($this, 'getVariationEstimator'));
+
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Exception in AjaxHandler constructor: ' . $e->getMessage());
@@ -59,6 +62,66 @@ class AjaxHandler {
             }
         }
     }
+/**
+ * * Get variation estimator content via AJAX
+ * */
+
+public function getVariationEstimator() {
+    // Verify nonce
+    check_ajax_referer('product_estimator_nonce', 'nonce');
+
+    // Get variation ID
+    $variation_id = isset($_POST['variation_id']) ? intval($_POST['variation_id']) : 0;
+
+    if (!$variation_id) {
+        wp_send_json_error([
+            'message' => __('Variation ID is required', 'product-estimator')
+        ]);
+        return;
+    }
+
+    try {
+        // Get variation
+        $variation = wc_get_product($variation_id);
+
+        if (!$variation || !$variation->is_type('variation')) {
+            throw new \Exception(__('Invalid variation', 'product-estimator'));
+        }
+
+        // Check if estimator is enabled for this variation
+        if (!\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation_id)) {
+            throw new \Exception(__('Estimator not enabled for this variation', 'product-estimator'));
+        }
+
+        // Get parent product ID
+        $parent_id = $variation->get_parent_id();
+
+        // Start output buffer to capture estimator HTML
+        ob_start();
+
+        // Include the estimator partial with variation context
+        $atts = [
+            'title' => __('Product Estimate', 'product-estimator'),
+            'button_text' => __('Calculate', 'product-estimator'),
+            'product_id' => $variation_id,
+            'parent_id' => $parent_id,
+            'is_variation' => true
+        ];
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-display.php';
+
+        // Get HTML
+        $html = ob_get_clean();
+
+        wp_send_json_success([
+            'html' => $html
+        ]);
+
+    } catch (\Exception $e) {
+        wp_send_json_error([
+            'message' => $e->getMessage()
+        ]);
+    }
+}
 
     /**
      * Get rooms for a specific estimate

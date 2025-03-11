@@ -105,12 +105,14 @@
 
 .estimate-section {
   margin-bottom: 30px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 30px;
 }
 
 .estimate-name {
-  font-size: 1.2rem;
+  font-size: 16px;
   margin-bottom: 15px;
-  color: #333;
+  color: #00833F;
 }
 
 /* Room Header */
@@ -569,6 +571,7 @@ body.modal-open {
     color: #fff;
   }
 
+
   .accordion {
     border-color: #3c3c3c;
   }
@@ -678,6 +681,6 @@ body.modal-open {
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .estimate-header h3 {
-    color: #f0f0f1;
+    color: #00833F;
   }
 }

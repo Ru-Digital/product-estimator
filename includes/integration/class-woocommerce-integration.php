@@ -32,6 +32,9 @@ class WoocommerceIntegration {
 
         // Add shortcode for estimator button
         add_shortcode('estimator_button', array($this, 'estimatorButtonShortcode'));
+
+         add_action('wp_footer', array($this, 'addVariationEstimatorData'), 10);
+
     }
 
     /**
@@ -196,5 +199,50 @@ class WoocommerceIntegration {
         return get_post_meta($product_id, '_enable_estimator', true) === 'yes';
     }
 
+
+    public function addVariationEstimatorData() {
+        // Only on single product pages
+        if (!is_product()) {
+            return;
+        }
+
+        global $product;
+
+        // Only for variable products
+        if (!$product || !$product->is_type('variable')) {
+            return;
+        }
+
+        // Get available variations
+        $available_variations = $product->get_available_variations();
+        $variation_data = [];
+
+        // Prepare variation data for JS
+        foreach ($available_variations as $variation) {
+            $variation_id = $variation['variation_id'];
+            $enable_estimator = get_post_meta($variation_id, '_enable_estimator', true);
+
+            $variation_data[$variation_id] = [
+                'enable_estimator' => $enable_estimator
+            ];
+        }
+
+        // Add inline script with variation data
+        if (!empty($variation_data)) {
+            echo '<script type="text/javascript">
+            var product_estimator_variations = ' . wp_json_encode($variation_data) . ';
+
+            // Enhance the variation found event
+            jQuery(document).ready(function($) {
+                $("form.variations_form").on("found_variation", function(event, variation) {
+                    if (variation && variation.variation_id && product_estimator_variations[variation.variation_id]) {
+                        // Add estimator data to the variation object
+                        variation.enable_estimator = product_estimator_variations[variation.variation_id].enable_estimator;
+                    }
+                });
+            });
+        </script>';
+        }
+    }
 
 }

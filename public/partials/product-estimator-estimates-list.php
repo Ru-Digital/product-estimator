@@ -15,7 +15,6 @@ if (!defined('WPINC')) {
 $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
 $estimates = $session_handler->getEstimates();
 ?>
-    <h2><?php esc_html_e('My Estimates', 'product-estimator'); ?></h2>
 
 <?php if (!empty($estimates)): ?>
     <?php foreach($estimates as $estimate_id => $estimate): ?>

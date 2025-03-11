@@ -123,7 +123,7 @@
 
 .room-header h4 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 15px;
   color: #333;
 }
 
@@ -175,8 +175,8 @@
   border: none;
   width: 100%;
   padding: 15px;
-  color: #333;
-  font-size: 1rem;
+  color: #fff;
+  font-size: 15px;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
@@ -194,7 +194,7 @@
 
 .accordion-header .room-dimensions {
   color: #666;
-  font-size: 0.9rem;
+  font-size: 15px;
 }
 
 .remove-room {
@@ -566,7 +566,7 @@ body.modal-open {
   .form-group label,
   .product-name,
   .accordion-header {
-    color: #f0f0f1;
+    color: #fff;
   }
 
   .accordion {

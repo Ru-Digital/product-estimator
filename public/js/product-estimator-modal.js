@@ -37,9 +37,25 @@
       this.initEvents();
       this.setupAccordion();
 
+      // Initialize menu link handler
+      this.initMenuLinkHandler();
+
       console.log('Product Estimator Modal initialized');
     }
 
+    // Add a dedicated handler for the menu link
+    initMenuLinkHandler() {
+      // Target specifically the menu item with product-estimator-menu-item class
+      $(document).on('click', '.product-estimator-menu-item a', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        console.log('Estimator menu link clicked - forcing list view');
+
+        // Force open the modal in list view mode regardless of page context
+        this.openModal(null, true);
+      });
+    }
     initEvents() {
       // Modal control events
       this.$closeButton.on('click', () => this.closeModal());
@@ -569,24 +585,28 @@
       });
     }
 
-    openModal(productId = null) {
+    // Modified openModal function with forceListView parameter
+    openModal(productId = null, forceListView = false) {
       // Check if modal is already open
       if (this.$modal.is(':visible')) {
         console.log('Modal already open, just updating product ID');
-        if (productId) {
+        if (productId && !forceListView) {
           this.$modal.attr('data-product-id', productId);
+        } else if (forceListView) {
+          // Clear product ID if we're forcing list view
+          this.$modal.removeAttr('data-product-id');
         }
         return;
       }
 
       this.showLoading();
-      console.log('Opening modal with product ID:', productId);
+      console.log('Opening modal with product ID:', productId, 'Force list view:', forceListView);
 
       // Reset modal state
       this.resetModalState();
 
-      // If we have a product ID, we're in "add to estimator" mode
-      if (productId) {
+      // If we have a product ID and not forcing list view, we're in "add to estimator" mode
+      if (productId && !forceListView) {
         this.$modal.attr('data-product-id', productId);
 
         // First check if there are any estimates in the session
@@ -609,7 +629,7 @@
           });
         });
       } else {
-        // Just show estimates list
+        // Just show estimates list (for menu link or shortcode without product ID)
         this.refreshEstimatesList(() => {
           this.hideLoading();
         });
@@ -1012,6 +1032,7 @@
   }
 
   // Initialize on document ready
+// Initialize on document ready
   $(document).ready(function() {
     // Check if modal HTML exists in the DOM
     if ($('#product-estimator-modal').length === 0) {
@@ -1033,18 +1054,19 @@
     // Unbind any existing click handlers to prevent duplicates
     $(document).off('click', '.open-estimator-modal, .single_add_to_estimator_button, .product-estimator-button');
 
-    // Bind click event to all modal trigger buttons
-    $(document).on('click', '.open-estimator-modal, .single_add_to_estimator_button, .product-estimator-button', function(e) {
+    // Bind click event to product-specific buttons (not the menu link)
+    $(document).on('click', '.open-estimator-modal, .single_add_to_estimator_button, .product-estimator-button:not(.product-estimator-menu-item a)', function(e) {
       e.preventDefault();
 
       // Prevent event bubbling
       e.stopPropagation();
 
       const productId = $(this).data('product-id') || null;
-      console.log('Button clicked with product ID:', productId);
+      console.log('Product button clicked with product ID:', productId);
 
       if (window.productEstimatorModalInstance) {
-        window.productEstimatorModalInstance.openModal(productId);
+        // Here we pass false for forceListView since these are product buttons
+        window.productEstimatorModalInstance.openModal(productId, false);
       } else {
         console.error('Modal instance not initialized');
 
@@ -1055,7 +1077,7 @@
             .done(function() {
               console.log('Modal script loaded successfully');
               window.productEstimatorModalInstance = new ProductEstimatorModal();
-              window.productEstimatorModalInstance.openModal(productId);
+              window.productEstimatorModalInstance.openModal(productId, false);
             })
             .fail(function() {
               console.error('Failed to load modal script');

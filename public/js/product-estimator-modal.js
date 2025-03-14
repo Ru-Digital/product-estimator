@@ -586,41 +586,49 @@
     }
 
     // Modified openModal function with forceListView parameter
+    /**
+     * Enhanced openModal method for ProductEstimatorModal class
+     *
+     * @param {number|string|null} productId - Product ID or null for list view
+     * @param {boolean} forceListView - Whether to force showing the list view
+     */
     openModal(productId = null, forceListView = false) {
-      // Check if modal is already open
-      if (this.$modal.is(':visible')) {
-        console.log('Modal already open, just updating product ID');
-        if (productId && !forceListView) {
-          this.$modal.attr('data-product-id', productId);
-        } else if (forceListView) {
-          // Clear product ID if we're forcing list view
-          this.$modal.removeAttr('data-product-id');
-        }
-        return;
-      }
+      console.log('Opening modal with productId:', productId, 'forceListView:', forceListView);
 
-      this.showLoading();
-      console.log('Opening modal with product ID:', productId, 'Force list view:', forceListView);
-
-      // Reset modal state
+      // Reset any previous modal state
       this.resetModalState();
 
-      // If we have a product ID and not forcing list view, we're in "add to estimator" mode
+      // Set product ID if provided (only when not forcing list view)
       if (productId && !forceListView) {
         this.$modal.attr('data-product-id', productId);
+      } else {
+        this.$modal.removeAttr('data-product-id');
+      }
 
-        // First check if there are any estimates in the session
+      // Always start with loader visible
+      this.showLoading();
+
+      // Make sure modal is visible with explicit CSS
+      this.$modal.css({
+        'display': 'block',
+        'visibility': 'visible',
+        'opacity': '1',
+        'z-index': '999999'
+      });
+
+      // Add modal-open class to body
+      $('body').addClass('modal-open');
+
+      // Prepare content based on context
+      if (productId && !forceListView) {
+        // Product-specific mode
         this.checkEstimatesExist((hasEstimates) => {
-          // Always refresh the estimates data when opening the modal
           this.refreshEstimatesData(() => {
-            // Check if we have any existing estimates after refreshing
             if (this.hasEstimates) {
-              // We have estimates, show the estimate selection form
               this.$estimatesList.hide();
               this.$estimateSelection.show();
               this.$estimateSelectionForm.show();
             } else {
-              // No estimates, show the new estimate form
               this.$estimatesList.hide();
               this.$estimateSelection.hide();
               this.$newEstimateForm.show();
@@ -629,15 +637,11 @@
           });
         });
       } else {
-        // Just show estimates list (for menu link or shortcode without product ID)
+        // List view mode
         this.refreshEstimatesList(() => {
           this.hideLoading();
         });
       }
-
-      // Show the modal
-      this.$modal.show();
-      $('body').addClass('modal-open');
     }
 
     /**
@@ -1031,15 +1035,8 @@
     }
   }
 
-  // Initialize on document ready
 // Initialize on document ready
   $(document).ready(function() {
-    // Check if modal HTML exists in the DOM
-    if ($('#product-estimator-modal').length === 0) {
-      console.log('Modal HTML not found in the DOM');
-      return;
-    }
-
     // Clean up any existing instance
     if (window.productEstimatorModalInstance) {
       console.log('Cleaning up existing ProductEstimatorModal instance');
@@ -1047,43 +1044,36 @@
       window.productEstimatorModalInitialized = false;
     }
 
-    // Create a new modal instance
+    // Always create a new modal instance
     console.log('Creating new ProductEstimatorModal instance');
     window.productEstimatorModalInstance = new ProductEstimatorModal();
 
     // Unbind any existing click handlers to prevent duplicates
     $(document).off('click', '.open-estimator-modal, .single_add_to_estimator_button, .product-estimator-button');
 
-    // Bind click event to product-specific buttons (not the menu link)
-    $(document).on('click', '.open-estimator-modal, .single_add_to_estimator_button, .product-estimator-button:not(.product-estimator-menu-item a)', function(e) {
+    // Setup product-specific buttons (not menu links)
+    $(document).on('click', '.open-estimator-modal, .single_add_to_estimator_button, .product-estimator-button:not(.product-estimator-menu-item)', function(e) {
       e.preventDefault();
-
-      // Prevent event bubbling
       e.stopPropagation();
 
       const productId = $(this).data('product-id') || null;
       console.log('Product button clicked with product ID:', productId);
 
       if (window.productEstimatorModalInstance) {
-        // Here we pass false for forceListView since these are product buttons
         window.productEstimatorModalInstance.openModal(productId, false);
-      } else {
-        console.error('Modal instance not initialized');
+      }
+    });
 
-        // Don't try to load the script again if we're already in it
-        // This prevents potential recursive loading
-        if (typeof ProductEstimatorModal === 'undefined') {
-          $.getScript(productEstimatorVars.plugin_url + 'public/js/product-estimator-modal.js')
-            .done(function() {
-              console.log('Modal script loaded successfully');
-              window.productEstimatorModalInstance = new ProductEstimatorModal();
-              window.productEstimatorModalInstance.openModal(productId, false);
-            })
-            .fail(function() {
-              console.error('Failed to load modal script');
-              // alert('Could not open estimator. Please refresh the page and try again.');
-            });
-        }
+    // Setup global menu links
+    $(document).on('click', '.product-estimator-menu-item a, a.product-estimator-menu-item', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      console.log('Menu link clicked - using global handler');
+
+      if (window.productEstimatorModalInstance) {
+        // Force list view (no product ID)
+        window.productEstimatorModalInstance.openModal(null, true);
       }
     });
   });

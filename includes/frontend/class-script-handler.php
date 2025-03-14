@@ -53,12 +53,7 @@ class ScriptHandler {
      * @since    1.0.0
      */
     public function enqueue_styles() {
-        // Only enqueue on relevant pages
-        if (!is_product() && !is_singular() && !$this->is_shortcode_present()) {
-            return;
-        }
-
-        // Register main styles
+        // Register styles (always register them)
         wp_register_style(
             $this->plugin_name . '-public',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-public.css',
@@ -75,13 +70,9 @@ class ScriptHandler {
             'all'
         );
 
-        // Enqueue the main public styles
+        // Always load styles on all pages
         wp_enqueue_style($this->plugin_name . '-public');
-
-        // Enqueue modal styles if we have estimator buttons or containers
-        if ($this->has_estimator_buttons() || $this->has_estimator_containers()) {
-            wp_enqueue_style($this->plugin_name . '-modal');
-        }
+        wp_enqueue_style($this->plugin_name . '-modal');
     }
 
     /**
@@ -90,16 +81,7 @@ class ScriptHandler {
      * @since    1.0.0
      */
     public function enqueue_scripts() {
-        // Only enqueue on relevant pages
-        if (!is_product() && !is_singular() && !$this->is_shortcode_present()) {
-            return;
-        }
-
-        // Get the current product if we're on a product page
-        $product = is_product() ? wc_get_product() : null;
-        $is_variable = $product && $product->is_type('variable');
-
-        // Register core scripts
+        // Always register scripts - this doesn't affect performance as they're only loaded when needed
         wp_register_script(
             $this->plugin_name . '-public',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-public.js',
@@ -141,7 +123,7 @@ class ScriptHandler {
             true
         );
 
-        // Register integration loader (should load last)
+        // Register integration loader
         wp_register_script(
             $this->plugin_name . '-integration',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'assets/js/product-estimator-integration.js',
@@ -150,7 +132,7 @@ class ScriptHandler {
             true
         );
 
-        // Localize scripts with shared data
+        // THIS IS THE KEY CHANGE: Always load core scripts and styles on all pages
         wp_localize_script(
             $this->plugin_name . '-public',
             'productEstimatorVars',
@@ -172,26 +154,20 @@ class ScriptHandler {
             )
         );
 
-        // Enqueue the core public script (always needed)
+        // Always enqueue core scripts and modal scripts on all pages
         wp_enqueue_script($this->plugin_name . '-public');
+        wp_enqueue_script($this->plugin_name . '-modal');
+        wp_enqueue_style($this->plugin_name . '-public');
+        wp_enqueue_style($this->plugin_name . '-modal');
 
-        // Enqueue modal script if we have estimator buttons or containers
-        if ($this->has_estimator_buttons() || $this->has_estimator_containers()) {
-            wp_enqueue_script($this->plugin_name . '-modal');
-        }
-
-        // Enqueue variation scripts if on variable product page
-        if ($is_variable) {
+        // If on variable product page, load variation scripts
+        if (is_product() && wc_get_product() && wc_get_product()->is_type('variable')) {
             wp_enqueue_script($this->plugin_name . '-variation-handler');
             wp_enqueue_script($this->plugin_name . '-variation-integration');
-
-            // Modal variation integration if modal is also used
-            if ($this->has_estimator_buttons()) {
-                wp_enqueue_script($this->plugin_name . '-modal-variation');
-            }
+            wp_enqueue_script($this->plugin_name . '-modal-variation');
         }
 
-        // Always enqueue the integration loader last
+        // Always load integration script
         wp_enqueue_script($this->plugin_name . '-integration');
     }
 

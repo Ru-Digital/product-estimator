@@ -57,46 +57,45 @@ class ProductEstimatorModal {
     }
 
     /**
-     * Enqueue scripts and styles for the modal
+     * Enqueue scripts and styles for the modal - always load these
      *
      * @since    1.0.4
      */
     public function enqueue_assets() {
-        // Only enqueue if we're on a product page or the shortcode is used
-        if (is_product() || $this->is_shortcode_used()) {
-            // Enqueue modal styles
-            wp_enqueue_style(
-                $this->plugin_name . '-modal',
-                PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-modal.css',
-                array(),
-                $this->version
-            );
+        // Always enqueue modal styles
+        wp_enqueue_style(
+            $this->plugin_name . '-modal',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-modal.css',
+            array(),
+            $this->version
+        );
 
-            // Enqueue modal scripts
-            wp_enqueue_script(
-                $this->plugin_name . '-modal',
-                PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-modal.js',
-                array('jquery'),
-                $this->version,
-                true
-            );
+        // Always enqueue modal scripts
+        wp_enqueue_script(
+            $this->plugin_name . '-modal',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-modal.js',
+            array('jquery'),
+            $this->version,
+            true
+        );
 
-            // Localize the script
-            wp_localize_script(
-                $this->plugin_name . '-modal',
-                'productEstimatorVars',
-                array(
-                    'ajax_url' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('product_estimator_nonce'),
-                    'estimator_url' => esc_url(home_url('/estimator/')),
-                    'i18n' => array(
-                        'loading' => __('Loading estimator...', 'product-estimator'),
-                        'error' => __('Error loading estimator. Please try again.', 'product-estimator'),
-                        'close' => __('Close', 'product-estimator')
-                    )
+        // Localize the script with necessary data
+        wp_localize_script(
+            $this->plugin_name . '-modal',
+            'productEstimatorVars',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('product_estimator_nonce'),
+                'estimator_url' => esc_url(home_url('/estimator/')),
+                'i18n' => array(
+                    'loading' => __('Loading estimator...', 'product-estimator'),
+                    'error' => __('Error loading estimator. Please try again.', 'product-estimator'),
+                    'close' => __('Close', 'product-estimator'),
+                    'cancel' => __('Cancel', 'product-estimator'),
+                    'confirm' => __('Confirm', 'product-estimator')
                 )
-            );
-        }
+            )
+        );
     }
 
     /**
@@ -119,15 +118,13 @@ class ProductEstimatorModal {
     }
 
     /**
-     * Render the modal HTML in the footer
+     * Render the modal HTML in the footer - always render it
      *
      * @since    1.0.4
      */
     public function render_modal() {
-        // Only render modal if we're on a product page or the shortcode is used
-//        if (is_product() || $this->is_shortcode_used()) {
-            include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
-//        }
+        // Always render the modal - it will be hidden by default via CSS
+        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
     }
 
     /**

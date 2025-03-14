@@ -83,12 +83,12 @@ require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/functions.php';
 function run_product_estimator() {
     require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-product-estimator.php';
 
-    // Load activation/deactivation hooks first
-    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-activator.php';
-    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-deactivator.php';
+    // Define the plugin name and version to pass to the constructor
+    $plugin_name = 'product-estimator';
+    $plugin_version = defined('PRODUCT_ESTIMATOR_VERSION') ? PRODUCT_ESTIMATOR_VERSION : '1.0.0';
 
-    // Initialize main plugin class
-    $plugin = new ProductEstimator();
+    // Initialize main plugin class with required parameters
+    $plugin = new ProductEstimator($plugin_name, $plugin_version);
 }
 
 // Register activation/deactivation hooks

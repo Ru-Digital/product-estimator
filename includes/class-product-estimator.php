@@ -54,18 +54,48 @@ class ProductEstimator {
     private $wc_integration;
 
     /**
-     * Initialize the class
+     * Initialize the class and set its properties.
+     *
+     * @since    1.0.4
+     * @param    string    $plugin_name    The name of the plugin.
+     * @param    string    $plugin_version        The version of this plugin.
      */
-    public function __construct() {
-        $this->version = defined('PRODUCT_ESTIMATOR_VERSION') ? PRODUCT_ESTIMATOR_VERSION : '1.0.0';
-        $this->plugin_name = 'product-estimator';
+    public function __construct($plugin_name, $plugin_version) {
+        $this->version = $plugin_name;
+        $this->plugin_name = $plugin_version;
 
         // Initialize session handler (high priority)
         $this->session = SessionHandler::getInstance();
 
+        // Add initialization on 'init' hook (early but not too early)
         add_action('init', array($this, 'initialize'), 20);
+
+        // Move enqueue scripts to a hook that runs after query setup
         add_action('wp_enqueue_scripts', array($this, 'enqueueAssets'));
+
+        // Move footer content to the wp_footer hook
         add_action('wp_footer', array($this, 'addModalToFooter'));
+    }
+
+    /**
+     * Add check for conditional tags on 'wp' hook to prevent errors
+     */
+    public function setupConditionalFeatures() {
+        // This function will run after the main query is set up,
+        // so it's safe to use conditional tags like is_product() here
+
+        // Example: Only set up product-specific features on product pages
+        if (function_exists('is_product') && is_product()) {
+            // Product page specific setup
+        }
+
+        // Check for shortcodes in content
+        if (is_singular()) {
+            global $post;
+            if ($post && has_shortcode($post->post_content, 'product_estimator')) {
+                // Shortcode-specific setup
+            }
+        }
     }
 
     /**
@@ -78,7 +108,7 @@ class ProductEstimator {
         // Initialize AJAX handler
         $this->ajax_handler = new AjaxHandler();
 
-        // Initialize script handler for variation support
+        // Initialize script handler
         new ScriptHandler($this->plugin_name, $this->version);
 
         // Initialize shortcodes
@@ -93,6 +123,9 @@ class ProductEstimator {
         if (is_admin()) {
             new ProductEstimatorAdmin($this->plugin_name, $this->version);
         }
+
+        // Set up conditional features after the query is parsed
+        add_action('wp', array($this, 'setupConditionalFeatures'));
     }
 
     /**
@@ -162,9 +195,8 @@ class ProductEstimator {
      * Add the modal HTML to the footer
      */
     public function addModalToFooter() {
-        if (is_product() || $this->isShortcodePresent()) {
-            include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
-        }
+        // Always add the modal to the footer on all pages
+        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
     }
 
     /**

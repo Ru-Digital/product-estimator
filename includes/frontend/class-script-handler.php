@@ -39,9 +39,9 @@ class ScriptHandler {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
 
-        // Register actions
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_styles'));
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
+        // Register actions - with higher priority to ensure styles/scripts are registered early
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_styles'), 5);
+        add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'), 5);
 
         // Add WooCommerce-specific hooks
         add_action('wp_footer', array($this, 'add_variation_data_to_footer'), 20);
@@ -53,7 +53,7 @@ class ScriptHandler {
      * @since    1.0.0
      */
     public function enqueue_styles() {
-        // Register styles (always register them)
+        // Always register and enqueue styles on all pages
         wp_register_style(
             $this->plugin_name . '-public',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-public.css',
@@ -132,7 +132,7 @@ class ScriptHandler {
             true
         );
 
-        // THIS IS THE KEY CHANGE: Always load core scripts and styles on all pages
+        // Localize script with all necessary data
         wp_localize_script(
             $this->plugin_name . '-public',
             'productEstimatorVars',
@@ -157,11 +157,9 @@ class ScriptHandler {
         // Always enqueue core scripts and modal scripts on all pages
         wp_enqueue_script($this->plugin_name . '-public');
         wp_enqueue_script($this->plugin_name . '-modal');
-        wp_enqueue_style($this->plugin_name . '-public');
-        wp_enqueue_style($this->plugin_name . '-modal');
 
         // If on variable product page, load variation scripts
-        if (is_product() && wc_get_product() && wc_get_product()->is_type('variable')) {
+        if (is_product() && function_exists('wc_get_product') && wc_get_product() && wc_get_product()->is_type('variable')) {
             wp_enqueue_script($this->plugin_name . '-variation-handler');
             wp_enqueue_script($this->plugin_name . '-variation-integration');
             wp_enqueue_script($this->plugin_name . '-modal-variation');
@@ -169,6 +167,9 @@ class ScriptHandler {
 
         // Always load integration script
         wp_enqueue_script($this->plugin_name . '-integration');
+
+        // Set a flag to avoid duplicate enqueuing
+        do_action('product_estimator_scripts_enqueued');
     }
 
     /**
@@ -222,63 +223,5 @@ class ScriptHandler {
                 });
             </script>';
         }
-    }
-
-    /**
-     * Check if page has estimator buttons
-     *
-     * @since    1.0.0
-     * @return   boolean  True if page has estimator buttons
-     */
-    private function has_estimator_buttons() {
-        global $post;
-
-        // Always true on product pages
-        if (is_product()) {
-            return true;
-        }
-
-        // Check if shortcode is used
-        if (is_singular() && $post && has_shortcode($post->post_content, 'estimator_button')) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if page has estimator containers
-     *
-     * @since    1.0.0
-     * @return   boolean  True if page has estimator containers
-     */
-    private function has_estimator_containers() {
-        global $post;
-
-        // Check if the estimator shortcode is used
-        if (is_singular() && $post && has_shortcode($post->post_content, 'product_estimator')) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if plugin shortcode is present on current page
-     *
-     * @since    1.0.0
-     * @return   boolean  Whether shortcode is present
-     */
-    private function is_shortcode_present() {
-        global $post;
-
-        if (!is_singular() || !is_a($post, 'WP_Post')) {
-            return false;
-        }
-
-        return (
-            has_shortcode($post->post_content, 'product_estimator') ||
-            has_shortcode($post->post_content, 'estimator_button')
-        );
     }
 }

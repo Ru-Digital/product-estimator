@@ -61,8 +61,8 @@ class ProductEstimator {
      * @param    string    $plugin_version        The version of this plugin.
      */
     public function __construct($plugin_name, $plugin_version) {
-        $this->version = $plugin_name;
-        $this->plugin_name = $plugin_version;
+        $this->plugin_name = $plugin_name;
+        $this->version = $plugin_version;
 
         // Initialize session handler (high priority)
         $this->session = SessionHandler::getInstance();
@@ -70,11 +70,8 @@ class ProductEstimator {
         // Add initialization on 'init' hook (early but not too early)
         add_action('init', array($this, 'initialize'), 20);
 
-        // Move enqueue scripts to a hook that runs after query setup
-        add_action('wp_enqueue_scripts', array($this, 'enqueueAssets'));
-
         // Move footer content to the wp_footer hook
-        add_action('wp_footer', array($this, 'addModalToFooter'));
+        add_action('wp_footer', array($this, 'addModalToFooter'), 30);
     }
 
     /**
@@ -108,7 +105,7 @@ class ProductEstimator {
         // Initialize AJAX handler
         $this->ajax_handler = new AjaxHandler();
 
-        // Initialize script handler
+        // Initialize script handler - this now enqueues scripts on all pages
         new ScriptHandler($this->plugin_name, $this->version);
 
         // Initialize shortcodes
@@ -126,69 +123,6 @@ class ProductEstimator {
 
         // Set up conditional features after the query is parsed
         add_action('wp', array($this, 'setupConditionalFeatures'));
-    }
-
-    /**
-     * Enqueue frontend scripts and styles
-     */
-    public function enqueueAssets() {
-        // Register styles
-        wp_register_style(
-            $this->plugin_name . '-public',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-public.css',
-            array(),
-            $this->version
-        );
-
-        wp_register_style(
-            $this->plugin_name . '-modal',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-modal.css',
-            array(),
-            $this->version
-        );
-
-        // Register scripts
-        wp_register_script(
-            $this->plugin_name . '-modal',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-modal.js',
-            array('jquery'),
-            $this->version,
-            true
-        );
-
-        wp_register_script(
-            $this->plugin_name . '-public',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-public.js',
-            array('jquery', $this->plugin_name . '-modal'),
-            $this->version,
-            true
-        );
-
-        // Localize script
-        wp_localize_script(
-            $this->plugin_name . '-modal',
-            'productEstimatorVars',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('product_estimator_nonce'),
-                'plugin_url' => PRODUCT_ESTIMATOR_PLUGIN_URL,
-                'i18n' => array(
-                    'loading' => __('Loading...', 'product-estimator'),
-                    'error' => __('Error loading content. Please try again.', 'product-estimator'),
-                    'adding' => __('Adding product...', 'product-estimator'),
-                    'addError' => __('Error adding product. Please try again.', 'product-estimator'),
-                    'close' => __('Close', 'product-estimator')
-                )
-            )
-        );
-
-        // Enqueue on product pages or where shortcode is used
-        if (is_product() || $this->isShortcodePresent()) {
-            wp_enqueue_style($this->plugin_name . '-public');
-            wp_enqueue_style($this->plugin_name . '-modal');
-            wp_enqueue_script($this->plugin_name . '-modal');
-            wp_enqueue_script($this->plugin_name . '-public');
-        }
     }
 
     /**

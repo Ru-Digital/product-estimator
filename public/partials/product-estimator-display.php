@@ -16,7 +16,12 @@ if (!defined('WPINC')) {
 
 // Get plugin settings
 $options = get_option('product_estimator_settings');
-$currency_symbol = isset($options['currency']) ? $this->get_currency_symbol($options['currency']) : '$';
+$currency_symbol = isset($options['currency']) ? product_estimator_get_currency_symbol($options['currency']) : '$';
+
+// Set up variation support
+$is_variation = isset($atts['is_variation']) && $atts['is_variation'];
+$parent_id = isset($atts['parent_id']) ? $atts['parent_id'] : 0;
+$selected_product_id = isset($atts['product_id']) ? $atts['product_id'] : 0;
 ?>
 
     <div class="product-estimator-container" id="product-estimator-<?php echo esc_attr(uniqid()); ?>">
@@ -32,7 +37,7 @@ $currency_symbol = isset($options['currency']) ? $this->get_currency_symbol($opt
         <form class="estimator-form" method="post">
             <?php wp_nonce_field('product_estimator_calculation', 'estimator_nonce'); ?>
 
-            <!-- Product Selection -->
+            <!-- Product Selection with variation support -->
             <div class="form-group">
                 <label for="product-type" class="required">
                     <?php esc_html_e('Product Type', 'product-estimator'); ?>
@@ -49,6 +54,66 @@ $currency_symbol = isset($options['currency']) ? $this->get_currency_symbol($opt
                         "SELECT id, title, base_price FROM $table_name WHERE is_active = 1 ORDER BY title ASC"
                     );
 
+                    // If we have a specific product or variation selected
+                    $selected_product = null;
+                    if ($selected_product_id > 0) {
+                        if ($is_variation) {
+                            // For variations, get the product data and append variation attributes
+                            $variation = wc_get_product($selected_product_id);
+                            if ($variation && $variation->is_type('variation')) {
+                                $parent = wc_get_product($parent_id);
+                                $product_name = $parent ? $parent->get_name() : '';
+
+                                // Get variation attributes for display
+                                $attributes = $variation->get_variation_attributes();
+                                $attribute_text = [];
+                                foreach ($attributes as $name => $value) {
+                                    $taxonomy = str_replace('attribute_', '', $name);
+                                    $term = get_term_by('slug', $value, $taxonomy);
+                                    $attribute_text[] = $term ? $term->name : $value;
+                                }
+
+                                if (!empty($attribute_text)) {
+                                    $product_name .= ' - ' . implode(', ', $attribute_text);
+                                }
+
+                                $selected_product = (object)[
+                                    'id' => $selected_product_id,
+                                    'title' => $product_name,
+                                    'base_price' => $variation->get_price()
+                                ];
+                            }
+                        } else {
+                            // For simple products, just get the product
+                            $product = wc_get_product($selected_product_id);
+                            if ($product) {
+                                $selected_product = (object)[
+                                    'id' => $selected_product_id,
+                                    'title' => $product->get_name(),
+                                    'base_price' => $product->get_price()
+                                ];
+                            }
+                        }
+                    }
+
+                    // If we have a selected product, add it to the options
+                    if ($selected_product) {
+                        $found_in_list = false;
+                        // Check if the selected product is already in our list
+                        foreach ($products as $product) {
+                            if ($product->id == $selected_product->id) {
+                                $found_in_list = true;
+                                break;
+                            }
+                        }
+
+                        // Only add if not already in the list
+                        if (!$found_in_list) {
+                            $products = array_merge([$selected_product], $products);
+                        }
+                    }
+
+                    // Display all products/variations
                     foreach ($products as $product):
                         $price_display = number_format(
                             $product->base_price,
@@ -56,9 +121,11 @@ $currency_symbol = isset($options['currency']) ? $this->get_currency_symbol($opt
                             '.',
                             ','
                         );
+                        $selected = ($selected_product_id > 0 && $product->id == $selected_product_id) ? 'selected' : '';
                         ?>
                         <option value="<?php echo esc_attr($product->id); ?>"
-                                data-base-price="<?php echo esc_attr($product->base_price); ?>">
+                                data-base-price="<?php echo esc_attr($product->base_price); ?>"
+                            <?php echo $selected; ?>>
                             <?php echo esc_html($product->title); ?>
                             (<?php echo esc_html($currency_symbol . $price_display); ?>)
                         </option>
@@ -79,6 +146,7 @@ $currency_symbol = isset($options['currency']) ? $this->get_currency_symbol($opt
                        id="quantity"
                        min="<?php echo esc_attr($options['minimum_quantity']); ?>"
                        max="<?php echo esc_attr($options['maximum_quantity']); ?>"
+                       value="<?php echo esc_attr($options['minimum_quantity']); ?>"
                        required>
                 <span class="field-description">
                 <?php

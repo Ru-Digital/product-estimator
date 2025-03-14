@@ -37,6 +37,7 @@
         },
         "classmap": [
             "includes/frontend/class-shortcodes.php",
+            "includes/frontend/class-script-handler.php",
             "includes/frontend/class-product-estimator-modal.php",
             "includes/frontend/class-product-display.php",
             "includes/frontend/class-product-estimator-public.php",
@@ -47,7 +48,10 @@
             "includes/class-product-estimator.php",
             "includes/class-i18n.php",
             "includes/class-deactivator.php",
-            "includes/class-loader.php"
+            "includes/class-loader.php",
+            "includes/class-session-handler.php",
+            "includes/class-session-debug-helper.php",
+            "includes/class-ajax-handler.php"
         ],
         "files": [
             "includes/functions.php"

@@ -46,7 +46,7 @@ class ProductEstimatorModal {
         add_action('wp_footer', array($this, 'render_modal'));
 
         // Add shortcode for the trigger button
-        add_shortcode('estimator_button', array($this, 'render_button'));
+//        add_shortcode('estimator_button', array($this, 'render_button'));
 
         // Enqueue scripts and styles
         add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
@@ -127,43 +127,6 @@ class ProductEstimatorModal {
         include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
     }
 
-    /**
-     * Render the "Add to estimator" button
-     *
-     * @since    1.0.4
-     * @param    array    $atts    Shortcode attributes.
-     * @return   string   Button HTML.
-     */
-    public function render_button($atts = array()) {
-        $atts = shortcode_atts(
-            array(
-                'text' => __('Add to estimator', 'product-estimator'),
-                'class' => '',
-                'product_id' => 0,
-            ),
-            $atts,
-            'estimator_button'
-        );
-
-        $classes = 'product-estimator-button';
-        if (!empty($atts['class'])) {
-            $classes .= ' ' . esc_attr($atts['class']);
-        }
-
-        $product_attr = '';
-        if (!empty($atts['product_id'])) {
-            $product_attr = ' data-product-id="' . esc_attr($atts['product_id']) . '"';
-        }
-
-        $button = sprintf(
-            '<button type="button" class="%1$s"%2$s>%3$s</button>',
-            esc_attr($classes),
-            $product_attr,
-            esc_html($atts['text'])
-        );
-
-        return $button;
-    }
 
     /**
      * AJAX handler to get the estimator form

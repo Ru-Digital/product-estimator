@@ -259,7 +259,7 @@
       const productId = this.$modal.attr('data-product-id');
 
       if (!estimateId) {
-        alert('Please select an estimate');
+        console.log('Please select an estimate');
         return;
       }
 
@@ -307,12 +307,12 @@
           } else {
             // Show error
             console.error('Error getting rooms:', response.data?.message);
-            alert('Error getting rooms. Please try again.');
+            console.log('Error getting rooms. Please try again.');
           }
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
-          alert('Error getting rooms. Please try again.');
+          console.log('Error getting rooms. Please try again.');
         },
         complete: () => {
           this.hideLoading();
@@ -329,7 +329,7 @@
       const productId = this.$modal.attr('data-product-id');
 
       if (!roomId) {
-        alert('Please select a room');
+        console.log('Please select a room');
         return;
       }
 
@@ -353,17 +353,17 @@
             // Refresh estimates list and show it
             this.refreshEstimatesList(() => {
               // Show success message
-              alert('Product added successfully!');
+              console.log('Product added successfully!');
             });
           } else {
             const errorMessage = response.data?.message || 'Error adding product to room';
             console.error('Error response:', response);
-            alert(errorMessage);
+            console.log(errorMessage);
           }
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
-          alert('Error adding product to room. Please try again.');
+          console.log('Error adding product to room. Please try again.');
         },
         complete: () => {
           this.hideLoading();
@@ -412,12 +412,12 @@
             }
           } else {
             console.error('Error creating estimate:', response.data?.message);
-            alert('Error creating estimate: ' + (response.data?.message || 'Unknown error'));
+            console.log('Error creating estimate: ' + (response.data?.message || 'Unknown error'));
           }
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
-          alert('Error creating estimate. Please try again.');
+          console.log('Error creating estimate. Please try again.');
         },
         complete: () => {
           this.hideLoading();
@@ -453,7 +453,7 @@
       const productId = this.$modal.attr('data-product-id');
 
       if (!estimateId) {
-        alert('No estimate selected for this room.');
+        console.log('No estimate selected for this room.');
         return;
       }
 
@@ -501,12 +501,12 @@
             }
           } else {
             console.error('Error adding room:', response.data?.message);
-            alert('Error adding room: ' + (response.data?.message || 'Unknown error'));
+            console.log('Error adding room: ' + (response.data?.message || 'Unknown error'));
           }
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
-          alert('Error adding room. Please try again.');
+          console.log('Error adding room. Please try again.');
         },
         complete: () => {
           this.hideLoading();
@@ -647,12 +647,12 @@
             this.setupAccordion();
           } else {
             console.error('Failed to refresh estimates list:', response.data?.message);
-            alert('Failed to refresh estimates list: ' + (response.data?.message || 'Unknown error'));
+            console.log('Failed to refresh estimates list: ' + (response.data?.message || 'Unknown error'));
           }
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
-          alert('Error refreshing estimates list. Please try again.');
+          console.log('Error refreshing estimates list. Please try again.');
         },
         complete: () => {
           this.hideLoading();
@@ -818,12 +818,12 @@
           } else {
             // Show error
             console.error('Error removing product:', response.data?.message);
-            alert('Error removing product: ' + (response.data?.message || 'Unknown error'));
+            console.log('Error removing product: ' + (response.data?.message || 'Unknown error'));
           }
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
-          alert('Error removing product. Please try again.');
+          console.log('Error removing product. Please try again.');
         },
         complete: () => {
           this.hideLoading();
@@ -855,12 +855,12 @@
           } else {
             // Show error
             console.error('Error removing room:', response.data?.message);
-            alert('Error removing room: ' + (response.data?.message || 'Unknown error'));
+            console.log('Error removing room: ' + (response.data?.message || 'Unknown error'));
           }
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
-          alert('Error removing room. Please try again.');
+          console.log('Error removing room. Please try again.');
         },
         complete: () => {
           this.hideLoading();
@@ -902,12 +902,12 @@
           } else {
             // Show error
             console.error('Error removing estimate:', response.data?.message);
-            alert('Error removing estimate: ' + (response.data?.message || 'Unknown error'));
+            console.log('Error removing estimate: ' + (response.data?.message || 'Unknown error'));
           }
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
-          alert('Error removing estimate. Please try again.');
+          console.log('Error removing estimate. Please try again.');
         },
         complete: () => {
           this.hideLoading();
@@ -1007,7 +1007,9 @@
       console.log('Product button clicked with product ID:', productId);
 
       if (window.productEstimatorModalInstance) {
-        window.productEstimatorModalInstance.openModal(productId, false);
+        const forceListView = !productId;
+
+        window.productEstimatorModalInstance.openModal(productId, forceListView);
       }
     });
 

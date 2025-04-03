@@ -31,7 +31,7 @@ class WoocommerceIntegration {
         add_action('woocommerce_after_add_to_cart_button', array($this, 'displayEstimatorButton'));
 
         // Add shortcode for estimator button
-        add_shortcode('estimator_button', array($this, 'estimatorButtonShortcode'));
+//        add_shortcode('estimator_button', array($this, 'estimatorButtonShortcode'));
 
          add_action('wp_footer', array($this, 'addVariationEstimatorData'), 10);
 
@@ -124,7 +124,7 @@ class WoocommerceIntegration {
         <button type="button"
                 class="single_add_to_estimator_button button alt open-estimator-modal"
                 data-product-id="<?php echo esc_attr($product->get_id()); ?>">
-            <?php esc_html_e('Add to Estimator', 'product-estimator'); ?>
+            <?php esc_html_e('Add to Estimate', 'product-estimator'); ?>
         </button>
         <?php
     }

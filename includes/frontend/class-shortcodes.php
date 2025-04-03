@@ -31,7 +31,7 @@ class Shortcodes {
      */
     public function __construct($plugin_name = 'product-estimator', $version = '1.0.0') {
         $this->plugin_name = $plugin_name;
-     ``   $this->version = $version;
+        $this->version = $version;
 
         // Debug log
         error_log('Shortcodes class constructed, about to register shortcodes');
@@ -39,6 +39,7 @@ class Shortcodes {
         // Register shortcodes
         add_shortcode('product_estimator', array($this, 'product_estimator_shortcode'));
         add_shortcode('estimator_button', array($this, 'product_estimator_button_shortcode'));
+        add_shortcode('estimator_button_category', array($this, 'product_estimator_button_category_shortcode'));
 
         // Confirm registration
         error_log('Shortcodes registered: ' . (shortcode_exists('estimator_button') ? 'true' : 'false'));
@@ -122,6 +123,62 @@ class Shortcodes {
 
         // Build button HTML with product ID as data attribute
         $button_classes = 'product-estimator-button';
+        if (!empty($atts['class'])) {
+            $button_classes .= ' ' . esc_attr($atts['class']);
+        }
+
+        $button_html = sprintf(
+            '<button type="button" class="%s" data-product-id="%d">%s</button>',
+            esc_attr($button_classes),
+            esc_attr($product_id),
+            esc_html($atts['text'])
+        );
+
+        return $button_html;
+    }
+
+    /**
+     * Register button shortcode
+     *
+     * @param array $atts Shortcode attributes
+     * @return string HTML output
+     */
+    public function product_estimator_button_category_shortcode($atts) {
+        // Flag that we're using the button shortcode
+        global $product_estimator_button_used;
+        $product_estimator_button_used = true;
+
+        // Parse attributes
+        $atts = shortcode_atts(
+            array(
+                'product_id' => 0,
+                'text' => __('$', 'product-estimator'),
+                'class' => '',
+            ),
+            $atts,
+            'estimator_button'
+        );
+
+        // Get product ID and check if it's a template variable
+        $product_id = $atts['product_id'];
+
+        // If it contains {{, it's likely a template variable that didn't get processed
+        if (strpos($product_id, '{{') !== false) {
+            // Try to extract the ID from item.products.id if that's the format
+            if (preg_match('/item\.products\.id/', $product_id)) {
+                // We're in a template context, so we need to get the current product ID
+                global $product;
+                if ($product) {
+                    $product_id = $product->get_id();
+                }
+            }
+        }
+
+        // Ensure it's an integer
+        $product_id = intval($product_id);
+
+        // Build button HTML with product ID as data attribute
+        $button_classes = 'product-estimator-button product-estimator-category-button';
         if (!empty($atts['class'])) {
             $button_classes .= ' ' . esc_attr($atts['class']);
         }

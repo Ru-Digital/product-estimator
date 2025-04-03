@@ -41,7 +41,7 @@
       if (!variation || !variation.variation_id) return;
 
       // Update all estimator buttons on the page with this variation ID
-      $('.product-estimator-button, .single_add_to_estimator_button').each(function() {
+      $('.single_add_to_estimator_button').each(function() {
         const $button = $(this);
         $button.data('product-id', variation.variation_id);
         $button.attr('data-product-id', variation.variation_id);

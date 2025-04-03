@@ -135,39 +135,39 @@ class WoocommerceIntegration {
      * @param array $atts Shortcode attributes
      * @return string Button HTML
      */
-    public function estimatorButtonShortcode($atts = array()) {
-        $atts = shortcode_atts(
-            array(
-                'text' => __('Add to Estimator', 'product-estimator'),
-                'class' => '',
-                'product_id' => 0,
-            ),
-            $atts,
-            'estimator_button'
-        );
-
-        $classes = 'product-estimator-button';
-        if (!empty($atts['class'])) {
-            $classes .= ' ' . esc_attr($atts['class']);
-        }
-
-        $product_attr = '';
-        if (!empty($atts['product_id'])) {
-            $product_id = intval($atts['product_id']);
-
-            // Check if the product exists and has estimator enabled
-            if ($product_id > 0 && self::isEstimatorEnabled($product_id)) {
-                $product_attr = ' data-product-id="' . esc_attr($product_id) . '"';
-            }
-        }
-
-        return sprintf(
-            '<button type="button" class="%1$s"%2$s>%3$s</button>',
-            esc_attr($classes),
-            $product_attr,
-            esc_html($atts['text'])
-        );
-    }
+//    public function estimatorButtonShortcode($atts = array()) {
+//        $atts = shortcode_atts(
+//            array(
+//                'text' => __('Add to Estimator', 'product-estimator'),
+//                'class' => '',
+//                'product_id' => 0,
+//            ),
+//            $atts,
+//            'estimator_button'
+//        );
+//
+//        $classes = 'product-estimator-button';
+//        if (!empty($atts['class'])) {
+//            $classes .= ' ' . esc_attr($atts['class']);
+//        }
+//
+//        $product_attr = '';
+//        if (!empty($atts['product_id'])) {
+//            $product_id = intval($atts['product_id']);
+//
+//            // Check if the product exists and has estimator enabled
+//            if ($product_id > 0 && self::isEstimatorEnabled($product_id)) {
+//                $product_attr = ' data-product-id="' . esc_attr($product_id) . '"';
+//            }
+//        }
+//
+//        return sprintf(
+//            '<button type="button" class="%1$s"%2$s>%3$s</button>',
+//            esc_attr($classes),
+//            $product_attr,
+//            esc_html($atts['text'])
+//        );
+//    }
 
     /**
      * Check if estimator is enabled for a product/variation

@@ -1007,7 +1007,9 @@
       console.log('Product button clicked with product ID:', productId);
 
       if (window.productEstimatorModalInstance) {
-        window.productEstimatorModalInstance.openModal(productId, false);
+        const forceListView = !productId;
+
+        window.productEstimatorModalInstance.openModal(productId, forceListView);
       }
     });
 

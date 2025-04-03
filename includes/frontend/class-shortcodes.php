@@ -23,7 +23,6 @@ class Shortcodes {
      * @var string
      */
     private $version;
-
     /**
      * Initialize shortcodes
      *
@@ -32,11 +31,17 @@ class Shortcodes {
      */
     public function __construct($plugin_name = 'product-estimator', $version = '1.0.0') {
         $this->plugin_name = $plugin_name;
-        $this->version = $version;
+     ``   $this->version = $version;
+
+        // Debug log
+        error_log('Shortcodes class constructed, about to register shortcodes');
 
         // Register shortcodes
         add_shortcode('product_estimator', array($this, 'product_estimator_shortcode'));
         add_shortcode('estimator_button', array($this, 'product_estimator_button_shortcode'));
+
+        // Confirm registration
+        error_log('Shortcodes registered: ' . (shortcode_exists('estimator_button') ? 'true' : 'false'));
 
         // Enqueue scripts when shortcodes are used
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
@@ -53,13 +58,13 @@ class Shortcodes {
         global $product_estimator_shortcode_used;
         $product_estimator_shortcode_used = true;
 
-        // Parse attributes
+        // Parse attributes - Fixed product_id handling
         $atts = shortcode_atts(
             array(
                 'title' => __('Product Estimator', 'product-estimator'),
                 'description' => '',
                 'button_text' => __('Calculate', 'product-estimator'),
-                'product_id' => 0
+                'product_id' => 0,
             ),
             $atts,
             'product_estimator'
@@ -97,8 +102,23 @@ class Shortcodes {
             'estimator_button'
         );
 
-        // Validate product ID
-        $product_id = intval($atts['product_id']);
+        // Get product ID and check if it's a template variable
+        $product_id = $atts['product_id'];
+
+        // If it contains {{, it's likely a template variable that didn't get processed
+        if (strpos($product_id, '{{') !== false) {
+            // Try to extract the ID from item.products.id if that's the format
+            if (preg_match('/item\.products\.id/', $product_id)) {
+                // We're in a template context, so we need to get the current product ID
+                global $product;
+                if ($product) {
+                    $product_id = $product->get_id();
+                }
+            }
+        }
+
+        // Ensure it's an integer
+        $product_id = intval($product_id);
 
         // Build button HTML with product ID as data attribute
         $button_classes = 'product-estimator-button';

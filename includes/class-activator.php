@@ -21,10 +21,11 @@ class Activator {
      * @since    1.0.0
      */
     public static function activate() {
-        self::create_tables();
-        self::set_default_options();
-        self::check_requirements();
-
+//        self::create_tables();
+//        self::set_default_options();
+//        self::check_requirements();
+//        self::run_composer_install();
+s
         // Set activation flag
         update_option('product_estimator_activated', true);
 
@@ -32,6 +33,29 @@ class Activator {
         wp_cache_flush();
     }
 
+
+    private static function run_composer_install() {
+        $pluginPath = dirname(__FILE__, 2); // Adjust based on directory structure
+        $composerAutoload = $pluginPath . '/vendor/autoload.php';
+
+        // If dependencies are missing, attempt to install them
+        if (!file_exists($composerAutoload)) {
+            // Check if Composer is available
+            $composerCmd = shell_exec('command -v composer');
+
+            if ($composerCmd) {
+                // Run composer install
+                exec("cd {$pluginPath} && composer install --no-dev 2>&1", $output, $returnCode);
+
+                if ($returnCode !== 0) {
+                    error_log("Composer install failed: " . implode("\n", $output));
+                    wp_die('Composer dependencies could not be installed automatically. Please run `composer install` in the plugin directory.');
+                }
+            } else {
+                wp_die('Composer is not installed on the server. Please install Composer or run `composer install` manually.');
+            }
+        }
+    }
     /**
      * Create plugin database tables.
      *

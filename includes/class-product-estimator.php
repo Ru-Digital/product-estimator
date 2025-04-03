@@ -109,7 +109,7 @@ class ProductEstimator {
         new ScriptHandler($this->plugin_name, $this->version);
 
         // Initialize shortcodes
-        new Shortcodes($this->plugin_name, $this->version);
+        $shortcodes = new Shortcodes($this->plugin_name, $this->version);
 
         // Initialize WooCommerce integration if WooCommerce is active
         if ($this->isWooCommerceActive()) {

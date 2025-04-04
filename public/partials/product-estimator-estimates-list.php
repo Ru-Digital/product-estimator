@@ -31,9 +31,9 @@ $estimates = $session_handler->getEstimates();
             <div id="rooms">
                 <div class="room-header">
                     <h4><?php esc_html_e('Rooms', 'product-estimator'); ?></h4>
-                    <button class="add-room" data-estimate="<?php echo esc_attr($estimate_id); ?>">
-                        <?php esc_html_e('Add New Room', 'product-estimator'); ?>
-                    </button>
+<!--                    <button class="add-room" data-estimate="--><?php //echo esc_attr($estimate_id); ?><!--">-->
+<!--                        --><?php //esc_html_e('Add New Room', 'product-estimator'); ?>
+<!--                    </button>-->
                 </div>
 
                 <?php if (!empty($estimate['rooms'])): ?>
@@ -78,7 +78,7 @@ $estimates = $session_handler->getEstimates();
                                                                     data-room-id="<?php echo esc_attr($room_id); ?>"
                                                                     data-product-index="<?php echo esc_attr($product_index); ?>"
                                                                     title="<?php esc_attr_e('Remove Product', 'product-estimator'); ?>">
-                                                                <span class="dashicons dashicons-no"></span>
+                                                                <span class="dashicons dashicons-trash"></span>
                                                             </button>
                                                         </div>
                                                     </li>
@@ -99,6 +99,31 @@ $estimates = $session_handler->getEstimates();
                         <?php esc_html_e('No rooms added to this estimate yet.', 'product-estimator'); ?>
                     </p>
                 <?php endif; ?>
+            </div>
+            <div class="estimate-actions">
+                <ul>
+                    <li>
+                <a class="print-estimate"
+                        data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
+                        title="<?php esc_attr_e('Print Estimate', 'product-estimator'); ?>">
+                    <span class="dashicons dashicons-pdf"></span> Print estimate
+                </a>
+                    </li>
+                    <li>
+                <a class="request-call-estimate"
+                        data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
+                        title="<?php esc_attr_e('Request a call with a store', 'product-estimator'); ?>">
+                    <span class="dashicons dashicons-phone"></span> Request a call with a store
+                </a>
+                    </li>
+                    <li>
+                        <a class="schedule-designer-estimate"
+                           data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
+                           title="<?php esc_attr_e('Schedule a free discussion with a designer', 'product-estimator'); ?>">
+                            <span class="dashicons dashicons-businessman"></span> Schedule a free discussion with a designer
+                        </a>
+                    </li>
+                </ul>
             </div>
         </div>
     <?php endforeach; ?>

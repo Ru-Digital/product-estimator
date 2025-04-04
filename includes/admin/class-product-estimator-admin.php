@@ -50,6 +50,17 @@ class ProductEstimatorAdmin {
 
         // Properly initialize settings
         $this->settings = new ProductEstimatorSettings($plugin_name, $version);
+
+        // Add this line to hook the menu method to the admin_menu action
+        add_action('admin_menu', array($this, 'add_plugin_admin_menu'));
+
+        // Register admin scripts and styles
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_styles'));
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
+
+        // Add action links to plugins page
+        add_filter('plugin_action_links_' . PRODUCT_ESTIMATOR_BASENAME, array($this, 'add_action_links'));
+
     }
 
     /**
@@ -100,6 +111,8 @@ class ProductEstimatorAdmin {
      *
      * @since  1.0.0
      */
+
+
     public function add_plugin_admin_menu() {
         add_menu_page(
             __('Product Estimator Settings', 'product-estimator'),

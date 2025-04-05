@@ -254,26 +254,41 @@
 }
 
 .product-thumbnail {
-  width: 50px;
-  height: 50px;
+  width: 110px;
+  height: 110px;
   object-fit: cover;
   border-radius: 4px;
   margin-right: 15px;
 }
 
 .product-details {
+  display: flex;
+  flex-direction: column;
   flex: 1;
 }
 
 .product-name {
-  display: block;
   font-weight: 600;
   margin-bottom: 5px;
+  font-size: 15px;
 }
 
+.product-room-area {
+  color: #666;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
 .product-price {
   color: #00833F;
   font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+
+.product-unit-price {
+  color: #666;
+  font-size: 12px;
+  font-style: italic;
 }
 
 .remove-product {
@@ -548,6 +563,20 @@ body.modal-open {
   .confirmation-dialog button {
     width: 100%;
     margin-bottom: 5px;
+  }
+
+  .product-item {
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+
+  .product-thumbnail {
+    width: 40px;
+    height: 40px;
+  }
+
+  .product-details {
+    padding-right: 30px;
   }
 }
 

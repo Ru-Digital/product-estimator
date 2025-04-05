@@ -241,7 +241,8 @@ public function getVariationEstimator() {
                     }
                 }
             }
-// Handle fallback for '0' room ID
+
+            // Handle fallback for '0' room ID
             if ($found_estimate_id === null && ($room_id === '0' || $room_id === 0)) {
                 // Find first estimate with rooms
                 foreach ($estimates as $estimate_id => $estimate) {
@@ -299,9 +300,97 @@ public function getVariationEstimator() {
             $product_data = [
                 'id' => $product_id,
                 'name' => $product->get_name(),
-                'price' => $product->get_price(),
                 'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
             ];
+
+            // Get price range from NetSuite API
+            try {
+                // Initialize NetSuite Integration
+                $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
+
+                // Get pricing data for this product
+                $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
+
+                // Check if we received valid pricing data
+                if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
+                    foreach ($pricing_data['prices'] as $price_item) {
+                        if ($price_item['product_id'] == $product_id) {
+                            // Add NetSuite pricing data to product
+                            $product_data['min_price'] = $price_item['min_price'];
+                            $product_data['max_price'] = $price_item['max_price'];
+                            break;
+                        }
+                    }
+                }
+
+                // If NetSuite data not found, set defaults based on WC price
+                if (!isset($product_data['min_price'])) {
+                    $base_price = (float)$product->get_price();
+                    $product_data['min_price'] = $base_price;
+                    $product_data['max_price'] = $base_price;
+                }
+
+                // Log the pricing data
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Product price data: ' . print_r($product_data, true));
+                }
+
+            } catch (\Exception $e) {
+                // If NetSuite API fails, log the error but continue with base price
+                error_log('NetSuite API Error: ' . $e->getMessage());
+
+                // Set default price range from WooCommerce price
+                $base_price = (float)$product->get_price();
+                $product_data['min_price'] = $base_price;
+                $product_data['max_price'] = $base_price;
+            }
+
+            // Get room area (width * length)
+            $room_area = 0;
+            if (isset($estimates[$found_estimate_id]['rooms'][$found_room_id])) {
+                $room_data = $estimates[$found_estimate_id]['rooms'][$found_room_id];
+                if (isset($room_data['width']) && isset($room_data['length'])) {
+                    $room_area = (float)$room_data['width'] * (float)$room_data['length'];
+                }
+            }
+
+            // Calculate price based on min_price * room_area
+            if ($room_area > 0 && isset($product_data['min_price'])) {
+                $product_data['min_price_total'] = $product_data['min_price'] * $room_area;
+
+                // Log the calculation
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Price calculation: min_price (' . $product_data['min_price'] . ') * room_area (' . $room_area . ') = ' . $product_data['min_price_total']);
+                }
+            } else {
+                // If room area is not available or is zero, use min_price as fallback
+                $product_data['min_price_total'] = $product_data['min_price'];
+
+                // Log the fallback
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Room area not available, using max_price as price: ' . $product_data['min_price_total']);
+                }
+            }
+
+            // Calculate price based on max_price * room_area
+            if ($room_area > 0 && isset($product_data['max_price'])) {
+                $product_data['max_price_total'] = $product_data['max_price'] * $room_area;
+
+                // Log the calculation
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Price calculation: max_price (' . $product_data['max_price'] . ') * room_area (' . $room_area . ') = ' . $product_data['max_price_total']);
+                }
+            } else {
+                // If room area is not available or is zero, use max_price as fallback
+                $product_data['max_price_total'] = $product_data['max_price'];
+
+                // Log the fallback
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Room area not available, using max_price as price: ' . $product_data['max_price_total']);
+                }
+            }
+
+            $product_data['price_total'] = $product_data['min_price_total'] . " - " . $product_data['max_price_total'];
 
             // Add product to room
             $success = $this->session->addProductToRoom($found_estimate_id, $found_room_id, $product_data);
@@ -320,7 +409,8 @@ public function getVariationEstimator() {
             wp_send_json_success([
                 'message' => __('Product added successfully', 'product-estimator'),
                 'estimate_id' => $found_estimate_id,
-                'room_id' => $found_room_id
+                'room_id' => $found_room_id,
+                'product_data' => $product_data
             ]);
 
         } catch (\Exception $e) {
@@ -330,7 +420,6 @@ public function getVariationEstimator() {
             ]);
         }
     }
-
     /**
      * Get the full estimates list HTML
      */

@@ -53,6 +53,11 @@ class ProductEstimatorAdmin {
 
         // Add this line to hook the menu method to the admin_menu action
         add_action('admin_menu', array($this, 'add_plugin_admin_menu'));
+        add_action('wp_ajax_test_netsuite_connection', array($this, 'test_netsuite_connection'));
+
+
+
+
 
         // Register admin scripts and styles
         add_action('admin_enqueue_scripts', array($this, 'enqueue_styles'));
@@ -377,6 +382,47 @@ class ProductEstimatorAdmin {
                     $count
                 )
             );
+        }
+    }
+
+    /**
+     * Test NetSuite API connection
+     */
+    public function test_netsuite_connection() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_admin_nonce', 'nonce');
+
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('You do not have permission to test API connections.', 'product-estimator')
+            ]);
+            return;
+        }
+
+        try {
+            // Initialize NetSuite Integration
+            $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
+
+            // Test authentication
+            $auth_result = $netsuite_integration->test_connection();
+
+            if (is_wp_error($auth_result)) {
+                wp_send_json_error([
+                    'message' => $auth_result->get_error_message()
+                ]);
+            } else {
+                wp_send_json_success([
+                    'message' => __('API connection successful!', 'product-estimator')
+                ]);
+            }
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => sprintf(
+                    __('Error: %s', 'product-estimator'),
+                    $e->getMessage()
+                )
+            ]);
         }
     }
 }

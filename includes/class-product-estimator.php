@@ -1,6 +1,7 @@
 <?php
 namespace RuDigital\ProductEstimator;
 
+use RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration;
 use RuDigital\ProductEstimator\Includes\SessionHandler;
 use RuDigital\ProductEstimator\Includes\AjaxHandler;
 use RuDigital\ProductEstimator\Includes\Frontend\ScriptHandler;
@@ -52,6 +53,13 @@ class ProductEstimator {
      * @var WoocommerceIntegration
      */
     private $wc_integration;
+
+    /**
+     * Netsuite integration
+     *
+     * @var NetsuiteIntegration
+     */
+    private $netsuite_integration;
 
     /**
      * Initialize the class and set its properties.
@@ -115,6 +123,8 @@ class ProductEstimator {
         if ($this->isWooCommerceActive()) {
             $this->wc_integration = new WoocommerceIntegration();
         }
+
+        $this->netsuite_integration = new NetsuiteIntegration();
 
         // Initialize admin if in admin area
         if (is_admin()) {

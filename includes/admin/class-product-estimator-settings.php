@@ -105,32 +105,72 @@ class ProductEstimatorSettings {
             'netsuite_enabled' => array(
                 'title' => __('Enable NetSuite Integration', 'product-estimator'),
                 'type' => 'checkbox',
-                'description' => __('Enable price syncing with NetSuite', 'product-estimator')
+                'description' => __('Enable price syncing with NetSuite API', 'product-estimator')
             ),
-            'netsuite_api_key' => array(
-                'title' => __('API Key', 'product-estimator'),
+            'netsuite_client_id' => array(
+                'title' => __('Client ID', 'product-estimator'),
+                'type' => 'text',
+                'description' => __('Your NetSuite API OAuth2 client ID', 'product-estimator')
+            ),
+            'netsuite_client_secret' => array(
+                'title' => __('Client Secret', 'product-estimator'),
                 'type' => 'password',
-                'description' => __('Your NetSuite API authentication key', 'product-estimator')
+                'description' => __('Your NetSuite API OAuth2 client secret', 'product-estimator')
+            ),
+            'netsuite_api_url' => array(
+                'title' => __('API Endpoint URL', 'product-estimator'),
+                'type' => 'text',
+                'description' => __('The URL to the NetSuite products/prices API endpoint', 'product-estimator'),
+                'default' => 'https://api.netsuite.com/api/v1/products/prices'
+            ),
+            'netsuite_token_url' => array(
+                'title' => __('OAuth Token URL', 'product-estimator'),
+                'type' => 'text',
+                'description' => __('The URL to the NetSuite OAuth token endpoint', 'product-estimator'),
+                'default' => 'https://api.netsuite.com/oauth/token'
             ),
             'netsuite_request_limit' => array(
                 'title' => __('API Request Limit', 'product-estimator'),
                 'type' => 'number',
-                'description' => __('Maximum number of API requests per hour', 'product-estimator')
+                'description' => __('Maximum number of product IDs per API request (max 100)', 'product-estimator'),
+                'default' => 50,
+                'min' => 1,
+                'max' => 100
+            ),
+            'netsuite_cache_time' => array(
+                'title' => __('Cache Duration', 'product-estimator'),
+                'type' => 'number',
+                'description' => __('How long to cache pricing data in minutes (0 to disable caching)', 'product-estimator'),
+                'default' => 60,
+                'min' => 0
             )
         );
 
         foreach ($fields as $key => $field) {
+            $args = array(
+                'id' => $key,
+                'type' => $field['type'],
+                'description' => $field['description']
+            );
+
+            // Add optional parameters if they exist
+            if (isset($field['default'])) {
+                $args['default'] = $field['default'];
+            }
+            if (isset($field['min'])) {
+                $args['min'] = $field['min'];
+            }
+            if (isset($field['max'])) {
+                $args['max'] = $field['max'];
+            }
+
             add_settings_field(
                 $key,
                 $field['title'],
                 array($this, 'render_field'),
-                $this->plugin_name . '_netsuite', // Changed to netsuite tab
+                $this->plugin_name . '_netsuite', // NetSuite tab
                 'netsuite_integration',
-                array(
-                    'id' => $key,
-                    'type' => $field['type'],
-                    'description' => $field['description']
-                )
+                $args
             );
         }
     }
@@ -212,7 +252,26 @@ class ProductEstimatorSettings {
     public function render_field($args) {
         $options = get_option($this->option_name);
         $id = $args['id'];
+
+        // Get value with fallback to default if provided
         $value = isset($options[$id]) ? $options[$id] : '';
+        if ($value === '' && isset($args['default'])) {
+            $value = $args['default'];
+        }
+
+        // Common attributes for number inputs
+        $extra_attrs = '';
+        if ($args['type'] === 'number') {
+            if (isset($args['min'])) {
+                $extra_attrs .= ' min="' . esc_attr($args['min']) . '"';
+            }
+            if (isset($args['max'])) {
+                $extra_attrs .= ' max="' . esc_attr($args['max']) . '"';
+            }
+            if (isset($args['step'])) {
+                $extra_attrs .= ' step="' . esc_attr($args['step']) . '"';
+            }
+        }
 
         switch ($args['type']) {
             case 'checkbox':
@@ -235,11 +294,12 @@ class ProductEstimatorSettings {
 
             default:
                 printf(
-                    '<input type="%1$s" id="%2$s" name="%3$s[%2$s]" value="%4$s" class="regular-text" />',
+                    '<input type="%1$s" id="%2$s" name="%3$s[%2$s]" value="%4$s" class="regular-text"%5$s />',
                     esc_attr($args['type']),
                     esc_attr($id),
                     esc_attr($this->option_name),
-                    esc_attr($value)
+                    esc_attr($value),
+                    $extra_attrs
                 );
         }
 
@@ -261,17 +321,21 @@ class ProductEstimatorSettings {
                     $valid[$key] = isset($value) ? 1 : 0;
                     break;
 
-                case 'netsuite_api_key':
+                case 'netsuite_client_id':
+                case 'netsuite_client_secret':
+                case 'netsuite_api_url':
+                case 'netsuite_token_url':
                     $valid[$key] = sanitize_text_field($value);
                     break;
 
-                case 'designer_email':
-                case 'store_email':
+                case 'default_designer_email':
+                case 'default_store_email':
                     $valid[$key] = sanitize_email($value);
                     break;
 
                 case 'default_markup':
                 case 'netsuite_request_limit':
+                case 'netsuite_cache_time':
                 case 'estimate_expiry_days':
                     $valid[$key] = absint($value);
                     break;
@@ -292,7 +356,52 @@ class ProductEstimatorSettings {
      * Render section descriptions
      */
     public function render_netsuite_section() {
-        echo '<p>' . esc_html__('Configure NetSuite integration settings for price syncing.', 'product-estimator') . '</p>';
+        echo '<p>' . esc_html__('Configure NetSuite integration settings for price syncing using the OAuth2 API.', 'product-estimator') . '</p>';
+
+        // Add test connection button if credentials are configured
+        $settings = get_option($this->option_name);
+        if (!empty($settings['netsuite_client_id']) && !empty($settings['netsuite_client_secret'])) {
+            echo '<p><button type="button" id="test-netsuite-connection" class="button">' .
+                esc_html__('Test API Connection', 'product-estimator') .
+                '</button> <span id="connection-result"></span></p>';
+
+            // Add inline JavaScript for the test button
+            ?>
+            <script type="text/javascript">
+                jQuery(document).ready(function($) {
+                    $('#test-netsuite-connection').on('click', function() {
+                        var $button = $(this);
+                        var $result = $('#connection-result');
+
+                        $button.prop('disabled', true);
+                        $result.html('<?php echo esc_js(__('Testing connection...', 'product-estimator')); ?>');
+
+                        $.ajax({
+                            url: ajaxurl,
+                            type: 'POST',
+                            data: {
+                                action: 'test_netsuite_connection',
+                                nonce: '<?php echo wp_create_nonce('product_estimator_admin_nonce'); ?>'
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    $result.html('<span style="color:green">' + response.data.message + '</span>');
+                                } else {
+                                    $result.html('<span style="color:red">' + response.data.message + '</span>');
+                                }
+                            },
+                            error: function() {
+                                $result.html('<span style="color:red"><?php echo esc_js(__('Connection test failed', 'product-estimator')); ?></span>');
+                            },
+                            complete: function() {
+                                $button.prop('disabled', false);
+                            }
+                        });
+                    });
+                });
+            </script>
+            <?php
+        }
     }
 
     public function render_estimator_section() {

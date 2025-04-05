@@ -129,41 +129,41 @@ input.error {
 }
 
 /* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-    .tab-content {
-        background: #fff;
-        border-color: #2c3338;
-    }
+/*@media (prefers-color-scheme: dark) {*/
+/*    .tab-content {*/
+/*        background: #fff;*/
+/*        border-color: #2c3338;*/
+/*    }*/
 
-    #report-placeholder {
-        background: #2c3338;
-        border-color: #2c3338;
-    }
+/*    #report-placeholder {*/
+/*        background: #2c3338;*/
+/*        border-color: #2c3338;*/
+/*    }*/
 
-    .report-summary,
-    .report-filters {
-        background: #2c3338;
-    }
+/*    .report-summary,*/
+/*    .report-filters {*/
+/*        background: #2c3338;*/
+/*    }*/
 
-    .nav-tab {
-        background: #2c3338;
-        border-color: #50575e;
-        color: #fff;
-    }
+/*    .nav-tab {*/
+/*        background: #2c3338;*/
+/*        border-color: #50575e;*/
+/*        color: #fff;*/
+/*    }*/
 
-    .nav-tab-active {
-        background: #2271b1;
-    }
+/*    .nav-tab-active {*/
+/*        background: #2271b1;*/
+/*    }*/
 
-    input[type="text"],
-    input[type="email"],
-    input[type="number"],
-    select {
-        background: #2c3338;
-        color: #fff;
-        border-color: #50575e;
-    }
-}
+/*    input[type="text"],*/
+/*    input[type="email"],*/
+/*    input[type="number"],*/
+/*    select {*/
+/*        background: #2c3338;*/
+/*        color: #fff;*/
+/*        border-color: #50575e;*/
+/*    }*/
+/*}*/
 
 /* Print Styles */
 @media print {

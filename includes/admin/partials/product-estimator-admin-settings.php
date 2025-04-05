@@ -27,7 +27,7 @@ if (!defined('WPINC')) {
     <div class="product-estimator-admin-wrapper">
         <!-- Navigation Tabs -->
         <nav class="nav-tab-wrapper">
-            <a href="#general" class="nav-tab nav-tab-active" data-tab="general">
+            <a href="#general" class="nav-tab" data-tab="general">
                 <?php esc_html_e('General Settings', 'product-estimator'); ?>
             </a>
             <a href="#netsuite" class="nav-tab" data-tab="netsuite">
@@ -44,21 +44,21 @@ if (!defined('WPINC')) {
             ?>
 
             <!-- General Settings Tab -->
-            <div id="general" class="tab-content active">
+            <div id="general" class="tab-content">
                 <?php
                 do_settings_sections($plugin_name);
                 ?>
             </div>
 
             <!-- NetSuite Tab -->
-            <div id="netsuite" class="tab-content" style="display: none;">
+            <div id="netsuite" class="tab-content">
                 <?php
                 do_settings_sections($plugin_name . '_netsuite');
                 ?>
             </div>
 
             <!-- Notifications Tab -->
-            <div id="notifications" class="tab-content" style="display: none;">
+            <div id="notifications" class="tab-content">
                 <?php
                 do_settings_sections($plugin_name . '_notifications');
                 ?>
@@ -68,20 +68,3 @@ if (!defined('WPINC')) {
         </form>
     </div>
 </div>
-
-<script>
-    jQuery(document).ready(function($) {
-        // Tab switching functionality
-        $('.nav-tab').on('click', function(e) {
-            e.preventDefault();
-
-            // Update active tab
-            $('.nav-tab').removeClass('nav-tab-active');
-            $(this).addClass('nav-tab-active');
-
-            // Show correct content
-            $('.tab-content').hide();
-            $('#' + $(this).data('tab')).show();
-        });
-    });
-</script>

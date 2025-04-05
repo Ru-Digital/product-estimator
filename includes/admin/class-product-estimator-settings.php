@@ -63,15 +63,7 @@ class ProductEstimatorSettings {
             array($this, 'validate_settings')
         );
 
-        // NetSuite Integration Settings
-        add_settings_section(
-            'netsuite_integration',
-            __('NetSuite Integration', 'product-estimator'),
-            array($this, 'render_netsuite_section'),
-            $this->plugin_name
-        );
-
-        // Estimator Settings
+        // General Settings (main plugin page)
         add_settings_section(
             'estimator_settings',
             __('Estimator Settings', 'product-estimator'),
@@ -79,19 +71,27 @@ class ProductEstimatorSettings {
             $this->plugin_name
         );
 
+        // NetSuite Integration Settings
+        add_settings_section(
+            'netsuite_integration',
+            __('NetSuite Integration', 'product-estimator'),
+            array($this, 'render_netsuite_section'),
+            $this->plugin_name . '_netsuite'
+        );
+
         // Notification Settings
         add_settings_section(
             'notification_settings',
             __('Notification Settings', 'product-estimator'),
             array($this, 'render_notification_section'),
-            $this->plugin_name
+            $this->plugin_name . '_notifications'
         );
+
+        // Register fields for Estimator Settings (General tab)
+        $this->add_estimator_fields();
 
         // Register fields for NetSuite Integration
         $this->add_netsuite_fields();
-
-        // Register fields for Estimator Settings
-        $this->add_estimator_fields();
 
         // Register fields for Notification Settings
         $this->add_notification_fields();
@@ -124,7 +124,7 @@ class ProductEstimatorSettings {
                 $key,
                 $field['title'],
                 array($this, 'render_field'),
-                $this->plugin_name,
+                $this->plugin_name . '_netsuite', // Changed to netsuite tab
                 'netsuite_integration',
                 array(
                     'id' => $key,
@@ -145,11 +145,6 @@ class ProductEstimatorSettings {
                 'type' => 'number',
                 'description' => __('Default markup percentage for price ranges', 'product-estimator')
             ),
-            'room_dimensions_required' => array(
-                'title' => __('Require Room Dimensions', 'product-estimator'),
-                'type' => 'checkbox',
-                'description' => __('Make room dimensions mandatory for estimates', 'product-estimator')
-            ),
             'estimate_expiry_days' => array(
                 'title' => __('Estimate Validity (Days)', 'product-estimator'),
                 'type' => 'number',
@@ -162,7 +157,7 @@ class ProductEstimatorSettings {
                 $key,
                 $field['title'],
                 array($this, 'render_field'),
-                $this->plugin_name,
+                $this->plugin_name, // Main plugin page for general settings
                 'estimator_settings',
                 array(
                     'id' => $key,
@@ -178,15 +173,15 @@ class ProductEstimatorSettings {
      */
     private function add_notification_fields() {
         $fields = array(
-            'designer_email' => array(
-                'title' => __('Designer Email', 'product-estimator'),
+            'default_designer_email' => array(
+                'title' => __('Default Designer Email', 'product-estimator'),
                 'type' => 'email',
-                'description' => __('Email for designer consultation requests', 'product-estimator')
+                'description' => __('Fallback email for designer consultation requests', 'product-estimator')
             ),
-            'store_email' => array(
-                'title' => __('Store Email', 'product-estimator'),
+            'default_store_email' => array(
+                'title' => __('Default Store Email', 'product-estimator'),
                 'type' => 'email',
-                'description' => __('Email for store contact requests', 'product-estimator')
+                'description' => __('Fallback email for store contact requests', 'product-estimator')
             ),
             'pdf_footer_text' => array(
                 'title' => __('PDF Footer Text', 'product-estimator'),
@@ -200,7 +195,7 @@ class ProductEstimatorSettings {
                 $key,
                 $field['title'],
                 array($this, 'render_field'),
-                $this->plugin_name,
+                $this->plugin_name . '_notifications', // Changed to notifications tab
                 'notification_settings',
                 array(
                     'id' => $key,

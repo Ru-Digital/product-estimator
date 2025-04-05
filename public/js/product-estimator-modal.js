@@ -296,6 +296,9 @@
               // Store estimate ID with the form
               this.$roomSelectionForm.attr('data-estimate-id', estimateId);
 
+              // IMPORTANT: Also set the data-estimate attribute on the Add New Room button
+              $('#add-new-room-from-selection').attr('data-estimate', estimateId);
+
               // Show room selection form
               this.$roomSelectionForm.show();
             } else {

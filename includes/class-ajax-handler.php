@@ -527,7 +527,7 @@ public function getVariationEstimator() {
     }
 
     /**
-     * Add a new room to an estimate
+     * Handle new room submission
      */
     public function addNewRoom() {
         // Verify nonce
@@ -603,24 +603,79 @@ public function getVariationEstimator() {
             if ($product_id > 0) {
                 // Get product data
                 $product = wc_get_product($product_id);
+
                 if ($product) {
-                    // Prepare product data
+                    // Instead of duplicating logic, simulate the product data creation from addProductToRoom
+                    // but without sending the AJAX response
                     $product_data = [
                         'id' => $product_id,
                         'name' => $product->get_name(),
-                        'price' => $product->get_price(),
                         'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
                     ];
 
-                    // Add product to room
-                    $product_added = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
+                    try {
+                        // Get room area for calculations
+                        $room_area = floatval($form_data['room_width']) * floatval($form_data['room_length']);
 
-                    // Debug logging
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('Product added to room: ' . ($product_added ? 'true' : 'false'));
-                        if (!$product_added) {
-                            error_log('Failed to add product to room. Estimate ID: ' . $estimate_id . ', Room ID: ' . $room_id);
+                        // Initialize NetSuite Integration for pricing
+                        $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
+
+                        // Get pricing data for this product
+                        $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
+
+                        // Check if we received valid pricing data
+                        if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
+                            foreach ($pricing_data['prices'] as $price_item) {
+                                if ($price_item['product_id'] == $product_id) {
+                                    // Add NetSuite pricing data to product
+                                    $product_data['min_price'] = $price_item['min_price'];
+                                    $product_data['max_price'] = $price_item['max_price'];
+                                    break;
+                                }
+                            }
                         }
+
+                        // If NetSuite data not found, set defaults based on WC price
+                        if (!isset($product_data['min_price'])) {
+                            $base_price = (float)$product->get_price();
+                            $product_data['min_price'] = $base_price;
+                            $product_data['max_price'] = $base_price;
+                        }
+
+                        // Calculate price based on min_price * room_area
+                        if ($room_area > 0 && isset($product_data['min_price'])) {
+                            $product_data['min_price_total'] = $product_data['min_price'] * $room_area;
+                        } else {
+                            // If room area is not available or is zero, use min_price as fallback
+                            $product_data['min_price_total'] = $product_data['min_price'];
+                        }
+
+                        // Calculate price based on max_price * room_area
+                        if ($room_area > 0 && isset($product_data['max_price'])) {
+                            $product_data['max_price_total'] = $product_data['max_price'] * $room_area;
+                        } else {
+                            // If room area is not available or is zero, use max_price as fallback
+                            $product_data['max_price_total'] = $product_data['max_price'];
+                        }
+
+                        $product_data['price_total'] = $product_data['min_price_total'] . " - " . $product_data['max_price_total'];
+
+                        // Add product to room
+                        $product_added = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
+
+                    } catch (\Exception $e) {
+                        error_log('Error calculating product prices: ' . $e->getMessage());
+
+                        // Simplified product data if pricing fails
+                        $product_data = [
+                            'id' => $product_id,
+                            'name' => $product->get_name(),
+                            'price' => $product->get_price(),
+                            'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
+                        ];
+
+                        // Still try to add the product even if pricing calculation fails
+                        $product_added = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
                     }
                 }
             }

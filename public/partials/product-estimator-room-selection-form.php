@@ -20,7 +20,8 @@
     <div class="form-actions">
         <button type="submit" class="button submit-btn"><?php esc_html_e('Add Product to Room', 'product-estimator'); ?></button>
         <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection"><?php esc_html_e('Back', 'product-estimator'); ?></button>
-        <button type="button" class="button add-room" id="add-new-room-from-selection"><?php esc_html_e('Add New Room', 'product-estimator'); ?></button>
+        <!-- Add data-estimate attribute that will be populated dynamically by JavaScript -->
+        <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate=""><?php esc_html_e('Add New Room', 'product-estimator'); ?></button>
     </div>
 </form>
 

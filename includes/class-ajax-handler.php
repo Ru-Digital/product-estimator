@@ -419,6 +419,9 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ]);
         }
+
+        $this->updateTotals($found_estimate_id);
+
     }
     /**
      * Get the full estimates list HTML
@@ -694,6 +697,11 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ]);
         }
+
+        // If a product was added to the new room
+        if ($product_added) {
+            $this->updateTotals($estimate_id);
+        }
     }
 
     /**
@@ -766,6 +774,8 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ]);
         }
+        $this->updateTotals($estimate_id);
+
     }
 
     /**
@@ -817,6 +827,9 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ]);
         }
+
+        $this->updateTotals($estimate_id);
+
     }
 
 
@@ -862,5 +875,35 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Update room and estimate totals in session
+     *
+     * @param string $estimate_id Estimate ID
+     */
+    private function updateTotals($estimate_id) {
+        // Get the estimate
+        $estimate = $this->session->getEstimate($estimate_id);
+
+        if (!$estimate) {
+            return;
+        }
+
+        // Loop through rooms and update totals
+        if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
+            foreach ($estimate['rooms'] as $room_id => $room) {
+                $room_totals = $this->session->calculateRoomTotals($room);
+
+                // Store totals in session
+                $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['min_total'] = $room_totals['min_total'];
+                $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['max_total'] = $room_totals['max_total'];
+            }
+        }
+
+        // Calculate and store estimate totals
+        $estimate_totals = $this->session->calculateEstimateTotals($estimate);
+        $_SESSION['product_estimator']['estimates'][$estimate_id]['min_total'] = $estimate_totals['min_total'];
+        $_SESSION['product_estimator']['estimates'][$estimate_id]['max_total'] = $estimate_totals['max_total'];
     }
 }

@@ -24,7 +24,27 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
     <?php foreach($estimates as $estimate_id => $estimate): ?>
         <div class="estimate-section" data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
             <div class="estimate-header">
-                <h3 class="estimate-name"><?php echo esc_html($estimate['name']); ?></h3>
+                <h3 class="estimate-name"><span class="estimate_total-wrapper">
+                    <?php echo esc_html($estimate['name']); ?>
+                    <?php
+                    // Calculate and display estimate totals
+                    $estimate_totals = $session_handler->calculateEstimateTotals($estimate);
+                    if ($estimate_totals['min_total'] > 0 || $estimate_totals['max_total'] > 0):
+                        if (round($estimate_totals['min_total'], 2) === round($estimate_totals['max_total'], 2)):
+                            ?>
+                            <span class="estimate-total-price">
+                (<?php echo wc_price($estimate_totals['min_total']); ?>)
+            </span>
+                        <?php else: ?>
+                            <span class="estimate-total-price">
+                <?php echo wc_price($estimate_totals['min_total']); ?> - <?php echo wc_price($estimate_totals['max_total']); ?>
+            </span>
+                        <?php
+                        endif;
+                    endif;
+                    ?>
+                    </span>
+                </h3>
                 <button class="remove-estimate"
                         data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
                         title="<?php esc_attr_e('Delete Estimate', 'product-estimator'); ?>">
@@ -48,8 +68,25 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                     <button class="accordion-header">
                                         <span class="room-name"><?php echo esc_html($room['name']); ?>: </span>
                                         <span class="room-dimensions">
-                                            <?php echo esc_html($room['width']); ?>m × <?php echo esc_html($room['length']); ?>m
-                                        </span>
+        <?php echo esc_html($room['width']); ?>m × <?php echo esc_html($room['length']); ?>m
+    </span>
+                                        <?php
+                                        // Calculate and display room totals
+                                        $room_totals = $session_handler->calculateRoomTotals($room);
+                                        if ($room_totals['min_total'] > 0 || $room_totals['max_total'] > 0):
+                                            if (round($room_totals['min_total'], 2) === round($room_totals['max_total'], 2)):
+                                                ?>
+                                                <span class="room-total-price">
+            <?php echo wc_price($room_totals['min_total']); ?>
+        </span>
+                                            <?php else: ?>
+                                                <span class="room-total-price">
+            <?php echo wc_price($room_totals['min_total']); ?> - <?php echo wc_price($room_totals['max_total']); ?>
+        </span>
+                                            <?php
+                                            endif;
+                                        endif;
+                                        ?>
                                     </button>
                                     <button class="remove-room"
                                             data-estimate-id="<?php echo esc_attr($estimate_id); ?>"

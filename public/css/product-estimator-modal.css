@@ -103,6 +103,25 @@
   padding-bottom: 10px;
 }
 
+/* Room and estimate pricing display */
+.room-total-price {
+  margin-left: auto;
+  color: #00833F;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.estimate-total-price {
+  color: #333 !important;
+  font-weight: 400;
+  font-size: 0.8em;
+  margin-left: 10px;
+}
+.estimate-total-price.amount {
+  color: #333 !important;
+}
+
+
 .estimate-section {
   margin-bottom: 30px;
   border-bottom: 1px solid #eee;
@@ -197,6 +216,12 @@
 .accordion-header .room-dimensions {
   color: #666;
   font-size: 15px;
+}
+
+.accordion-header .room-name,
+.accordion-header .room-dimensions {
+  margin-right: 10px;
+  white-space: nowrap;
 }
 
 .remove-room {

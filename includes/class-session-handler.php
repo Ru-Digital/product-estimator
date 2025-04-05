@@ -395,4 +395,71 @@ class SessionHandler {
         return true;
     }
 
+    /**
+     * Calculate total price range for a room
+     *
+     * @param array $room Room data with products
+     * @return array Array with min_total and max_total values
+     */
+    public function calculateRoomTotals($room) {
+        $min_total = 0;
+        $max_total = 0;
+
+        // Get default markup from settings
+        $options = get_option('product_estimator_settings');
+        $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+
+        if (isset($room['products']) && is_array($room['products'])) {
+            foreach ($room['products'] as $product) {
+                // Calculate room area
+                $room_width = isset($room['width']) ? floatval($room['width']) : 0;
+                $room_length = isset($room['length']) ? floatval($room['length']) : 0;
+                $room_area = $room_width * $room_length;
+
+                if (isset($product['min_price']) && isset($product['max_price'])) {
+                    // Apply markup adjustment
+                    $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
+                    $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
+
+                    // Add to totals
+                    $min_total += $min_price * $room_area;
+                    $max_total += $max_price * $room_area;
+                } elseif (isset($product['min_price_total']) && isset($product['max_price_total'])) {
+                    // For pre-calculated totals
+                    $min_total += floatval($product['min_price_total']) * (1 - ($default_markup / 100));
+                    $max_total += floatval($product['max_price_total']) * (1 + ($default_markup / 100));
+                }
+            }
+        }
+
+        return [
+            'min_total' => $min_total,
+            'max_total' => $max_total
+        ];
+    }
+
+    /**
+     * Calculate total price range for an estimate
+     *
+     * @param array $estimate Estimate data with rooms
+     * @return array Array with min_total and max_total values
+     */
+    public function calculateEstimateTotals($estimate) {
+        $estimate_min = 0;
+        $estimate_max = 0;
+
+        if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
+            foreach ($estimate['rooms'] as $room) {
+                $room_totals = $this->calculateRoomTotals($room);
+                $estimate_min += $room_totals['min_total'];
+                $estimate_max += $room_totals['max_total'];
+            }
+        }
+
+        return [
+            'min_total' => $estimate_min,
+            'max_total' => $estimate_max
+        ];
+    }
+
 }

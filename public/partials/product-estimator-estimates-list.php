@@ -23,27 +23,27 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
 <?php if (!empty($estimates)): ?>
     <?php foreach($estimates as $estimate_id => $estimate): ?>
         <div class="estimate-section" data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
+            <!-- For the estimate header -->
             <div class="estimate-header">
-                <h3 class="estimate-name"><span class="estimate_total-wrapper">
+                <h3 class="estimate-name">
                     <?php echo esc_html($estimate['name']); ?>
                     <?php
-                    // Calculate and display estimate totals
-                    $estimate_totals = $session_handler->calculateEstimateTotals($estimate);
-                    if ($estimate_totals['min_total'] > 0 || $estimate_totals['max_total'] > 0):
-                        if (round($estimate_totals['min_total'], 2) === round($estimate_totals['max_total'], 2)):
+                    // Display estimate totals if available
+                    if (isset($estimate['min_total']) && isset($estimate['max_total']) &&
+                        ($estimate['min_total'] > 0 || $estimate['max_total'] > 0)):
+                        if (round($estimate['min_total'], 2) === round($estimate['max_total'], 2)):
                             ?>
                             <span class="estimate-total-price">
-                (<?php echo wc_price($estimate_totals['min_total']); ?>)
+                (<?php echo wc_price($estimate['min_total']); ?>)
             </span>
                         <?php else: ?>
                             <span class="estimate-total-price">
-                <?php echo wc_price($estimate_totals['min_total']); ?> - <?php echo wc_price($estimate_totals['max_total']); ?>
+                (<?php echo wc_price($estimate['min_total']); ?> - <?php echo wc_price($estimate['max_total']); ?>)
             </span>
                         <?php
                         endif;
                     endif;
                     ?>
-                    </span>
                 </h3>
                 <button class="remove-estimate"
                         data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
@@ -71,17 +71,17 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
         <?php echo esc_html($room['width']); ?>m × <?php echo esc_html($room['length']); ?>m
     </span>
                                         <?php
-                                        // Calculate and display room totals
-                                        $room_totals = $session_handler->calculateRoomTotals($room);
-                                        if ($room_totals['min_total'] > 0 || $room_totals['max_total'] > 0):
-                                            if (round($room_totals['min_total'], 2) === round($room_totals['max_total'], 2)):
+                                        // Display room totals if available
+                                        if (isset($room['min_total']) && isset($room['max_total']) &&
+                                            ($room['min_total'] > 0 || $room['max_total'] > 0)):
+                                            if (round($room['min_total'], 2) === round($room['max_total'], 2)):
                                                 ?>
                                                 <span class="room-total-price">
-            <?php echo wc_price($room_totals['min_total']); ?>
+            <?php echo wc_price($room['min_total']); ?>
         </span>
                                             <?php else: ?>
                                                 <span class="room-total-price">
-            <?php echo wc_price($room_totals['min_total']); ?> - <?php echo wc_price($room_totals['max_total']); ?>
+            <?php echo wc_price($room['min_total']); ?> - <?php echo wc_price($room['max_total']); ?>
         </span>
                                             <?php
                                             endif;

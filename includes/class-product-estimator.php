@@ -75,6 +75,11 @@ class ProductEstimator {
         // Initialize session handler (high priority)
         $this->session = SessionHandler::getInstance();
 
+
+        // Initialize totals for existing session data
+        $this->session->initializeAllTotals();
+
+
         // Add initialization on 'init' hook (early but not too early)
         add_action('init', array($this, 'initialize'), 20);
 

@@ -406,6 +406,9 @@ public function getVariationEstimator() {
                 return;
             }
 
+            // Update totals after adding the product
+            $this->updateTotals($found_estimate_id);
+
             wp_send_json_success([
                 'message' => __('Product added successfully', 'product-estimator'),
                 'estimate_id' => $found_estimate_id,
@@ -419,9 +422,6 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ]);
         }
-
-        $this->updateTotals($found_estimate_id);
-
     }
     /**
      * Get the full estimates list HTML
@@ -681,6 +681,10 @@ public function getVariationEstimator() {
                         $product_added = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
                     }
                 }
+                // Product was added, update totals
+                if ($product_added) {
+                    $this->updateTotals($estimate_id);
+                }
             }
 
             wp_send_json_success([
@@ -696,11 +700,6 @@ public function getVariationEstimator() {
                 'message' => __('An error occurred while processing your request', 'product-estimator'),
                 'error' => $e->getMessage()
             ]);
-        }
-
-        // If a product was added to the new room
-        if ($product_added) {
-            $this->updateTotals($estimate_id);
         }
     }
 
@@ -764,6 +763,9 @@ public function getVariationEstimator() {
                 return;
             }
 
+            // Update totals after removing the product
+            $this->updateTotals($estimate_id);
+
             wp_send_json_success([
                 'message' => __('Product removed successfully', 'product-estimator')
             ]);
@@ -774,7 +776,6 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ]);
         }
-        $this->updateTotals($estimate_id);
 
     }
 
@@ -817,6 +818,9 @@ public function getVariationEstimator() {
                 return;
             }
 
+            $this->updateTotals($estimate_id);
+
+
             wp_send_json_success([
                 'message' => __('Room and all its products removed successfully', 'product-estimator')
             ]);
@@ -828,7 +832,6 @@ public function getVariationEstimator() {
             ]);
         }
 
-        $this->updateTotals($estimate_id);
 
     }
 
@@ -883,27 +886,64 @@ public function getVariationEstimator() {
      * @param string $estimate_id Estimate ID
      */
     private function updateTotals($estimate_id) {
-        // Get the estimate
-        $estimate = $this->session->getEstimate($estimate_id);
+        // Ensure session is started
+        $this->session->startSession();
 
-        if (!$estimate) {
+        // Reference to session data for direct manipulation
+        $estimates = &$_SESSION['product_estimator']['estimates'];
+
+        if (!isset($estimates[$estimate_id])) {
             return;
         }
 
-        // Loop through rooms and update totals
-        if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
-            foreach ($estimate['rooms'] as $room_id => $room) {
-                $room_totals = $this->session->calculateRoomTotals($room);
+        // Get default markup from settings
+        $options = get_option('product_estimator_settings');
+        $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
 
-                // Store totals in session
-                $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['min_total'] = $room_totals['min_total'];
-                $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['max_total'] = $room_totals['max_total'];
+        $estimate_min_total = 0;
+        $estimate_max_total = 0;
+
+        // Loop through rooms and calculate totals
+        if (isset($estimates[$estimate_id]['rooms'])) {
+            foreach ($estimates[$estimate_id]['rooms'] as $room_id => &$room) {
+                $room_min_total = 0;
+                $room_max_total = 0;
+
+                // Calculate room area
+                $room_width = isset($room['width']) ? floatval($room['width']) : 0;
+                $room_length = isset($room['length']) ? floatval($room['length']) : 0;
+                $room_area = $room_width * $room_length;
+
+                if (isset($room['products']) && is_array($room['products'])) {
+                    foreach ($room['products'] as $product) {
+                        if (isset($product['min_price']) && isset($product['max_price'])) {
+                            // Apply markup adjustment
+                            $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
+                            $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
+
+                            // Add to totals
+                            $room_min_total += $min_price * $room_area;
+                            $room_max_total += $max_price * $room_area;
+                        } elseif (isset($product['min_price_total']) && isset($product['max_price_total'])) {
+                            // For pre-calculated totals
+                            $room_min_total += floatval($product['min_price_total']) * (1 - ($default_markup / 100));
+                            $room_max_total += floatval($product['max_price_total']) * (1 + ($default_markup / 100));
+                        }
+                    }
+                }
+
+                // Store room totals directly in the session
+                $room['min_total'] = $room_min_total;
+                $room['max_total'] = $room_max_total;
+
+                // Add to estimate totals
+                $estimate_min_total += $room_min_total;
+                $estimate_max_total += $room_max_total;
             }
         }
 
-        // Calculate and store estimate totals
-        $estimate_totals = $this->session->calculateEstimateTotals($estimate);
-        $_SESSION['product_estimator']['estimates'][$estimate_id]['min_total'] = $estimate_totals['min_total'];
-        $_SESSION['product_estimator']['estimates'][$estimate_id]['max_total'] = $estimate_totals['max_total'];
+        // Store estimate totals directly in the session
+        $estimates[$estimate_id]['min_total'] = $estimate_min_total;
+        $estimates[$estimate_id]['max_total'] = $estimate_max_total;
     }
 }

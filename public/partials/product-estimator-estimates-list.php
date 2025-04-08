@@ -55,9 +55,9 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
             <div id="rooms">
                 <div class="room-header">
                     <h4><?php esc_html_e('Rooms', 'product-estimator'); ?></h4>
-                    <!--                    <button class="add-room" data-estimate="--><?php //echo esc_attr($estimate_id); ?><!--">-->
-                    <!--                        --><?php //esc_html_e('Add New Room', 'product-estimator'); ?>
-                    <!--                    </button>-->
+                                        <button class="add-room" data-estimate="<?php echo esc_attr($estimate_id); ?>">
+                                            <?php esc_html_e('Add New Room', 'product-estimator'); ?>
+                                        </button>
                 </div>
 
                 <?php if (!empty($estimate['rooms'])): ?>

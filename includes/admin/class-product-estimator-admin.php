@@ -51,6 +51,10 @@ class ProductEstimatorAdmin {
         // Properly initialize settings
         $this->settings = new ProductEstimatorSettings($plugin_name, $version);
 
+        // Initialize the Product Additions Manager
+        $product_additions_manager = new ProductAdditionsManager($plugin_name, $version, null);
+
+
         // Add this line to hook the menu method to the admin_menu action
         add_action('admin_menu', array($this, 'add_plugin_admin_menu'));
         add_action('wp_ajax_test_netsuite_connection', array($this, 'test_netsuite_connection'));

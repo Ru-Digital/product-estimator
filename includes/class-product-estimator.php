@@ -174,4 +174,106 @@ class ProductEstimator {
     private function isWooCommerceActive() {
         return class_exists('WooCommerce');
     }
+
+    /**
+     * Register all of the hooks related to the admin area functionality
+     * of the plugin.
+     *
+     * @since    1.0.3
+     * @access   private
+     */
+    private function define_admin_hooks() {
+        // Existing code...
+
+        // Load Product Additions Manager
+        $product_additions_manager = new Includes\Admin\ProductAdditionsManager($this->get_plugin_name(), $this->get_version(), $this->get_loader());
+
+        // Load Product Estimator Field (for "Enable Estimator" checkbox)
+        $product_estimator_field = new Includes\Admin\ProductEstimatorField($this->get_plugin_name(), $this->get_version(), $this->get_loader());
+    }
+
+    /**
+     * Get category relations for a specific product
+     *
+     * @since    1.0.3
+     * @access   public
+     * @param    int      $product_id     The product ID.
+     * @param    string   $relation_type  The relation type (automatic, optional, or empty for all).
+     * @return   array    The related product categories.
+     */
+    public function get_related_categories_for_product($product_id, $relation_type = '') {
+        // Get product categories
+        $product_categories = get_the_terms($product_id, 'product_cat');
+
+        if (!$product_categories || is_wp_error($product_categories)) {
+            return array();
+        }
+
+        // Get category IDs
+        $category_ids = array();
+        foreach ($product_categories as $category) {
+            $category_ids[] = $category->term_id;
+        }
+
+        // Get category relations
+        $relations = get_option('product_estimator_category_relations', array());
+        $related_categories = array();
+
+        foreach ($relations as $relation_id => $relation) {
+            // Check if this product has a source category that is related
+            if (in_array($relation['source_category'], $category_ids)) {
+                // If relation_type is specified, filter by it
+                if (empty($relation_type) || $relation['relation_type'] === $relation_type) {
+                    $related_categories[] = $relation['target_category'];
+                }
+            }
+        }
+
+        return array_unique($related_categories);
+    }
+
+    /**
+     * Get related products for a specific product based on category relations
+     *
+     * @since    1.0.3
+     * @access   public
+     * @param    int      $product_id     The product ID.
+     * @param    string   $relation_type  The relation type (automatic, optional, or empty for all).
+     * @return   array    The related product IDs.
+     */
+    public function get_related_products_for_product($product_id, $relation_type = '') {
+        // Get related categories
+        $related_categories = $this->get_related_categories_for_product($product_id, $relation_type);
+
+        if (empty($related_categories)) {
+            return array();
+        }
+
+        // Get products from related categories that have estimator enabled
+        $args = array(
+            'post_type'      => 'product',
+            'posts_per_page' => -1,
+            'post_status'    => 'publish',
+            'fields'         => 'ids',
+            'meta_query'     => array(
+                array(
+                    'key'     => '_enable_estimator',
+                    'value'   => 'yes',
+                    'compare' => '=',
+                ),
+            ),
+            'tax_query'      => array(
+                array(
+                    'taxonomy' => 'product_cat',
+                    'field'    => 'term_id',
+                    'terms'    => $related_categories,
+                    'operator' => 'IN',
+                ),
+            ),
+        );
+
+        $products = get_posts($args);
+
+        return $products;
+    }
 }

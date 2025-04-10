@@ -319,19 +319,20 @@ public function getVariationEstimator() {
     /**
      * Get the full estimates list HTML
      */
-    public function getEstimatesList() {
+    public function getEstimatesList()
+    {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
         // Start output buffer to capture HTML
         ob_start();
 
+        // Get all estimates
+        $estimates = $this->session->getEstimates();
+
         // Check if we have a ProductAdditionsManager instance to generate suggestions
         if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
             $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
-
-            // Get all estimates
-            $estimates = $this->session->getEstimates();
 
             // Generate suggestions for each room in each estimate
             foreach ($estimates as $estimate_id => &$estimate) {
@@ -404,9 +405,22 @@ public function getVariationEstimator() {
                 }
             }
 
-            // Update the session with the modified estimates that include suggestions
+            // Update only the suggestions in the session, not the entire data
             if (isset($_SESSION['product_estimator']['estimates'])) {
-                $_SESSION['product_estimator']['estimates'] = $estimates;
+                foreach ($estimates as $estimate_id => $estimate) {
+                    if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
+                        foreach ($estimate['rooms'] as $room_id => $room) {
+                            if (isset($room['product_suggestions'])) {
+                                // Only update the suggestions, not the entire room data
+                                $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'] =
+                                    $room['product_suggestions'];
+                            } else if (isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'])) {
+                                // Remove suggestions if they've been removed from our local copy
+                                unset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions']);
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -421,7 +435,6 @@ public function getVariationEstimator() {
             'html' => $html
         ));
     }
-
     /**
      * Get estimates data for dropdown
      */

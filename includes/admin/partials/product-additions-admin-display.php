@@ -24,6 +24,7 @@ if (!defined('ABSPATH')) {
         <p><?php _e('Create relationships between product categories to automatically add related products to estimates.', 'product-estimator'); ?></p>
         <ul class="ul-disc">
             <li><?php _e('<strong>Auto add product with Category:</strong> A specific product from the selected category will be automatically added when a product from the source category is added to an estimate.', 'product-estimator'); ?></li>
+            <li><?php _e('<strong>Auto add note with Category:</strong> A custom note will be automatically added when a product from the source category is added to an estimate.', 'product-estimator'); ?></li>
         </ul>
     </div>
 
@@ -49,8 +50,9 @@ if (!defined('ABSPATH')) {
                             <select name="relation_type" id="relation_type" class="regular-text" required>
                                 <option value=""><?php _e('Please Select', 'product-estimator'); ?></option>
                                 <option value="auto_add_by_category"><?php _e('Auto add product with Category', 'product-estimator'); ?></option>
+                                <option value="auto_add_note_by_category"><?php _e('Auto add note with Category', 'product-estimator'); ?></option>
                             </select>
-                            <p class="description"><?php _e('Select how the related products are added to the estimate.', 'product-estimator'); ?></p>
+                            <p class="description"><?php _e('Select how the related products or notes are added to the estimate.', 'product-estimator'); ?></p>
                         </td>
                     </tr>
 
@@ -70,7 +72,7 @@ if (!defined('ABSPATH')) {
                         </td>
                     </tr>
 
-                    <!-- Target Category Row (initially hidden, will be shown based on action) -->
+                    <!-- Target Category Row (initially hidden, will be shown for auto_add_by_category) -->
                     <tr class="target-category-row" style="display: none;">
                         <th scope="row">
                             <label for="target_category"><?php _e('Product Addition Category', 'product-estimator'); ?></label>
@@ -105,6 +107,17 @@ if (!defined('ABSPATH')) {
                             <p class="description"><?php _e('Select a product to be automatically added.', 'product-estimator'); ?></p>
                         </td>
                     </tr>
+
+                    <!-- Note Row (initially hidden, will be shown for auto_add_note_by_category) -->
+                    <tr class="note-row" style="display: none;">
+                        <th scope="row">
+                            <label for="note_text"><?php _e('Note Text', 'product-estimator'); ?></label>
+                        </th>
+                        <td>
+                            <textarea name="note_text" id="note_text" class="regular-text" rows="5" style="width: 100%;" placeholder="<?php _e('Enter the note text to be automatically added...', 'product-estimator'); ?>"></textarea>
+                            <p class="description"><?php _e('Enter the note text that will be automatically added to the estimate when products from the source categories are added.', 'product-estimator'); ?></p>
+                        </td>
+                    </tr>
                 </table>
 
                 <div class="form-actions">
@@ -130,7 +143,7 @@ if (!defined('ABSPATH')) {
                     <tr>
                         <th scope="col"><?php _e('Source Categories', 'product-estimator'); ?></th>
                         <th scope="col"><?php _e('Action', 'product-estimator'); ?></th>
-                        <th scope="col"><?php _e('Target Product', 'product-estimator'); ?></th>
+                        <th scope="col"><?php _e('Target/Note', 'product-estimator'); ?></th>
                         <th scope="col"><?php _e('Actions', 'product-estimator'); ?></th>
                     </tr>
                     </thead>
@@ -148,23 +161,43 @@ if (!defined('ABSPATH')) {
                             }
                         }
 
-                        // Get target product info (if applicable)
-                        $product_info = '';
-                        if (isset($relation['product_id']) && $relation['product_id'] > 0) {
-                            $product = wc_get_product($relation['product_id']);
-                            if ($product) {
-                                $product_info = $product->get_name();
+                        // Get target product info or note text (if applicable)
+                        $target_info = '';
+                        if (isset($relation['relation_type']) && $relation['relation_type'] === 'auto_add_note_by_category') {
+                            // For note type, show a preview of the note
+                            if (isset($relation['note_text'])) {
+                                $target_info = strlen($relation['note_text']) > 50 ?
+                                    substr($relation['note_text'], 0, 50) . '...' :
+                                    $relation['note_text'];
                             }
-                        } else if (isset($relation['target_category'])) {
-                            // For backward compatibility - show category instead
-                            $target_cat = get_term($relation['target_category'], 'product_cat');
-                            if (!is_wp_error($target_cat) && $target_cat) {
-                                $product_info = $target_cat->name . ' ' . __('(Category)', 'product-estimator');
+                        } else {
+                            // For product type
+                            if (isset($relation['product_id']) && $relation['product_id'] > 0) {
+                                $product = wc_get_product($relation['product_id']);
+                                if ($product) {
+                                    $target_info = $product->get_name();
+                                }
+                            } else if (isset($relation['target_category'])) {
+                                // For backward compatibility - show category instead
+                                $target_cat = get_term($relation['target_category'], 'product_cat');
+                                if (!is_wp_error($target_cat) && $target_cat) {
+                                    $target_info = $target_cat->name . ' ' . __('(Category)', 'product-estimator');
+                                }
                             }
                         }
 
                         if (empty($source_names)) {
                             continue;
+                        }
+
+                        // Determine relation type label
+                        $relation_type_label = '';
+                        if (isset($relation['relation_type'])) {
+                            if ($relation['relation_type'] === 'auto_add_by_category') {
+                                $relation_type_label = __('Auto add product with Category', 'product-estimator');
+                            } elseif ($relation['relation_type'] === 'auto_add_note_by_category') {
+                                $relation_type_label = __('Auto add note with Category', 'product-estimator');
+                            }
                         }
                         ?>
                         <tr data-id="<?php echo esc_attr($relation_id); ?>">
@@ -172,12 +205,12 @@ if (!defined('ABSPATH')) {
                                 <?php echo esc_html(implode(', ', $source_names)); ?>
                             </td>
                             <td>
-                                <span class="relation-type auto-add-by-category">
-                                    <?php _e('Auto add product with Category', 'product-estimator'); ?>
+                                <span class="relation-type <?php echo esc_attr($relation['relation_type']); ?>">
+                                    <?php echo esc_html($relation_type_label); ?>
                                 </span>
                             </td>
                             <td>
-                                <?php echo esc_html($product_info); ?>
+                                <?php echo esc_html($target_info); ?>
                             </td>
                             <td class="actions">
                                 <button type="button" class="button button-small edit-relation"
@@ -185,7 +218,8 @@ if (!defined('ABSPATH')) {
                                         data-source="<?php echo esc_attr(implode(',', $source_categories)); ?>"
                                         data-target="<?php echo esc_attr($relation['target_category'] ?? ''); ?>"
                                         data-product-id="<?php echo esc_attr($relation['product_id'] ?? ''); ?>"
-                                        data-type="<?php echo esc_attr($relation['relation_type']); ?>">
+                                        data-type="<?php echo esc_attr($relation['relation_type']); ?>"
+                                        data-note-text="<?php echo esc_attr($relation['note_text'] ?? ''); ?>">
                                     <?php _e('Edit', 'product-estimator'); ?>
                                 </button>
                                 <button type="button" class="button button-small delete-relation"

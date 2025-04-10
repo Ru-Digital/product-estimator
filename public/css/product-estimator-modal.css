@@ -860,7 +860,6 @@ body.modal-open {
   margin-left: 0;
 }
 
-/* Header with icon and title
 .product-includes-header {
   display: flex;
   align-items: center;
@@ -899,7 +898,6 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-left: 26px; /* Align with title text after icon */
 }
 
 /* Individual include item */
@@ -912,13 +910,13 @@ body.modal-open {
   position: relative;
 }
 
-.include-item:before {
-  content: "•";
-  position: absolute;
-  left: -12px;
-  color: #00833F;
-  top: 0;
-}
+/*.include-item:before {*/
+/*  content: "•";*/
+/*  position: absolute;*/
+/*  left: -12px;*/
+/*  color: #00833F;*/
+/*  top: 0;*/
+/*}*/
 
 .include-item-name {
   color: #555;
@@ -965,10 +963,11 @@ body.modal-open {
 
   .product-includes-title {
     font-size: 11px;
+
   }
 
   .product-includes-items {
-    padding-left: 24px;
+    /*padding-left: 24px;*/
     gap: 8px;
   }
 
@@ -1000,6 +999,102 @@ body.modal-open {
 /*  }*/
 /*}*/
 
+/* Note styling */
+.product-note-item {
+  background-color: #fffbeb;
+  border-left: 3px solid #00833F;
+  padding: 15px;
+}
+
+.note-details-wrapper {
+  width: 100%;
+}
+
+.note-details {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  padding-right: 30px;
+}
+
+.note-icon {
+  margin-right: 10px;
+  color: #00833F;
+}
+
+.note-icon .dashicons {
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+}
+
+.note-content {
+  flex: 1;
+  font-style: italic;
+  color: #555;
+  line-height: 1.5;
+}
+
+.note-content p {
+  margin: 0 0 8px 0;
+}
+
+.note-content p:last-child {
+  margin: 0;
+}
+
+.product-notes .product-includes-icon {
+  color: #00833F;
+}
+
+.include-item.note-item {
+  padding: 8px 10px;
+  background-color: #f3f3f3;
+  /*border-left: 2px solid #00833F;*/
+  margin-top: 5px;
+  justify-content: start;
+  align-items: center;
+}
+
+.include-item-note {
+  font-style: italic;
+  color: #555;
+  line-height: 1.4;
+  font-size: 0.9em;
+}
+
+.include-item-note p {
+  margin: 0 0 6px 0;
+}
+
+.include-item-note p:last-child {
+  margin: 0;
+}
+
+/* Auto-add note relation type style */
+.relation-type.auto_add_note_by_category {
+  background-color: #00833F;
+  color: #00833F;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 767px) {
+  .product-note-item {
+    padding: 12px;
+  }
+
+  .note-icon .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+}
 
 /* Responsive adjustments */
 @media (max-width: 480px) {

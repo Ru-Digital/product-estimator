@@ -164,6 +164,11 @@ class ProductAdditionsManager {
                 if (isset($value['product_id']) && !empty($value['product_id'])) {
                     $sanitized_input[$key]['product_id'] = absint($value['product_id']);
                 }
+
+                // Add note_text for note type relationships
+                if (isset($value['note_text']) && !empty($value['note_text'])) {
+                    $sanitized_input[$key]['note_text'] = sanitize_textarea_field($value['note_text']);
+                }
             }
         }
 
@@ -271,6 +276,7 @@ class ProductAdditionsManager {
         $relation_type = isset($_POST['relation_type']) ? sanitize_text_field($_POST['relation_type']) : '';
         $target_category = isset($_POST['target_category']) ? absint($_POST['target_category']) : 0;
         $product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
+        $note_text = isset($_POST['note_text']) ? sanitize_textarea_field($_POST['note_text']) : '';
 
         // Validate data
         if (empty($relation_type)) {
@@ -294,6 +300,11 @@ class ProductAdditionsManager {
                 wp_send_json_error(array('message' => __('Please select a product.', 'product-estimator')));
                 return;
             }
+        } elseif ($relation_type === 'auto_add_note_by_category') {
+            if (empty($note_text)) {
+                wp_send_json_error(array('message' => __('Please enter a note text.', 'product-estimator')));
+                return;
+            }
         }
 
         // Get current relations
@@ -309,6 +320,8 @@ class ProductAdditionsManager {
         if ($relation_type === 'auto_add_by_category') {
             $relation_data['target_category'] = $target_category;
             $relation_data['product_id'] = $product_id;
+        } elseif ($relation_type === 'auto_add_note_by_category') {
+            $relation_data['note_text'] = $note_text;
         }
 
         // Add or update relation
@@ -332,7 +345,9 @@ class ProductAdditionsManager {
             'source_category' => $source_categories,
             'source_name' => implode(', ', $source_cat_names),
             'relation_type' => $relation_type,
-            'relation_type_label' => __('Auto add product with Category', 'product-estimator'),
+            'relation_type_label' => $relation_type === 'auto_add_by_category' ?
+                __('Auto add product with Category', 'product-estimator') :
+                __('Auto add note with Category', 'product-estimator'),
         );
 
         // Add target category info if applicable
@@ -351,6 +366,11 @@ class ProductAdditionsManager {
                 $response_data['product_id'] = $product_id;
                 $response_data['product_name'] = $product->get_name();
             }
+        }
+
+        // Add note text if applicable
+        if ($note_text) {
+            $response_data['note_text'] = $note_text;
         }
 
         wp_send_json_success(array(
@@ -565,22 +585,32 @@ class ProductAdditionsManager {
             if (in_array($term_id, $source_categories)) {
                 $relation_info = '';
 
-                if ($relation['relation_type'] === 'auto_add_by_category' && isset($relation['product_id'])) {
-                    $product = wc_get_product($relation['product_id']);
-                    if ($product) {
+                if (isset($relation['relation_type'])) {
+                    if ($relation['relation_type'] === 'auto_add_by_category' && isset($relation['product_id'])) {
+                        $product = wc_get_product($relation['product_id']);
+                        if ($product) {
+                            $relation_info = sprintf(
+                                __('Auto-adds product: %s', 'product-estimator'),
+                                '<strong>' . esc_html($product->get_name()) . '</strong>'
+                            );
+                        }
+                    } elseif ($relation['relation_type'] === 'auto_add_note_by_category' && isset($relation['note_text'])) {
+                        $note_preview = strlen($relation['note_text']) > 30 ?
+                            substr($relation['note_text'], 0, 30) . '...' :
+                            $relation['note_text'];
                         $relation_info = sprintf(
-                            __('Auto-adds product: %s', 'product-estimator'),
-                            '<strong>' . esc_html($product->get_name()) . '</strong>'
+                            __('Auto-adds note: %s', 'product-estimator'),
+                            '<strong>' . esc_html($note_preview) . '</strong>'
                         );
-                    }
-                } else if (isset($relation['target_category'])) {
-                    // Backward compatibility for category-only relationships
-                    $target_cat = get_term($relation['target_category'], 'product_cat');
-                    if (!is_wp_error($target_cat) && $target_cat) {
-                        $relation_info = sprintf(
-                            __('Adds products from: %s', 'product-estimator'),
-                            '<strong>' . esc_html($target_cat->name) . '</strong>'
-                        );
+                    } else if (isset($relation['target_category'])) {
+                        // Backward compatibility for category-only relationships
+                        $target_cat = get_term($relation['target_category'], 'product_cat');
+                        if (!is_wp_error($target_cat) && $target_cat) {
+                            $relation_info = sprintf(
+                                __('Adds products from: %s', 'product-estimator'),
+                                '<strong>' . esc_html($target_cat->name) . '</strong>'
+                            );
+                        }
                     }
                 }
 
@@ -601,7 +631,7 @@ class ProductAdditionsManager {
                 if (!empty($source_cat_names)) {
                     $relation_text = '';
 
-                    if ($relation['relation_type'] === 'auto_add_by_category' && isset($relation['product_id'])) {
+                    if (isset($relation['relation_type']) && $relation['relation_type'] === 'auto_add_by_category' && isset($relation['product_id'])) {
                         $product = wc_get_product($relation['product_id']);
                         if ($product) {
                             $relation_text = sprintf(
@@ -683,7 +713,7 @@ class ProductAdditionsManager {
      * Get relations for a specific category
      *
      * @param int $category_id The category ID.
-     * @param string $relation_type The relation type (auto_add_by_category or empty for all).
+     * @param string $relation_type The relation type (auto_add_by_category, auto_add_note_by_category, or empty for all).
      * @return array The product additions.
      */
     public function get_relations_for_category($category_id, $relation_type = '') {
@@ -695,7 +725,7 @@ class ProductAdditionsManager {
             $source_categories = isset($relation['source_category']) ? (array) $relation['source_category'] : array();
 
             if (in_array($category_id, $source_categories)) {
-                if (empty($relation_type) || $relation['relation_type'] === $relation_type) {
+                if (empty($relation_type) || (isset($relation['relation_type']) && $relation['relation_type'] === $relation_type)) {
                     $product_additions[$relation_id] = $relation;
                 }
             }
@@ -726,5 +756,25 @@ class ProductAdditionsManager {
         return array_unique($product_ids);
     }
 
+    /**
+     * Get auto-add notes for categories
+     *
+     * This method returns notes that should be automatically added
+     * when a product from the specified category is added to an estimate.
+     *
+     * @param int $category_id The category ID.
+     * @return array Array of notes to auto-add.
+     */
+    public function get_auto_add_notes_for_category($category_id) {
+        $relations = $this->get_relations_for_category($category_id, 'auto_add_note_by_category');
+        $notes = array();
 
+        foreach ($relations as $relation) {
+            if (isset($relation['note_text']) && !empty($relation['note_text'])) {
+                $notes[] = $relation['note_text'];
+            }
+        }
+
+        return $notes;
+    }
 }

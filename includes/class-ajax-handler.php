@@ -398,16 +398,29 @@ public function getVariationEstimator() {
             $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
             $product_additions_manager = new ProductAdditionsManager($this->plugin_name, $this->version);
             $auto_add_products = array();
+            $auto_add_notes = array();
+
             foreach ($product_categories as $category_id) {
+                // Get auto-add products
                 $category_auto_add_products = $product_additions_manager->get_auto_add_products_for_category($category_id);
                 if (!empty($category_auto_add_products)) {
                     $auto_add_products = array_merge($auto_add_products, $category_auto_add_products);
+                }
+
+                // Get auto-add notes
+                $category_auto_add_notes = $product_additions_manager->get_auto_add_notes_for_category($category_id);
+                if (!empty($category_auto_add_notes)) {
+                    $auto_add_notes = array_merge($auto_add_notes, $category_auto_add_notes);
                 }
             }
 
             // Remove duplicates
             $auto_add_products = array_unique($auto_add_products);
+            $auto_add_notes = array_unique($auto_add_notes);
+
             $added_related_products = array();
+
+            // Handle auto-add products
             foreach ($auto_add_products as $related_product_id) {
                 // Skip if it's the same product we just added (to avoid loops)
                 if ($related_product_id == $product_id) {
@@ -460,11 +473,10 @@ public function getVariationEstimator() {
 
                     $related_product_data['price_total'] = $related_product_data['min_price_total'] . " - " . $related_product_data['max_price_total'];
 
-
                     // Add the related product to the room
 //                    $added = $this->session->addProductToRoom($found_estimate_id, $found_room_id, $related_product_data);
 
-                    // Add to product
+                    // Add to product's additional products list
                     $product_data['additional_products'][] = $related_product_data;
 
 //                    if ($added) {
@@ -474,12 +486,27 @@ public function getVariationEstimator() {
                 } catch (\Exception $e) {
                     error_log('Error adding related product: ' . $e->getMessage());
                 }
-
             }
 
+            // Handle auto-add notes
+            foreach ($auto_add_notes as $note_text) {
+                // Create note data
+                $note_data = [
+                    'id' => 'note_' . uniqid(),
+                    'type' => 'note',
+                    'name' => __('Note', 'product-estimator'),
+                    'note_text' => $note_text,
+                    // We don't set price data for notes
+                ];
 
+                // Add the note to the room
+//                $this->session->addProductToRoom($found_estimate_id, $found_room_id, $note_data);
 
-                // Add product to room
+                // Add to product's additional products/notes list for reference
+                $product_data['additional_notes'][] = $note_data;
+            }
+
+            // Add product to room
             $success = $this->session->addProductToRoom($found_estimate_id, $found_room_id, $product_data);
 
             if (!$success) {
@@ -500,7 +527,8 @@ public function getVariationEstimator() {
                 'message' => __('Product added successfully', 'product-estimator'),
                 'estimate_id' => $found_estimate_id,
                 'room_id' => $found_room_id,
-                'product_data' => $product_data
+                'product_data' => $product_data,
+                'added_notes' => !empty($auto_add_notes) ? count($auto_add_notes) : 0
             ]);
 
         } catch (\Exception $e) {

@@ -39,6 +39,8 @@
     const $selectedProductInfo = $('.selected-product-info');
     const $clearProductButton = $('.clear-product');
     const $selectedProductIdInput = $('#selected_product_id');
+    const $noteRow = $('.note-row');
+    const $noteTextarea = $('#note_text');
 
     // Initialize Select2 for multiple selection
     $('#source_category').select2({
@@ -63,11 +65,18 @@
       $productSearchRow.hide();
       $selectedProduct.hide();
       $selectedProductIdInput.val('');
+      $noteRow.hide();
+      $noteTextarea.val('');
 
       if (actionType === 'auto_add_by_category') {
         $targetCategoryRow.show();
+        $noteRow.hide();
+      } else if (actionType === 'auto_add_note_by_category') {
+        $targetCategoryRow.hide();
+        $noteRow.show();
       } else {
         $targetCategoryRow.hide();
+        $noteRow.hide();
       }
     });
 
@@ -194,6 +203,7 @@
       const actionType = $relationTypeSelect.val();
       const sourceCategories = $('#source_category').val();
       const productId = $selectedProductIdInput.val();
+      const noteText = $noteTextarea.val();
 
       // Validate form
       if (!actionType) {
@@ -218,6 +228,11 @@
           alert(ProductEstimatorAdmin.i18n.selectProduct || 'Please select a product');
           return;
         }
+      } else if (actionType === 'auto_add_note_by_category') {
+        if (!noteText) {
+          alert('Please enter a note text');
+          return;
+        }
       }
 
       // Disable form while submitting
@@ -230,7 +245,8 @@
         relation_type: actionType,
         source_category: sourceCategories,
         target_category: $targetCategorySelect.val(),
-        product_id: productId
+        product_id: productId,
+        note_text: noteText
       };
 
       console.log('Sending form data:', formData);
@@ -275,7 +291,7 @@
                     <tr>
                       <th scope="col">${'Source Categories'}</th>
                       <th scope="col">${'Action'}</th>
-                      <th scope="col">${'Target Product'}</th>
+                      <th scope="col">${'Target/Note'}</th>
                       <th scope="col">${'Actions'}</th>
                     </tr>
                   </thead>
@@ -310,8 +326,9 @@
       const targetCategory = $btn.data('target');
       const relationType = $btn.data('type');
       const productId = $btn.data('product-id');
+      const noteText = $btn.data('note-text');
 
-      console.log('Edit relation:', relationId, sourceCategories, targetCategory, relationType, productId);
+      console.log('Edit relation:', relationId, sourceCategories, targetCategory, relationType, productId, noteText);
 
       // Reset form
       resetForm();
@@ -332,6 +349,9 @@
           if (productId) {
             loadProductDetails(productId);
           }
+        } else if (relationType === 'auto_add_note_by_category' && noteText) {
+          // Set the note text
+          $noteTextarea.val(noteText);
         }
       }, 100);
 
@@ -444,6 +464,7 @@
     $('.product-search-row').hide();
     $('#selected-product').hide();
     $('#product-search-results').empty();
+    $('.note-row').hide();
   }
 
   /**
@@ -456,7 +477,7 @@
     const $submitBtn = $form.find('.save-relation');
     const $cancelBtn = $form.find('.cancel-form');
 
-    $form.find('input, select').prop('disabled', !enabled);
+    $form.find('input, select, textarea').prop('disabled', !enabled);
     $submitBtn.prop('disabled', !enabled);
     $cancelBtn.prop('disabled', !enabled);
 
@@ -495,14 +516,22 @@
     $typeCell.append($typeSpan);
     $row.append($typeCell);
 
-    // Target product cell
-    const $productCell = $('<td></td>');
-    if (relation.product_name) {
-      $productCell.text(relation.product_name);
-    } else if (relation.target_name) {
-      $productCell.text(relation.target_name + ' (Category)');
+    // Target product cell or Note text
+    const $targetCell = $('<td></td>');
+    if (relation.relation_type === 'auto_add_by_category') {
+      if (relation.product_name) {
+        $targetCell.text(relation.product_name);
+      } else if (relation.target_name) {
+        $targetCell.text(relation.target_name + ' (Category)');
+      }
+    } else if (relation.relation_type === 'auto_add_note_by_category') {
+      // For note type, we display a preview of the note text
+      const notePreview = relation.note_text && relation.note_text.length > 50 ?
+        relation.note_text.substring(0, 50) + '...' :
+        relation.note_text || '';
+      $targetCell.text(notePreview);
     }
-    $row.append($productCell);
+    $row.append($targetCell);
 
     const $actionsCell = $('<td></td>').addClass('actions');
 
@@ -514,7 +543,8 @@
         'data-source': Array.isArray(relation.source_category) ? relation.source_category.join(',') : relation.source_category,
         'data-target': relation.target_category || '',
         'data-product-id': relation.product_id || '',
-        'data-type': relation.relation_type
+        'data-type': relation.relation_type,
+        'data-note-text': relation.note_text || ''
       })
       .text('Edit');
 

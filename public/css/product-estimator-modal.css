@@ -265,7 +265,7 @@
 
 .product-item {
   display: flex;
-  align-items: center;
+  align-items: start;
   padding: 10px;
   border: 1px solid #eee;
   border-radius: 4px;
@@ -285,7 +285,11 @@
   border-radius: 4px;
   margin-right: 15px;
 }
-
+.product-details-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
 .product-details {
   display: flex;
   flex-direction: column;
@@ -840,6 +844,161 @@ body.modal-open {
 .estimate-actions ul li a .dashicons {
   margin-right: 0.5rem;
 }
+
+/**
+ * Included Products styling for Product Estimator Modal
+ */
+
+/* Product Includes Section */
+.product-includes {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed #e5e5e5;
+  width: 100%;
+  clear: both;
+  box-sizing: border-box;
+  margin-left: 0;
+}
+
+/* Header with icon and title
+.product-includes-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.product-includes-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background-color: #00833F;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.product-includes-icon .dashicons {
+  color: white;
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  line-height: 1;
+}
+
+.product-includes-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Included items container */
+.product-includes-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 26px; /* Align with title text after icon */
+}
+
+/* Individual include item */
+.include-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.4;
+  position: relative;
+}
+
+.include-item:before {
+  content: "•";
+  position: absolute;
+  left: -12px;
+  color: #00833F;
+  top: 0;
+}
+
+.include-item-name {
+  color: #555;
+  font-weight: normal;
+  flex: 1;
+  padding-right: 8px;
+}
+
+.include-item-prices {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.include-item-total-price {
+  color: #00833F;
+  font-weight: 500;
+  white-space: nowrap;
+  margin-bottom: 2px;
+}
+
+.include-item-unit-price {
+  color: #777;
+  font-size: 10px;
+  white-space: nowrap;
+  font-style: italic;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 768px) {
+  .product-includes {
+    width: 100%;
+    padding-right: 25px;
+  }
+
+  .product-includes-header {
+    margin-bottom: 6px;
+  }
+
+  .product-includes-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .product-includes-title {
+    font-size: 11px;
+  }
+
+  .product-includes-items {
+    padding-left: 24px;
+    gap: 8px;
+  }
+
+  .include-item {
+    font-size: 11px;
+  }
+
+  .include-item-unit-price {
+    font-size: 9px;
+  }
+}
+
+/*!* Dark Mode Support *!*/
+/*@media (prefers-color-scheme: dark) {*/
+/*  .product-includes {*/
+/*    border-top-color: #444;*/
+/*  }*/
+
+/*  .product-includes-title {*/
+/*    color: #f0f0f0;*/
+/*  }*/
+
+/*  .include-item-name {*/
+/*    color: #ccc;*/
+/*  }*/
+
+/*  .include-item-unit-price {*/
+/*    color: #999;*/
+/*  }*/
+/*}*/
 
 
 /* Responsive adjustments */

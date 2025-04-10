@@ -2,6 +2,7 @@
 namespace RuDigital\ProductEstimator\Includes;
 
 use WP_Error;
+use RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager;
 
 /**
  * AJAX Handlers for Product Estimator
@@ -300,7 +301,8 @@ public function getVariationEstimator() {
             $product_data = [
                 'id' => $product_id,
                 'name' => $product->get_name(),
-                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
+                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
+                'additional_products' => [],
             ];
 
             // Get price range from NetSuite API
@@ -392,7 +394,92 @@ public function getVariationEstimator() {
 
             $product_data['price_total'] = $product_data['min_price_total'] . " - " . $product_data['max_price_total'];
 
-            // Add product to room
+            // PRODUCT ADDITIONS
+            $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
+            $product_additions_manager = new ProductAdditionsManager($this->plugin_name, $this->version);
+            $auto_add_products = array();
+            foreach ($product_categories as $category_id) {
+                $category_auto_add_products = $product_additions_manager->get_auto_add_products_for_category($category_id);
+                if (!empty($category_auto_add_products)) {
+                    $auto_add_products = array_merge($auto_add_products, $category_auto_add_products);
+                }
+            }
+
+            // Remove duplicates
+            $auto_add_products = array_unique($auto_add_products);
+            $added_related_products = array();
+            foreach ($auto_add_products as $related_product_id) {
+                // Skip if it's the same product we just added (to avoid loops)
+                if ($related_product_id == $product_id) {
+                    continue;
+                }
+
+                // Get the related product
+                $related_product = wc_get_product($related_product_id);
+                if (!$related_product) {
+                    continue;
+                }
+
+                // Prepare related product data (similar to the original product)
+                $related_product_data = [
+                    'id' => $related_product_id,
+                    'name' => $related_product->get_name(),
+                    'image' => wp_get_attachment_image_url($related_product->get_image_id(), 'thumbnail')
+                ];
+
+                // Add pricing data (similar to original product)
+                try {
+                    // Try to get pricing from NetSuite
+                    $pricing_data = $netsuite_integration->get_product_prices([$related_product_id]);
+
+                    if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
+                        foreach ($pricing_data['prices'] as $price_item) {
+                            if ($price_item['product_id'] == $related_product_id) {
+                                $related_product_data['min_price'] = $price_item['min_price'];
+                                $related_product_data['max_price'] = $price_item['max_price'];
+                                break;
+                            }
+                        }
+                    }
+
+                    // If NetSuite data not found, use WC price
+                    if (!isset($related_product_data['min_price'])) {
+                        $base_price = (float)$related_product->get_price();
+                        $related_product_data['min_price'] = $base_price;
+                        $related_product_data['max_price'] = $base_price;
+                    }
+
+                    // Calculate totals based on room area
+                    if ($room_area > 0) {
+                        $related_product_data['min_price_total'] = $related_product_data['min_price'] * $room_area;
+                        $related_product_data['max_price_total'] = $related_product_data['max_price'] * $room_area;
+                    } else {
+                        $related_product_data['min_price_total'] = $related_product_data['min_price'];
+                        $related_product_data['max_price_total'] = $related_product_data['max_price'];
+                    }
+
+                    $related_product_data['price_total'] = $related_product_data['min_price_total'] . " - " . $related_product_data['max_price_total'];
+
+
+                    // Add the related product to the room
+//                    $added = $this->session->addProductToRoom($found_estimate_id, $found_room_id, $related_product_data);
+
+                    // Add to product
+                    $product_data['additional_products'][] = $related_product_data;
+
+//                    if ($added) {
+//                        $added_related_products[] = $related_product_data;
+//                    }
+
+                } catch (\Exception $e) {
+                    error_log('Error adding related product: ' . $e->getMessage());
+                }
+
+            }
+
+
+
+                // Add product to room
             $success = $this->session->addProductToRoom($found_estimate_id, $found_room_id, $product_data);
 
             if (!$success) {

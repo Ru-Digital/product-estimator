@@ -725,4 +725,6 @@ class ProductAdditionsManager {
 
         return array_unique($product_ids);
     }
+
+
 }

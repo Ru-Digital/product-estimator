@@ -301,12 +301,20 @@ public function getVariationEstimator() {
                 return;
             }
 
+            // Get the updated room data to regenerate suggestions
+            $room = $this->session->getRoom($found_estimate_id, $found_room_id);
+            if ($room && isset($room['products']) && !empty($room['products'])) {
+                // Generate new suggestions based on updated room contents
+                $this->generateAndStoreSuggestions($found_estimate_id, $found_room_id, $room['products']);
+            }
+
             wp_send_json_success([
                 'message' => $result['message'],
                 'estimate_id' => $found_estimate_id,
                 'room_id' => $found_room_id,
                 'product_data' => $result['product_data'],
-                'added_notes' => $result['added_notes']
+                'added_notes' => $result['added_notes'],
+                'has_suggestions' => isset($_SESSION['product_estimator']['estimates'][$found_estimate_id]['rooms'][$found_room_id]['product_suggestions'])
             ]);
 
         } catch (\Exception $e) {
@@ -315,8 +323,7 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ]);
         }
-    }
-    /**
+    }    /**
      * Get the full estimates list HTML
      */
     public function getEstimatesList()
@@ -355,45 +362,7 @@ public function getVariationEstimator() {
 
                             // Only generate suggestions if there are actual products in the room
                             if ($has_regular_products) {
-                                // Get product categories in the room
-                                $product_categories = array();
-                                foreach ($room['products'] as $product) {
-                                    // Skip notes
-                                    if (isset($product['type']) && $product['type'] === 'note') {
-                                        continue;
-                                    }
-
-                                    if (isset($product['id']) && $product['id'] > 0) {
-                                        $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
-                                        if (is_array($categories)) {
-                                            $product_categories = array_merge($product_categories, $categories);
-                                        }
-                                    }
-                                }
-
-                                // Get unique categories
-                                $product_categories = array_unique($product_categories);
-
-                                // Check if any categories have suggestion relationships
-                                $has_suggestion_relationships = false;
-                                foreach ($product_categories as $category_id) {
-                                    $suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
-                                    if (!empty($suggestions)) {
-                                        $has_suggestion_relationships = true;
-                                        break;
-                                    }
-                                }
-
-                                // Only add suggestions if there are relationship rules that apply
-                                if ($has_suggestion_relationships) {
-                                    // Generate suggestions based on room contents
-                                    $suggestions = $product_additions_manager->get_suggestions_for_room($room['products']);
-
-                                    // Add suggestions to the room data for template access
-                                    if (!empty($suggestions)) {
-                                        $room['product_suggestions'] = $suggestions;
-                                    }
-                                }
+                                $this->generateAndStoreSuggestions($estimate_id, $room_id, $room['products']);
                             } else {
                                 // No regular products in this room, remove any existing suggestions
                                 if (isset($room['product_suggestions'])) {
@@ -647,42 +616,14 @@ public function getVariationEstimator() {
                 if ($product_added) {
                     $product_data = $result['product_data'];
 
-                    // Generate product suggestions immediately for the new room
-                    if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
-                        $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
-
-                        // Get product categories
-                        $product_categories = array();
-                        $categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
-                        if (is_array($categories)) {
-                            $product_categories = $categories;
-                        }
-
-                        // Check if any categories have suggestion relationships
-                        $has_suggestion_relationships = false;
-                        foreach ($product_categories as $category_id) {
-                            $suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
-                            if (!empty($suggestions)) {
-                                $has_suggestion_relationships = true;
-                                break;
-                            }
-                        }
-
-                        // Only add suggestions if there are relationship rules that apply
-                        if ($has_suggestion_relationships) {
-                            // Get the updated products list for the room
-                            $updated_room = $this->session->getRoom($estimate_id, $room_id);
-                            if ($updated_room && isset($updated_room['products'])) {
-                                // Generate suggestions based on room contents
-                                $suggestions = $product_additions_manager->get_suggestions_for_room($updated_room['products']);
-
-                                // Add suggestions to the session directly
-                                if (!empty($suggestions)) {
-                                    $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'] = $suggestions;
-                                    error_log("Added product suggestions: " . print_r($suggestions, true));
-                                }
-                            }
-                        }
+                    // Get the updated room data to check for products
+                    $updated_room = $this->session->getRoom($estimate_id, $room_id);
+                    if ($updated_room && isset($updated_room['products']) && !empty($updated_room['products'])) {
+                        // Generate suggestions for the new room
+                        $suggestions = $this->generateAndStoreSuggestions($estimate_id, $room_id, $updated_room['products']);
+                        $has_suggestions = !empty($suggestions);
+                    } else {
+                        $has_suggestions = false;
                     }
                 }
             }
@@ -781,8 +722,61 @@ public function getVariationEstimator() {
             // Update totals after removing the product
             $this->updateTotals($estimate_id);
 
+            // Check if any remaining products trigger suggestions
+            $show_suggestions = false;
+            $updatedRoom = $this->session->getRoom($estimate_id, $room_id);
+
+            if ($updatedRoom && isset($updatedRoom['products']) && !empty($updatedRoom['products'])) {
+                // Check if we have the ProductAdditionsManager class
+                if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
+                    $manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
+
+                    // Check remaining products for categories that trigger suggestions
+                    $categoryProductsExist = false;
+                    foreach ($updatedRoom['products'] as $product) {
+                        // Skip notes or products without IDs
+                        if (isset($product['type']) && $product['type'] === 'note') {
+                            continue;
+                        }
+                        if (!isset($product['id']) || empty($product['id'])) {
+                            continue;
+                        }
+
+                        // Get product categories
+                        $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+                        if (!empty($categories)) {
+                            foreach ($categories as $category_id) {
+                                // Check if this category is a source for suggestions
+                                $suggested_products = $manager->get_suggested_products_for_category($category_id);
+                                if (!empty($suggested_products)) {
+                                    $categoryProductsExist = true;
+                                    break 2; // Break both loops if we found a triggering category
+                                }
+                            }
+                        }
+                    }
+
+                    if ($categoryProductsExist) {
+                        // Regenerate suggestions for the room
+                        $suggestions = $this->generateAndStoreSuggestions($estimate_id, $room_id, $updatedRoom['products']);
+                        $show_suggestions = !empty($suggestions);
+                    } else {
+                        // No triggering categories left, remove any existing suggestions
+                        if (isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'])) {
+                            unset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions']);
+                        }
+                    }
+                }
+            } else {
+                // No products left in room, remove any existing suggestions
+                if (isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'])) {
+                    unset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions']);
+                }
+            }
+
             wp_send_json_success([
-                'message' => __('Product removed successfully', 'product-estimator')
+                'message' => __('Product removed successfully', 'product-estimator'),
+                'show_suggestions' => $show_suggestions
             ]);
 
         } catch (\Exception $e) {
@@ -791,7 +785,6 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ]);
         }
-
     }
 
     /**
@@ -980,6 +973,58 @@ public function getVariationEstimator() {
         // Store estimate totals directly in the session
         $estimates[$estimate_id]['min_total'] = $estimate_min_total;
         $estimates[$estimate_id]['max_total'] = $estimate_max_total;
+    }
+
+    /**
+     * Generate and store suggestions for a room in the session
+     *
+     * @param string $estimate_id The estimate ID
+     * @param string $room_id The room ID
+     * @param array $room_products The products in the room
+     * @return array The generated suggestions
+     */
+    private function generateAndStoreSuggestions($estimate_id, $room_id, $room_products) {
+        if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
+            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
+
+            // Get product categories
+            $product_categories = array();
+            foreach ($room_products as $product) {
+                if (isset($product['id']) && $product['id'] > 0) {
+                    $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+                    if (is_array($categories)) {
+                        $product_categories = array_merge($product_categories, $categories);
+                    }
+                }
+            }
+
+            // Remove duplicates
+            $product_categories = array_unique($product_categories);
+
+            // Check if any categories have suggestion relationships
+            $has_suggestion_relationships = false;
+            foreach ($product_categories as $category_id) {
+                $suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
+                if (!empty($suggestions)) {
+                    $has_suggestion_relationships = true;
+                    break;
+                }
+            }
+
+            // Only generate suggestions if there are relationship rules
+            if ($has_suggestion_relationships) {
+                // Generate suggestions
+                $suggestions = $product_additions_manager->get_suggestions_for_room($room_products);
+
+                // Store in session
+                if (!empty($suggestions)) {
+                    $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'] = $suggestions;
+                    return $suggestions;
+                }
+            }
+        }
+
+        return array();
     }
 
     /**

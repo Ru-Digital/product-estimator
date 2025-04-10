@@ -148,6 +148,7 @@
       });
 
       // Add handler for suggested products
+// Add handler for suggested products
       $(document).on('click', '.add-suggestion-to-room', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -177,7 +178,21 @@
 
               // After a delay, refresh the estimates list to show the updated content
               setTimeout(() => {
-                this.refreshEstimatesList();
+                this.refreshEstimatesList(() => {
+                  // Find and expand the room accordion after refresh
+                  const $room = $(`.accordion-item[data-room-id="${roomId}"]`);
+                  if ($room.length) {
+                    // Ensure the accordion header is set to active
+                    $room.find('.accordion-header').addClass('active');
+                    // Make sure the accordion content is visible
+                    $room.find('.accordion-content').show();
+
+                    // Optionally scroll to the room to ensure it's visible
+                    $('html, body').animate({
+                      scrollTop: $room.offset().top - 50 // 50px offset for better visibility
+                    }, 300);
+                  }
+                });
               }, 1500);
             } else {
               // Reset button on error
@@ -401,6 +416,19 @@
 
             // Refresh estimates list and show it
             this.refreshEstimatesList(() => {
+              // After refreshing the list, find and expand the room
+              const $room = $(`.accordion-item[data-room-id="${roomId}"]`);
+              if ($room.length) {
+                // Make sure the room is expanded
+                $room.find('.accordion-header').addClass('active');
+                $room.find('.accordion-content').show();
+
+                // Scroll to the room to ensure it's visible
+                $('html, body').animate({
+                  scrollTop: $room.offset().top - 50 // 50px offset for better visibility
+                }, 300);
+              }
+
               // After refreshing the list, check if we should show suggestions
               const estimateId = this.$roomSelectionForm.attr('data-estimate-id');
               if (estimateId) {
@@ -880,25 +908,63 @@
         },
         success: (response) => {
           if (response.success) {
-            // Refresh estimates list and update suggestion visibility
+            // Refresh estimates list
             this.refreshEstimatesList(() => {
-              // After refreshing the list, check if we should hide suggestions
-              this.updateSuggestionVisibility(estimateId, roomId);
+              // After refreshing the list, find the room
+              const $room = $(`.accordion-item[data-room-id="${roomId}"]`);
+
+              if ($room.length) {
+                // Always ensure the room stays expanded after deleting a product
+                $room.find('.accordion-header').addClass('active');
+                $room.find('.accordion-content').show();
+
+                // Handle suggestions visibility
+                const $suggestions = $room.find('.product-suggestions');
+                if ($suggestions.length) {
+                  if (response.data.show_suggestions) {
+                    $suggestions.show();
+                  } else {
+                    $suggestions.hide();
+                  }
+                }
+              }
             });
           } else {
             // Show error
             console.error('Error removing product:', response.data?.message);
-            console.log('Error removing product: ' + (response.data?.message || 'Unknown error'));
+            this.showMessage(response.data?.message || 'Error removing product', 'error');
           }
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
-          console.log('Error removing product. Please try again.');
+          this.showMessage('Error removing product. Please try again.', 'error');
         },
         complete: () => {
           this.hideLoading();
         }
       });
+    }
+
+    /**
+     * Display a message to the user
+     * @param {string} message - The message to display
+     * @param {string} type - Message type ('success' or 'error')
+     */
+    showMessage(message, type = 'success') {
+      // Remove any existing messages
+      $('.modal-message').remove();
+
+      // Create message element
+      const messageClass = type === 'error' ? 'modal-error-message' : 'modal-success-message';
+      const $message = $(`<div class="modal-message ${messageClass}">${message}</div>`);
+
+      // Add to modal container
+      this.$modalContainer.prepend($message);
+
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        $message.fadeOut(() => $message.remove());
+      }, 5000);
     }
 
     /**

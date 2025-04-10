@@ -290,245 +290,23 @@ public function getVariationEstimator() {
                 return;
             }
 
-            // Get product data
-            $product = wc_get_product($product_id);
-            if (!$product) {
-                wp_send_json_error(['message' => __('Product not found', 'product-estimator')]);
-                return;
-            }
+            // Use common method to prepare and add product to room
+            $result = $this->prepareAndAddProductToRoom($product_id, $found_estimate_id, $found_room_id);
 
-            // Prepare product data
-            $product_data = [
-                'id' => $product_id,
-                'name' => $product->get_name(),
-                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
-                'additional_products' => [],
-            ];
-
-            // Get price range from NetSuite API
-            try {
-                // Initialize NetSuite Integration
-                $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
-
-                // Get pricing data for this product
-                $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
-
-                // Check if we received valid pricing data
-                if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
-                    foreach ($pricing_data['prices'] as $price_item) {
-                        if ($price_item['product_id'] == $product_id) {
-                            // Add NetSuite pricing data to product
-                            $product_data['min_price'] = $price_item['min_price'];
-                            $product_data['max_price'] = $price_item['max_price'];
-                            break;
-                        }
-                    }
-                }
-
-                // If NetSuite data not found, set defaults based on WC price
-                if (!isset($product_data['min_price'])) {
-                    $base_price = (float)$product->get_price();
-                    $product_data['min_price'] = $base_price;
-                    $product_data['max_price'] = $base_price;
-                }
-
-                // Log the pricing data
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Product price data: ' . print_r($product_data, true));
-                }
-
-            } catch (\Exception $e) {
-                // If NetSuite API fails, log the error but continue with base price
-                error_log('NetSuite API Error: ' . $e->getMessage());
-
-                // Set default price range from WooCommerce price
-                $base_price = (float)$product->get_price();
-                $product_data['min_price'] = $base_price;
-                $product_data['max_price'] = $base_price;
-            }
-
-            // Get room area (width * length)
-            $room_area = 0;
-            if (isset($estimates[$found_estimate_id]['rooms'][$found_room_id])) {
-                $room_data = $estimates[$found_estimate_id]['rooms'][$found_room_id];
-                if (isset($room_data['width']) && isset($room_data['length'])) {
-                    $room_area = (float)$room_data['width'] * (float)$room_data['length'];
-                }
-            }
-
-            // Calculate price based on min_price * room_area
-            if ($room_area > 0 && isset($product_data['min_price'])) {
-                $product_data['min_price_total'] = $product_data['min_price'] * $room_area;
-
-                // Log the calculation
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Price calculation: min_price (' . $product_data['min_price'] . ') * room_area (' . $room_area . ') = ' . $product_data['min_price_total']);
-                }
-            } else {
-                // If room area is not available or is zero, use min_price as fallback
-                $product_data['min_price_total'] = $product_data['min_price'];
-
-                // Log the fallback
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Room area not available, using max_price as price: ' . $product_data['min_price_total']);
-                }
-            }
-
-            // Calculate price based on max_price * room_area
-            if ($room_area > 0 && isset($product_data['max_price'])) {
-                $product_data['max_price_total'] = $product_data['max_price'] * $room_area;
-
-                // Log the calculation
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Price calculation: max_price (' . $product_data['max_price'] . ') * room_area (' . $room_area . ') = ' . $product_data['max_price_total']);
-                }
-            } else {
-                // If room area is not available or is zero, use max_price as fallback
-                $product_data['max_price_total'] = $product_data['max_price'];
-
-                // Log the fallback
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Room area not available, using max_price as price: ' . $product_data['max_price_total']);
-                }
-            }
-
-            $product_data['price_total'] = $product_data['min_price_total'] . " - " . $product_data['max_price_total'];
-
-            // PRODUCT ADDITIONS
-            $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
-            $product_additions_manager = new ProductAdditionsManager($this->plugin_name, $this->version);
-            $auto_add_products = array();
-            $auto_add_notes = array();
-
-            foreach ($product_categories as $category_id) {
-                // Get auto-add products
-                $category_auto_add_products = $product_additions_manager->get_auto_add_products_for_category($category_id);
-                if (!empty($category_auto_add_products)) {
-                    $auto_add_products = array_merge($auto_add_products, $category_auto_add_products);
-                }
-
-                // Get auto-add notes
-                $category_auto_add_notes = $product_additions_manager->get_auto_add_notes_for_category($category_id);
-                if (!empty($category_auto_add_notes)) {
-                    $auto_add_notes = array_merge($auto_add_notes, $category_auto_add_notes);
-                }
-            }
-
-            // Remove duplicates
-            $auto_add_products = array_unique($auto_add_products);
-            $auto_add_notes = array_unique($auto_add_notes);
-
-            $added_related_products = array();
-
-            // Handle auto-add products
-            foreach ($auto_add_products as $related_product_id) {
-                // Skip if it's the same product we just added (to avoid loops)
-                if ($related_product_id == $product_id) {
-                    continue;
-                }
-
-                // Get the related product
-                $related_product = wc_get_product($related_product_id);
-                if (!$related_product) {
-                    continue;
-                }
-
-                // Prepare related product data (similar to the original product)
-                $related_product_data = [
-                    'id' => $related_product_id,
-                    'name' => $related_product->get_name(),
-                    'image' => wp_get_attachment_image_url($related_product->get_image_id(), 'thumbnail')
-                ];
-
-                // Add pricing data (similar to original product)
-                try {
-                    // Try to get pricing from NetSuite
-                    $pricing_data = $netsuite_integration->get_product_prices([$related_product_id]);
-
-                    if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
-                        foreach ($pricing_data['prices'] as $price_item) {
-                            if ($price_item['product_id'] == $related_product_id) {
-                                $related_product_data['min_price'] = $price_item['min_price'];
-                                $related_product_data['max_price'] = $price_item['max_price'];
-                                break;
-                            }
-                        }
-                    }
-
-                    // If NetSuite data not found, use WC price
-                    if (!isset($related_product_data['min_price'])) {
-                        $base_price = (float)$related_product->get_price();
-                        $related_product_data['min_price'] = $base_price;
-                        $related_product_data['max_price'] = $base_price;
-                    }
-
-                    // Calculate totals based on room area
-                    if ($room_area > 0) {
-                        $related_product_data['min_price_total'] = $related_product_data['min_price'] * $room_area;
-                        $related_product_data['max_price_total'] = $related_product_data['max_price'] * $room_area;
-                    } else {
-                        $related_product_data['min_price_total'] = $related_product_data['min_price'];
-                        $related_product_data['max_price_total'] = $related_product_data['max_price'];
-                    }
-
-                    $related_product_data['price_total'] = $related_product_data['min_price_total'] . " - " . $related_product_data['max_price_total'];
-
-                    // Add the related product to the room
-//                    $added = $this->session->addProductToRoom($found_estimate_id, $found_room_id, $related_product_data);
-
-                    // Add to product's additional products list
-                    $product_data['additional_products'][] = $related_product_data;
-
-//                    if ($added) {
-//                        $added_related_products[] = $related_product_data;
-//                    }
-
-                } catch (\Exception $e) {
-                    error_log('Error adding related product: ' . $e->getMessage());
-                }
-            }
-
-            // Handle auto-add notes
-            foreach ($auto_add_notes as $note_text) {
-                // Create note data
-                $note_data = [
-                    'id' => 'note_' . uniqid(),
-                    'type' => 'note',
-                    'name' => __('Note', 'product-estimator'),
-                    'note_text' => $note_text,
-                    // We don't set price data for notes
-                ];
-
-                // Add the note to the room
-//                $this->session->addProductToRoom($found_estimate_id, $found_room_id, $note_data);
-
-                // Add to product's additional products/notes list for reference
-                $product_data['additional_notes'][] = $note_data;
-            }
-
-            // Add product to room
-            $success = $this->session->addProductToRoom($found_estimate_id, $found_room_id, $product_data);
-
-            if (!$success) {
+            if (!$result['success']) {
                 wp_send_json_error([
-                    'message' => __('Failed to add product to room', 'product-estimator'),
-                    'debug' => [
-                        'estimate_id' => $found_estimate_id,
-                        'room_id' => $found_room_id
-                    ]
+                    'message' => $result['message'],
+                    'debug' => $result['debug'] ?? null
                 ]);
                 return;
             }
 
-            // Update totals after adding the product
-            $this->updateTotals($found_estimate_id);
-
             wp_send_json_success([
-                'message' => __('Product added successfully', 'product-estimator'),
+                'message' => $result['message'],
                 'estimate_id' => $found_estimate_id,
                 'room_id' => $found_room_id,
-                'product_data' => $product_data,
-                'added_notes' => !empty($auto_add_notes) ? count($auto_add_notes) : 0
+                'product_data' => $result['product_data'],
+                'added_notes' => $result['added_notes']
             ]);
 
         } catch (\Exception $e) {
@@ -719,87 +497,17 @@ public function getVariationEstimator() {
             // If a product ID was provided, add it to the room
             $product_added = false;
             if ($product_id > 0) {
-                // Get product data
-                $product = wc_get_product($product_id);
+                // Use common method to prepare and add product to room
+                // We pass the room dimensions directly since we just created this room
+                $result = $this->prepareAndAddProductToRoom(
+                    $product_id,
+                    $estimate_id,
+                    $room_id,
+                    floatval($form_data['room_width']),
+                    floatval($form_data['room_length'])
+                );
 
-                if ($product) {
-                    // Instead of duplicating logic, simulate the product data creation from addProductToRoom
-                    // but without sending the AJAX response
-                    $product_data = [
-                        'id' => $product_id,
-                        'name' => $product->get_name(),
-                        'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
-                    ];
-
-                    try {
-                        // Get room area for calculations
-                        $room_area = floatval($form_data['room_width']) * floatval($form_data['room_length']);
-
-                        // Initialize NetSuite Integration for pricing
-                        $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
-
-                        // Get pricing data for this product
-                        $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
-
-                        // Check if we received valid pricing data
-                        if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
-                            foreach ($pricing_data['prices'] as $price_item) {
-                                if ($price_item['product_id'] == $product_id) {
-                                    // Add NetSuite pricing data to product
-                                    $product_data['min_price'] = $price_item['min_price'];
-                                    $product_data['max_price'] = $price_item['max_price'];
-                                    break;
-                                }
-                            }
-                        }
-
-                        // If NetSuite data not found, set defaults based on WC price
-                        if (!isset($product_data['min_price'])) {
-                            $base_price = (float)$product->get_price();
-                            $product_data['min_price'] = $base_price;
-                            $product_data['max_price'] = $base_price;
-                        }
-
-                        // Calculate price based on min_price * room_area
-                        if ($room_area > 0 && isset($product_data['min_price'])) {
-                            $product_data['min_price_total'] = $product_data['min_price'] * $room_area;
-                        } else {
-                            // If room area is not available or is zero, use min_price as fallback
-                            $product_data['min_price_total'] = $product_data['min_price'];
-                        }
-
-                        // Calculate price based on max_price * room_area
-                        if ($room_area > 0 && isset($product_data['max_price'])) {
-                            $product_data['max_price_total'] = $product_data['max_price'] * $room_area;
-                        } else {
-                            // If room area is not available or is zero, use max_price as fallback
-                            $product_data['max_price_total'] = $product_data['max_price'];
-                        }
-
-                        $product_data['price_total'] = $product_data['min_price_total'] . " - " . $product_data['max_price_total'];
-
-                        // Add product to room
-                        $product_added = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
-
-                    } catch (\Exception $e) {
-                        error_log('Error calculating product prices: ' . $e->getMessage());
-
-                        // Simplified product data if pricing fails
-                        $product_data = [
-                            'id' => $product_id,
-                            'name' => $product->get_name(),
-                            'price' => $product->get_price(),
-                            'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
-                        ];
-
-                        // Still try to add the product even if pricing calculation fails
-                        $product_added = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
-                    }
-                }
-                // Product was added, update totals
-                if ($product_added) {
-                    $this->updateTotals($estimate_id);
-                }
+                $product_added = $result['success'];
             }
 
             wp_send_json_success([
@@ -1031,6 +739,7 @@ public function getVariationEstimator() {
 
                 if (isset($room['products']) && is_array($room['products'])) {
                     foreach ($room['products'] as $product) {
+                        // Calculate main product price
                         if (isset($product['min_price']) && isset($product['max_price'])) {
                             // Apply markup adjustment
                             $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
@@ -1043,6 +752,25 @@ public function getVariationEstimator() {
                             // For pre-calculated totals
                             $room_min_total += floatval($product['min_price_total']) * (1 - ($default_markup / 100));
                             $room_max_total += floatval($product['max_price_total']) * (1 + ($default_markup / 100));
+                        }
+
+                        // Calculate additional products prices
+                        if (isset($product['additional_products']) && is_array($product['additional_products'])) {
+                            foreach ($product['additional_products'] as $additional_product) {
+                                if (isset($additional_product['min_price']) && isset($additional_product['max_price'])) {
+                                    // Apply markup adjustment
+                                    $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
+                                    $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
+
+                                    // Add to totals with room area
+                                    $room_min_total += $add_min_price * $room_area;
+                                    $room_max_total += $add_max_price * $room_area;
+                                } elseif (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])) {
+                                    // For pre-calculated totals
+                                    $room_min_total += floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
+                                    $room_max_total += floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
+                                }
+                            }
                         }
                     }
                 }
@@ -1060,5 +788,249 @@ public function getVariationEstimator() {
         // Store estimate totals directly in the session
         $estimates[$estimate_id]['min_total'] = $estimate_min_total;
         $estimates[$estimate_id]['max_total'] = $estimate_max_total;
+    }
+
+    /**
+     * Helper method to prepare product data and add to room
+     *
+     * @param int $product_id The product ID
+     * @param string|int $estimate_id The estimate ID
+     * @param string|int $room_id The room ID
+     * @param float $room_width Room width (optional, will use existing room data if not provided)
+     * @param float $room_length Room length (optional, will use existing room data if not provided)
+     * @return array Result with status and product data
+     */
+    private function prepareAndAddProductToRoom($product_id, $estimate_id, $room_id, $room_width = null, $room_length = null) {
+        try {
+            // Get product data
+            $product = wc_get_product($product_id);
+            if (!$product) {
+                return [
+                    'success' => false,
+                    'message' => __('Product not found', 'product-estimator')
+                ];
+            }
+
+            // Prepare base product data
+            $product_data = [
+                'id' => $product_id,
+                'name' => $product->get_name(),
+                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
+                'additional_products' => [],
+                'additional_notes' => []
+            ];
+
+            // Calculate room area
+            $room_area = 0;
+
+            // If room dimensions were provided directly
+            if ($room_width !== null && $room_length !== null) {
+                $room_area = (float)$room_width * (float)$room_length;
+            } else {
+                // Get room dimensions from session
+                $estimates = $this->session->getEstimates();
+                if (isset($estimates[$estimate_id]['rooms'][$room_id])) {
+                    $room_data = $estimates[$estimate_id]['rooms'][$room_id];
+                    if (isset($room_data['width']) && isset($room_data['length'])) {
+                        $room_area = (float)$room_data['width'] * (float)$room_data['length'];
+                    }
+                }
+            }
+
+            // Get price range from NetSuite API
+            try {
+                // Initialize NetSuite Integration
+                $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
+
+                // Get pricing data for this product
+                $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
+
+                // Check if we received valid pricing data
+                if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
+                    foreach ($pricing_data['prices'] as $price_item) {
+                        if ($price_item['product_id'] == $product_id) {
+                            // Add NetSuite pricing data to product
+                            $product_data['min_price'] = $price_item['min_price'];
+                            $product_data['max_price'] = $price_item['max_price'];
+                            break;
+                        }
+                    }
+                }
+
+                // If NetSuite data not found, set defaults based on WC price
+                if (!isset($product_data['min_price'])) {
+                    $base_price = (float)$product->get_price();
+                    $product_data['min_price'] = $base_price;
+                    $product_data['max_price'] = $base_price;
+                }
+
+                // Log the pricing data
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Product price data: ' . print_r($product_data, true));
+                }
+
+            } catch (\Exception $e) {
+                // If NetSuite API fails, log the error but continue with base price
+                error_log('NetSuite API Error: ' . $e->getMessage());
+
+                // Set default price range from WooCommerce price
+                $base_price = (float)$product->get_price();
+                $product_data['min_price'] = $base_price;
+                $product_data['max_price'] = $base_price;
+            }
+
+            // Calculate price totals based on room area
+            if ($room_area > 0) {
+                $product_data['min_price_total'] = $product_data['min_price'] * $room_area;
+                $product_data['max_price_total'] = $product_data['max_price'] * $room_area;
+
+                // Log the calculation
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Price calculations: min_price (' . $product_data['min_price'] . ') * room_area (' . $room_area . ') = ' . $product_data['min_price_total']);
+                    error_log('Price calculations: max_price (' . $product_data['max_price'] . ') * room_area (' . $room_area . ') = ' . $product_data['max_price_total']);
+                }
+            } else {
+                // If room area is not available or is zero, use min/max_price as fallback
+                $product_data['min_price_total'] = $product_data['min_price'];
+                $product_data['max_price_total'] = $product_data['max_price'];
+
+                // Log the fallback
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Room area not available, using min/max_price as total price');
+                }
+            }
+
+            // PRODUCT ADDITIONS - auto-add related products and notes
+            $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
+
+            // Check if ProductAdditionsManager is accessible
+            if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
+                $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager($this->plugin_name, $this->version);
+                $auto_add_products = array();
+                $auto_add_notes = array();
+
+                foreach ($product_categories as $category_id) {
+                    // Get auto-add products
+                    $category_auto_add_products = $product_additions_manager->get_auto_add_products_for_category($category_id);
+                    if (!empty($category_auto_add_products)) {
+                        $auto_add_products = array_merge($auto_add_products, $category_auto_add_products);
+                    }
+
+                    // Get auto-add notes
+                    $category_auto_add_notes = $product_additions_manager->get_auto_add_notes_for_category($category_id);
+                    if (!empty($category_auto_add_notes)) {
+                        $auto_add_notes = array_merge($auto_add_notes, $category_auto_add_notes);
+                    }
+                }
+
+                // Remove duplicates
+                $auto_add_products = array_unique($auto_add_products);
+                $auto_add_notes = array_unique($auto_add_notes);
+
+                // Handle auto-add products
+                foreach ($auto_add_products as $related_product_id) {
+                    // Skip if it's the same product we just added (to avoid loops)
+                    if ($related_product_id == $product_id) {
+                        continue;
+                    }
+
+                    // Get the related product
+                    $related_product = wc_get_product($related_product_id);
+                    if (!$related_product) {
+                        continue;
+                    }
+
+                    // Prepare related product data
+                    $related_product_data = [
+                        'id' => $related_product_id,
+                        'name' => $related_product->get_name(),
+                        'image' => wp_get_attachment_image_url($related_product->get_image_id(), 'thumbnail')
+                    ];
+
+                    // Add pricing data (similar to original product)
+                    try {
+                        // Try to get pricing from NetSuite
+                        $pricing_data = $netsuite_integration->get_product_prices([$related_product_id]);
+
+                        if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
+                            foreach ($pricing_data['prices'] as $price_item) {
+                                if ($price_item['product_id'] == $related_product_id) {
+                                    $related_product_data['min_price'] = $price_item['min_price'];
+                                    $related_product_data['max_price'] = $price_item['max_price'];
+                                    break;
+                                }
+                            }
+                        }
+
+                        // If NetSuite data not found, use WC price
+                        if (!isset($related_product_data['min_price'])) {
+                            $base_price = (float)$related_product->get_price();
+                            $related_product_data['min_price'] = $base_price;
+                            $related_product_data['max_price'] = $base_price;
+                        }
+
+                        // Calculate totals based on room area
+                        if ($room_area > 0) {
+                            $related_product_data['min_price_total'] = $related_product_data['min_price'] * $room_area;
+                            $related_product_data['max_price_total'] = $related_product_data['max_price'] * $room_area;
+                        } else {
+                            $related_product_data['min_price_total'] = $related_product_data['min_price'];
+                            $related_product_data['max_price_total'] = $related_product_data['max_price'];
+                        }
+
+                        // Add to product's additional products list
+                        $product_data['additional_products'][] = $related_product_data;
+
+                    } catch (\Exception $e) {
+                        error_log('Error adding related product: ' . $e->getMessage());
+                    }
+                }
+
+                // Handle auto-add notes
+                foreach ($auto_add_notes as $note_text) {
+                    // Create note data
+                    $note_data = [
+                        'id' => 'note_' . uniqid(),
+                        'type' => 'note',
+                        'name' => __('Note', 'product-estimator'),
+                        'note_text' => $note_text,
+                    ];
+
+                    // Add to product's additional notes list
+                    $product_data['additional_notes'][] = $note_data;
+                }
+            }
+
+            // Add product to room
+            $success = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
+
+            if (!$success) {
+                return [
+                    'success' => false,
+                    'message' => __('Failed to add product to room', 'product-estimator'),
+                    'debug' => [
+                        'estimate_id' => $estimate_id,
+                        'room_id' => $room_id
+                    ]
+                ];
+            }
+
+            // Update totals after adding the product
+            $this->updateTotals($estimate_id);
+
+            return [
+                'success' => true,
+                'message' => __('Product added successfully', 'product-estimator'),
+                'product_data' => $product_data,
+                'added_notes' => !empty($auto_add_notes) ? count($auto_add_notes) : 0
+            ];
+
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => __('An error occurred while processing your request', 'product-estimator'),
+                'error' => $e->getMessage()
+            ];
+        }
     }
 }

@@ -409,13 +409,14 @@ class SessionHandler {
         $options = get_option('product_estimator_settings');
         $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
 
+        // Calculate room area
+        $room_width = isset($room['width']) ? floatval($room['width']) : 0;
+        $room_length = isset($room['length']) ? floatval($room['length']) : 0;
+        $room_area = $room_width * $room_length;
+
         if (isset($room['products']) && is_array($room['products'])) {
             foreach ($room['products'] as $product) {
-                // Calculate room area
-                $room_width = isset($room['width']) ? floatval($room['width']) : 0;
-                $room_length = isset($room['length']) ? floatval($room['length']) : 0;
-                $room_area = $room_width * $room_length;
-
+                // Calculate main product prices
                 if (isset($product['min_price']) && isset($product['max_price'])) {
                     // Apply markup adjustment
                     $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
@@ -428,6 +429,25 @@ class SessionHandler {
                     // For pre-calculated totals
                     $min_total += floatval($product['min_price_total']) * (1 - ($default_markup / 100));
                     $max_total += floatval($product['max_price_total']) * (1 + ($default_markup / 100));
+                }
+
+                // Calculate additional products prices
+                if (isset($product['additional_products']) && is_array($product['additional_products'])) {
+                    foreach ($product['additional_products'] as $additional_product) {
+                        if (isset($additional_product['min_price']) && isset($additional_product['max_price'])) {
+                            // Apply markup adjustment
+                            $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
+                            $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
+
+                            // Add to totals with room area
+                            $min_total += $add_min_price * $room_area;
+                            $max_total += $add_max_price * $room_area;
+                        } elseif (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])) {
+                            // For pre-calculated totals
+                            $min_total += floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
+                            $max_total += floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
+                        }
+                    }
                 }
             }
         }
@@ -497,6 +517,7 @@ class SessionHandler {
 
                     if (isset($room['products']) && is_array($room['products'])) {
                         foreach ($room['products'] as $product) {
+                            // Calculate main product prices
                             if (isset($product['min_price']) && isset($product['max_price'])) {
                                 // Apply markup adjustment
                                 $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
@@ -509,6 +530,25 @@ class SessionHandler {
                                 // For pre-calculated totals
                                 $room_min_total += floatval($product['min_price_total']) * (1 - ($default_markup / 100));
                                 $room_max_total += floatval($product['max_price_total']) * (1 + ($default_markup / 100));
+                            }
+
+                            // Calculate additional products prices
+                            if (isset($product['additional_products']) && is_array($product['additional_products'])) {
+                                foreach ($product['additional_products'] as $additional_product) {
+                                    if (isset($additional_product['min_price']) && isset($additional_product['max_price'])) {
+                                        // Apply markup adjustment
+                                        $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
+                                        $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
+
+                                        // Add to totals with room area
+                                        $room_min_total += $add_min_price * $room_area;
+                                        $room_max_total += $add_max_price * $room_area;
+                                    } elseif (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])) {
+                                        // For pre-calculated totals
+                                        $room_min_total += floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
+                                        $room_max_total += floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
+                                    }
+                                }
                             }
                         }
                     }

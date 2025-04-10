@@ -241,6 +241,8 @@ class ProductAdditionsManager {
         );
     }
 
+
+
     /**
      * AJAX handler for saving a category relation
      */
@@ -300,6 +302,11 @@ class ProductAdditionsManager {
                 wp_send_json_error(array('message' => __('Please select a product.', 'product-estimator')));
                 return;
             }
+        } elseif ($relation_type === 'suggest_products_by_category') {
+            if (empty($target_category)) {
+                wp_send_json_error(array('message' => __('Please select a target category.', 'product-estimator')));
+                return;
+            }
         } elseif ($relation_type === 'auto_add_note_by_category') {
             if (empty($note_text)) {
                 wp_send_json_error(array('message' => __('Please enter a note text.', 'product-estimator')));
@@ -320,6 +327,8 @@ class ProductAdditionsManager {
         if ($relation_type === 'auto_add_by_category') {
             $relation_data['target_category'] = $target_category;
             $relation_data['product_id'] = $product_id;
+        } elseif ($relation_type === 'suggest_products_by_category') {
+            $relation_data['target_category'] = $target_category;
         } elseif ($relation_type === 'auto_add_note_by_category') {
             $relation_data['note_text'] = $note_text;
         }
@@ -339,19 +348,27 @@ class ProductAdditionsManager {
             }
         }
 
+        // Determine relation type label
+        $relation_type_label = '';
+        if ($relation_type === 'auto_add_by_category') {
+            $relation_type_label = __('Auto add product with Category', 'product-estimator');
+        } elseif ($relation_type === 'auto_add_note_by_category') {
+            $relation_type_label = __('Auto add note with Category', 'product-estimator');
+        } elseif ($relation_type === 'suggest_products_by_category') {
+            $relation_type_label = __('Suggest products when Category', 'product-estimator');
+        }
+
         // Prepare response data
         $response_data = array(
             'id' => $relation_id,
             'source_category' => $source_categories,
             'source_name' => implode(', ', $source_cat_names),
             'relation_type' => $relation_type,
-            'relation_type_label' => $relation_type === 'auto_add_by_category' ?
-                __('Auto add product with Category', 'product-estimator') :
-                __('Auto add note with Category', 'product-estimator'),
+            'relation_type_label' => $relation_type_label,
         );
 
-        // Add target category info if applicable
-        if ($target_category) {
+        // Add target category info if applicable - this condition is already correct
+        if ($target_category && ($relation_type === 'auto_add_by_category' || $relation_type === 'suggest_products_by_category')) {
             $target_cat = get_term($target_category, 'product_cat');
             if (!is_wp_error($target_cat) && $target_cat) {
                 $response_data['target_category'] = $target_category;
@@ -360,7 +377,7 @@ class ProductAdditionsManager {
         }
 
         // Add product info if applicable
-        if ($product_id) {
+        if ($product_id && $relation_type === 'auto_add_by_category') {
             $product = wc_get_product($product_id);
             if ($product) {
                 $response_data['product_id'] = $product_id;
@@ -369,7 +386,7 @@ class ProductAdditionsManager {
         }
 
         // Add note text if applicable
-        if ($note_text) {
+        if ($note_text && $relation_type === 'auto_add_note_by_category') {
             $response_data['note_text'] = $note_text;
         }
 
@@ -776,5 +793,141 @@ class ProductAdditionsManager {
         }
 
         return $notes;
+    }
+
+    /**
+     * Get product suggestions for a specific product category
+     *
+     * @since    1.0.4
+     * @access   public
+     * @param    int      $category_id    The category ID.
+     * @return   array    The suggested product IDs.
+     */
+    public function get_suggested_products_for_category($category_id) {
+        $relations = $this->get_relations_for_category($category_id, 'suggest_products_by_category');
+        $suggested_categories = array();
+
+        foreach ($relations as $relation) {
+            if (isset($relation['target_category']) && $relation['target_category'] > 0) {
+                $suggested_categories[] = $relation['target_category'];
+            }
+        }
+
+        if (empty($suggested_categories)) {
+            return array();
+        }
+
+        // Get products from suggested categories that have estimator enabled
+        $args = array(
+            'post_type'      => 'product',
+            'posts_per_page' => 6, // Limit suggestions to avoid overwhelming the UI
+            'post_status'    => 'publish',
+            'fields'         => 'ids',
+            'meta_query'     => array(
+                array(
+                    'key'     => '_enable_estimator',
+                    'value'   => 'yes',
+                    'compare' => '=',
+                ),
+            ),
+            'tax_query'      => array(
+                array(
+                    'taxonomy' => 'product_cat',
+                    'field'    => 'term_id',
+                    'terms'    => $suggested_categories,
+                    'operator' => 'IN',
+                ),
+            ),
+        );
+
+        $products = get_posts($args);
+
+        return $products;
+    }
+
+    /**
+     * Determine if a room has any products from a specific category
+     *
+     * @since    1.0.4
+     * @access   public
+     * @param    array     $room_products    Array of products in the room.
+     * @param    int       $category_id      The category ID to check for.
+     * @return   bool      True if room has products from the category.
+     */
+    public function room_has_category_products($room_products, $category_id) {
+        if (empty($room_products) || !is_array($room_products)) {
+            return false;
+        }
+
+        foreach ($room_products as $product) {
+            if (isset($product['id']) && $product['id'] > 0) {
+                $product_categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+                if (in_array($category_id, $product_categories)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Generate product suggestions based on room contents
+     *
+     * @since    1.0.4
+     * @access   public
+     * @param    array    $room_products    Array of products in the room.
+     * @return   array    Array of suggested products data.
+     */
+    public function get_suggestions_for_room($room_products) {
+        if (empty($room_products) || !is_array($room_products)) {
+            return array();
+        }
+
+        $product_categories = array();
+        $suggested_products = array();
+
+        // Get all product categories in the room
+        foreach ($room_products as $product) {
+            if (isset($product['id']) && $product['id'] > 0) {
+                $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+                $product_categories = array_merge($product_categories, $categories);
+            }
+        }
+
+        // Remove duplicates
+        $product_categories = array_unique($product_categories);
+
+        // Generate suggestions for each category
+        foreach ($product_categories as $category_id) {
+            $products = $this->get_suggested_products_for_category($category_id);
+            if (!empty($products)) {
+                // Avoid duplicate suggestions
+                $products = array_diff($products, array_column($room_products, 'id'));
+                $suggested_products = array_merge($suggested_products, $products);
+            }
+        }
+
+        // Remove duplicates and limit to a reasonable number
+        $suggested_products = array_unique($suggested_products);
+        $suggested_products = array_slice($suggested_products, 0, 6);
+
+        // Get product details
+        $suggestions = array();
+        foreach ($suggested_products as $product_id) {
+            $product = wc_get_product($product_id);
+            if ($product) {
+                $suggestions[] = array(
+                    'id' => $product_id,
+                    'name' => $product->get_name(),
+                    'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
+                    'price' => $product->get_price(),
+                    'formatted_price' => wc_price($product->get_price()),
+                    'permalink' => get_permalink($product_id)
+                );
+            }
+        }
+
+        return $suggestions;
     }
 }

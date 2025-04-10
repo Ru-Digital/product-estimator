@@ -42,6 +42,15 @@
     const $noteRow = $('.note-row');
     const $noteTextarea = $('#note_text');
 
+    // Add CSS for the new relationship type
+    const newStyling = `
+    .relation-type.suggest_products_by_category {
+      background-color: #f0f7e6;
+      color: #2e7d32;
+    }
+    `;
+    $('<style>').text(newStyling).appendTo('head');
+
     // Initialize Select2 for multiple selection
     $('#source_category').select2({
       placeholder: 'Select source categories',
@@ -74,6 +83,11 @@
       } else if (actionType === 'auto_add_note_by_category') {
         $targetCategoryRow.hide();
         $noteRow.show();
+      } else if (actionType === 'suggest_products_by_category') {
+        // For suggestion type, we only need the target category
+        $targetCategoryRow.show();
+        $noteRow.hide();
+        $productSearchRow.hide();
       } else {
         $targetCategoryRow.hide();
         $noteRow.hide();
@@ -83,6 +97,7 @@
     // Handle target category change
     $targetCategorySelect.on('change', function() {
       const categoryId = $(this).val();
+      const actionType = $relationTypeSelect.val();
 
       // Reset product search
       $productSearch.val('');
@@ -90,7 +105,7 @@
       $selectedProduct.hide();
       $selectedProductIdInput.val('');
 
-      if (categoryId) {
+      if (categoryId && actionType === 'auto_add_by_category') {
         $productSearchRow.show();
       } else {
         $productSearchRow.hide();
@@ -228,6 +243,13 @@
           alert(ProductEstimatorAdmin.i18n.selectProduct || 'Please select a product');
           return;
         }
+      } else if (actionType === 'suggest_products_by_category') {
+        const targetCategory = $targetCategorySelect.val();
+
+        if (!targetCategory) {
+          alert(ProductEstimatorAdmin.i18n.selectTargetCategory || 'Please select a target category');
+          return;
+        }
       } else if (actionType === 'auto_add_note_by_category') {
         if (!noteText) {
           alert('Please enter a note text');
@@ -349,6 +371,9 @@
           if (productId) {
             loadProductDetails(productId);
           }
+        } else if (relationType === 'suggest_products_by_category' && targetCategory) {
+          // For suggest products, we just need the target category
+          $targetCategorySelect.val(targetCategory).trigger('change');
         } else if (relationType === 'auto_add_note_by_category' && noteText) {
           // Set the note text
           $noteTextarea.val(noteText);
@@ -511,8 +536,21 @@
     const $typeCell = $('<td></td>');
     const $typeSpan = $('<span></span>')
       .addClass('relation-type')
-      .addClass(relation.relation_type)
-      .text(relation.relation_type_label);
+      .addClass(relation.relation_type);
+
+    // Set appropriate label based on relation type
+    let relation_type_label = '';
+    if (relation.relation_type === 'auto_add_by_category') {
+      relation_type_label = 'Auto add product with Category';
+    } else if (relation.relation_type === 'auto_add_note_by_category') {
+      relation_type_label = 'Auto add note with Category';
+    } else if (relation.relation_type === 'suggest_products_by_category') {
+      relation_type_label = 'Suggest products when Category';
+    } else {
+      relation_type_label = relation.relation_type_label || '';
+    }
+
+    $typeSpan.text(relation_type_label);
     $typeCell.append($typeSpan);
     $row.append($typeCell);
 
@@ -530,6 +568,11 @@
         relation.note_text.substring(0, 50) + '...' :
         relation.note_text || '';
       $targetCell.text(notePreview);
+    } else if (relation.relation_type === 'suggest_products_by_category') {
+      // For suggestion type, show the target category
+      if (relation.target_name) {
+        $targetCell.text(relation.target_name + ' (Category)');
+      }
     }
     $row.append($targetCell);
 

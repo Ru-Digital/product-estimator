@@ -51,6 +51,7 @@ if (!defined('ABSPATH')) {
                                 <option value=""><?php _e('Please Select', 'product-estimator'); ?></option>
                                 <option value="auto_add_by_category"><?php _e('Auto add product with Category', 'product-estimator'); ?></option>
                                 <option value="auto_add_note_by_category"><?php _e('Auto add note with Category', 'product-estimator'); ?></option>
+                                <option value="suggest_products_by_category"><?php _e('Suggest products when Category', 'product-estimator'); ?></option>
                             </select>
                             <p class="description"><?php _e('Select how the related products or notes are added to the estimate.', 'product-estimator'); ?></p>
                         </td>
@@ -149,6 +150,9 @@ if (!defined('ABSPATH')) {
                     </thead>
                     <tbody>
                     <?php foreach ($relations as $relation_id => $relation) :
+                        echo "<pre>";
+                    print_r($relation);
+                    echo "</pre>";
                         // For backward compatibility, ensure source_category is always an array
                         $source_categories = isset($relation['source_category']) ? (array)$relation['source_category'] : array();
 
@@ -197,6 +201,10 @@ if (!defined('ABSPATH')) {
                                 $relation_type_label = __('Auto add product with Category', 'product-estimator');
                             } elseif ($relation['relation_type'] === 'auto_add_note_by_category') {
                                 $relation_type_label = __('Auto add note with Category', 'product-estimator');
+                            } elseif ($relation['relation_type'] === 'suggest_products_by_category') {
+                                $relation_type_label = __('Suggest products when Category', 'product-estimator');
+                            } else {
+                                $relation_type_label = $relation['relation_type'];
                             }
                         }
                         ?>

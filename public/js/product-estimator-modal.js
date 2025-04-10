@@ -147,6 +147,52 @@
         this.confirmDelete('product', estimateId, roomId, productIndex);
       });
 
+      // Add handler for suggested products
+      $(document).on('click', '.add-suggestion-to-room', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const $button = $(e.currentTarget);
+        const productId = $button.data('product-id');
+        const estimateId = $button.data('estimate-id');
+        const roomId = $button.data('room-id');
+
+        // Disable the button and show loading state
+        $button.prop('disabled', true).text('Adding...');
+
+        // Call the existing AJAX endpoint to add product to room
+        $.ajax({
+          url: productEstimatorVars.ajax_url,
+          type: 'POST',
+          data: {
+            action: 'add_product_to_room',
+            nonce: productEstimatorVars.nonce,
+            product_id: productId,
+            room_id: roomId
+          },
+          success: (response) => {
+            if (response.success) {
+              // Show temporary success indicator
+              $button.removeClass('button').addClass('added').text('Added!');
+
+              // After a delay, refresh the estimates list to show the updated content
+              setTimeout(() => {
+                this.refreshEstimatesList();
+              }, 1500);
+            } else {
+              // Reset button on error
+              $button.prop('disabled', false).text('Try Again');
+              console.error('Error adding suggested product:', response.data?.message);
+            }
+          },
+          error: (xhr, status, error) => {
+            // Reset button on error
+            $button.prop('disabled', false).text('Try Again');
+            console.error('AJAX error:', status, error);
+          }
+        });
+      });
+
       // Escape key to close modal
       $(document).on('keydown', (e) => {
         if (e.key === 'Escape' && this.$modal.is(':visible')) {

@@ -100,11 +100,6 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                         <div class="room-products">
                                             <h5><?php esc_html_e('Products', 'product-estimator'); ?></h5>
                                             <ul class="product-list">
-                                                <?php
-//                                                echo "<pre>";
-//                                                print_r($room['products']);
-//                                                echo "</pre>";
-                                                ?>
                                                 <?php foreach($room['products'] as $product_index => $product): ?>
 
                                                     <li class="product-item <?php echo isset($product['type']) && $product['type'] === 'note' ? 'product-note-item' : ''; ?>" data-product-index="<?php echo esc_attr($product_index); ?>">
@@ -410,6 +405,38 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                         <p class="no-products">
                                             <?php esc_html_e('No products added to this room yet.', 'product-estimator'); ?>
                                         </p>
+                                    <?php endif; ?>
+
+                                    <?php // Display product suggestions inside the accordion content ?>
+                                    <?php if (!empty($room['product_suggestions'])): ?>
+                                        <div class="product-suggestions">
+                                            <h5><?php esc_html_e('Suggested Products', 'product-estimator'); ?></h5>
+                                            <div class="suggestions-list">
+                                                <?php foreach ($room['product_suggestions'] as $suggestion): ?>
+                                                    <div class="suggestion-item">
+                                                        <div class="suggestion-image">
+                                                            <?php if (!empty($suggestion['image'])): ?>
+                                                                <img src="<?php echo esc_url($suggestion['image']); ?>" alt="<?php echo esc_attr($suggestion['name']); ?>">
+                                                            <?php else: ?>
+                                                                <div class="no-image"></div>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                        <div class="suggestion-details">
+                                                            <div class="suggestion-name"><?php echo esc_html($suggestion['name']); ?></div>
+                                                            <div class="suggestion-price"><?php echo $suggestion['formatted_price']; ?></div>
+                                                        </div>
+                                                        <div class="suggestion-actions">
+                                                            <button class="add-suggestion-to-room button"
+                                                                    data-product-id="<?php echo esc_attr($suggestion['id']); ?>"
+                                                                    data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
+                                                                    data-room-id="<?php echo esc_attr($room_id); ?>">
+                                                                <?php esc_html_e('Add', 'product-estimator'); ?>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                             </div>

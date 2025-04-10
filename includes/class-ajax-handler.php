@@ -326,6 +326,36 @@ public function getVariationEstimator() {
         // Start output buffer to capture HTML
         ob_start();
 
+        // Check if we have a ProductAdditionsManager instance to generate suggestions
+        if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
+            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
+
+            // Get all estimates
+            $estimates = $this->session->getEstimates();
+
+            // Generate suggestions for each room in each estimate
+            foreach ($estimates as $estimate_id => &$estimate) {
+                if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
+                    foreach ($estimate['rooms'] as $room_id => &$room) {
+                        if (isset($room['products']) && is_array($room['products'])) {
+                            // Generate suggestions based on room contents
+                            $suggestions = $product_additions_manager->get_suggestions_for_room($room['products']);
+
+                            // Add suggestions to the room data for template access
+                            if (!empty($suggestions)) {
+                                $room['product_suggestions'] = $suggestions;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Update the session with the modified estimates that include suggestions
+            if (isset($_SESSION['product_estimator']['estimates'])) {
+                $_SESSION['product_estimator']['estimates'] = $estimates;
+            }
+        }
+
         // Include the estimates portion of the modal template
         include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-estimates-list.php';
 

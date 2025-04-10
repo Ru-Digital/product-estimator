@@ -535,8 +535,17 @@
             if (productId) {
               if (response.data.product_added) {
                 // Product was added to the new room - refresh the estimates list
-                this.refreshEstimatesList();
-              } else {
+                this.refreshEstimatesList(() => {
+                  // After refreshing, check if we should show suggestions for the new room
+                  if (response.data.has_suggestions) {
+                    // Find the new room in the DOM and expand it to show suggestions
+                    const $room = $(`.accordion-item[data-room-id="${response.data.room_id}"]`);
+                    if ($room.length) {
+                      $room.find('.accordion-header').addClass('active');
+                      $room.find('.accordion-content').show();
+                    }
+                  }
+                });              } else {
                 // Room was created but product wasn't added - show room selection
                 const $roomSelect = $('#room-dropdown');
                 $roomSelect.empty();

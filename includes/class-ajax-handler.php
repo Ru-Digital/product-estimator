@@ -522,11 +522,19 @@ public function getVariationEstimator() {
     /**
      * Handle new room submission
      */
+    /**
+     * Handle new room submission
+     */
     public function addNewRoom() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
+        // Enhanced debugging
+        error_log('=== NEW ROOM SUBMISSION - START ===');
+        error_log('POST data: ' . print_r($_POST, true));
+
         if (!isset($_POST['form_data']) || !isset($_POST['estimate_id'])) {
+            error_log('Required parameters missing in request');
             wp_send_json_error(['message' => __('Required parameters missing', 'product-estimator')]);
             return;
         }
@@ -534,21 +542,27 @@ public function getVariationEstimator() {
         $estimate_id = sanitize_text_field($_POST['estimate_id']);
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
 
+        error_log("Estimate ID: $estimate_id, Product ID: $product_id");
+
         // Parse form data
         parse_str($_POST['form_data'], $form_data);
+        error_log('Parsed form data: ' . print_r($form_data, true));
 
         // Validate room data
         if (empty($form_data['room_name'])) {
+            error_log('Room name is missing');
             wp_send_json_error(['message' => __('Room name is required', 'product-estimator')]);
             return;
         }
 
         if (!isset($form_data['room_width']) || !is_numeric($form_data['room_width'])) {
+            error_log('Invalid room width: ' . print_r($form_data['room_width'] ?? 'not set', true));
             wp_send_json_error(['message' => __('Valid room width is required', 'product-estimator')]);
             return;
         }
 
         if (!isset($form_data['room_length']) || !is_numeric($form_data['room_length'])) {
+            error_log('Invalid room length: ' . print_r($form_data['room_length'] ?? 'not set', true));
             wp_send_json_error(['message' => __('Valid room length is required', 'product-estimator')]);
             return;
         }
@@ -557,24 +571,32 @@ public function getVariationEstimator() {
             // Force session initialization
             $this->session->startSession();
 
-            // Debug logging
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Adding room to estimate ID: ' . $estimate_id);
-                error_log('Current estimates before room addition: ' . print_r($this->session->getEstimates(), true));
-            }
+            // Get current estimates for debugging
+            $current_estimates = $this->session->getEstimates();
+            error_log('Current estimates before adding room: ' . print_r($current_estimates, true));
 
-            // Create room data
+            // Create room data with explicit values - USING STRICT TYPE CONVERSION
+            $room_width = (float)$form_data['room_width'];
+            $room_length = (float)$form_data['room_length'];
+            $room_name = sanitize_text_field($form_data['room_name']);
+
+            error_log("Room dimensions from form: width=$room_width, length=$room_length, name=$room_name");
+
             $room_data = [
-                'name' => sanitize_text_field($form_data['room_name']),
-                'width' => floatval($form_data['room_width']),
-                'length' => floatval($form_data['room_length']),
+                'name' => $room_name,
+                'width' => $room_width,
+                'length' => $room_length,
                 'products' => []
             ];
 
+            error_log('Prepared room data: ' . print_r($room_data, true));
+
             // Add room to estimate
             $room_id = $this->session->addRoom($estimate_id, $room_data);
+            error_log("Result of addRoom: room_id=$room_id");
 
-            if (!$room_id && $room_id !== '0') { // Check for both false and non-zero string values
+            if ($room_id === false) {
+                error_log('Failed to add room: session returned false');
                 wp_send_json_error([
                     'message' => __('Failed to add room to estimate', 'product-estimator'),
                     'debug' => [
@@ -585,44 +607,117 @@ public function getVariationEstimator() {
                 return;
             }
 
-            // Debug logging
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Room added with ID: ' . print_r($room_id, true));
-                error_log('Current estimates after room addition: ' . print_r($this->session->getEstimates(), true));
+            // Verify room was added correctly
+            $updated_estimates = $this->session->getEstimates();
+            error_log('Estimates after adding room: ' . print_r($updated_estimates, true));
+
+            // Check if the room exists with correct data
+            if (isset($updated_estimates[$estimate_id]['rooms'][$room_id])) {
+                $saved_room = $updated_estimates[$estimate_id]['rooms'][$room_id];
+                error_log("Saved room data: " . print_r($saved_room, true));
+
+                // Verify dimensions match
+                if ((float)$saved_room['width'] != $room_width || (float)$saved_room['length'] != $room_length) {
+                    error_log("WARNING: Saved room dimensions don't match input dimensions!");
+                    error_log("Expected: width=$room_width, length=$room_length");
+                    error_log("Actual: width={$saved_room['width']}, length={$saved_room['length']}");
+                }
+            } else {
+                error_log("ERROR: Room ID $room_id not found in estimate $estimate_id after save!");
             }
 
             // If a product ID was provided, add it to the room
             $product_added = false;
+            $product_data = null;
             if ($product_id > 0) {
-                // Use common method to prepare and add product to room
-                // We pass the room dimensions directly since we just created this room
+                error_log("Adding product $product_id to room $room_id");
+
+                // Use common method to prepare and add product to room - PASS THE EXACT DIMENSIONS
                 $result = $this->prepareAndAddProductToRoom(
                     $product_id,
                     $estimate_id,
                     $room_id,
-                    floatval($form_data['room_width']),
-                    floatval($form_data['room_length'])
+                    $room_width,   // Pass the original width value
+                    $room_length   // Pass the original length value
                 );
 
+                error_log('Result of prepareAndAddProductToRoom: ' . print_r($result, true));
                 $product_added = $result['success'];
+
+                if ($product_added) {
+                    $product_data = $result['product_data'];
+
+                    // Generate product suggestions immediately for the new room
+                    if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
+                        $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
+
+                        // Get product categories
+                        $product_categories = array();
+                        $categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
+                        if (is_array($categories)) {
+                            $product_categories = $categories;
+                        }
+
+                        // Check if any categories have suggestion relationships
+                        $has_suggestion_relationships = false;
+                        foreach ($product_categories as $category_id) {
+                            $suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
+                            if (!empty($suggestions)) {
+                                $has_suggestion_relationships = true;
+                                break;
+                            }
+                        }
+
+                        // Only add suggestions if there are relationship rules that apply
+                        if ($has_suggestion_relationships) {
+                            // Get the updated products list for the room
+                            $updated_room = $this->session->getRoom($estimate_id, $room_id);
+                            if ($updated_room && isset($updated_room['products'])) {
+                                // Generate suggestions based on room contents
+                                $suggestions = $product_additions_manager->get_suggestions_for_room($updated_room['products']);
+
+                                // Add suggestions to the session directly
+                                if (!empty($suggestions)) {
+                                    $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'] = $suggestions;
+                                    error_log("Added product suggestions: " . print_r($suggestions, true));
+                                }
+                            }
+                        }
+                    }
+                }
             }
+
+            // Final check of session data
+            $final_estimates = $this->session->getEstimates();
+            error_log('Final estimate data: ' . print_r($final_estimates, true));
+            error_log('=== NEW ROOM SUBMISSION - END ===');
 
             wp_send_json_success([
                 'message' => __('Room added successfully', 'product-estimator'),
                 'estimate_id' => $estimate_id,
                 'room_id' => $room_id,
-                'product_added' => $product_added
+                'product_added' => $product_added,
+                'product_data' => $product_data,
+                'room_data' => [  // Return the exact room data we sent to the session
+                    'name' => $room_name,
+                    'width' => $room_width,
+                    'length' => $room_length
+                ],
+                // Include suggestions in the response if available
+                'has_suggestions' => isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'])
             ]);
 
         } catch (Exception $e) {
             error_log('Exception in addNewRoom: ' . $e->getMessage());
+            error_log('Exception trace: ' . $e->getTraceAsString());
+            error_log('=== NEW ROOM SUBMISSION - ERROR END ===');
+
             wp_send_json_error([
                 'message' => __('An error occurred while processing your request', 'product-estimator'),
                 'error' => $e->getMessage()
             ]);
         }
     }
-
     /**
      * Check if any estimates exist in the session
      */

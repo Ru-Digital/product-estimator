@@ -338,12 +338,66 @@ public function getVariationEstimator() {
                 if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
                     foreach ($estimate['rooms'] as $room_id => &$room) {
                         if (isset($room['products']) && is_array($room['products'])) {
-                            // Generate suggestions based on room contents
-                            $suggestions = $product_additions_manager->get_suggestions_for_room($room['products']);
+                            // Check if there are any regular (non-note) products in the room
+                            $has_regular_products = false;
+                            foreach ($room['products'] as $product) {
+                                // Skip notes or products without IDs
+                                if (isset($product['type']) && $product['type'] === 'note') {
+                                    continue;
+                                }
+                                if (!isset($product['id']) || empty($product['id'])) {
+                                    continue;
+                                }
+                                $has_regular_products = true;
+                                break;
+                            }
 
-                            // Add suggestions to the room data for template access
-                            if (!empty($suggestions)) {
-                                $room['product_suggestions'] = $suggestions;
+                            // Only generate suggestions if there are actual products in the room
+                            if ($has_regular_products) {
+                                // Get product categories in the room
+                                $product_categories = array();
+                                foreach ($room['products'] as $product) {
+                                    // Skip notes
+                                    if (isset($product['type']) && $product['type'] === 'note') {
+                                        continue;
+                                    }
+
+                                    if (isset($product['id']) && $product['id'] > 0) {
+                                        $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+                                        if (is_array($categories)) {
+                                            $product_categories = array_merge($product_categories, $categories);
+                                        }
+                                    }
+                                }
+
+                                // Get unique categories
+                                $product_categories = array_unique($product_categories);
+
+                                // Check if any categories have suggestion relationships
+                                $has_suggestion_relationships = false;
+                                foreach ($product_categories as $category_id) {
+                                    $suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
+                                    if (!empty($suggestions)) {
+                                        $has_suggestion_relationships = true;
+                                        break;
+                                    }
+                                }
+
+                                // Only add suggestions if there are relationship rules that apply
+                                if ($has_suggestion_relationships) {
+                                    // Generate suggestions based on room contents
+                                    $suggestions = $product_additions_manager->get_suggestions_for_room($room['products']);
+
+                                    // Add suggestions to the room data for template access
+                                    if (!empty($suggestions)) {
+                                        $room['product_suggestions'] = $suggestions;
+                                    }
+                                }
+                            } else {
+                                // No regular products in this room, remove any existing suggestions
+                                if (isset($room['product_suggestions'])) {
+                                    unset($room['product_suggestions']);
+                                }
                             }
                         }
                     }
@@ -893,12 +947,6 @@ public function getVariationEstimator() {
                     $product_data['min_price'] = $base_price;
                     $product_data['max_price'] = $base_price;
                 }
-
-                // Log the pricing data
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Product price data: ' . print_r($product_data, true));
-                }
-
             } catch (\Exception $e) {
                 // If NetSuite API fails, log the error but continue with base price
                 error_log('NetSuite API Error: ' . $e->getMessage());
@@ -913,21 +961,10 @@ public function getVariationEstimator() {
             if ($room_area > 0) {
                 $product_data['min_price_total'] = $product_data['min_price'] * $room_area;
                 $product_data['max_price_total'] = $product_data['max_price'] * $room_area;
-
-                // Log the calculation
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Price calculations: min_price (' . $product_data['min_price'] . ') * room_area (' . $room_area . ') = ' . $product_data['min_price_total']);
-                    error_log('Price calculations: max_price (' . $product_data['max_price'] . ') * room_area (' . $room_area . ') = ' . $product_data['max_price_total']);
-                }
             } else {
                 // If room area is not available or is zero, use min/max_price as fallback
                 $product_data['min_price_total'] = $product_data['min_price'];
                 $product_data['max_price_total'] = $product_data['max_price'];
-
-                // Log the fallback
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Room area not available, using min/max_price as total price');
-                }
             }
 
             // PRODUCT ADDITIONS - auto-add related products and notes
@@ -935,7 +972,7 @@ public function getVariationEstimator() {
 
             // Check if ProductAdditionsManager is accessible
             if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
-                $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager($this->plugin_name, $this->version);
+                $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.3');
                 $auto_add_products = array();
                 $auto_add_notes = array();
 

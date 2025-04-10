@@ -401,6 +401,12 @@
 
             // Refresh estimates list and show it
             this.refreshEstimatesList(() => {
+              // After refreshing the list, check if we should show suggestions
+              const estimateId = this.$roomSelectionForm.attr('data-estimate-id');
+              if (estimateId) {
+                this.updateSuggestionVisibility(estimateId, roomId);
+              }
+
               // Show success message
               console.log('Product added successfully!');
             });
@@ -694,6 +700,9 @@
 
             // Re-initialize accordion after content update
             this.setupAccordion();
+
+            // After the content is updated, check and update suggestion visibility for all rooms
+            this.updateAllSuggestionsVisibility();
           } else {
             console.error('Failed to refresh estimates list:', response.data?.message);
             console.log('Failed to refresh estimates list: ' + (response.data?.message || 'Unknown error'));
@@ -862,8 +871,11 @@
         },
         success: (response) => {
           if (response.success) {
-            // Refresh estimates list
-            this.refreshEstimatesList();
+            // Refresh estimates list and update suggestion visibility
+            this.refreshEstimatesList(() => {
+              // After refreshing the list, check if we should hide suggestions
+              this.updateSuggestionVisibility(estimateId, roomId);
+            });
           } else {
             // Show error
             console.error('Error removing product:', response.data?.message);
@@ -1016,6 +1028,56 @@
         if (e.key === 'Escape') {
           $overlay.remove();
           $dialog.remove();
+        }
+      });
+    }
+
+    /**
+     * Update product suggestion visibility based on room contents
+     * @param {string} estimateId - Estimate ID
+     * @param {string} roomId - Room ID
+     */
+    updateSuggestionVisibility(estimateId, roomId) {
+      // Find the room element
+      const $room = $(`.accordion-item[data-room-id="${roomId}"]`);
+
+      // Check if this room has any products
+      const hasProducts = $room.find('.product-item').not('.product-note-item').length > 0;
+
+      // Find the product suggestions section
+      const $suggestions = $room.find('.product-suggestions');
+
+      // Toggle visibility based on whether there are products in the room
+      if (hasProducts) {
+        $suggestions.show();
+      } else {
+        $suggestions.hide();
+      }
+    }
+
+    /**
+     * Update visibility of suggestions for all rooms
+     */
+    updateAllSuggestionsVisibility() {
+      $('.accordion-item').each((_, room) => {
+        const $room = $(room);
+        const roomId = $room.data('room-id');
+        const estimateId = $room.closest('.estimate-section').data('estimate-id');
+
+        // Check if this room has any products (excluding note items)
+        const hasProducts = $room.find('.product-item').not('.product-note-item').length > 0;
+
+        // Find the product suggestions section
+        const $suggestions = $room.find('.product-suggestions');
+
+        // Skip if there are no suggestions in this room
+        if ($suggestions.length === 0) return;
+
+        // Toggle visibility based on whether there are products in the room
+        if (hasProducts) {
+          $suggestions.show();
+        } else {
+          $suggestions.hide();
         }
       });
     }

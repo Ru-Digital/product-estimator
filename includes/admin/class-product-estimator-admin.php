@@ -29,13 +29,22 @@ class ProductEstimatorAdmin {
     private $version;
 
     /**
-     * The settings instance
+     * The settings manager instance
      *
-     * @since    1.0.0
+     * @since    1.1.0
      * @access   private
-     * @var      ProductEstimatorSettings    $settings    The settings handler
+     * @var      SettingsManager    $settings_manager    The settings manager
      */
-    private $settings;
+    private $settings_manager;
+
+    /**
+     * The product additions manager instance
+     *
+     * @since    1.1.0
+     * @access   private
+     * @var      ProductAdditionsManager    $product_additions_manager    The product additions manager
+     */
+    private $product_additions_manager;
 
     /**
      * Initialize the class and set its properties.
@@ -48,28 +57,57 @@ class ProductEstimatorAdmin {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
 
-        // Properly initialize settings
-        $this->settings = new ProductEstimatorSettings($plugin_name, $version);
+        $this->load_dependencies();
+        $this->init_components();
+        $this->define_hooks();
+    }
 
-        // Initialize the Product Additions Manager
-        $product_additions_manager = new ProductAdditionsManager($plugin_name, $version, null);
+    /**
+     * Load required dependencies.
+     *
+     * @since    1.1.0
+     * @access   private
+     */
+    private function load_dependencies() {
+        // Load Settings Manager
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-settings-manager.php';
 
+        // Load Product Additions Manager
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-product-additions-manager.php';
+    }
 
-        // Add this line to hook the menu method to the admin_menu action
+    /**
+     * Initialize admin components.
+     *
+     * @since    1.1.0
+     * @access   private
+     */
+    private function init_components() {
+        // Initialize Settings Manager
+        $this->settings_manager = new SettingsManager($this->plugin_name, $this->version);
+
+        // Initialize Product Additions Manager
+        $this->product_additions_manager = new ProductAdditionsManager($this->plugin_name, $this->version);
+    }
+
+    /**
+     * Register all of the hooks related to the admin area functionality.
+     *
+     * @since    1.0.0
+     */
+    private function define_hooks() {
+        // Add the main admin menu
         add_action('admin_menu', array($this, 'add_plugin_admin_menu'));
-        add_action('wp_ajax_test_netsuite_connection', array($this, 'test_netsuite_connection'));
-
-
-
-
 
         // Register admin scripts and styles
         add_action('admin_enqueue_scripts', array($this, 'enqueue_styles'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
 
         // Add action links to plugins page
-        add_filter('plugin_action_links_' . PRODUCT_ESTIMATOR_BASENAME, array($this, 'add_action_links'));
+//        add_filter('plugin_action_links_' . PRODUCT_ESTIMATOR_BASENAME, array($this, 'add_action_links'));
 
+        // WooCommerce product integration
+        $this->init_woocommerce_integration();
     }
 
     /**
@@ -120,26 +158,15 @@ class ProductEstimatorAdmin {
      *
      * @since  1.0.0
      */
-
-
     public function add_plugin_admin_menu() {
         add_menu_page(
-            __('Product Estimator Settings', 'product-estimator'),
-            __('Product Estimator', 'product-estimator'),
+            __('Product Estimator', $this->plugin_name),
+            __('Product Estimator', $this->plugin_name),
             'manage_options',
             $this->plugin_name,
             array($this, 'display_plugin_admin_page'),
             'dashicons-calculator',
             25
-        );
-
-        add_submenu_page(
-            $this->plugin_name,
-            __('Settings', 'product-estimator'),
-            __('Settings', 'product-estimator'),
-            'manage_options',
-            $this->plugin_name . '-settings',
-            array($this, 'display_plugin_admin_settings')
         );
     }
 
@@ -152,7 +179,7 @@ class ProductEstimatorAdmin {
      */
     public function add_action_links($links) {
         $settings_link = array(
-            '<a href="' . admin_url('admin.php?page=' . $this->plugin_name) . '">' .
+            '<a href="' . admin_url('admin.php?page=' . $this->plugin_name . '-settings') . '">' .
             __('Settings', 'product-estimator') . '</a>'
         );
         return array_merge($settings_link, $links);
@@ -172,27 +199,6 @@ class ProductEstimatorAdmin {
             include_once $template_path;
         } else {
             wp_die(__('Admin template file not found:', 'product-estimator') . ' ' . $template_path);
-        }
-    }
-
-    /**
-     * Render the settings page
-     *
-     * @since    1.0.0
-     */
-    public function display_plugin_admin_settings() {
-        // Set up variables needed by the template
-        $plugin_name = $this->plugin_name;
-        $version = $this->version;
-
-        // Fix the path to point to the correct location
-        $template_path = plugin_dir_path(dirname(dirname(__FILE__))) .
-            'includes/admin/partials/product-estimator-admin-settings.php';
-
-        if (file_exists($template_path)) {
-            require $template_path;
-        } else {
-            wp_die(__('Settings template file not found:', 'product-estimator') . ' ' . $template_path);
         }
     }
 
@@ -258,175 +264,5 @@ class ProductEstimatorAdmin {
     public function save_estimator_checkbox_for_variation($variation_id, $loop) {
         $enable_estimator = isset($_POST['_enable_product_estimator_variation'][$loop]) ? 'yes' : 'no';
         update_post_meta($variation_id, '_enable_product_estimator', $enable_estimator);
-    }
-
-    /**
-     * Add custom columns to product list
-     */
-    public function add_estimator_column_to_product_list($columns) {
-        $columns['product_estimator'] = __('Estimator', 'product-estimator');
-        return $columns;
-    }
-
-    /**
-     * Render custom column content
-     *
-     * @param string $column Column name
-     * @param int $post_id Product ID
-     */
-    public function render_estimator_column_content($column, $post_id) {
-        if ($column === 'product_estimator') {
-            $product = wc_get_product($post_id);
-
-            // Check if it's a variable product
-            if ($product->is_type('variable')) {
-                $variations_enabled = false;
-                foreach ($product->get_children() as $variation_id) {
-                    if (get_post_meta($variation_id, '_enable_product_estimator', true) === 'yes') {
-                        $variations_enabled = true;
-                        break;
-                    }
-                }
-
-                echo $variations_enabled
-                    ? '<span class="dashicons dashicons-yes" style="color:green;"></span>'
-                    : '<span class="dashicons dashicons-no" style="color:red;"></span>';
-            } else {
-                // Simple product
-                echo get_post_meta($post_id, '_enable_product_estimator', true) === 'yes'
-                    ? '<span class="dashicons dashicons-yes" style="color:green;"></span>'
-                    : '<span class="dashicons dashicons-no" style="color:red;"></span>';
-            }
-        }
-    }
-
-    /**
-     * Add custom bulk actions for enabling/disabling estimator
-     *
-     * @param array $bulk_actions Existing bulk actions
-     * @return array Modified bulk actions
-     */
-    public function add_estimator_bulk_actions($bulk_actions) {
-        $bulk_actions['enable_product_estimator'] = __('Enable Product Estimator', 'product-estimator');
-        $bulk_actions['disable_product_estimator'] = __('Disable Product Estimator', 'product-estimator');
-        return $bulk_actions;
-    }
-
-    /**
-     * Handle bulk actions for estimator
-     *
-     * @param string $redirect_to Redirect URL
-     * @param string $action Bulk action name
-     * @param array $post_ids Selected product IDs
-     * @return string Modified redirect URL
-     */
-    public function handle_estimator_bulk_actions($redirect_to, $action, $post_ids) {
-        $processed_ids = [];
-
-        switch ($action) {
-            case 'enable_product_estimator':
-                foreach ($post_ids as $post_id) {
-                    $product = wc_get_product($post_id);
-
-                    if ($product->is_type('variable')) {
-                        // Enable for all variations
-                        foreach ($product->get_children() as $variation_id) {
-                            update_post_meta($variation_id, '_enable_product_estimator', 'yes');
-                        }
-                    } else {
-                        update_post_meta($post_id, '_enable_product_estimator', 'yes');
-                    }
-
-                    $processed_ids[] = $post_id;
-                }
-                break;
-
-            case 'disable_product_estimator':
-                foreach ($post_ids as $post_id) {
-                    $product = wc_get_product($post_id);
-
-                    if ($product->is_type('variable')) {
-                        // Disable for all variations
-                        foreach ($product->get_children() as $variation_id) {
-                            update_post_meta($variation_id, '_enable_product_estimator', 'no');
-                        }
-                    } else {
-                        update_post_meta($post_id, '_enable_product_estimator', 'no');
-                    }
-
-                    $processed_ids[] = $post_id;
-                }
-                break;
-        }
-
-        // Add notice for processed products
-        if (!empty($processed_ids)) {
-            $redirect_to = add_query_arg([
-                'post_type' => 'product',
-                'bulk_estimator_processed' => count($processed_ids)
-            ], $redirect_to);
-        }
-
-        return $redirect_to;
-    }
-
-    /**
-     * Display admin notice after bulk action
-     */
-    public function display_bulk_action_notice() {
-        if (isset($_REQUEST['post_type']) &&
-            $_REQUEST['post_type'] === 'product' &&
-            isset($_REQUEST['bulk_estimator_processed'])
-        ) {
-            $count = intval($_REQUEST['bulk_estimator_processed']);
-            printf(
-                '<div class="notice notice-success is-dismissible"><p>%s</p></div>',
-                sprintf(
-                    __('%d products updated with Product Estimator settings.', 'product-estimator'),
-                    $count
-                )
-            );
-        }
-    }
-
-    /**
-     * Test NetSuite API connection
-     */
-    public function test_netsuite_connection() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_admin_nonce', 'nonce');
-
-        // Check permissions
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error([
-                'message' => __('You do not have permission to test API connections.', 'product-estimator')
-            ]);
-            return;
-        }
-
-        try {
-            // Initialize NetSuite Integration
-            $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
-
-            // Test authentication
-            $auth_result = $netsuite_integration->test_connection();
-
-            if (is_wp_error($auth_result)) {
-                wp_send_json_error([
-                    'message' => $auth_result->get_error_message()
-                ]);
-            } else {
-                wp_send_json_success([
-                    'message' => __('API connection successful!', 'product-estimator')
-                ]);
-            }
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => sprintf(
-                    __('Error: %s', 'product-estimator'),
-                    $e->getMessage()
-                )
-            ]);
-        }
     }
 }

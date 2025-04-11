@@ -1,0 +1,83 @@
+/**
+ * NetSuite Settings CSS
+ *
+ * Styles specific to the NetSuite integration settings tab.
+ */
+
+/* Test Connection Button and Result */
+#test-netsuite-connection {
+  margin-right: 10px;
+}
+
+#connection-result {
+  display: inline-block;
+  padding: 5px 0;
+  font-weight: 500;
+}
+
+/* NetSuite Settings Section */
+#netsuite .form-table {
+  margin-top: 0;
+}
+
+/* Field Layout */
+#netsuite .form-table th {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+#netsuite .form-table td {
+  padding-top: 15px;
+  padding-bottom: 15px;
+  vertical-align: middle;
+}
+
+/* Password Field */
+#netsuite_client_secret {
+  letter-spacing: 0.1em;
+}
+
+/* API URL Field */
+#netsuite_api_url,
+#netsuite_token_url {
+  font-family: monospace;
+  font-size: 13px;
+}
+
+/* Number Input Fields */
+#netsuite_request_limit,
+#netsuite_cache_time {
+  width: 80px;
+}
+
+/* Info Box for API Settings */
+.netsuite-info-box {
+  background-color: #f0f6fc;
+  border-left: 4px solid #2271b1;
+  padding: 12px 15px;
+  margin: 15px 0;
+  max-width: 600px;
+}
+
+.netsuite-info-box p {
+  margin: 0.5em 0;
+}
+
+.netsuite-info-box code {
+  background: rgba(0, 0, 0, 0.07);
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+  #netsuite_api_url,
+  #netsuite_token_url {
+    font-size: 12px;
+  }
+
+  #connection-result {
+    display: block;
+    margin-top: 10px;
+  }
+}

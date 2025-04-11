@@ -1,21 +1,26 @@
 <?php
-// includes/admin/partials/product-estimator-admin-settings.php
-
 /**
  * Provide an admin area view for the plugin settings
  *
  * This file is used to markup the admin-facing settings page.
  *
- * @since      1.0.0
+ * @since      1.1.0
  * @package    Product_Estimator
  * @subpackage Product_Estimator/admin/partials
- *
- * @var string $plugin_name The name/ID of the plugin
  */
 
 // If this file is called directly, abort.
 if (!defined('WPINC')) {
     die;
+}
+
+// Get all modules from the Settings Manager
+$modules = $this->get_modules();
+$active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
+
+// Ensure the active tab exists, default to general if not
+if (!isset($modules[$active_tab])) {
+    $active_tab = 'general';
 }
 ?>
 
@@ -27,44 +32,26 @@ if (!defined('WPINC')) {
     <div class="product-estimator-admin-wrapper">
         <!-- Navigation Tabs -->
         <nav class="nav-tab-wrapper">
-            <a href="#general" class="nav-tab" data-tab="general">
-                <?php esc_html_e('General Settings', 'product-estimator'); ?>
-            </a>
-            <a href="#netsuite" class="nav-tab" data-tab="netsuite">
-                <?php esc_html_e('NetSuite Integration', 'product-estimator'); ?>
-            </a>
-            <a href="#notifications" class="nav-tab" data-tab="notifications">
-                <?php esc_html_e('Notifications', 'product-estimator'); ?>
-            </a>
+            <?php foreach ($modules as $tab_id => $module): ?>
+                <a href="?page=<?php echo esc_attr($this->plugin_name . '-settings'); ?>&tab=<?php echo esc_attr($tab_id); ?>"
+                   class="nav-tab <?php echo $active_tab === $tab_id ? 'nav-tab-active' : ''; ?>"
+                   data-tab="<?php echo esc_attr($tab_id); ?>">
+                    <?php echo esc_html($module->get_tab_title()); ?>
+                </a>
+            <?php endforeach; ?>
         </nav>
 
-        <form method="post" action="options.php" class="product-estimator-form">
-            <?php
-            settings_fields($plugin_name . '_options');
-            ?>
+        <?php foreach ($modules as $tab_id => $module): ?>
+            <div id="<?php echo esc_attr($tab_id); ?>"
+                 class="tab-content"
+                 style="<?php echo $active_tab === $tab_id ? '' : 'display: none;'; ?>">
 
-            <!-- General Settings Tab -->
-            <div id="general" class="tab-content">
-                <?php
-                do_settings_sections($plugin_name);
-                ?>
+                <form method="post" action="options.php" class="product-estimator-form" id="product-estimator-<?php echo esc_attr($tab_id); ?>-form">
+                    <?php settings_fields($this->plugin_name . '_options'); ?>
+                    <?php do_settings_sections($this->plugin_name . '_' . $tab_id); ?>
+                    <?php submit_button(); ?>
+                </form>
             </div>
-
-            <!-- NetSuite Tab -->
-            <div id="netsuite" class="tab-content">
-                <?php
-                do_settings_sections($plugin_name . '_netsuite');
-                ?>
-            </div>
-
-            <!-- Notifications Tab -->
-            <div id="notifications" class="tab-content">
-                <?php
-                do_settings_sections($plugin_name . '_notifications');
-                ?>
-            </div>
-
-            <?php submit_button(); ?>
-        </form>
+        <?php endforeach; ?>
     </div>
 </div>

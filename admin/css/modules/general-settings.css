@@ -1,0 +1,119 @@
+/**
+ * General Settings CSS
+ *
+ * Styles specific to the general settings tab.
+ */
+
+/* General Settings Section */
+#general .form-table {
+  margin-top: 0;
+}
+
+/* Field Layout */
+#general .form-table th {
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+#general .form-table td {
+  padding-top: 15px;
+  padding-bottom: 15px;
+  vertical-align: middle;
+}
+
+/* Number Input Fields */
+#default_markup,
+#estimate_expiry_days {
+  width: 80px;
+}
+
+/* Info Indicator */
+.info-indicator {
+  color: #2271b1;
+  margin-left: 5px;
+  cursor: help;
+}
+
+/* Tooltip */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltip-text {
+  visibility: hidden;
+  width: 200px;
+  background-color: #555;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  left: 50%;
+  margin-left: -100px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Field Help Box */
+.field-help-box {
+  background-color: #f0f6fc;
+  border-left: 4px solid #2271b1;
+  padding: 12px 15px;
+  margin: 15px 0;
+  max-width: 600px;
+}
+
+.field-help-box h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+/* Select Field */
+.select-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.select-wrapper select {
+  padding-right: 30px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.select-wrapper::after {
+  content: '\25BC';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 12px;
+  color: #50575e;
+}
+
+/* Currency Symbol Preview */
+.currency-preview {
+  margin-left: 15px;
+  padding: 3px 8px;
+  background: #f0f0f1;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+  .currency-preview {
+    display: block;
+    margin-left: 0;
+    margin-top: 10px;
+  }
+}

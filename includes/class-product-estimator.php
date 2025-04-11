@@ -187,13 +187,10 @@ class ProductEstimator {
      * @access   private
      */
     private function define_admin_hooks() {
-        // Existing code...
-
-        // Load Product Additions Manager
-        $product_additions_manager = new Includes\Admin\ProductAdditionsManager($this->get_plugin_name(), $this->get_version(), $this->get_loader());
-
-        // Load Product Estimator Field (for "Enable Estimator" checkbox)
-        $product_estimator_field = new Includes\Admin\ProductEstimatorField($this->get_plugin_name(), $this->get_version(), $this->get_loader());
+        $this->admin = new \RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin(
+            $this->get_plugin_name(),
+            $this->get_version()
+        );
     }
 
     /**

@@ -150,9 +150,6 @@ if (!defined('ABSPATH')) {
                     </thead>
                     <tbody>
                     <?php foreach ($relations as $relation_id => $relation) :
-                        echo "<pre>";
-                    print_r($relation);
-                    echo "</pre>";
                         // For backward compatibility, ensure source_category is always an array
                         $source_categories = isset($relation['source_category']) ? (array)$relation['source_category'] : array();
 

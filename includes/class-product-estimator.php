@@ -113,10 +113,14 @@ class ProductEstimator {
      */
     public function initialize() {
         // Include the AjaxHandler class file
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-customer-details.php';
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-ajax-handler.php';
+
 
         // Initialize AJAX handler
         $this->ajax_handler = new AjaxHandler();
+
+
 
         // Initialize script handler - this now enqueues scripts on all pages
         new ScriptHandler($this->plugin_name, $this->version);

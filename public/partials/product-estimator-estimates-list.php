@@ -15,6 +15,11 @@ if (!defined('WPINC')) {
 $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
 $estimates = $session_handler->getEstimates();
 
+//echo "<pre>";
+//////unset($_SESSION['product_estimator']);
+//print_r($_SESSION['product_estimator']);
+//echo "</pre>";
+
 // Get default markup from settings
 $options = get_option('product_estimator_settings');
 $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;

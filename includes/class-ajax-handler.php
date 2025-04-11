@@ -433,11 +433,24 @@ public function getVariationEstimator() {
     }
 
     /**
-     * Add a new estimate
+     * Handle new estimate submission
+     * Modified to use the CustomerDetails class
      */
     public function addNewEstimate() {
+        // Debug incoming request
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('addNewEstimate called');
+            error_log('POST data: ' . print_r($_POST, true));
+        }
+
         // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_nonce')) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Nonce verification failed');
+            }
+            wp_send_json_error(['message' => __('Security check failed.', 'product-estimator')]);
+            return;
+        }
 
         if (!isset($_POST['form_data'])) {
             wp_send_json_error(['message' => __('No form data provided', 'product-estimator')]);
@@ -446,6 +459,10 @@ public function getVariationEstimator() {
 
         // Parse form data
         parse_str($_POST['form_data'], $form_data);
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Parsed form data: ' . print_r($form_data, true));
+        }
 
         // Validate estimate name
         if (empty($form_data['estimate_name'])) {
@@ -457,11 +474,83 @@ public function getVariationEstimator() {
             // Force session initialization
             $this->session->startSession();
 
+            // Check if CustomerDetails class exists and is accessible
+            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\CustomerDetails')) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('CustomerDetails class not found, including directly');
+                }
+                // Include it directly if needed
+                require_once dirname(__FILE__) . '/class-customer-details.php';
+            }
+
+            // Initialize CustomerDetails class with error handling
+            try {
+                $customer_details_manager = new CustomerDetails();
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('CustomerDetails class initialized successfully');
+                }
+            } catch (\Exception $e) {
+                error_log('Error initializing CustomerDetails: ' . $e->getMessage());
+                // Fallback to basic handling without CustomerDetails class
+                $customer_details = [
+                    'name' => isset($form_data['customer_name']) ? sanitize_text_field($form_data['customer_name']) : '',
+                    'email' => isset($form_data['customer_email']) ? sanitize_email($form_data['customer_email']) : '',
+                    'phone' => isset($form_data['customer_phone']) ? sanitize_text_field($form_data['customer_phone']) : '',
+                    'postcode' => isset($form_data['customer_postcode']) ? sanitize_text_field($form_data['customer_postcode']) : ''
+                ];
+
+                // Store in session directly using the standard key
+                if (!isset($_SESSION['product_estimator'])) {
+                    $_SESSION['product_estimator'] = [];
+                }
+                $_SESSION['product_estimator']['customer_details'] = $customer_details;
+
+                // Create new estimate data
+                $estimate_data = [
+                    'name' => sanitize_text_field($form_data['estimate_name']),
+                    'created_at' => current_time('mysql'),
+                    'rooms' => [],
+                    'customer_details' => $customer_details
+                ];
+
+                $estimate_id = $this->session->addEstimate($estimate_data);
+
+                wp_send_json_success([
+                    'message' => __('Estimate created successfully (fallback mode)', 'product-estimator'),
+                    'estimate_id' => $estimate_id,
+                    'has_customer_details' => true
+                ]);
+                return;
+            }
+
+            // Check if we need to save customer details
+            $save_customer_details = false;
+            $customer_details = [];
+
+            if (!$customer_details_manager->hasCompleteDetails()) {
+                // Validate and process customer details from form
+                $validated_details = $customer_details_manager->validateFormData($form_data);
+
+                if (is_wp_error($validated_details)) {
+                    wp_send_json_error(['message' => $validated_details->get_error_message()]);
+                    return;
+                }
+
+                // Save validated details
+                $customer_details_manager->setDetails($validated_details);
+                $customer_details = $validated_details;
+                $save_customer_details = true;
+            } else {
+                // Use existing details
+                $customer_details = $customer_details_manager->getDetails();
+            }
+
             // Create new estimate data
             $estimate_data = [
                 'name' => sanitize_text_field($form_data['estimate_name']),
                 'created_at' => current_time('mysql'),
-                'rooms' => []
+                'rooms' => [],
+                'customer_details' => $customer_details // Use standard naming
             ];
 
             // Add estimate to session
@@ -480,10 +569,15 @@ public function getVariationEstimator() {
 
             wp_send_json_success([
                 'message' => __('Estimate created successfully', 'product-estimator'),
-                'estimate_id' => $estimate_id
+                'estimate_id' => $estimate_id,
+                'has_customer_details' => true
             ]);
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Exception in addNewEstimate: ' . $e->getMessage());
+                error_log('Stack trace: ' . $e->getTraceAsString());
+            }
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
@@ -666,10 +760,27 @@ public function getVariationEstimator() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
-        $has_estimates = $this->session->hasEstimates();
+        // Force session initialization
+        $this->session->startSession();
+
+        // Get all estimates and check if there are any
+        $estimates = $this->session->getEstimates();
+        $has_estimates = !empty($estimates);
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('checkEstimatesExist called');
+            error_log('Session ID: ' . session_id());
+            error_log('Estimates: ' . print_r($estimates, true));
+            error_log('Has estimates: ' . ($has_estimates ? 'true' : 'false'));
+        }
 
         wp_send_json_success([
-            'has_estimates' => $has_estimates
+            'has_estimates' => $has_estimates,
+            'debug' => [
+                'session_id' => session_id(),
+                'estimate_count' => count($estimates)
+            ]
         ]);
     }
 

@@ -57,11 +57,16 @@ class SessionHandler {
             session_start();
         }
 
-        // Initialize session data
+        // Initialize session data if not exists
         if (!isset($_SESSION['product_estimator'])) {
             $_SESSION['product_estimator'] = [
                 'estimates' => []
             ];
+        }
+
+        // Ensure estimates array exists
+        if (!isset($_SESSION['product_estimator']['estimates'])) {
+            $_SESSION['product_estimator']['estimates'] = [];
         }
 
         // Store session data locally
@@ -105,6 +110,12 @@ class SessionHandler {
 
         // Add the estimate
         $this->session_data['estimates'][$new_id] = $data;
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Added new estimate with ID: ' . $new_id);
+            error_log('Current session estimates: ' . print_r($this->session_data['estimates'], true));
+        }
 
         return $new_id;
     }
@@ -230,6 +241,13 @@ class SessionHandler {
      */
     public function hasEstimates() {
         $this->startSession();
+
+        // Debugging information
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Checking for estimates. Session data: ' . print_r($this->session_data, true));
+            error_log('Has estimates: ' . (!empty($this->session_data['estimates']) ? 'true' : 'false'));
+        }
+
         return !empty($this->session_data['estimates']);
     }
 
@@ -268,7 +286,8 @@ class SessionHandler {
             'session_id' => session_id(),
             'session_active' => $this->session_started,
             'session_status' => session_status(),
-            'estimates' => $this->getEstimates()
+            'estimates' => $this->getEstimates(),
+            'has_estimates' => $this->hasEstimates()
         ];
     }
 
@@ -566,6 +585,113 @@ class SessionHandler {
             // Store estimate totals
             $estimate['min_total'] = $estimate_min_total;
             $estimate['max_total'] = $estimate_max_total;
+        }
+    }
+
+
+    /**
+     * Updated methods for the SessionHandler class to standardize customer details handling
+     */
+
+    /**
+     * Store customer details in session
+     *
+     * @param array $customer_data Customer details data
+     * @return bool Success
+     */
+    public function setCustomerDetails($customer_data)
+    {
+        // Ensure session is started
+        $this->startSession();
+
+        // Store customer details under the standard key
+        $this->session_data['customer_details'] = $customer_data;
+
+        // If user_details exists, remove it for consistency
+        if (isset($this->session_data['user_details'])) {
+            unset($this->session_data['user_details']);
+        }
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Customer details stored in session: ' . print_r($customer_data, true));
+        }
+
+        return true;
+    }
+
+    /**
+     * Get customer details from session
+     *
+     * @return array|null Customer details or null if not set
+     */
+    public function getCustomerDetails()
+    {
+        $this->startSession();
+
+        // Check for customer_details (standard key)
+        if (isset($this->session_data['customer_details'])) {
+            return $this->session_data['customer_details'];
+        }
+
+        // Fall back to legacy user_details for backward compatibility
+        if (isset($this->session_data['user_details'])) {
+            // Migrate the data to the standard key
+            $this->session_data['customer_details'] = $this->session_data['user_details'];
+            unset($this->session_data['user_details']);
+
+            return $this->session_data['customer_details'];
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if customer details exist in session
+     *
+     * @return bool Whether customer details exist
+     */
+    public function hasCustomerDetails()
+    {
+        $this->startSession();
+
+        // First check the standard key
+        $customer_details = isset($this->session_data['customer_details']) ?
+            $this->session_data['customer_details'] : null;
+
+        // If not found, check the legacy key
+        if (empty($customer_details) && isset($this->session_data['user_details'])) {
+            $customer_details = $this->session_data['user_details'];
+
+            // Migrate to new key format
+            $this->session_data['customer_details'] = $customer_details;
+            unset($this->session_data['user_details']);
+        }
+
+        return !empty($customer_details) &&
+            isset($customer_details['name']) &&
+            isset($customer_details['email']) &&
+            isset($customer_details['postcode']);
+    }
+
+    /**
+     * Migrate legacy user details to customer details format in all existing estimates
+     * This helps ensure all existing data is standardized
+     */
+    public function migrateUserDetailsInEstimates()
+    {
+        $this->startSession();
+
+        if (!isset($this->session_data['estimates']) || empty($this->session_data['estimates'])) {
+            return;
+        }
+
+        foreach ($this->session_data['estimates'] as $estimate_id => &$estimate) {
+            // Migrate user_details to customer_details at the estimate level
+            if (isset($estimate['user_details']) && !empty($estimate['user_details'])) {
+                $estimate['customer_details'] = $estimate['user_details'];
+                unset($estimate['user_details']);
+            }
         }
     }
 }

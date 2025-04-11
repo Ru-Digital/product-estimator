@@ -1227,6 +1227,103 @@ body.modal-open {
   background: #006630;
 }
 
+/* Add these styles to product-estimator-modal.css */
+
+/* User Details Section */
+.customer-details-section {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.customer-details-section h4 {
+  font-size: 16px;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+/* User details confirmation display */
+.customer-details-confirmation {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 4px solid #00833F;
+}
+
+.saved-customer-details {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.saved-customer-details p {
+  margin: 5px 0;
+}
+
+/* Form fields styling */
+#new-estimate-form .form-group {
+  margin-bottom: 15px;
+}
+
+#new-estimate-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #333;
+}
+
+#new-estimate-form input[type="text"],
+#new-estimate-form input[type="email"],
+#new-estimate-form input[type="tel"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+#new-estimate-form input[type="text"]:focus,
+#new-estimate-form input[type="email"]:focus,
+#new-estimate-form input[type="tel"]:focus {
+  border-color: #00833F;
+  outline: none;
+  box-shadow: 0 0 0 1px #00833F;
+}
+
+/* Error message styling */
+.modal-message {
+  padding: 12px 15px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.modal-error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.modal-success-message {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .customer-details-section h4 {
+    font-size: 15px;
+  }
+
+  #new-estimate-form input[type="text"],
+  #new-estimate-form input[type="email"],
+  #new-estimate-form input[type="tel"] {
+    padding: 8px;
+    font-size: 13px;
+  }
+}
+
 /* Responsive Adjustments */
 @media screen and (max-width: 768px) {
   .suggestions-list {

@@ -54,7 +54,8 @@
             "includes/class-loader.php",
             "includes/class-session-handler.php",
             "includes/class-session-debug-helper.php",
-            "includes/class-ajax-handler.php"
+            "includes/class-ajax-handler.php",
+            "includes/class-customer-details.php"
         ],
         "files": [
             "includes/functions.php"

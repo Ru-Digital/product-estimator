@@ -262,6 +262,8 @@
       if (productId && !forceListView) {
         // Product-specific mode
         this.updateEstimatesState().then(hasEstimates => {
+          console.log('Has estimates check result:', hasEstimates); // Debug log
+
           if (hasEstimates) {
             // Show estimate selection if estimates exist
             this.$estimatesList.hide();
@@ -414,6 +416,9 @@
             this.$estimateSelection.hide();
             this.$roomSelectionForm.hide();
 
+            // Clear the product ID from the modal after successful addition
+            this.$modal.removeAttr('data-product-id');
+
             // Refresh estimates list and show it
             this.refreshEstimatesList(() => {
               // After refreshing the list, find and expand the room
@@ -454,59 +459,60 @@
       });
     }
 
-    /**
-     * Handle new estimate submission
-     */
-    handleNewEstimateSubmission(e) {
-      const formData = $(e.target).serialize();
-      const productId = this.$modal.attr('data-product-id');
 
-      this.showLoading();
+  /**
+   * Handle new estimate submission - updated to handle user details
+   */
+  handleNewEstimateSubmission(e) {
+    const formData = $(e.target).serialize();
+    const productId = this.$modal.attr('data-product-id');
 
-      $.ajax({
-        url: productEstimatorVars.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'add_new_estimate',
-          nonce: productEstimatorVars.nonce,
-          form_data: formData,
-          product_id: productId
-        },
-        success: (response) => {
-          if (response.success) {
-            // Clear form
-            $(e.target)[0].reset();
+    this.showLoading();
 
-            // Update our local state to reflect that we now have estimates
-            this.updateEstimatesState(true);
+    $.ajax({
+      url: productEstimatorVars.ajax_url,
+      type: 'POST',
+      data: {
+        action: 'add_new_estimate',
+        nonce: productEstimatorVars.nonce,
+        form_data: formData,
+        product_id: productId
+      },
+      success: (response) => {
+        if (response.success) {
+          // Clear form
+          $(e.target)[0].reset();
 
+          // Update our local state to reflect that we now have estimates
+          this.updateEstimatesState(true);
 
-            // Hide new estimate form
-            this.$newEstimateForm.hide();
+          // Hide new estimate form
+          this.$newEstimateForm.hide();
 
-            if (productId) {
-              // Show new room form for the new estimate
-              this.$newRoomForm.attr('data-estimate-id', response.data.estimate_id);
-              this.$newRoomForm.attr('data-product-id', productId);
-              this.$newRoomForm.show();
-            } else {
-              // Just refresh the estimates list
-              this.refreshEstimatesList();
-            }
+          if (productId) {
+            // Show new room form for the new estimate
+            this.$newRoomForm.attr('data-estimate-id', response.data.estimate_id);
+            this.$newRoomForm.attr('data-product-id', productId);
+            this.$newRoomForm.show();
           } else {
-            console.error('Error creating estimate:', response.data?.message);
-            console.log('Error creating estimate: ' + (response.data?.message || 'Unknown error'));
+            // Just refresh the estimates list
+            this.refreshEstimatesList();
           }
-        },
-        error: (xhr, status, error) => {
-          console.error('AJAX error:', status, error);
-          console.log('Error creating estimate. Please try again.');
-        },
-        complete: () => {
-          this.hideLoading();
+        } else {
+          console.error('Error creating estimate:', response.data?.message);
+          this.showMessage(response.data?.message || 'Error creating estimate', 'error');
         }
-      });
-    }
+      },
+      error: (xhr, status, error) => {
+        console.error('AJAX error:', status, error);
+        this.showMessage('Error creating estimate. Please try again.', 'error');
+      },
+      complete: () => {
+        this.hideLoading();
+      }
+    });
+  }
+
 
     /**
      * Update the hasEstimates state
@@ -559,6 +565,9 @@
 
             // Hide new room form
             this.$newRoomForm.hide();
+
+            // Clear the product ID from the modal after successful addition
+            this.$modal.removeAttr('data-product-id');
 
             if (productId) {
               if (response.data.product_added) {
@@ -619,6 +628,8 @@
           nonce: productEstimatorVars.nonce
         },
         success: (response) => {
+          console.log('Check estimates response:', response); // Debug log
+
           if (response.success) {
             // Update our local state
             this.hasEstimates = response.data.has_estimates;
@@ -637,6 +648,7 @@
         },
         error: (xhr, status, error) => {
           console.error('AJAX error:', status, error);
+          console.error('Response:', xhr.responseText);
           this.hasEstimates = false;
           if (typeof callback === 'function') {
             callback(false);

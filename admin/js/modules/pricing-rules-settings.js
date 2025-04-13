@@ -224,6 +224,8 @@
           $('.pricing-rules-form').slideUp();
           this.resetForm();
 
+
+
           // If this is the first rule, remove the "no items" message and create the table
           const $noItems = $('.pricing-rules-list').find('.no-items');
           if ($noItems.length) {
@@ -250,6 +252,8 @@
           // Show error message
           this.showNotice('error', response.data.message);
         }
+
+
 
         // Re-enable form
         this.toggleFormState(true);

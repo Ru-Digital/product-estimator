@@ -199,11 +199,11 @@
       const newTab = $(e.currentTarget).data('tab');
 
       // Warn about unsaved changes before switching tabs
-      if (this.formChanged) {
-        if (!confirm(productEstimatorSettings.i18n.unsavedChanges)) {
-          return;
-        }
-      }
+      // if (this.formChanged) {
+      //   if (!confirm(productEstimatorSettings.i18n.unsavedChanges)) {
+      //     return;
+      //   }
+      // }
 
       this.switchTab(newTab);
     },

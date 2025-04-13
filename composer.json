@@ -43,7 +43,6 @@
             "includes/frontend/class-product-estimator-public.php",
             "includes/integration/class-netsuite-integration.php",
             "includes/integration/class-woocommerce-integration.php",
-            "includes/admin/class-product-additions-manager.php",
             "includes/admin/class-product-estimator-field.php",
             "includes/admin/class-product-estimator-settings.php",
             "includes/admin/class-product-estimator-admin.php",

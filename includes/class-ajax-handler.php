@@ -2,7 +2,7 @@
 namespace RuDigital\ProductEstimator\Includes;
 
 use WP_Error;
-use RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager;
+use RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule;
 
 /**
  * AJAX Handlers for Product Estimator
@@ -338,8 +338,8 @@ public function getVariationEstimator() {
         $estimates = $this->session->getEstimates();
 
         // Check if we have a ProductAdditionsManager instance to generate suggestions
-        if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
-            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
+        if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
+            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
 
             // Generate suggestions for each room in each estimate
             foreach ($estimates as $estimate_id => &$estimate) {
@@ -839,8 +839,8 @@ public function getVariationEstimator() {
 
             if ($updatedRoom && isset($updatedRoom['products']) && !empty($updatedRoom['products'])) {
                 // Check if we have the ProductAdditionsManager class
-                if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
-                    $manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
+                if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductAdditionsManager')) {
+                    $manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
 
                     // Check remaining products for categories that trigger suggestions
                     $categoryProductsExist = false;
@@ -1137,8 +1137,8 @@ public function getVariationEstimator() {
      * @return array The generated suggestions
      */
     private function generateAndStoreSuggestions($estimate_id, $room_id, $room_products) {
-    if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
-        $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
+    if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
+        $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
 
         // Get product categories
         $product_categories = array();
@@ -1303,8 +1303,8 @@ public function getVariationEstimator() {
             $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
 
             // Check if ProductAdditionsManager is accessible
-            if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
-                $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.3');
+            if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
+                $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.3');
                 $auto_add_products = array();
                 $auto_add_notes = array();
 

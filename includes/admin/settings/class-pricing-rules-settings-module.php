@@ -32,8 +32,84 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
      * @access   protected
      */
     protected function register_fields() {
-        // No traditional fields to register for this tab, as it uses a custom UI
-        // But we can still register the section to ensure it's created
+        // Add default pricing method and source fields
+        $fields = array(
+            'default_pricing_method' => array(
+                'title' => __('Default Pricing Method', 'product-estimator'),
+                'type' => 'select',
+                'description' => __('Select the default pricing method to use when no specific rules apply.', 'product-estimator'),
+                'default' => 'sqm',
+                'options' => $this->get_pricing_methods()
+            ),
+            'default_pricing_source' => array(
+                'title' => __('Default Pricing Source', 'product-estimator'),
+                'type' => 'select',
+                'description' => __('Select the default pricing source to use when no specific rules apply.', 'product-estimator'),
+                'default' => 'website',
+                'options' => $this->get_pricing_sources()
+            ),
+        );
+
+        foreach ($fields as $id => $field) {
+            $args = array(
+                'id' => $id,
+                'type' => $field['type'],
+                'description' => $field['description'],
+                'default' => $field['default'],
+                'options' => $field['options']
+            );
+
+            add_settings_field(
+                $id,
+                $field['title'],
+                array($this, 'render_field_callback'),
+                $this->plugin_name . '_' . $this->tab_id,
+                $this->section_id,
+                $args
+            );
+        }
+    }
+
+    /**
+     * Render a settings field.
+     *
+     * @since    1.1.0
+     * @access   public
+     * @param    array    $args    Field arguments.
+     */
+    public function render_field_callback($args) {
+        if ($args['type'] === 'select') {
+            $this->render_select_field($args);
+        } else {
+            $this->render_field($args);
+        }
+    }
+
+    /**
+     * Render a select field.
+     *
+     * @since    1.1.0
+     * @access   private
+     * @param    array    $args    Field arguments.
+     */
+    private function render_select_field($args) {
+        $options = get_option('product_estimator_settings');
+        $id = $args['id'];
+        $current_value = isset($options[$id]) ? $options[$id] : '';
+
+        if (empty($current_value) && isset($args['default'])) {
+            $current_value = $args['default'];
+        }
+
+        echo '<select id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']">';
+        foreach ($args['options'] as $value => $label) {
+            echo '<option value="' . esc_attr($value) . '" ' . selected($current_value, $value, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select>';
+
+        if (isset($args['description'])) {
+            echo '<p class="description">' . esc_html($args['description']) . '</p>';
+        }
     }
 
     /**
@@ -45,8 +121,38 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
      * @return   true|\WP_Error    True on success, WP_Error on failure
      */
     protected function process_form_data($form_data) {
+        if (!isset($form_data['product_estimator_settings'])) {
+            return new \WP_Error('missing_data', __('No settings data received', 'product-estimator'));
+        }
+
+        $settings = $form_data['product_estimator_settings'];
+
+        // Validate default pricing method
+        if (isset($settings['default_pricing_method'])) {
+            $method = $settings['default_pricing_method'];
+            $valid_methods = array_keys($this->get_pricing_methods());
+            if (!in_array($method, $valid_methods)) {
+                return new \WP_Error(
+                    'invalid_pricing_method',
+                    __('Invalid default pricing method', 'product-estimator')
+                );
+            }
+        }
+
+        // Validate default pricing source
+        if (isset($settings['default_pricing_source'])) {
+            $source = $settings['default_pricing_source'];
+            $valid_sources = array_keys($this->get_pricing_sources());
+            if (!in_array($source, $valid_sources)) {
+                return new \WP_Error(
+                    'invalid_pricing_source',
+                    __('Invalid default pricing source', 'product-estimator')
+                );
+            }
+        }
+
         // For pricing rules, we handle the data saving through separate AJAX endpoints
-        // This method is primarily used for validation
+        // but defaults will be saved with the main settings
 
         return true;
     }
@@ -58,7 +164,7 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
      * @access   public
      */
     public function render_section_description() {
-        echo '<p>' . esc_html__('Configure pricing methods based on product categories.', 'product-estimator') . '</p>';
+        echo '<p>' . esc_html__('Configure default pricing settings and category-specific pricing rules.', 'product-estimator') . '</p>';
     }
 
     /**
@@ -68,6 +174,29 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
      * @access   public
      */
     public function render_module_content() {
+        // First render the default settings form
+        ?>
+        <div class="default-pricing-settings">
+            <h3><?php esc_html_e('Default Pricing Settings', 'product-estimator'); ?></h3>
+            <p><?php esc_html_e('Set the default pricing method and source to use when no specific category rules apply.', 'product-estimator'); ?></p>
+
+            <form method="post" action="javascript:void(0);" class="product-estimator-form default-pricing-form">
+                <?php
+                settings_fields($this->plugin_name . '_options');
+                do_settings_sections($this->plugin_name . '_' . $this->tab_id);
+                ?>
+                <p class="submit">
+                    <button type="submit" class="button button-primary">
+                        <?php esc_html_e('Save Default Settings', 'product-estimator'); ?>
+                    </button>
+                </p>
+            </form>
+        </div>
+
+        <hr class="pricing-rules-divider" />
+
+        <?php
+        // Then render the pricing rules UI
         // Get existing pricing rules
         $pricing_rules = get_option('product_estimator_pricing_rules', array());
 
@@ -77,7 +206,6 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
             'hide_empty' => false,
         ));
 
-        // Include the template
         include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/partials/pricing-rules-admin-display.php';
     }
 

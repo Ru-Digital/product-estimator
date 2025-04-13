@@ -26,6 +26,7 @@
       console.log('Initializing Pricing Rules Settings Module');
       this.bindEvents();
       this.setupFormHandling();
+      this.initializeDefaultSettingsForm();
     },
 
     /**
@@ -37,6 +38,25 @@
 
       // Tab-specific handlers
       this.initRuleHandlers();
+    },
+
+    /**
+     * Initialize default settings form
+     */
+    initializeDefaultSettingsForm: function() {
+      // Initialize default settings form with the main settings framework
+      $('.default-pricing-form').on('submit', function(e) {
+        e.preventDefault();
+
+        // Use the main settings framework to save the settings
+        if (typeof ProductEstimatorSettings !== 'undefined') {
+          // Set the formChanged flag to trigger a save
+          ProductEstimatorSettings.formChanged = true;
+
+          // Submit the form using the main settings AJAX handler
+          ProductEstimatorSettings.handleAjaxFormSubmit(e);
+        }
+      });
     },
 
     /**

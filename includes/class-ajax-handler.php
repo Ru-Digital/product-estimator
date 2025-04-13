@@ -56,6 +56,11 @@ class AjaxHandler {
             add_action('wp_ajax_get_variation_estimator', array($this, 'getVariationEstimator'));
             add_action('wp_ajax_nopriv_get_variation_estimator', array($this, 'getVariationEstimator'));
 
+            add_action('wp_ajax_search_category_products', array($this, 'ajaxSearchCategoryProducts'));
+            add_action('wp_ajax_nopriv_search_category_products', array($this, 'ajaxSearchCategoryProducts'));
+
+
+
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Exception in AjaxHandler constructor: ' . $e->getMessage());
@@ -1460,6 +1465,7 @@ public function getVariationEstimator() {
             ];
         }
     }
+
     /**
      * Get the appropriate pricing rule for a product
      *
@@ -1467,10 +1473,13 @@ public function getVariationEstimator() {
      * @return array The pricing rule with 'method' and 'source' keys, or default values
      */
     private function getPricingRuleForProduct($product_id) {
-        // Default rule (fall back to NetSuite Per Square Meter)
+        // Get global settings
+        $settings = get_option('product_estimator_settings');
+
+        // Use defaults from settings if available, otherwise fall back to hardcoded defaults
         $default_rule = [
-            'method' => 'sqm',
-            'source' => 'netsuite'
+            'method' => isset($settings['default_pricing_method']) ? $settings['default_pricing_method'] : 'sqm',
+            'source' => isset($settings['default_pricing_source']) ? $settings['default_pricing_source'] : 'netsuite'
         ];
 
         // Get product categories
@@ -1499,8 +1508,8 @@ public function getVariationEstimator() {
             if (!empty($matching_categories)) {
                 // Found a matching rule, return its method and source
                 return [
-                    'method' => isset($rule['pricing_method']) ? $rule['pricing_method'] : 'sqm',
-                    'source' => isset($rule['pricing_source']) ? $rule['pricing_source'] : 'netsuite'
+                    'method' => isset($rule['pricing_method']) ? $rule['pricing_method'] : $default_rule['method'],
+                    'source' => isset($rule['pricing_source']) ? $rule['pricing_source'] : $default_rule['source']
                 ];
             }
         }
@@ -1516,8 +1525,11 @@ public function getVariationEstimator() {
      * @return string The pricing method ('sqm' or 'fixed')
      */
     private function getPricingMethodForProduct($product_id) {
-        // Default to 'sqm' if no rules match
-        $default_method = 'sqm';
+        // Get settings
+        $settings = get_option('product_estimator_settings');
+
+        // Default to setting from options, or 'sqm' if not set
+        $default_method = isset($settings['default_pricing_method']) ? $settings['default_pricing_method'] : 'sqm';
 
         // Get product categories
         $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
@@ -1550,4 +1562,79 @@ public function getVariationEstimator() {
 
         return $default_method;
     }
+
+
+    /**
+     * AJAX handler for searching products within a category
+     */
+    public function ajaxSearchCategoryProducts()
+    {
+        // Check nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_product_additions_nonce')) {
+            wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
+            return;
+        }
+
+        // Check permissions
+        if (!current_user_can('manage_product_terms')) {
+            wp_send_json_error(array('message' => __('You do not have permission to perform this action.', 'product-estimator')));
+            return;
+        }
+
+        // Get search parameters
+        $search_term = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $category_id = isset($_POST['category']) ? absint($_POST['category']) : 0;
+
+        if (empty($search_term) || empty($category_id)) {
+            wp_send_json_error(array('message' => __('Invalid search parameters.', 'product-estimator')));
+            return;
+        }
+
+        try {
+            // Query products
+            $args = array(
+                'post_type' => 'product',
+                'post_status' => 'publish',
+                'posts_per_page' => 20,
+                's' => $search_term,
+                'tax_query' => array(
+                    array(
+                        'taxonomy' => 'product_cat',
+                        'field' => 'term_id',
+                        'terms' => $category_id,
+                    ),
+                ),
+            );
+
+            $query = new \WP_Query($args);
+            $products = array();
+
+            if ($query->have_posts()) {
+                while ($query->have_posts()) {
+                    $query->the_post();
+                    $product_id = get_the_ID();
+                    $product = wc_get_product($product_id);
+
+                    if ($product) {
+                        $products[] = array(
+                            'id' => $product_id,
+                            'name' => $product->get_name(),
+                            'price' => $product->get_price(),
+                            'formatted_price' => wc_price($product->get_price()),
+                        );
+                    }
+                }
+                wp_reset_postdata();
+            }
+
+            wp_send_json_success(array(
+                'products' => $products,
+            ));
+        } catch (\Exception $e) {
+            wp_send_json_error(array(
+                'message' => __('Error searching products:', 'product-estimator') . ' ' . $e->getMessage()
+            ));
+        }
+    }
 }
+

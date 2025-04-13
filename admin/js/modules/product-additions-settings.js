@@ -9,8 +9,8 @@
   // Access localized data with a fallback mechanism
   const adminSettings = window.productAdditionsSettings || {};
 
-  // Create a safe reference to the ProductEstimatorAdmin object
-  const ProductEstimatorAdmin = {
+  // Create a safe reference to the settings object
+  const ProductAdditionsAdmin = {
     ajaxUrl: adminSettings.ajax_url || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
     nonce: adminSettings.nonce || '',
     i18n: adminSettings.i18n || {},
@@ -19,11 +19,16 @@
 
   // Product Additions Settings Module
   const ProductAdditionsSettingsModule = {
+    // Add a variable to track if the form has been modified
+    formModified: false,
+
     /**
      * Initialize the module
      */
     init: function() {
       console.log('Initializing Product Additions Settings Module');
+      // Reset form modified state on initialization
+      this.formModified = false;
       this.bindEvents();
       this.setupFormHandling();
     },
@@ -37,6 +42,22 @@
 
       // Tab-specific handlers
       this.initRelationshipHandlers();
+
+      // Track form changes
+      $('#product-addition-form').on('change input', 'input, select, textarea', () => {
+        this.formModified = true;
+
+        // Update the global form change tracker if available
+        if (typeof ProductEstimatorSettings !== 'undefined' &&
+          typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
+          ProductEstimatorSettings.formChangeTrackers[ProductAdditionsAdmin.tab_id] = true;
+
+          // If this is the current tab, update the main formChanged flag
+          if (ProductEstimatorSettings.currentTab === ProductAdditionsAdmin.tab_id) {
+            ProductEstimatorSettings.formChanged = true;
+          }
+        }
+      });
     },
 
     /**
@@ -71,8 +92,8 @@
       $addButton.on('click', function() {
         console.log('Add New Relationship button clicked');
         this.resetForm();
-        $('.form-title').text(ProductEstimatorAdmin.i18n.addNew || 'Add New Relationship');
-        $('.save-relation').text(ProductEstimatorAdmin.i18n.saveChanges || 'Save Changes');
+        $('.form-title').text(ProductAdditionsAdmin.i18n.addNew || 'Add New Relationship');
+        $('.save-relation').text(ProductAdditionsAdmin.i18n.saveChanges || 'Save Changes');
         $formContainer.slideDown();
       }.bind(this));
 
@@ -129,10 +150,11 @@
         }
       });
 
-      // Handle product search
+      // Handle product search - FIX: Proper binding for 'this'
       let searchTimeout;
-      $('#product_search').on('keyup', function() {
-        const searchTerm = $(this).val();
+      $('#product_search').on('keyup', function(e) {
+        // Use the event target instead of 'this' to ensure correct reference
+        const searchTerm = $(e.target).val() || '';
         const categoryId = $targetCategorySelect.val();
 
         clearTimeout(searchTimeout);
@@ -142,9 +164,10 @@
           return;
         }
 
-        searchTimeout = setTimeout(function() {
+        searchTimeout = setTimeout(() => {
+          // Use the correctly bound function for searchProducts
           this.searchProducts(searchTerm, categoryId);
-        }.bind(this), 500);
+        }, 500);
       }.bind(this));
 
       // Handle clear product button
@@ -193,8 +216,20 @@
      */
     handleTabChanged: function(e, tabId) {
       // If our tab becomes active, refresh initialization
-      if (tabId === ProductEstimatorAdmin.tab_id) {
+      if (tabId === ProductAdditionsAdmin.tab_id) {
+        this.formModified = false; // Reset form modified state
         this.init();
+
+        // Update the global form change tracker if available
+        if (typeof ProductEstimatorSettings !== 'undefined' &&
+          typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
+          ProductEstimatorSettings.formChangeTrackers[ProductAdditionsAdmin.tab_id] = false;
+
+          // If this is the current tab, update the main formChanged flag
+          if (ProductEstimatorSettings.currentTab === ProductAdditionsAdmin.tab_id) {
+            ProductEstimatorSettings.formChanged = false;
+          }
+        }
       }
     },
 
@@ -218,6 +253,20 @@
       $('#selected-product').hide();
       $('#product-search-results').empty();
       $('.note-row').hide();
+
+      // Reset form modified state
+      this.formModified = false;
+
+      // Update the global form change tracker if available
+      if (typeof ProductEstimatorSettings !== 'undefined' &&
+        typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
+        ProductEstimatorSettings.formChangeTrackers[ProductAdditionsAdmin.tab_id] = false;
+
+        // If this is the current tab, update the main formChanged flag
+        if (ProductEstimatorSettings.currentTab === ProductAdditionsAdmin.tab_id) {
+          ProductEstimatorSettings.formChanged = false;
+        }
+      }
     },
 
     /**
@@ -263,12 +312,12 @@
 
       // Validate form
       if (!actionType) {
-        alert(ProductEstimatorAdmin.i18n.selectAction || 'Please select an action type');
+        alert(ProductAdditionsAdmin.i18n.selectAction || 'Please select an action type');
         return;
       }
 
       if (!sourceCategories || sourceCategories.length === 0) {
-        alert(ProductEstimatorAdmin.i18n.selectSourceCategories || 'Please select at least one source category');
+        alert(ProductAdditionsAdmin.i18n.selectSourceCategories || 'Please select at least one source category');
         return;
       }
 
@@ -276,19 +325,19 @@
         const targetCategory = $('#target_category').val();
 
         if (!targetCategory) {
-          alert(ProductEstimatorAdmin.i18n.selectTargetCategory || 'Please select a target category');
+          alert(ProductAdditionsAdmin.i18n.selectTargetCategory || 'Please select a target category');
           return;
         }
 
         if (!productId) {
-          alert(ProductEstimatorAdmin.i18n.selectProduct || 'Please select a product');
+          alert(ProductAdditionsAdmin.i18n.selectProduct || 'Please select a product');
           return;
         }
       } else if (actionType === 'suggest_products_by_category') {
         const targetCategory = $('#target_category').val();
 
         if (!targetCategory) {
-          alert(ProductEstimatorAdmin.i18n.selectTargetCategory || 'Please select a target category');
+          alert(ProductAdditionsAdmin.i18n.selectTargetCategory || 'Please select a target category');
           return;
         }
       } else if (actionType === 'auto_add_note_by_category') {
@@ -303,7 +352,7 @@
 
       const formData = {
         action: 'save_category_relation',
-        nonce: ProductEstimatorAdmin.nonce,
+        nonce: ProductAdditionsAdmin.nonce,
         relation_id: $('#relation_id').val(),
         relation_type: actionType,
         source_category: sourceCategories,
@@ -315,7 +364,7 @@
       console.log('Sending form data:', formData);
 
       // Send AJAX request
-      $.post(ProductEstimatorAdmin.ajaxUrl, formData, function(response) {
+      $.post(ProductAdditionsAdmin.ajaxUrl, formData, function(response) {
         console.log('Response received:', response);
 
         if (response.success) {
@@ -364,6 +413,20 @@
               $('.product-additions-list').find('h3').after(tableHtml);
             }
           }
+
+          // Reset form modified state
+          this.formModified = false;
+
+          // Update the global form change tracker if available
+          if (typeof ProductEstimatorSettings !== 'undefined' &&
+            typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
+            ProductEstimatorSettings.formChangeTrackers[ProductAdditionsAdmin.tab_id] = false;
+
+            // If this is the current tab, update the main formChanged flag
+            if (ProductEstimatorSettings.currentTab === ProductAdditionsAdmin.tab_id) {
+              ProductEstimatorSettings.formChanged = false;
+            }
+          }
         } else {
           // Show error message
           this.showNotice('error', response.data.message);
@@ -388,7 +451,7 @@
     handleEditRelation: function(e) {
       const $btn = $(e.currentTarget);
       const relationId = $btn.data('id');
-      const sourceCategories = String($btn.data('source')).split(',');
+      const sourceCategories = String($btn.data('source') || '').split(',');
       const targetCategory = $btn.data('target');
       const relationType = $btn.data('type');
       const productId = $btn.data('product-id');
@@ -447,7 +510,7 @@
 
       console.log('Delete relation:', relationId);
 
-      if (!confirm(ProductEstimatorAdmin.i18n.confirmDelete || 'Are you sure you want to delete this relationship?')) {
+      if (!confirm(ProductAdditionsAdmin.i18n.confirmDelete || 'Are you sure you want to delete this relationship?')) {
         return;
       }
 
@@ -456,11 +519,11 @@
 
       const data = {
         action: 'delete_category_relation',
-        nonce: ProductEstimatorAdmin.nonce,
+        nonce: ProductAdditionsAdmin.nonce,
         relation_id: relationId
       };
 
-      $.post(ProductEstimatorAdmin.ajaxUrl, data, function(response) {
+      $.post(ProductAdditionsAdmin.ajaxUrl, data, function(response) {
         console.log('Delete response:', response);
 
         if (response.success) {
@@ -499,19 +562,24 @@
      * @param {number} categoryId Category ID
      */
     searchProducts: function(searchTerm, categoryId) {
+      if (!searchTerm || !categoryId) {
+        $('#product-search-results').html('<p>Please enter search term and select a category</p>');
+        return;
+      }
+
       $('#product-search-results').html('<p>Searching...</p>');
 
       $.ajax({
-        url: ProductEstimatorAdmin.ajaxUrl,
+        url: ProductAdditionsAdmin.ajaxUrl,
         type: 'POST',
         data: {
           action: 'search_category_products',
-          nonce: ProductEstimatorAdmin.nonce,
+          nonce: ProductAdditionsAdmin.nonce,
           search: searchTerm,
           category: categoryId
         },
         success: function(response) {
-          if (response.success && response.data.products.length > 0) {
+          if (response.success && response.data.products && response.data.products.length > 0) {
             let resultsHtml = '<ul class="product-results-list">';
 
             response.data.products.forEach(function(product) {
@@ -528,7 +596,8 @@
             $('#product-search-results').html('<p>No products found</p>');
           }
         },
-        error: function() {
+        error: function(xhr, status, error) {
+          console.error('AJAX error:', status, error);
           $('#product-search-results').html('<p>Error searching products</p>');
         }
       });
@@ -539,12 +608,16 @@
      * @param {number} productId Product ID
      */
     loadProductDetails: function(productId) {
+      if (!productId) {
+        return;
+      }
+
       $.ajax({
-        url: ProductEstimatorAdmin.ajaxUrl,
+        url: ProductAdditionsAdmin.ajaxUrl,
         type: 'POST',
         data: {
           action: 'get_product_details',
-          nonce: ProductEstimatorAdmin.nonce,
+          nonce: ProductAdditionsAdmin.nonce,
           product_id: productId
         },
         success: function(response) {
@@ -555,7 +628,12 @@
             $('#selected_product_id').val(product.id);
             $('.selected-product-info').html(`<strong>${product.name}</strong> (ID: ${product.id})`);
             $('#selected-product').show();
+          } else {
+            console.error('Failed to load product details:', response);
           }
+        },
+        error: function(xhr, status, error) {
+          console.error('AJAX error while loading product details:', status, error);
         }
       });
     },
@@ -566,14 +644,22 @@
      * @return {jQuery} The created row
      */
     createRelationRow: function(relation) {
+      if (!relation || !relation.id) {
+        console.error('Invalid relation data', relation);
+        return $('<tr><td colspan="4">Error: Invalid relation data</td></tr>');
+      }
+
       const $row = $('<tr></tr>').attr('data-id', relation.id);
 
-      $row.append($('<td></td>').text(relation.source_name));
+      // Source categories
+      const sourceName = relation.source_name || '';
+      $row.append($('<td></td>').text(sourceName));
 
+      // Relation type
       const $typeCell = $('<td></td>');
       const $typeSpan = $('<span></span>')
         .addClass('relation-type')
-        .addClass(relation.relation_type);
+        .addClass(relation.relation_type || '');
 
       // Set appropriate label based on relation type
       let relation_type_label = '';
@@ -613,17 +699,22 @@
       }
       $row.append($targetCell);
 
+      // Action buttons
       const $actionsCell = $('<td></td>').addClass('actions');
+
+      const sourceStr = Array.isArray(relation.source_category) ?
+        relation.source_category.join(',') :
+        (relation.source_category || '');
 
       const $editBtn = $('<button></button>')
         .addClass('button button-small edit-relation')
         .attr({
           'type': 'button',
           'data-id': relation.id,
-          'data-source': Array.isArray(relation.source_category) ? relation.source_category.join(',') : relation.source_category,
+          'data-source': sourceStr,
           'data-target': relation.target_category || '',
           'data-product-id': relation.product_id || '',
-          'data-type': relation.relation_type,
+          'data-type': relation.relation_type || '',
           'data-note-text': relation.note_text || ''
         })
         .text('Edit');
@@ -647,10 +738,24 @@
      * @param {Object} relation The relation data
      */
     appendRelationRow: function(relation) {
-      const $table = $('.product-additions-table');
-      const $tbody = $table.find('tbody');
-      const $row = this.createRelationRow(relation);
+      if (!relation || !relation.id) {
+        console.error('Cannot append row: Invalid relation data', relation);
+        return;
+      }
 
+      const $table = $('.product-additions-table');
+      if (!$table.length) {
+        console.error('Cannot append row: Table not found');
+        return;
+      }
+
+      const $tbody = $table.find('tbody');
+      if (!$tbody.length) {
+        console.error('Cannot append row: Table body not found');
+        return;
+      }
+
+      const $row = this.createRelationRow(relation);
       $tbody.append($row);
     },
 
@@ -661,6 +766,11 @@
      */
     showNotice: function(type, message) {
       const $container = $('.product-estimator-additions');
+      if (!$container.length) {
+        console.error('Cannot show notice: Container not found');
+        return;
+      }
+
       const $existingNotice = $container.find('.notice');
 
       // Remove existing notices
@@ -674,8 +784,8 @@
         .addClass(type === 'success' ? 'notice-success' : 'notice-error')
         .html(`<p>${message}</p>`);
 
-      // Insert notice after heading
-      $container.find('h1').after($notice);
+      // Insert notice at the top of the container
+      $container.prepend($notice);
 
       // Auto-remove after 5 seconds
       setTimeout(function() {
@@ -707,7 +817,7 @@
     window.ProductAdditionsSettingsModule = ProductAdditionsSettingsModule;
 
     // Also make ProductEstimatorAdmin available for debugging
-    window.ProductEstimatorAdmin = ProductEstimatorAdmin;
+    window.ProductAdditionsAdmin = ProductAdditionsAdmin;
   });
 
 })(jQuery);

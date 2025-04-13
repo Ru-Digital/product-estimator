@@ -9,6 +9,34 @@
   max-width: 1200px;
 }
 
+/* Default Pricing Settings Section */
+.default-pricing-settings {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  margin-bottom: 20px;
+  padding: 20px;
+  border-radius: 4px;
+}
+
+.default-pricing-settings h3 {
+  margin-top: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  font-size: 1.3em;
+  font-weight: 600;
+}
+
+.default-pricing-form .form-table {
+  margin-top: 10px;
+}
+
+.pricing-rules-divider {
+  margin: 30px 0;
+  border: none;
+  border-top: 1px solid #ddd;
+}
+
 /* Form Container */
 .pricing-rules-form {
   background: #fff;

@@ -187,7 +187,6 @@ class ProductAdditionsManager {
             'taxonomy' => 'product_cat',
             'hide_empty' => false,
         ));
-
         include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/partials/product-additions-admin-display.php';
     }
 

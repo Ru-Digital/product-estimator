@@ -40,18 +40,38 @@ if (!isset($modules[$active_tab])) {
                 </a>
             <?php endforeach; ?>
         </nav>
-
-        <?php foreach ($modules as $tab_id => $module): ?>
-            <div id="<?php echo esc_attr($tab_id); ?>"
-                 class="tab-content"
-                 style="<?php echo $active_tab === $tab_id ? '' : 'display: none;'; ?>">
-
-                <form method="post" action="options.php" class="product-estimator-form" id="product-estimator-<?php echo esc_attr($tab_id); ?>-form">
-                    <?php settings_fields($this->plugin_name . '_options'); ?>
-                    <?php do_settings_sections($this->plugin_name . '_' . $tab_id); ?>
-                    <?php submit_button(); ?>
+    <?php
+        foreach ($modules as $module) {
+        $tab_id = $module->get_tab_id();
+        $display_style = ($current_tab === $tab_id) ? 'block' : 'none';
+        ?>
+        <div id="<?php echo esc_attr($tab_id); ?>" class="tab-content" style="display: <?php echo esc_attr($display_style); ?>;">
+            <?php
+            // For standard settings tabs with fields
+            if (method_exists($module, 'render_module_content')) {
+                // Custom rendering for modules with special UI
+                $module->render_module_content();
+            } else {
+                // Standard settings form
+                ?>
+                <form method="post" action="javascript:void(0);" class="product-estimator-form">
+                    <?php
+                    // Output section heading and fields
+                    settings_fields($this->plugin_name . '_options');
+                    do_settings_sections($this->plugin_name . '_' . $tab_id);
+                    ?>
+                    <p class="submit">
+                        <button type="submit" class="button button-primary">
+                            <?php esc_html_e('Save Settings', 'product-estimator'); ?>
+                        </button>
+                    </p>
                 </form>
-            </div>
-        <?php endforeach; ?>
+                <?php
+            }
+            ?>
+        </div>
+        <?php
+    }
+    ?>
     </div>
 </div>

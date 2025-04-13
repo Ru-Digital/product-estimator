@@ -135,6 +135,14 @@ class NotificationSettingsModule extends SettingsModuleBase {
 
         $settings = $form_data['product_estimator_settings'];
 
+        // Fix for checkbox fields - ensure they're properly set to 0 when unchecked
+        $checkbox_fields = array('enable_notifications', 'admin_email_notifications', 'user_email_notifications');
+        foreach ($checkbox_fields as $field) {
+            if (!isset($settings[$field])) {
+                $settings[$field] = 0;
+            }
+        }
+
         // If notifications are enabled, validate email addresses
         if (isset($settings['enable_notifications']) && $settings['enable_notifications']) {
             // Validate designer email if provided
@@ -198,6 +206,14 @@ class NotificationSettingsModule extends SettingsModuleBase {
             }
         }
 
+        // Make sure settings preserves company_logo value even when no new upload
+        if (!isset($settings['company_logo']) || empty($settings['company_logo'])) {
+            $existing_settings = get_option('product_estimator_settings', array());
+            if (isset($existing_settings['company_logo']) && !empty($existing_settings['company_logo'])) {
+                $settings['company_logo'] = $existing_settings['company_logo'];
+            }
+        }
+
         // Update the settings array in the form data for further processing
         $form_data['product_estimator_settings'] = $settings;
 
@@ -214,6 +230,11 @@ class NotificationSettingsModule extends SettingsModuleBase {
     protected function after_save_actions($form_data) {
         // Clear notification-related caches
         delete_transient('product_estimator_email_templates');
+
+        // Log the saved settings for debugging if WP_DEBUG is enabled
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Notification settings saved: ' . print_r($form_data['product_estimator_settings'], true));
+        }
     }
 
     /**
@@ -323,5 +344,82 @@ class NotificationSettingsModule extends SettingsModuleBase {
             array($this->plugin_name . '-settings'),
             $this->version
         );
+    }
+
+    /**
+     * Handle AJAX save request for this module
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function handle_ajax_save() {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_settings_nonce')) {
+            wp_send_json_error(array('message' => __('Security check failed', 'product-estimator')));
+            return;
+        }
+
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('You do not have permission to change these settings', 'product-estimator')));
+            return;
+        }
+
+        // Parse form data
+        if (!isset($_POST['form_data'])) {
+            wp_send_json_error(array('message' => __('No form data received', 'product-estimator')));
+            return;
+        }
+
+        parse_str($_POST['form_data'], $form_data);
+
+        // For debugging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Notification settings form data received: ' . print_r($form_data, true));
+        }
+
+        // Process the settings specific to this module
+        $result = $this->process_form_data($form_data);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()));
+            return;
+        }
+
+        // Update options
+        if (isset($form_data['product_estimator_settings'])) {
+            // Get existing settings
+            $current_settings = get_option('product_estimator_settings', array());
+
+            // Ensure checkbox fields are properly set
+            $checkbox_fields = array('enable_notifications', 'admin_email_notifications', 'user_email_notifications');
+            foreach ($checkbox_fields as $field) {
+                if (!isset($form_data['product_estimator_settings'][$field])) {
+                    $form_data['product_estimator_settings'][$field] = 0;
+                }
+            }
+
+            // Update only the settings for this module
+            $updated_settings = array_merge($current_settings, $form_data['product_estimator_settings']);
+
+            // Save updated settings
+            update_option('product_estimator_settings', $updated_settings);
+
+            // For debugging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Notification settings saved to database: ' . print_r($updated_settings, true));
+            }
+        }
+
+        // Allow modules to perform additional actions after saving
+        $this->after_save_actions($form_data);
+
+        // Send success response
+        wp_send_json_success(array(
+            'message' => sprintf(
+                __('%s settings saved successfully', 'product-estimator'),
+                $this->tab_title
+            )
+        ));
     }
 }

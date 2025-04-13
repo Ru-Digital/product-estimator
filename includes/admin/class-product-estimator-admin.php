@@ -38,15 +38,6 @@ class ProductEstimatorAdmin {
     private $settings_manager;
 
     /**
-     * The product additions manager instance
-     *
-     * @since    1.1.0
-     * @access   private
-     * @var      ProductAdditionsManager    $product_additions_manager    The product additions manager
-     */
-    private $product_additions_manager;
-
-    /**
      * Initialize the class and set its properties.
      *
      * @since    1.0.0
@@ -71,9 +62,6 @@ class ProductEstimatorAdmin {
     private function load_dependencies() {
         // Load Settings Manager
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-settings-manager.php';
-
-        // Load Product Additions Manager
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-product-additions-manager.php';
     }
 
     /**
@@ -85,9 +73,6 @@ class ProductEstimatorAdmin {
     private function init_components() {
         // Initialize Settings Manager
         $this->settings_manager = new SettingsManager($this->plugin_name, $this->version);
-
-        // Initialize Product Additions Manager
-        $this->product_additions_manager = new ProductAdditionsManager($this->plugin_name, $this->version);
     }
 
     /**

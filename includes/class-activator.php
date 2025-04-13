@@ -25,7 +25,7 @@ class Activator {
 //        self::set_default_options();
 //        self::check_requirements();
 //        self::run_composer_install();
-s
+
         // Set activation flag
         update_option('product_estimator_activated', true);
 

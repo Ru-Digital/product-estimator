@@ -1,0 +1,236 @@
+/**
+ * Pricing Rules CSS
+ * Styles for the pricing rules management interface
+ */
+
+/* Container Styles */
+.product-estimator-pricing-rules {
+  margin: 20px 0;
+  max-width: 1200px;
+}
+
+/* Form Container */
+.pricing-rules-form {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  margin-bottom: 20px;
+  padding: 20px;
+  border-radius: 4px;
+}
+
+.form-title {
+  margin-top: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+  font-size: 1.3em;
+  font-weight: 600;
+}
+
+/* Form Styles */
+#pricing-rule-form .form-table {
+  margin-top: 0;
+}
+
+#pricing-rule-form .form-table th {
+  width: 200px;
+  padding: 15px 10px 15px 0;
+}
+
+#pricing-rule-form .form-table td {
+  padding: 15px 10px;
+}
+
+#pricing-rule-form select {
+  width: 25em;
+  max-width: 100%;
+}
+
+/* Select2 Custom Styles */
+.select2-container--default .select2-selection--multiple {
+  border-color: #8c8f94;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+  border-color: #2271b1;
+  box-shadow: 0 0 0 1px #2271b1;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+  background-color: #f0f0f1;
+  border-color: #c3c4c7;
+  color: #3c434a;
+  padding: 3px 8px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+  color: #b32d2e;
+  margin-right: 5px;
+}
+
+.select2-container--default .select2-selection--single {
+  border-color: #8c8f94;
+  height: auto;
+  padding: 4px 8px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  line-height: 1.5;
+}
+
+.select2-dropdown {
+  border-color: #2271b1;
+}
+
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+  background-color: #2271b1;
+}
+
+.select2-container .select2-selection--multiple .select2-selection__rendered {
+  padding: 4px 8px;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+/* Form Actions */
+.form-actions {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 10px;
+}
+
+/* Rule List */
+.pricing-rules-list {
+  margin-top: 20px;
+}
+
+.pricing-rules-list h3 {
+  margin-bottom: 12px;
+}
+
+.pricing-rules-table {
+  border-spacing: 0;
+  width: 100%;
+  clear: both;
+}
+
+.pricing-rules-table thead th {
+  font-weight: 600;
+  padding: 8px 10px;
+  line-height: 1.3;
+  font-size: 14px;
+}
+
+.pricing-rules-table td {
+  vertical-align: middle;
+  padding: 10px;
+}
+
+.pricing-rules-table .actions {
+  text-align: right;
+}
+
+/* Button Styles */
+.add-new-rule {
+  margin-bottom: 15px !important;
+}
+
+/* Method Type Indicator */
+.method-type {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.method-type.fixed_website {
+  background-color: #e7f5fa;
+  color: #0071a1;
+}
+
+.method-type.fixed_netsuite {
+  background-color: #f0f6fc;
+  color: #2271b1;
+}
+
+.method-type.sqm_website {
+  background-color: #f6f7f7;
+  color: #3c434a;
+}
+
+.method-type.sqm_netsuite {
+  background-color: #f9f9f9;
+  color: #50575e;
+}
+
+/* No Items Message */
+.no-items {
+  padding: 15px;
+  background: #f8f8f8;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  color: #666;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Notices */
+.notice {
+  margin: 15px 0;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+  #pricing-rule-form select,
+  .select2-container {
+    width: 100% !important;
+  }
+
+  #pricing-rule-form .form-table th {
+    width: auto;
+    display: block;
+    padding-bottom: 0;
+  }
+
+  #pricing-rule-form .form-table td {
+    display: block;
+    padding-top: 5px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+    margin-bottom: 5px;
+  }
+
+  .pricing-rules-table .column-actions {
+    text-align: left;
+  }
+
+  .pricing-rules-table .actions button {
+    display: block;
+    width: 100%;
+    margin-bottom: 5px;
+    text-align: center;
+  }
+}
+
+/* Animation for form slide */
+@keyframes slide-down {
+  0% { opacity: 0; transform: translateY(-10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.pricing-rules-form {
+  display: none;
+  animation: slide-down 0.3s ease-out;
+}

@@ -73,6 +73,7 @@ class SettingsManager {
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-netsuite-settings-module.php';
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-notification-settings-module.php';
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-product-additions-settings-module.php';
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-pricing-rules-settings-module.php';
     }
 
     /**
@@ -88,6 +89,7 @@ class SettingsManager {
             new \RuDigital\ProductEstimator\Includes\Admin\Settings\NetsuiteSettingsModule($this->plugin_name, $this->version),
             new \RuDigital\ProductEstimator\Includes\Admin\Settings\NotificationSettingsModule($this->plugin_name, $this->version),
             new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule($this->plugin_name, $this->version),
+            new \RuDigital\ProductEstimator\Includes\Admin\Settings\PricingRulesSettingsModule($this->plugin_name, $this->version),
         );
 
         // Store modules by their tab ID for easy access

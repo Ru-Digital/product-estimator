@@ -203,30 +203,30 @@ class Shortcodes {
         if ((isset($product_estimator_shortcode_used) || isset($product_estimator_button_used))
             && !is_product()) {
 
-            // Enqueue core scripts
-            wp_enqueue_script(
-                'product-estimator-public',
-                PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-public.js',
-                array('jquery'),
-                $this->version,
-                true
-            );
-
-            // Localize script
-            wp_localize_script(
-                'product-estimator-public',
-                'productEstimatorVars',
-                array(
-                    'ajax_url' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('product_estimator_nonce'),
-                    'estimator_url' => home_url('/estimator/'),
-                    'i18n' => array(
-                        'error_loading_options' => __('Error loading options.', 'product-estimator'),
-                        'error_calculation' => __('Error calculating estimate.', 'product-estimator'),
-                        'error_adding' => __('Error adding product to estimator.', 'product-estimator'),
-                    )
-                )
-            );
+//            // Enqueue core scripts
+//            wp_enqueue_script(
+//                'product-estimator-public',
+//                PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-public.js',
+//                array('jquery'),
+//                $this->version,
+//                true
+//            );
+//
+//            // Localize script
+//            wp_localize_script(
+//                'product-estimator-public',
+//                'productEstimatorVars',
+//                array(
+//                    'ajax_url' => admin_url('admin-ajax.php'),
+//                    'nonce' => wp_create_nonce('product_estimator_nonce'),
+//                    'estimator_url' => home_url('/estimator/'),
+//                    'i18n' => array(
+//                        'error_loading_options' => __('Error loading options.', 'product-estimator'),
+//                        'error_calculation' => __('Error calculating estimate.', 'product-estimator'),
+//                        'error_adding' => __('Error adding product to estimator.', 'product-estimator'),
+//                    )
+//                )
+//            );
 
             // Add styles
             wp_enqueue_style(

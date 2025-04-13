@@ -59,6 +59,22 @@ class AjaxHandler {
             add_action('wp_ajax_search_category_products', array($this, 'ajaxSearchCategoryProducts'));
             add_action('wp_ajax_nopriv_search_category_products', array($this, 'ajaxSearchCategoryProducts'));
 
+            add_action('wp_ajax_get_estimate_selection_form', array($this, 'getEstimateSelectionForm'));
+            add_action('wp_ajax_nopriv_get_estimate_selection_form', array($this, 'getEstimateSelectionForm'));
+
+            // Register new AJAX handlers for form partials
+
+            add_action('wp_ajax_get_new_estimate_form', array($this, 'getNewEstimateForm'));
+            add_action('wp_ajax_nopriv_get_new_estimate_form', array($this, 'getNewEstimateForm'));
+
+            add_action('wp_ajax_get_new_room_form', array($this, 'getNewRoomForm'));
+            add_action('wp_ajax_nopriv_get_new_room_form', array($this, 'getNewRoomForm'));
+
+            add_action('wp_ajax_get_room_selection_form', array($this, 'getRoomSelectionForm'));
+            add_action('wp_ajax_nopriv_get_room_selection_form', array($this, 'getRoomSelectionForm'));
+
+
+
 
 
         } catch (\Exception $e) {
@@ -1635,6 +1651,72 @@ public function getVariationEstimator() {
                 'message' => __('Error searching products:', 'product-estimator') . ' ' . $e->getMessage()
             ));
         }
+    }
+
+    /**
+     * Get estimate selection form HTML
+     */
+    public function getEstimateSelectionForm() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Start output buffer to capture form HTML
+        ob_start();
+
+        // Include the form partial
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-estimate-selection-form.php';
+
+        // Get HTML
+        $html = ob_get_clean();
+
+        wp_send_json_success(array(
+            'html' => $html
+        ));
+    }
+
+    /**
+     * Get new estimate form HTML
+     */
+    public function getNewEstimateForm() {
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        ob_start();
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-new-estimate-form.php';
+        $html = ob_get_clean();
+
+        wp_send_json_success(array(
+            'html' => $html
+        ));
+    }
+
+    /**
+     * Get new room form HTML
+     */
+    public function getNewRoomForm() {
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        ob_start();
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-new-room-form.php';
+        $html = ob_get_clean();
+
+        wp_send_json_success(array(
+            'html' => $html
+        ));
+    }
+
+    /**
+     * Get room selection form HTML
+     */
+    public function getRoomSelectionForm() {
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        ob_start();
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-room-selection-form.php';
+        $html = ob_get_clean();
+
+        wp_send_json_success(array(
+            'html' => $html
+        ));
     }
 }
 

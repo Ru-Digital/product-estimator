@@ -1034,16 +1034,39 @@ public function getVariationEstimator() {
                 $room_area = $room_width * $room_length;
 
                 if (isset($room['products']) && is_array($room['products'])) {
-                    foreach ($room['products'] as $product) {
+                    foreach ($room['products'] as &$product) {
+                        // Skip notes
+                        if (isset($product['type']) && $product['type'] === 'note') {
+                            continue;
+                        }
+
+                        // Get pricing method from the product data or from the pricing rules
+                        $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : $this->getPricingMethodForProduct($product['id']);
+
                         // Calculate main product price
                         if (isset($product['min_price']) && isset($product['max_price'])) {
                             // Apply markup adjustment
                             $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
                             $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
 
-                            // Add to totals
-                            $room_min_total += $min_price * $room_area;
-                            $room_max_total += $max_price * $room_area;
+                            // Update pricing method in product data for future reference
+                            $product['pricing_method'] = $pricing_method;
+
+                            // Calculate totals based on pricing method
+                            if ($pricing_method === 'sqm') {
+                                $min_total = $min_price * $room_area;
+                                $max_total = $max_price * $room_area;
+                                $product['min_price_total'] = $min_total;
+                                $product['max_price_total'] = $max_total;
+                                $room_min_total += $min_total;
+                                $room_max_total += $max_total;
+                            } else {
+                                // Fixed pricing
+                                $product['min_price_total'] = $min_price;
+                                $product['max_price_total'] = $max_price;
+                                $room_min_total += $min_price;
+                                $room_max_total += $max_price;
+                            }
                         } elseif (isset($product['min_price_total']) && isset($product['max_price_total'])) {
                             // For pre-calculated totals
                             $room_min_total += floatval($product['min_price_total']) * (1 - ($default_markup / 100));
@@ -1052,15 +1075,35 @@ public function getVariationEstimator() {
 
                         // Calculate additional products prices
                         if (isset($product['additional_products']) && is_array($product['additional_products'])) {
-                            foreach ($product['additional_products'] as $additional_product) {
+                            foreach ($product['additional_products'] as &$additional_product) {
+                                // Get additional product pricing method - default to same as parent product
+                                $add_pricing_method = isset($additional_product['pricing_method']) ?
+                                    $additional_product['pricing_method'] :
+                                    $this->getPricingMethodForProduct($additional_product['id']);
+
+                                // Update pricing method in additional product data
+                                $additional_product['pricing_method'] = $add_pricing_method;
+
                                 if (isset($additional_product['min_price']) && isset($additional_product['max_price'])) {
                                     // Apply markup adjustment
                                     $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
                                     $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
 
-                                    // Add to totals with room area
-                                    $room_min_total += $add_min_price * $room_area;
-                                    $room_max_total += $add_max_price * $room_area;
+                                    // Add to totals based on pricing method
+                                    if ($add_pricing_method === 'sqm') {
+                                        $min_total = $add_min_price * $room_area;
+                                        $max_total = $add_max_price * $room_area;
+                                        $additional_product['min_price_total'] = $min_total;
+                                        $additional_product['max_price_total'] = $max_total;
+                                        $room_min_total += $min_total;
+                                        $room_max_total += $max_total;
+                                    } else {
+                                        // Fixed pricing
+                                        $additional_product['min_price_total'] = $add_min_price;
+                                        $additional_product['max_price_total'] = $add_max_price;
+                                        $room_min_total += $add_min_price;
+                                        $room_max_total += $add_max_price;
+                                    }
                                 } elseif (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])) {
                                     // For pre-calculated totals
                                     $room_min_total += floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
@@ -1085,7 +1128,6 @@ public function getVariationEstimator() {
         $estimates[$estimate_id]['min_total'] = $estimate_min_total;
         $estimates[$estimate_id]['max_total'] = $estimate_max_total;
     }
-
     /**
      * Generate and store suggestions for a room in the session
      *
@@ -1095,49 +1137,51 @@ public function getVariationEstimator() {
      * @return array The generated suggestions
      */
     private function generateAndStoreSuggestions($estimate_id, $room_id, $room_products) {
-        if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
-            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
+    if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\ProductAdditionsManager')) {
+        $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\ProductAdditionsManager('product-estimator', '1.0.4');
 
-            // Get product categories
-            $product_categories = array();
-            foreach ($room_products as $product) {
-                if (isset($product['id']) && $product['id'] > 0) {
-                    $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
-                    if (is_array($categories)) {
-                        $product_categories = array_merge($product_categories, $categories);
-                    }
-                }
-            }
-
-            // Remove duplicates
-            $product_categories = array_unique($product_categories);
-
-            // Check if any categories have suggestion relationships
-            $has_suggestion_relationships = false;
-            foreach ($product_categories as $category_id) {
-                $suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
-                if (!empty($suggestions)) {
-                    $has_suggestion_relationships = true;
-                    break;
-                }
-            }
-
-            // Only generate suggestions if there are relationship rules
-            if ($has_suggestion_relationships) {
-                // Generate suggestions
-                $suggestions = $product_additions_manager->get_suggestions_for_room($room_products);
-
-                // Store in session
-                if (!empty($suggestions)) {
-                    $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'] = $suggestions;
-                    return $suggestions;
+        // Get product categories
+        $product_categories = array();
+        foreach ($room_products as $product) {
+            if (isset($product['id']) && $product['id'] > 0) {
+                $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+                if (is_array($categories)) {
+                    $product_categories = array_merge($product_categories, $categories);
                 }
             }
         }
 
-        return array();
+        // Remove duplicates
+        $product_categories = array_unique($product_categories);
+
+        // Check if any categories have suggestion relationships
+        $has_suggestion_relationships = false;
+        foreach ($product_categories as $category_id) {
+            $suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
+            if (!empty($suggestions)) {
+                $has_suggestion_relationships = true;
+                break;
+            }
+        }
+
+        // Only generate suggestions if there are relationship rules
+        if ($has_suggestion_relationships) {
+            // Generate suggestions
+            $suggestions = $product_additions_manager->get_suggestions_for_room($room_products);
+
+            // Store in session
+            if (!empty($suggestions)) {
+                $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'] = $suggestions;
+                return $suggestions;
+            }
+        }
     }
 
+    return array();
+}
+
+
+    /**
     /**
      * Helper method to prepare product data and add to room
      *
@@ -1185,50 +1229,74 @@ public function getVariationEstimator() {
                 }
             }
 
-            // Get price range from NetSuite API
-            try {
-                // Initialize NetSuite Integration
-                $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
+            // Get pricing rule for this product
+            $pricing_rule = $this->getPricingRuleForProduct($product_id);
+            $pricing_method = $pricing_rule['method']; // 'fixed' or 'sqm'
+            $pricing_source = $pricing_rule['source']; // 'website' or 'netsuite'
 
-                // Get pricing data for this product
-                $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
+            // Initialize pricing data
+            $min_price = 0;
+            $max_price = 0;
 
-                // Check if we received valid pricing data
-                if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
-                    foreach ($pricing_data['prices'] as $price_item) {
-                        if ($price_item['product_id'] == $product_id) {
-                            // Add NetSuite pricing data to product
-                            $product_data['min_price'] = $price_item['min_price'];
-                            $product_data['max_price'] = $price_item['max_price'];
-                            break;
+            // Get price based on source
+            if ($pricing_source === 'website') {
+                // Use WooCommerce price
+                $base_price = (float)$product->get_price();
+                $min_price = $base_price;
+                $max_price = $base_price;
+            } else {
+                // NetSuite pricing
+                try {
+                    // Initialize NetSuite Integration
+                    $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
+
+                    // Get pricing data for this product
+                    $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
+
+                    // Check if we received valid pricing data
+                    if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
+                        foreach ($pricing_data['prices'] as $price_item) {
+                            if ($price_item['product_id'] == $product_id) {
+                                // Add NetSuite pricing data to product
+                                $min_price = $price_item['min_price'];
+                                $max_price = $price_item['max_price'];
+                                break;
+                            }
                         }
                     }
-                }
 
-                // If NetSuite data not found, set defaults based on WC price
-                if (!isset($product_data['min_price'])) {
+                    // If NetSuite data not found, set defaults based on WC price
+                    if ($min_price === 0) {
+                        $base_price = (float)$product->get_price();
+                        $min_price = $base_price;
+                        $max_price = $base_price;
+                    }
+                } catch (\Exception $e) {
+                    // If NetSuite API fails, log the error but continue with base price
+                    error_log('NetSuite API Error: ' . $e->getMessage());
+
+                    // Set default price range from WooCommerce price
                     $base_price = (float)$product->get_price();
-                    $product_data['min_price'] = $base_price;
-                    $product_data['max_price'] = $base_price;
+                    $min_price = $base_price;
+                    $max_price = $base_price;
                 }
-            } catch (\Exception $e) {
-                // If NetSuite API fails, log the error but continue with base price
-                error_log('NetSuite API Error: ' . $e->getMessage());
-
-                // Set default price range from WooCommerce price
-                $base_price = (float)$product->get_price();
-                $product_data['min_price'] = $base_price;
-                $product_data['max_price'] = $base_price;
             }
 
-            // Calculate price totals based on room area
-            if ($room_area > 0) {
-                $product_data['min_price_total'] = $product_data['min_price'] * $room_area;
-                $product_data['max_price_total'] = $product_data['max_price'] * $room_area;
+            // Store pricing data in product_data
+            $product_data['min_price'] = $min_price;
+            $product_data['max_price'] = $max_price;
+            $product_data['pricing_method'] = $pricing_method;
+            $product_data['pricing_source'] = $pricing_source;
+
+            // Calculate price totals based on pricing method
+            if ($pricing_method === 'sqm' && $room_area > 0) {
+                // Per square meter pricing - multiply by room area
+                $product_data['min_price_total'] = $min_price * $room_area;
+                $product_data['max_price_total'] = $max_price * $room_area;
             } else {
-                // If room area is not available or is zero, use min/max_price as fallback
-                $product_data['min_price_total'] = $product_data['min_price'];
-                $product_data['max_price_total'] = $product_data['max_price'];
+                // Fixed pricing - use price directly as total
+                $product_data['min_price_total'] = $min_price;
+                $product_data['max_price_total'] = $max_price;
             }
 
             // PRODUCT ADDITIONS - auto-add related products and notes
@@ -1271,50 +1339,78 @@ public function getVariationEstimator() {
                         continue;
                     }
 
+                    // Get pricing rule for related product
+                    $related_pricing_rule = $this->getPricingRuleForProduct($related_product_id);
+                    $related_pricing_method = $related_pricing_rule['method']; // 'fixed' or 'sqm'
+                    $related_pricing_source = $related_pricing_rule['source']; // 'website' or 'netsuite'
+
                     // Prepare related product data
                     $related_product_data = [
                         'id' => $related_product_id,
                         'name' => $related_product->get_name(),
-                        'image' => wp_get_attachment_image_url($related_product->get_image_id(), 'thumbnail')
+                        'image' => wp_get_attachment_image_url($related_product->get_image_id(), 'thumbnail'),
+                        'pricing_method' => $related_pricing_method,
+                        'pricing_source' => $related_pricing_source
                     ];
 
-                    // Add pricing data (similar to original product)
-                    try {
-                        // Try to get pricing from NetSuite
-                        $pricing_data = $netsuite_integration->get_product_prices([$related_product_id]);
+                    // Initialize pricing data for related product
+                    $related_min_price = 0;
+                    $related_max_price = 0;
 
-                        if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
-                            foreach ($pricing_data['prices'] as $price_item) {
-                                if ($price_item['product_id'] == $related_product_id) {
-                                    $related_product_data['min_price'] = $price_item['min_price'];
-                                    $related_product_data['max_price'] = $price_item['max_price'];
-                                    break;
+                    // Get price based on source for related product
+                    if ($related_pricing_source === 'website') {
+                        // Use WooCommerce price for related product
+                        $related_base_price = (float)$related_product->get_price();
+                        $related_min_price = $related_base_price;
+                        $related_max_price = $related_base_price;
+                    } else {
+                        // Add pricing data (similar to original product)
+                        try {
+                            // Try to get pricing from NetSuite for related product
+                            $pricing_data = $netsuite_integration->get_product_prices([$related_product_id]);
+
+                            if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
+                                foreach ($pricing_data['prices'] as $price_item) {
+                                    if ($price_item['product_id'] == $related_product_id) {
+                                        $related_min_price = $price_item['min_price'];
+                                        $related_max_price = $price_item['max_price'];
+                                        break;
+                                    }
                                 }
                             }
+
+                            // If NetSuite data not found, use WC price
+                            if ($related_min_price === 0) {
+                                $related_base_price = (float)$related_product->get_price();
+                                $related_min_price = $related_base_price;
+                                $related_max_price = $related_base_price;
+                            }
+                        } catch (\Exception $e) {
+                            error_log('Error adding related product: ' . $e->getMessage());
+                            // Use WC price on error
+                            $related_base_price = (float)$related_product->get_price();
+                            $related_min_price = $related_base_price;
+                            $related_max_price = $related_base_price;
                         }
-
-                        // If NetSuite data not found, use WC price
-                        if (!isset($related_product_data['min_price'])) {
-                            $base_price = (float)$related_product->get_price();
-                            $related_product_data['min_price'] = $base_price;
-                            $related_product_data['max_price'] = $base_price;
-                        }
-
-                        // Calculate totals based on room area
-                        if ($room_area > 0) {
-                            $related_product_data['min_price_total'] = $related_product_data['min_price'] * $room_area;
-                            $related_product_data['max_price_total'] = $related_product_data['max_price'] * $room_area;
-                        } else {
-                            $related_product_data['min_price_total'] = $related_product_data['min_price'];
-                            $related_product_data['max_price_total'] = $related_product_data['max_price'];
-                        }
-
-                        // Add to product's additional products list
-                        $product_data['additional_products'][] = $related_product_data;
-
-                    } catch (\Exception $e) {
-                        error_log('Error adding related product: ' . $e->getMessage());
                     }
+
+                    // Add min/max price to related product data
+                    $related_product_data['min_price'] = $related_min_price;
+                    $related_product_data['max_price'] = $related_max_price;
+
+                    // Calculate totals based on pricing method
+                    if ($related_pricing_method === 'sqm' && $room_area > 0) {
+                        // Per square meter pricing
+                        $related_product_data['min_price_total'] = $related_min_price * $room_area;
+                        $related_product_data['max_price_total'] = $related_max_price * $room_area;
+                    } else {
+                        // Fixed pricing
+                        $related_product_data['min_price_total'] = $related_min_price;
+                        $related_product_data['max_price_total'] = $related_max_price;
+                    }
+
+                    // Add to product's additional products list
+                    $product_data['additional_products'][] = $related_product_data;
                 }
 
                 // Handle auto-add notes
@@ -1363,5 +1459,95 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ];
         }
+    }
+    /**
+     * Get the appropriate pricing rule for a product
+     *
+     * @param int $product_id The product ID
+     * @return array The pricing rule with 'method' and 'source' keys, or default values
+     */
+    private function getPricingRuleForProduct($product_id) {
+        // Default rule (fall back to NetSuite Per Square Meter)
+        $default_rule = [
+            'method' => 'sqm',
+            'source' => 'netsuite'
+        ];
+
+        // Get product categories
+        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+
+        if (empty($product_categories) || is_wp_error($product_categories)) {
+            return $default_rule;
+        }
+
+        // Get all pricing rules
+        $pricing_rules = get_option('product_estimator_pricing_rules', []);
+
+        if (empty($pricing_rules)) {
+            return $default_rule;
+        }
+
+        // Check each rule to find one that applies to this product's categories
+        foreach ($pricing_rules as $rule) {
+            if (!isset($rule['categories']) || !is_array($rule['categories'])) {
+                continue;
+            }
+
+            // Check if any of this product's categories match the rule's categories
+            $matching_categories = array_intersect($product_categories, $rule['categories']);
+
+            if (!empty($matching_categories)) {
+                // Found a matching rule, return its method and source
+                return [
+                    'method' => isset($rule['pricing_method']) ? $rule['pricing_method'] : 'sqm',
+                    'source' => isset($rule['pricing_source']) ? $rule['pricing_source'] : 'netsuite'
+                ];
+            }
+        }
+
+        // No matching rule found, return default
+        return $default_rule;
+    }
+
+    /**
+     * Get pricing method for a product based on pricing rules
+     *
+     * @param int $product_id The product ID
+     * @return string The pricing method ('sqm' or 'fixed')
+     */
+    private function getPricingMethodForProduct($product_id) {
+        // Default to 'sqm' if no rules match
+        $default_method = 'sqm';
+
+        // Get product categories
+        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+
+        if (empty($product_categories)) {
+            return $default_method;
+        }
+
+        // Get all pricing rules
+        $pricing_rules = get_option('product_estimator_pricing_rules', []);
+
+        if (empty($pricing_rules)) {
+            return $default_method;
+        }
+
+        // Check each rule for matching categories
+        foreach ($pricing_rules as $rule) {
+            if (!isset($rule['categories']) || !is_array($rule['categories'])) {
+                continue;
+            }
+
+            // Check if this product's categories match any in the rule
+            $matching_categories = array_intersect($product_categories, $rule['categories']);
+
+            if (!empty($matching_categories)) {
+                // Found a matching rule, return its method
+                return isset($rule['pricing_method']) ? $rule['pricing_method'] : $default_method;
+            }
+        }
+
+        return $default_method;
     }
 }

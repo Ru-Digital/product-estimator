@@ -150,159 +150,57 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                     <?php echo sprintf(__('Area: %.2f m²', 'product-estimator'), $room_area); ?>
                                 </span>
 
-                                                                    <?php if (isset($product['min_price']) && isset($product['max_price'])): ?>
-                                                                        <?php
-                                                                        // Apply markup adjustment - subtract from min, add to max
-                                                                        $min_price = floatval($product['min_price']);
-                                                                        $max_price = floatval($product['max_price']);
 
-                                                                        // Calculate adjusted prices with markup
-                                                                        $min_price_adjusted = $min_price * (1 - ($default_markup / 100));
-                                                                        $max_price_adjusted = $max_price * (1 + ($default_markup / 100));
+<?php if (isset($product['min_price']) && isset($product['max_price'])): ?>
+                                                                    <?php
+                                                                    // Apply markup adjustment - subtract from min, add to max
+                                                                    $min_price = floatval($product['min_price']);
+                                                                    $max_price = floatval($product['max_price']);
+                                                                    $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'sqm';
 
-                                                                        // Calculate totals based on room area
+                                                                    // Calculate adjusted prices with markup
+                                                                    $min_price_adjusted = $min_price * (1 - ($default_markup / 100));
+                                                                    $max_price_adjusted = $max_price * (1 + ($default_markup / 100));
+
+                                                                    // Calculate totals based on pricing method
+                                                                    if ($pricing_method === 'sqm') {
+                                                                        // Per square meter - multiply by room area
                                                                         $min_total = $min_price_adjusted * $room_area;
                                                                         $max_total = $max_price_adjusted * $room_area;
-                                                                        ?>
+                                                                        $unit_price_text = '/m²'; // Show unit price for sqm pricing
+                                                                    } else {
+                                                                        // Fixed pricing - use price directly
+                                                                        $min_total = $min_price_adjusted;
+                                                                        $max_total = $max_price_adjusted;
+                                                                        $unit_price_text = ''; // No unit price for fixed pricing
+                                                                    }
+                                                                    ?>
 
-                                                                        <?php if (round($min_total, 2) === round($max_total, 2)): ?>
-                                                                            <span class="product-price">
-                                            <?php echo wc_price($min_total); ?>
-                                        </span>
-                                                                        <?php else: ?>
-                                                                            <span class="product-price">
-                                            <?php echo wc_price($min_total); ?> - <?php echo wc_price($max_total); ?>
-                                        </span>
-                                                                        <?php endif; ?>
-
-                                                                        <!-- Unit price display -->
-                                                                        <span class="product-unit-price">
-                                        <?php
-                                        if (round($min_price_adjusted, 2) === round($max_price_adjusted, 2)) {
-                                            echo sprintf(__('Unit Price: %s/m²', 'product-estimator'),
-                                                wc_price($min_price_adjusted));
-                                        } else {
-                                            echo sprintf(__('Unit Price: %s - %s/m²', 'product-estimator'),
-                                                wc_price($min_price_adjusted),
-                                                wc_price($max_price_adjusted));
-                                        }
-                                        ?>
-                                    </span>
-                                                                    <?php elseif (isset($product['min_price_total']) && isset($product['max_price_total'])): ?>
-                                                                        <?php
-                                                                        // For pre-calculated totals, apply markup directly to totals
-                                                                        $min_total = floatval($product['min_price_total']) * (1 - ($default_markup / 100));
-                                                                        $max_total = floatval($product['max_price_total']) * (1 + ($default_markup / 100));
-                                                                        ?>
-
-                                                                        <?php if (round($min_total, 2) === round($max_total, 2)): ?>
-                                                                            <span class="product-price">
-                                            <?php echo wc_price($min_total); ?>
-                                        </span>
-                                                                        <?php else: ?>
-                                                                            <span class="product-price">
-                                            <?php echo wc_price($min_total); ?> - <?php echo wc_price($max_total); ?>
-                                        </span>
-                                                                        <?php endif; ?>
-
-                                                                        <!-- Unit price display -->
-                                                                        <span class="product-unit-price">
-                                        <?php
-                                        if (isset($product['min_price']) && isset($product['max_price'])) {
-                                            $min_price_unit = floatval($product['min_price']) * (1 - ($default_markup / 100));
-                                            $max_price_unit = floatval($product['max_price']) * (1 + ($default_markup / 100));
-
-                                            if (round($min_price_unit, 2) === round($max_price_unit, 2)) {
-                                                echo sprintf(__('Unit Price: %s/m²', 'product-estimator'),
-                                                    wc_price($min_price_unit));
-                                            } else {
-                                                echo sprintf(__('Unit Price: %s - %s/m²', 'product-estimator'),
-                                                    wc_price($min_price_unit),
-                                                    wc_price($max_price_unit));
-                                            }
-                                        }
-                                        ?>
-                                    </span>
-                                                                    <?php elseif (isset($product['min_total']) && isset($product['max_total'])): ?>
-                                                                        <?php
-                                                                        // For backward compatibility with 'min_total'/'max_total' format
-                                                                        $min_total = floatval($product['min_total']) * (1 - ($default_markup / 100));
-                                                                        $max_total = floatval($product['max_total']) * (1 + ($default_markup / 100));
-                                                                        ?>
-
-                                                                        <?php if (round($min_total, 2) === round($max_total, 2)): ?>
-                                                                            <span class="product-price">
-                                            <?php echo wc_price($min_total); ?>
-                                        </span>
-                                                                        <?php else: ?>
-                                                                            <span class="product-price">
-                                            <?php echo wc_price($min_total); ?> - <?php echo wc_price($max_total); ?>
-                                        </span>
-                                                                        <?php endif; ?>
-
-                                                                        <!-- Unit price display -->
-                                                                        <span class="product-unit-price">
-                                        <?php
-                                        if (isset($product['min_price']) && isset($product['max_price'])) {
-                                            $min_price_unit = floatval($product['min_price']) * (1 - ($default_markup / 100));
-                                            $max_price_unit = floatval($product['max_price']) * (1 + ($default_markup / 100));
-
-                                            if (round($min_price_unit, 2) === round($max_price_unit, 2)) {
-                                                echo sprintf(__('Unit Price: %s/m²', 'product-estimator'),
-                                                    wc_price($min_price_unit));
-                                            } else {
-                                                echo sprintf(__('Unit Price: %s - %s/m²', 'product-estimator'),
-                                                    wc_price($min_price_unit),
-                                                    wc_price($max_price_unit));
-                                            }
-                                        }
-                                        ?>
-                                    </span>
+                                                                    <?php if (round($min_total, 2) === round($max_total, 2)): ?>
+                                                                    <span class="product-price">
+            <?php echo wc_price($min_total); ?>
+        </span>
                                                                     <?php else: ?>
-                                                                        <?php
-                                                                        // Calculate total price based on area if not already calculated
-                                                                        if (isset($product['min_price'])) {
-                                                                            $product_min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
-                                                                            $total_min_price = $product_min_price * $room_area;
+                                                                    <span class="product-price">
+            <?php echo wc_price($min_total); ?> - <?php echo wc_price($max_total); ?>
+        </span>
+                                                                    <?php endif; ?>
 
-                                                                            // If we have a max price as well
-                                                                            $product_max_price = isset($product['max_price']) ?
-                                                                                floatval($product['max_price']) * (1 + ($default_markup / 100)) :
-                                                                                $product_min_price;
-                                                                            $total_max_price = $product_max_price * $room_area;
-
-                                                                            // Display the calculated price
-                                                                            if (round($total_min_price, 2) === round($total_max_price, 2)) {
-                                                                                ?>
-                                                                                <span class="product-price">
-                                                <?php echo wc_price($total_min_price); ?>
-                                            </span>
-                                                                                <?php
-                                                                            } else {
-                                                                                ?>
-                                                                                <span class="product-price">
-                                                <?php echo wc_price($total_min_price); ?> - <?php echo wc_price($total_max_price); ?>
-                                            </span>
-                                                                                <?php
-                                                                            }
-                                                                            ?>
-                                                                            <span class="product-unit-price">
-                                            <?php
-                                            if (round($product_min_price, 2) === round($product_max_price, 2)) {
-                                                echo sprintf(__('Unit Price: %s/m²', 'product-estimator'),
-                                                    wc_price($product_min_price));
-                                            } else {
-                                                echo sprintf(__('Unit Price: %s - %s/m²', 'product-estimator'),
-                                                    wc_price($product_min_price),
-                                                    wc_price($product_max_price));
-                                            }
-                                            ?>
-                                        </span>
-                                                                        <?php } else { ?>
-                                                                            <span class="product-price">
-                                            <?php esc_html_e('Price not available', 'product-estimator'); ?>
-                                        </span>
-                                                                        <?php } ?>
+                                                                    <!-- Unit price display - only for sqm pricing method -->
+                                                                    <?php if ($pricing_method === 'sqm'): ?>
+                                                                    <span class="product-unit-price">
+            <?php
+            if (round($min_price_adjusted, 2) === round($max_price_adjusted, 2)) {
+                echo sprintf(__('Unit Price: %s/m²', 'product-estimator'),
+                    wc_price($min_price_adjusted));
+            } else {
+                echo sprintf(__('Unit Price: %s - %s/m²', 'product-estimator'),
+                    wc_price($min_price_adjusted),
+                    wc_price($max_price_adjusted));
+            }
+            ?>
+        </span>
+                                                                    <?php endif; ?>
                                                                     <?php endif; ?>
 
                                                                     <button class="remove-product"

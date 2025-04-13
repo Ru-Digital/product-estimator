@@ -520,6 +520,9 @@ class SessionHandler {
         $options = get_option('product_estimator_settings');
         $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
 
+        // Get all pricing rules
+        $pricing_rules = get_option('product_estimator_pricing_rules', []);
+
         foreach ($estimates as $estimate_id => &$estimate) {
             $estimate_min_total = 0;
             $estimate_max_total = 0;
@@ -535,16 +538,58 @@ class SessionHandler {
                     $room_area = $room_width * $room_length;
 
                     if (isset($room['products']) && is_array($room['products'])) {
-                        foreach ($room['products'] as $product) {
+                        foreach ($room['products'] as &$product) {
+                            // Skip notes
+                            if (isset($product['type']) && $product['type'] === 'note') {
+                                continue;
+                            }
+
+                            // Get product categories to determine pricing method
+                            $product_id = isset($product['id']) ? $product['id'] : 0;
+                            $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'sqm';
+
+                            if ($product_id > 0 && !isset($product['pricing_method'])) {
+                                // Get the pricing method from rules if not already set
+                                $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+
+                                // Check rules for matching categories
+                                foreach ($pricing_rules as $rule) {
+                                    if (isset($rule['categories']) && is_array($rule['categories'])) {
+                                        $matching_categories = array_intersect($product_categories, $rule['categories']);
+                                        if (!empty($matching_categories)) {
+                                            $pricing_method = isset($rule['pricing_method']) ? $rule['pricing_method'] : 'sqm';
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // Store the pricing method in the product data
+                                $product['pricing_method'] = $pricing_method;
+                            }
+
                             // Calculate main product prices
                             if (isset($product['min_price']) && isset($product['max_price'])) {
                                 // Apply markup adjustment
                                 $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
                                 $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
 
-                                // Add to totals
-                                $room_min_total += $min_price * $room_area;
-                                $room_max_total += $max_price * $room_area;
+                                // Calculate based on pricing method
+                                if ($pricing_method === 'sqm' && $room_area > 0) {
+                                    $min_total = $min_price * $room_area;
+                                    $max_total = $max_price * $room_area;
+                                    // Store calculated totals
+                                    $product['min_price_total'] = $min_total;
+                                    $product['max_price_total'] = $max_total;
+                                    // Add to room totals
+                                    $room_min_total += $min_total;
+                                    $room_max_total += $max_total;
+                                } else {
+                                    // Fixed pricing
+                                    $product['min_price_total'] = $min_price;
+                                    $product['max_price_total'] = $max_price;
+                                    $room_min_total += $min_price;
+                                    $room_max_total += $max_price;
+                                }
                             } elseif (isset($product['min_price_total']) && isset($product['max_price_total'])) {
                                 // For pre-calculated totals
                                 $room_min_total += floatval($product['min_price_total']) * (1 - ($default_markup / 100));
@@ -553,15 +598,53 @@ class SessionHandler {
 
                             // Calculate additional products prices
                             if (isset($product['additional_products']) && is_array($product['additional_products'])) {
-                                foreach ($product['additional_products'] as $additional_product) {
+                                foreach ($product['additional_products'] as &$additional_product) {
+                                    // Get additional product pricing method
+                                    $add_product_id = isset($additional_product['id']) ? $additional_product['id'] : 0;
+                                    $add_pricing_method = isset($additional_product['pricing_method']) ?
+                                        $additional_product['pricing_method'] : $pricing_method;
+
+                                    if ($add_product_id > 0 && !isset($additional_product['pricing_method'])) {
+                                        // Get the pricing method from rules if not already set
+                                        $add_product_categories = wp_get_post_terms($add_product_id, 'product_cat', ['fields' => 'ids']);
+
+                                        // Check rules for matching categories
+                                        foreach ($pricing_rules as $rule) {
+                                            if (isset($rule['categories']) && is_array($rule['categories'])) {
+                                                $matching_categories = array_intersect($add_product_categories, $rule['categories']);
+                                                if (!empty($matching_categories)) {
+                                                    $add_pricing_method = isset($rule['pricing_method']) ? $rule['pricing_method'] : 'sqm';
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        // Store the pricing method in the additional product data
+                                        $additional_product['pricing_method'] = $add_pricing_method;
+                                    }
+
                                     if (isset($additional_product['min_price']) && isset($additional_product['max_price'])) {
                                         // Apply markup adjustment
                                         $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
                                         $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
 
-                                        // Add to totals with room area
-                                        $room_min_total += $add_min_price * $room_area;
-                                        $room_max_total += $add_max_price * $room_area;
+                                        // Calculate based on pricing method
+                                        if ($add_pricing_method === 'sqm' && $room_area > 0) {
+                                            $add_min_total = $add_min_price * $room_area;
+                                            $add_max_total = $add_max_price * $room_area;
+                                            // Store calculated totals
+                                            $additional_product['min_price_total'] = $add_min_total;
+                                            $additional_product['max_price_total'] = $add_max_total;
+                                            // Add to room totals
+                                            $room_min_total += $add_min_total;
+                                            $room_max_total += $add_max_total;
+                                        } else {
+                                            // Fixed pricing
+                                            $additional_product['min_price_total'] = $add_min_price;
+                                            $additional_product['max_price_total'] = $add_max_price;
+                                            $room_min_total += $add_min_price;
+                                            $room_max_total += $add_max_price;
+                                        }
                                     } elseif (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])) {
                                         // For pre-calculated totals
                                         $room_min_total += floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));

@@ -474,12 +474,11 @@ class ModalManager {
               this.initializeAccordions();
               this.updateEstimatesList();
 
-              // Bind remove buttons
+              // Bind all the necessary event handlers
               this.bindProductRemovalEvents();
-
-              // Also bind room and estimate removal
               this.bindRoomRemovalEvents();
               this.bindEstimateRemovalEvents();
+              this.bindEstimateListEventHandlers(); // Add this line
             }, 50);
 
             resolve(response.data.html);
@@ -1020,13 +1019,22 @@ class ModalManager {
    * @param {string} estimateId - Estimate ID
    */
   showNewRoomForm(estimateId) {
+    console.log('Showing new room form for estimate:', estimateId);
+
     // Store the estimate ID with the form
     if (this.newRoomForm) {
       this.newRoomForm.dataset.estimateId = estimateId;
+
+      // Also set it on the form element directly for redundancy
+      const form = this.newRoomForm.querySelector('form');
+      if (form) {
+        form.dataset.estimateId = estimateId;
+      }
     }
 
     // Hide other views
     if (this.estimatesList) this.estimatesList.style.display = 'none';
+    if (this.estimateSelection) this.estimateSelection.style.display = 'none';
     if (this.roomSelectionForm) this.roomSelectionForm.style.display = 'none';
 
     // Force visibility of the form
@@ -1035,6 +1043,12 @@ class ModalManager {
     // Check if form content needs to be loaded
     if (!this.newRoomForm.querySelector('form')) {
       this.loadNewRoomForm(estimateId);
+    } else {
+      // Form already exists, make sure it has the right estimate ID
+      const form = this.newRoomForm.querySelector('form');
+      if (form) {
+        form.dataset.estimateId = estimateId;
+      }
     }
   }
 
@@ -1095,6 +1109,42 @@ class ModalManager {
     });
   }
 
+  bindEstimateListEventHandlers() {
+    if (!this.estimatesList) {
+      console.error('Cannot bind events - estimates list container not found');
+      return;
+    }
+
+    // Remove any existing handlers
+    if (this._addRoomButtonHandler) {
+      this.estimatesList.removeEventListener('click', this._addRoomButtonHandler);
+    }
+
+    // Create a new handler function and store the reference
+    this._addRoomButtonHandler = (e) => {
+      const addRoomButton = e.target.closest('.add-room');
+      if (addRoomButton) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Get estimate ID from data attribute
+        const estimateId = addRoomButton.dataset.estimate;
+        console.log('Add room button clicked for estimate:', estimateId);
+
+        if (estimateId) {
+          this.showNewRoomForm(estimateId);
+        } else {
+          console.error('No estimate ID found for add room button');
+        }
+      }
+    };
+
+    // Add the event listener to the estimates list
+    this.estimatesList.addEventListener('click', this._addRoomButtonHandler);
+    console.log('Add room button event handler bound');
+  }
+
+
   /**
    * Bind room selection form events
    */
@@ -1109,36 +1159,61 @@ class ModalManager {
 
     console.log('Room selection form found:', form);
 
-    // Clean approach: use fresh event listener
-    form.addEventListener('submit', (e) => {
+    // Remove existing event listeners to prevent duplication
+    if (this._roomFormSubmitHandler) {
+      form.removeEventListener('submit', this._roomFormSubmitHandler);
+    }
+
+    // Create and store the handler
+    this._roomFormSubmitHandler = (e) => {
       e.preventDefault();
       console.log('Room selection form submitted');
       this.handleRoomSelection(form);
-    });
+    };
+
+    // Add the event listener
+    form.addEventListener('submit', this._roomFormSubmitHandler);
 
     // Also bind the back button
     const backButton = form.querySelector('.back-btn');
     if (backButton) {
-      backButton.addEventListener('click', () => {
+      if (this._backButtonHandler) {
+        backButton.removeEventListener('click', this._backButtonHandler);
+      }
+
+      this._backButtonHandler = () => {
         console.log('Back button clicked');
         this.forceElementVisibility(this.estimateSelectionForm);
         this.forceElementVisibility(this.estimateSelection);
         this.roomSelectionForm.style.display = 'none';
-      });
+      };
+
+      backButton.addEventListener('click', this._backButtonHandler);
     }
 
-    // Bind add new room button
+    // Bind add new room button - CRITICAL FIX
     const addRoomButton = form.querySelector('#add-new-room-from-selection');
     if (addRoomButton) {
-      addRoomButton.addEventListener('click', () => {
-        console.log('Add new room button clicked');
+      if (this._addNewRoomHandler) {
+        addRoomButton.removeEventListener('click', this._addNewRoomHandler);
+      }
+
+      this._addNewRoomHandler = () => {
+        console.log('Add new room button clicked in form');
         const estimateId = this.roomSelectionForm.dataset.estimateId;
+        console.log('Estimate ID for new room:', estimateId);
+
         if (estimateId) {
           this.showNewRoomForm(estimateId);
         } else {
           console.error('No estimate ID found for new room');
         }
-      });
+      };
+
+      addRoomButton.addEventListener('click', this._addNewRoomHandler);
+      console.log('Add new room button handler bound');
+    } else {
+      console.warn('Add new room button not found in room selection form');
     }
 
     console.log('Room selection form events bound successfully');

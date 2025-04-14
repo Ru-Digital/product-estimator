@@ -14,9 +14,9 @@ if (!defined('WPINC')) {
 // Get session handler
 $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
 $estimates = $session_handler->getEstimates();
-
+//
 //echo "<pre>";
-//////unset($_SESSION['product_estimator']);
+////unset($_SESSION['product_estimator']);
 //print_r($_SESSION['product_estimator']);
 //echo "</pre>";
 

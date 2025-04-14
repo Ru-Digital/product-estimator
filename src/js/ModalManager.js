@@ -136,6 +136,66 @@ class ModalManager {
         this.estimateSelection.appendChild(this.estimateSelectionForm);
       }
     }
+
+    // Bind events to any existing forms
+    this.bindExistingForms();
+  }
+
+  /**
+   * New method to bind events to any forms that already exist in the DOM
+   */
+  bindExistingForms() {
+    // Bind room form events
+    if (this.newRoomForm) {
+      const form = this.newRoomForm.querySelector('form#new-room-form');
+      if (form) {
+        console.log('Found existing room form, binding event handlers');
+
+        // Remove any existing event handlers to prevent duplicates
+        if (this._newRoomFormSubmitHandler) {
+          form.removeEventListener('submit', this._newRoomFormSubmitHandler);
+        }
+
+        // Create new handler with preventDefault
+        this._newRoomFormSubmitHandler = (e) => {
+          e.preventDefault();
+          console.log('Existing room form submitted');
+          this.handleNewRoomSubmission(form, e);
+        };
+
+        // Add event listener
+        form.addEventListener('submit', this._newRoomFormSubmitHandler);
+
+        // Also bind cancel button
+        const cancelButton = form.querySelector('.cancel-btn');
+        if (cancelButton) {
+          cancelButton.addEventListener('click', () => {
+            this.cancelForm('room');
+          });
+        }
+      }
+    }
+
+    // Bind estimate form events
+    if (this.newEstimateForm) {
+      const form = this.newEstimateForm.querySelector('form#new-estimate-form');
+      if (form) {
+        // Similar binding for the estimate form
+        if (this._estimateFormSubmitHandler) {
+          form.removeEventListener('submit', this._estimateFormSubmitHandler);
+        }
+
+        this._estimateFormSubmitHandler = (e) => {
+          e.preventDefault();
+          this.handleNewEstimateSubmission(form, e);
+        };
+
+        form.addEventListener('submit', this._estimateFormSubmitHandler);
+      }
+    }
+
+    // Bind room selection form events if needed
+    this.bindRoomSelectionFormEvents();
   }
 
   /**
@@ -1072,19 +1132,31 @@ class ModalManager {
         },
         success: (response) => {
           if (response.success && response.data.html) {
+            // Insert form HTML
             this.newRoomForm.innerHTML = response.data.html;
 
-            // Set estimate ID on the form
+            // HERE IS WHERE YOU ADD THE EVENT BINDING CODE:
             const form = this.newRoomForm.querySelector('form');
             if (form) {
+              // Set estimate ID on the form
               form.dataset.estimateId = estimateId;
 
-              // Bind form events
-              form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleNewRoomSubmission(form);
-              });
+              // Remove any existing event handlers
+              if (this._newRoomFormSubmitHandler) {
+                form.removeEventListener('submit', this._newRoomFormSubmitHandler);
+              }
 
+              // Create new handler that PREVENTS DEFAULT
+              this._newRoomFormSubmitHandler = (e) => {
+                e.preventDefault(); // This is crucial to prevent page reload
+                console.log('New room form submitted');
+                this.handleNewRoomSubmission(form);
+              };
+
+              // Bind the handler
+              form.addEventListener('submit', this._newRoomFormSubmitHandler);
+
+              // Also bind cancel button
               const cancelButton = form.querySelector('.cancel-btn');
               if (cancelButton) {
                 cancelButton.addEventListener('click', () => {
@@ -1425,8 +1497,14 @@ class ModalManager {
 
     this.showLoading();
 
+    // Use console.log to debug the process
+    console.log('Submitting new estimate form');
+
     this.dataService.addNewEstimate(formData, productId)
       .then(response => {
+        // Check that we got a valid estimate_id
+        console.log('New estimate created with ID:', response.estimate_id);
+
         // Clear form
         form.reset();
 
@@ -1435,7 +1513,23 @@ class ModalManager {
 
         if (productId) {
           // Show new room form for the new estimate
-          this.newRoomForm.dataset.estimateId = response.estimate_id;
+          // THIS IS THE KEY PART - we need to properly pass the new estimate ID
+          const newEstimateId = response.estimate_id;
+
+          console.log('Setting new room form with estimate ID:', newEstimateId);
+
+          // Set on container element
+          this.newRoomForm.dataset.estimateId = newEstimateId;
+
+          // Also ensure it's set on the actual form element
+          const roomForm = this.newRoomForm.querySelector('form');
+          if (roomForm) {
+            roomForm.dataset.estimateId = newEstimateId;
+            console.log('Form dataset updated:', roomForm.dataset);
+          } else {
+            console.error('Could not find room form element');
+          }
+
           this.newRoomForm.dataset.productId = productId;
           this.forceElementVisibility(this.newRoomForm);
         } else {
@@ -1457,100 +1551,123 @@ class ModalManager {
   }
 
   /**
-   * Handle new room form submission
+   * Handle new room form submission via AJAX
    * @param {HTMLFormElement} form - The submitted form
+   * @param {Event} event - The form submission event
    */
-  handleNewRoomSubmission(form) {
+  handleNewRoomSubmission(form, event) {
+    console.log('Processing new room form submission via AJAX');
+
+    // Prevent default form submission which would cause page reload
+    if (event) {
+      event.preventDefault();
+    } else {
+      // This is for backward compatibility
+      if (typeof window.event !== 'undefined') {
+        window.event.preventDefault();
+      }
+    }
+
+    // Check form validity
+    if (!form.checkValidity()) {
+      console.error('Form validation failed');
+      form.reportValidity();
+      return;
+    }
+
+    // Get the estimate ID directly from the form's dataset
     const formData = new FormData(form);
-    const estimateId = this.newRoomForm.dataset.estimateId;
-    const productId = this.currentProductId;
+    const estimateId = form.dataset.estimateId;
+    const productId = this.currentProductId || form.dataset.productId;
+
+    // Log the full state for debugging
+    console.log('Room form submission data:', {
+      formElement: form,
+      formDataset: form.dataset,
+      containerDataset: this.newRoomForm.dataset,
+      estimateId: estimateId,
+      productId: productId,
+      formData: Object.fromEntries(formData)
+    });
 
     if (!estimateId) {
       this.showError('No estimate selected for this room.');
+      console.error('Missing estimate ID for room submission');
       return;
     }
 
     this.showLoading();
 
-    this.dataService.addNewRoom(formData, estimateId, productId)
-      .then(response => {
-        // Clear form
-        form.reset();
+    // Add a specific log message for the AJAX submission
+    console.log('Submitting room for estimate ID:', estimateId);
 
-        // Hide new room form
-        this.newRoomForm.style.display = 'none';
+    // Use jQuery AJAX to submit the form data
+    jQuery.ajax({
+      url: productEstimatorVars.ajax_url,
+      type: 'POST',
+      data: {
+        action: 'add_new_room',
+        nonce: productEstimatorVars.nonce,
+        estimate_id: estimateId,
+        product_id: productId || '',
+        form_data: jQuery(form).serialize()
+      },
+      success: (response) => {
+        if (response.success) {
+          console.log('Room added successfully:', response.data);
 
-        // Clear the product ID from the modal after successful addition
-        delete this.modal.dataset.productId;
-        this.currentProductId = null;
+          // Clear form
+          form.reset();
 
-        if (productId) {
-          if (response.product_added) {
-            // Product was added to the new room - refresh the estimates list
-            this.loadEstimatesList()
-              .then(() => {
-                // After refreshing, check if we should show suggestions for the new room
-                if (response.has_suggestions) {
-                  // Find the new room in the DOM and expand it to show suggestions
-                  const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${response.room_id}"]`);
-                  if (roomElement) {
-                    const header = roomElement.querySelector('.accordion-header');
-                    if (header) {
-                      header.classList.add('active');
-                      const content = roomElement.querySelector('.accordion-content');
-                      if (content) content.style.display = 'block';
-                    }
+          // Hide new room form
+          this.newRoomForm.style.display = 'none';
 
-                    // Scroll to the room to ensure it's visible
-                    roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }
-                }
+          // Clear the product ID from the modal after successful addition
+          delete this.modal.dataset.productId;
+          this.currentProductId = null;
 
-                // Show success message
-                this.showMessage('Room and product added successfully!', 'success');
-              })
-              .catch(error => {
-                this.log('Error refreshing estimates list:', error);
-                this.showError('Error refreshing estimates list. Please try again.');
-              });
-          } else {
-            // Room was created but product wasn't added - show room selection
-            const roomSelect = document.getElementById('room-dropdown');
-            if (roomSelect) {
-              roomSelect.innerHTML = '';
-              roomSelect.appendChild(new Option(
-                `${form.querySelector('#room-name').value} (${form.querySelector('#room-width').value}m x ${form.querySelector('#room-length').value}m)`,
-                response.room_id,
-                true,
-                true
-              ));
-
-              // Set the estimate and product IDs
-              this.roomSelectionForm.dataset.estimateId = estimateId;
-              this.forceElementVisibility(this.roomSelectionForm);
-            }
-          }
-        } else {
-          // Just refresh the estimates list
+          // Refresh the estimates list to show the new room
           this.loadEstimatesList()
             .then(() => {
+              // If we had a room ID in the response, find and expand it
+              if (response.data.room_id) {
+                const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${response.data.room_id}"]`);
+                if (roomElement) {
+                  const header = roomElement.querySelector('.accordion-header');
+                  if (header) {
+                    header.classList.add('active');
+                    const content = roomElement.querySelector('.accordion-content');
+                    if (content) content.style.display = 'block';
+                  }
+
+                  // Scroll to the room to ensure it's visible
+                  roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }
+
               // Show success message
               this.showMessage('Room added successfully!', 'success');
             })
             .catch(error => {
-              this.log('Error refreshing estimates list:', error);
+              console.error('Error refreshing estimates list:', error);
               this.showError('Error refreshing estimates list. Please try again.');
             });
+        } else {
+          // Handle error response
+          console.error('Error adding room:', response.data.message);
+          this.showError(response.data.message || 'Error adding room. Please try again.');
         }
-      })
-      .catch(error => {
-        this.log('Error adding room:', error);
-        this.showError(error.message || 'Error adding room. Please try again.');
-      })
-      .finally(() => {
+      },
+      error: (jqXHR, textStatus, errorThrown) => {
+        console.error('AJAX error:', textStatus, errorThrown);
+        this.showError('Error adding room. Please try again.');
+      },
+      complete: () => {
         this.hideLoading();
-      });
+      }
+    });
   }
+
 
   /**
    * Cancel a form and return to previous view

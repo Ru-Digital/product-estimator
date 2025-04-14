@@ -628,6 +628,13 @@ public function getVariationEstimator() {
 
         error_log("Estimate ID: $estimate_id, Product ID: $product_id");
 
+        error_log("PROCESSING ROOM FOR ESTIMATE ID: $estimate_id");
+        error_log("Product ID: $product_id");
+
+        $current_estimates = $this->session->getEstimates();
+        error_log('Available estimates with keys: ' . implode(', ', array_keys($current_estimates)));
+
+
         // Parse form data
         parse_str($_POST['form_data'], $form_data);
         error_log('Parsed form data: ' . print_r($form_data, true));

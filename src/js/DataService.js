@@ -231,6 +231,12 @@ class DataService {
    * @returns {Promise<Object>} New room data
    */
   addNewRoom(formData, estimateId, productId = null) {
+    console.log('DataService: Adding new room', {
+      estimateId: estimateId,
+      productId: productId,
+      formData: formData instanceof FormData ? Object.fromEntries(formData) : formData
+    });
+
     let requestData = {
       form_data: this.formatFormData(formData),
       estimate_id: estimateId
@@ -242,12 +248,18 @@ class DataService {
 
     return this.request('add_new_room', requestData)
       .then(data => {
+        // Log success for debugging
+        console.log('DataService: Room added successfully', data);
+
         // Invalidate caches since we modified data
         this.invalidateCache();
         return data;
+      })
+      .catch(error => {
+        console.error('DataService: Error adding room', error);
+        throw error; // Re-throw to allow handling upstream
       });
   }
-
   /**
    * Remove a product from a room
    * @param {string|number} estimateId - Estimate ID

@@ -16,7 +16,7 @@ $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInsta
 $estimates = $session_handler->getEstimates();
 //
 //echo "<pre>";
-////unset($_SESSION['product_estimator']);
+//unset($_SESSION['product_estimator']);
 //print_r($_SESSION['product_estimator']);
 //echo "</pre>";
 
@@ -68,7 +68,7 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                 <?php if (!empty($estimate['rooms'])): ?>
                     <div class="accordion">
                         <?php foreach($estimate['rooms'] as $room_id => $room): ?>
-                            <div class="accordion-item" data-room-id="<?php echo esc_attr($room_id); ?>">
+                            <div class="accordion-item" data-room-id="<?php echo esc_attr($room_id); ?>" data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
                                 <div class="accordion-header-wrapper">
                                     <button class="accordion-header">
                                         <span class="room-name"><?php echo esc_html($room['name']); ?>: </span>
@@ -122,7 +122,7 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                                                             data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
                                                                             data-room-id="<?php echo esc_attr($room_id); ?>"
                                                                             data-product-index="<?php echo esc_attr($product_index); ?>"
-                                                                            title="<?php esc_attr_e('Remove Note', 'product-estimator'); ?>">
+                                                                            title="<?php esc_attr_e('Remove Product', 'product-estimator'); ?>">
                                                                         <span class="dashicons dashicons-trash"></span>
                                                                     </button>
                                                                 </div>

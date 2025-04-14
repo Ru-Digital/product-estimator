@@ -61,7 +61,13 @@ class DataService {
 
       // Add all other data
       Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value);
+        // Skip null or undefined values
+        if (value === null || value === undefined) {
+          return;
+        }
+
+        // Ensure all values are converted to strings for consistent server-side handling
+        formData.append(key, String(value));
       });
 
       // Debug the request data
@@ -122,19 +128,53 @@ class DataService {
   }
 
   /**
-   * Get the HTML for the estimates list
-   * @param {boolean} bypassCache - Whether to bypass the cache
-   * @returns {Promise<string>} HTML content for estimates list
+   * Add method to consistently bind the Create Estimate button event
+   */
+  bindCreateEstimateButton() {
+    // Find the button in the DOM
+    const createButton = this.modal.querySelector('#create-estimate-btn');
+
+    if (createButton) {
+      console.log('Found Create Estimate button, binding event handler');
+
+      // Remove any existing event handlers to prevent duplication
+      if (this._createEstimateBtnHandler) {
+        createButton.removeEventListener('click', this._createEstimateBtnHandler);
+      }
+
+      // Create and store a new handler
+      this._createEstimateBtnHandler = (e) => {
+        e.preventDefault();
+        console.log('Create Estimate button clicked');
+        this.showNewEstimateForm();
+      };
+
+      // Add the new handler
+      createButton.addEventListener('click', this._createEstimateBtnHandler);
+    }
+  }
+
+  /**
+   * Update getEstimatesList method to bind the Create Estimate button
+   * after loading the list
    */
   getEstimatesList(bypassCache = false) {
     if (!bypassCache && this.cache.estimatesList) {
       this.log('Returning cached estimates list');
+
+      // Even when using cache, we need to bind the button
+      setTimeout(() => this.bindCreateEstimateButton(), 100);
+
       return Promise.resolve(this.cache.estimatesList);
     }
 
     return this.request('get_estimates_list')
       .then(data => {
         this.cache.estimatesList = data.html;
+
+        // After loading new content, bind the button
+        setTimeout(() => this.bindCreateEstimateButton(), 100);
+
         return data.html;
       });
   }
@@ -186,17 +226,37 @@ class DataService {
    * Add a product to a room
    * @param {string|number} roomId - Room ID
    * @param {number} productId - Product ID
+   * @param {string|number|null} estimateId - Optional estimate ID to ensure correct room
    * @returns {Promise<Object>} Result data
    */
-  addProductToRoom(roomId, productId) {
-    return this.request('add_product_to_room', {
+  addProductToRoom(roomId, productId, estimateId = null) {
+    console.log('DataService: Adding product to room', {
+      roomId: roomId,
+      productId: productId,
+      estimateId: estimateId
+    });
+
+    const requestData = {
       room_id: roomId,
       product_id: productId
-    })
+    };
+
+    // Include estimate ID if provided to ensure correct room selection
+    if (estimateId !== null) {
+      requestData.estimate_id = estimateId;
+    }
+
+    return this.request('add_product_to_room', requestData)
       .then(data => {
+        console.log('DataService: Product added successfully', data);
+
         // Invalidate caches since we modified data
         this.invalidateCache();
         return data;
+      })
+      .catch(error => {
+        console.error('DataService: Error adding product to room', error);
+        throw error;
       });
   }
 
@@ -287,14 +347,28 @@ class DataService {
    * @returns {Promise<Object>} Result data
    */
   removeRoom(estimateId, roomId) {
-    return this.request('remove_room', {
-      estimate_id: estimateId,
-      room_id: roomId
-    })
+    console.log('DataService: Removing room', {
+      estimateId: estimateId,
+      roomId: roomId
+    });
+
+    // Force string conversion for consistency
+    const requestData = {
+      estimate_id: String(estimateId),
+      room_id: String(roomId)
+    };
+
+    return this.request('remove_room', requestData)
       .then(data => {
+        console.log('DataService: Room removed successfully', data);
+
         // Invalidate caches since we modified data
         this.invalidateCache();
         return data;
+      })
+      .catch(error => {
+        console.error('DataService: Error removing room', error);
+        throw error;
       });
   }
 

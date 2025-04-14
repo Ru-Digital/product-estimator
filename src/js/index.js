@@ -6,6 +6,8 @@
  */
 
 import EstimatorCore from './EstimatorCore';
+import ConfirmationDialog from './ConfirmationDialog';
+
 
 // Global initialization tracker - defined at the top level
 window._productEstimatorInitialized = window._productEstimatorInitialized || false;
@@ -96,10 +98,11 @@ function initEstimator(debugMode) {
       // Add any other configuration here
     });
 
-    // Mark as initialized
+    // Make dialog available globally
     window.productEstimator = window.productEstimator || {};
     window.productEstimator.initialized = true;
     window.productEstimator.core = EstimatorCore;
+    window.productEstimator.dialog = ConfirmationDialog; // Add dialog to global object
 
     console.log(`Product Estimator initialized${debugMode ? ' (debug mode)' : ''}`);
   } catch (e) {

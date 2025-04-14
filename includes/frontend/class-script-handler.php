@@ -70,9 +70,18 @@ class ScriptHandler {
             'all'
         );
 
+        wp_register_style(
+            $this->plugin_name . '-dialog',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-dialog.css',
+            array(),
+            $this->version,
+            'all'
+        );
+
         // Always load styles on all pages
         wp_enqueue_style($this->plugin_name . '-public');
         wp_enqueue_style($this->plugin_name . '-modal');
+        wp_enqueue_style($this->plugin_name . '-dialog');
     }
 
     /**
@@ -102,6 +111,7 @@ class ScriptHandler {
                 'nonce' => $nonce,
                 'plugin_url' => PRODUCT_ESTIMATOR_PLUGIN_URL,
                 'estimator_url' => home_url('/estimator/'),
+                'debug' => defined('WP_DEBUG') && WP_DEBUG, // Pass debug mode to JS
                 'i18n' => array(
                     'loading' => __('Loading...', 'product-estimator'),
                     'error' => __('Error loading content. Please try again.', 'product-estimator'),
@@ -110,7 +120,20 @@ class ScriptHandler {
                     'close' => __('Close', 'product-estimator'),
                     'cancel' => __('Cancel', 'product-estimator'),
                     'confirm' => __('Confirm', 'product-estimator'),
-                    'select_estimate' => __('-- Select an Estimate --', 'product-estimator')
+                    'delete' => __('Delete', 'product-estimator'),
+                    'remove' => __('Remove', 'product-estimator'),
+                    'select_estimate' => __('-- Select an Estimate --', 'product-estimator'),
+                    // Dialog translations
+                    'dialog_titles' => array(
+                        'product' => __('Remove Product', 'product-estimator'),
+                        'room' => __('Delete Room', 'product-estimator'),
+                        'estimate' => __('Delete Estimate', 'product-estimator'),
+                    ),
+                    'dialog_messages' => array(
+                        'product' => __('Are you sure you want to remove this product from the room?', 'product-estimator'),
+                        'room' => __('Are you sure you want to delete this room and all its products?', 'product-estimator'),
+                        'estimate' => __('Are you sure you want to delete this estimate and all its rooms?', 'product-estimator'),
+                    ),
                 )
             )
         );

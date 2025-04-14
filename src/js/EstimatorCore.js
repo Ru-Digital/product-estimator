@@ -137,7 +137,8 @@ class EstimatorCore {
           e.stopPropagation();
           this.log('Menu button clicked - opening modal in list view');
           if (this.modalManager) {
-            this.modalManager.openModal(null, true); // Pass null for productId, true for forceListView
+            // Pass true as second parameter to force list view mode
+            this.modalManager.openModal(null, true);
           }
           return;
         }

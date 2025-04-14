@@ -4,6 +4,8 @@
  * Handles all modal operations for the Product Estimator plugin.
  * This is the single source of truth for modal operations.
  */
+import ConfirmationDialog from './ConfirmationDialog';
+
 
 class ModalManager {
   /**
@@ -84,6 +86,14 @@ class ModalManager {
     if (this.modal) {
       this.initializeElements();
       this.bindEvents();
+
+      // Install the loader safety system
+      this.setupLoaderSafety();
+
+      // Hide any loading indicators that might be visible
+      setTimeout(() => {
+        this.ensureLoaderHidden();
+      }, 500);
     }
 
     // Initialize jQuery fallback
@@ -94,13 +104,7 @@ class ModalManager {
   }
 
   /**
-   * Initialize modal elements
-   */
-  /**
-   * Initialize modal elements
-   */
-  /**
-   * Initialize modal elements - optimized version
+   * Initialize modal elements - with loading indicator fix
    */
   initializeElements() {
     if (!this.modal) {
@@ -113,6 +117,18 @@ class ModalManager {
     this.closeButton = this.modal.querySelector(this.config.selectors.closeButton);
     this.contentContainer = this.modal.querySelector(this.config.selectors.contentContainer);
     this.loadingIndicator = this.modal.querySelector(this.config.selectors.loadingIndicator);
+
+    // Create loading indicator if it doesn't exist
+    if (!this.loadingIndicator) {
+      console.warn('[ModalManager] Loading indicator not found, creating one');
+      this.loadingIndicator = document.createElement('div');
+      this.loadingIndicator.className = 'product-estimator-modal-loading';
+      this.loadingIndicator.innerHTML = `
+      <div class="loading-spinner"></div>
+      <div class="loading-text">${this.config.i18n.loading || 'Loading...'}</div>
+    `;
+      this.modal.appendChild(this.loadingIndicator);
+    }
 
     // Find view containers - directly use string IDs for performance
     this.estimatesList = this.modal.querySelector('#estimates');
@@ -137,8 +153,59 @@ class ModalManager {
       }
     }
 
+    // Create any missing form containers to prevent errors
+    if (!this.roomSelectionForm && this.contentContainer) {
+      console.warn('Creating room selection form container');
+      this.roomSelectionForm = document.createElement('div');
+      this.roomSelectionForm.id = 'room-selection-form-wrapper';
+      this.roomSelectionForm.style.display = 'none';
+      this.contentContainer.appendChild(this.roomSelectionForm);
+    }
+
     // Bind events to any existing forms
     this.bindExistingForms();
+  }
+
+  /**
+   * Show loading overlay - with error handling
+   */
+  showLoading() {
+    if (this.loadingIndicator) {
+      this.loadingIndicator.style.display = 'flex';
+    } else {
+      console.warn('Loading indicator not available - creating one');
+      // Try to initialize a loading indicator
+      if (this.modal) {
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.className = 'product-estimator-modal-loading';
+        loadingIndicator.style.display = 'flex';
+        loadingIndicator.innerHTML = `
+        <div class="loading-spinner"></div>
+        <div class="loading-text">${this.config.i18n.loading || 'Loading...'}</div>
+      `;
+        this.modal.appendChild(loadingIndicator);
+        this.loadingIndicator = loadingIndicator;
+      } else {
+        console.error('Cannot create loading indicator - modal not available');
+      }
+    }
+  }
+
+  /**
+   * Hide loading overlay with timeout tracking reset
+   */
+  hideLoading() {
+    // Reset loading start time
+    this.loadingStartTime = 0;
+
+    if (this.loadingIndicator) {
+      this.loadingIndicator.style.display = 'none';
+
+      // Log operation for tracking
+      console.log('Loading indicator hidden at:', new Date().toISOString());
+    } else {
+      console.warn('Loading indicator not available during hide operation');
+    }
   }
 
   /**
@@ -198,6 +265,7 @@ class ModalManager {
     this.bindRoomSelectionFormEvents();
   }
 
+
   /**
    * Bind events to modal elements
    */
@@ -251,7 +319,7 @@ class ModalManager {
   }
 
   /**
-   * Open the modal
+   * Open the modal with corrected loading handling
    * @param {number|string|null} productId - Product ID or null for list view
    * @param {boolean} forceListView - Whether to force showing the list view
    */
@@ -322,6 +390,8 @@ class ModalManager {
           } else {
             // Show new estimate form
             this.showNewEstimateForm();
+            // IMPORTANT: Hide the loading indicator when showing the form
+            this.hideLoading();
           }
         })
         .catch(error => {
@@ -333,8 +403,44 @@ class ModalManager {
       // LIST VIEW FLOW: No product ID or forcing list view
       console.log('STARTING LIST VIEW FLOW');
 
+      // Ensure the estimates list is visible and other views are hidden
+      if (this.estimatesList) {
+        this.estimatesList.style.display = 'block';
+      }
+
+      if (this.estimateSelection) {
+        this.estimateSelection.style.display = 'none';
+      }
+
+      if (this.newEstimateForm) {
+        this.newEstimateForm.style.display = 'none';
+      }
+
+      if (this.newRoomForm) {
+        this.newRoomForm.style.display = 'none';
+      }
+
       // Show estimates list
       this.loadEstimatesList()
+        .then(() => {
+          // Find and ensure the create estimate button has correct event handler
+          const createButton = this.modal.querySelector('#create-estimate-btn');
+          if (createButton) {
+            // Remove existing handlers
+            if (this._createEstimateBtnHandler) {
+              createButton.removeEventListener('click', this._createEstimateBtnHandler);
+            }
+
+            // Create and store new handler
+            this._createEstimateBtnHandler = () => {
+              this.showNewEstimateForm();
+            };
+
+            // Add the handler
+            createButton.addEventListener('click', this._createEstimateBtnHandler);
+            console.log('Updated event handler for list view create estimate button');
+          }
+        })
         .catch(error => {
           console.error('Error loading estimates list:', error);
           this.showError('Error loading estimates list.');
@@ -441,7 +547,7 @@ class ModalManager {
   }
 
   /**
-   * Close the modal and reset state
+   * Override the original closeModal to ensure loader is hidden
    */
   closeModal() {
     if (!this.isOpen) return;
@@ -454,6 +560,9 @@ class ModalManager {
       return;
     }
 
+    // Make sure loading indicator is hidden
+    this.ensureLoaderHidden();
+
     document.body.classList.remove('modal-open');
     this.isOpen = false;
     this.currentProductId = null;
@@ -464,6 +573,71 @@ class ModalManager {
 
     // Emit close event
     this.emit('modal:closed');
+  }
+
+  /**
+   * Add method to attach a global loader timeout checker
+   */
+  setupLoaderSafety() {
+    // Set up a periodic check to ensure the loader doesn't get stuck
+    setInterval(() => {
+      if (this.isOpen && this.loadingIndicator &&
+        window.getComputedStyle(this.loadingIndicator).display !== 'none') {
+        // Check if the loader has been visible for too long (more than 10 seconds)
+        const loaderStartTime = this.loadingStartTime || 0;
+        const currentTime = new Date().getTime();
+
+        if (loaderStartTime && (currentTime - loaderStartTime > 10000)) {
+          console.warn('Loading indicator has been visible for more than 10 seconds, hiding it.');
+          this.hideLoading();
+          this.showError('The operation is taking longer than expected or may have failed silently.');
+        }
+      }
+    }, 2000); // Check every 2 seconds
+
+    // Track when loading starts
+    const originalShowLoading = this.showLoading;
+    this.showLoading = () => {
+      this.loadingStartTime = new Date().getTime();
+      return originalShowLoading.call(this);
+    };
+
+    // Reset tracking when loading ends
+    const originalHideLoading = this.hideLoading;
+    this.hideLoading = () => {
+      this.loadingStartTime = 0;
+      return originalHideLoading.call(this);
+    };
+
+    console.log('Loader safety system installed');
+  }
+
+  /**
+   * Global method to ensure loading indicator is hidden
+   * This can be called from multiple places as a safety measure
+   */
+  ensureLoaderHidden() {
+    // Check if we have a loader that's currently visible
+    if (this.loadingIndicator &&
+      window.getComputedStyle(this.loadingIndicator).display !== 'none') {
+      console.log('Force hiding loader that was left visible');
+      this.hideLoading();
+    }
+
+    // Also check for any other loading indicators that might exist
+    const allLoaders = document.querySelectorAll('.product-estimator-modal-loading');
+    if (allLoaders.length > 1) {
+      console.warn(`Found ${allLoaders.length} loading indicators, cleaning up duplicates`);
+      // Keep only the first one, remove others
+      for (let i = 1; i < allLoaders.length; i++) {
+        allLoaders[i].remove();
+      }
+    }
+
+    // Set all loaders to hidden
+    allLoaders.forEach(loader => {
+      loader.style.display = 'none';
+    });
   }
 
   /**
@@ -499,10 +673,12 @@ class ModalManager {
   }
 
   /**
-   * Load the estimates list
+   * Load the estimates list with improved multi-estimate expansion
+   * @param {string|null} expandRoomId - Optional room ID to expand after loading
+   * @param {string|null} expandEstimateId - Optional estimate ID containing the room
    * @returns {Promise} Promise that resolves when the list is loaded
    */
-  loadEstimatesList() {
+  loadEstimatesList(expandRoomId = null, expandEstimateId = null) {
     return new Promise((resolve, reject) => {
       // Show loading state
       this.showLoading();
@@ -515,6 +691,9 @@ class ModalManager {
 
       // Make sure it's visible
       this.estimatesList.style.display = 'block';
+
+      // Log expansion parameters
+      console.log(`Loading estimates list with expansion params - Room: ${expandRoomId}, Estimate: ${expandEstimateId}`);
 
       // Load estimates list via AJAX
       jQuery.ajax({
@@ -531,15 +710,41 @@ class ModalManager {
 
             // Initialize accordions with a slight delay to ensure DOM is updated
             setTimeout(() => {
-              this.initializeAccordions();
-              this.updateEstimatesList();
+              // Update estimate-specific data attributes if needed
+              if (expandEstimateId) {
+                const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${expandEstimateId}"]`);
+                if (!estimateSection) {
+                  // Add data-estimate-id to estimate sections that don't have it
+                  const estimateSections = this.modal.querySelectorAll('.estimate-section');
+                  console.log(`Adding missing data-estimate-id attributes to ${estimateSections.length} estimates`);
+
+                  // Find sections that match our estimate ID by other means
+                  estimateSections.forEach((section, index) => {
+                    if (!section.dataset.estimateId) {
+                      // Get estimate ID from the section's remove button if available
+                      const removeButton = section.querySelector('.remove-estimate');
+                      if (removeButton && removeButton.dataset.estimateId) {
+                        section.dataset.estimateId = removeButton.dataset.estimateId;
+                        console.log(`Added estimate ID ${removeButton.dataset.estimateId} to section`);
+                      } else {
+                        // Fallback: add sequential IDs
+                        section.dataset.estimateId = String(index);
+                        console.log(`Added fallback estimate ID ${index} to section`);
+                      }
+                    }
+                  });
+                }
+              }
+
+              this.updateEstimatesList(expandRoomId, expandEstimateId);
+              this.initializeAccordions(expandRoomId, expandEstimateId);
 
               // Bind all the necessary event handlers
               this.bindProductRemovalEvents();
               this.bindRoomRemovalEvents();
               this.bindEstimateRemovalEvents();
-              this.bindEstimateListEventHandlers(); // Add this line
-            }, 50);
+              this.bindEstimateListEventHandlers();
+            }, 150); // Increased delay for more reliability
 
             resolve(response.data.html);
           } else {
@@ -585,7 +790,7 @@ class ModalManager {
                 if (content) content.style.display = 'block';
               }
 
-              // Handle suggestions visibility
+              // Handle suggestions visibility ONLY for this specific room
               const suggestions = roomElement.querySelector('.product-suggestions');
               if (suggestions) {
                 suggestions.style.display = response.show_suggestions ? 'block' : 'none';
@@ -609,21 +814,48 @@ class ModalManager {
       });
   }
 
-  javascript/**
+  /**
    * Handle room removal
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    */
   handleRoomRemoval(estimateId, roomId) {
+    // Find the room element before removal for better UI handling
+    const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+    const roomName = roomElement ? roomElement.querySelector('.room-name')?.textContent || 'room' : 'room';
+
     this.showLoading();
 
+    // Log the exact parameters being sent
+    console.log('Removing room with parameters:', {
+      estimate_id: estimateId,
+      room_id: roomId
+    });
+
     this.dataService.removeRoom(estimateId, roomId)
-      .then(() => {
+      .then((response) => {
+        console.log('Room removal response:', response);
+
         // Refresh estimates list
         this.loadEstimatesList()
           .then(() => {
             // Show success message
-            this.showMessage('Room removed successfully', 'success');
+            this.showMessage(`${roomName} removed successfully`, 'success');
+
+            // If the estimate has no rooms left, it might need special handling
+            if (response.has_rooms === false) {
+              console.log('Estimate has no rooms left after removal');
+
+              // You might want to highlight the "Add New Room" button or similar
+              const addRoomBtn = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"] .add-room`);
+              if (addRoomBtn) {
+                // Briefly highlight the button
+                addRoomBtn.classList.add('highlight-btn');
+                setTimeout(() => {
+                  addRoomBtn.classList.remove('highlight-btn');
+                }, 2000);
+              }
+            }
           })
           .catch(error => {
             this.log('Error refreshing estimates list:', error);
@@ -786,42 +1018,69 @@ class ModalManager {
   }
 
   /**
-   * Update confirmDelete method to ensure proper dialog creation
+   * Replace your existing confirmDelete method with this updated version
+   * that uses the custom confirmation dialog
    */
   confirmDelete(type, estimateId, roomId, productIndex) {
-    let message = '';
-    let title = '';
+    // Get text from localized strings if available
+    const i18n = window.productEstimatorVars?.i18n || {};
+    const dialogTitles = i18n.dialog_titles || {};
+    const dialogMessages = i18n.dialog_messages || {};
 
+    // Set default values
+    let title = '';
+    let message = '';
+    let confirmText = '';
+
+    // Set values based on type
     switch (type) {
       case 'estimate':
-        title = 'Delete Estimate';
-        message = 'Are you sure you want to delete this estimate and all its rooms?';
+        title = dialogTitles.estimate || 'Delete Estimate';
+        message = dialogMessages.estimate || 'Are you sure you want to delete this estimate and all its rooms?';
+        confirmText = i18n.delete || 'Delete';
         break;
       case 'room':
-        title = 'Delete Room';
-        message = 'Are you sure you want to delete this room and all its products?';
+        title = dialogTitles.room || 'Delete Room';
+        message = dialogMessages.room || 'Are you sure you want to delete this room and all its products?';
+        confirmText = i18n.delete || 'Delete';
         break;
       case 'product':
-        title = 'Remove Product';
-        message = 'Are you sure you want to remove this product from the room?';
+        title = dialogTitles.product || 'Remove Product';
+        message = dialogMessages.product || 'Are you sure you want to remove this product from the room?';
+        confirmText = i18n.remove || 'Remove';
         break;
     }
 
-    // Create a simple confirmation dialog
-    if (confirm(message)) {
-      console.log(`User confirmed deletion of ${type}`);
-      switch (type) {
-        case 'estimate':
-          this.handleEstimateRemoval(estimateId);
-          break;
-        case 'room':
-          this.handleRoomRemoval(estimateId, roomId);
-          break;
-        case 'product':
-          this.handleProductRemoval(estimateId, roomId, productIndex);
-          break;
+    // Log what we're trying to delete
+    this.log(`Confirming deletion of ${type} - ID: ${type === 'product' ? productIndex : (type === 'room' ? roomId : estimateId)}`);
+
+    // Use our custom confirmation dialog
+    ConfirmationDialog.show({
+      title: title,
+      message: message,
+      type: type,
+      confirmText: confirmText,
+      onConfirm: () => {
+        this.log(`User confirmed deletion of ${type}`);
+
+        // Handle deletion based on type
+        switch (type) {
+          case 'estimate':
+            this.handleEstimateRemoval(estimateId);
+            break;
+          case 'room':
+            this.handleRoomRemoval(estimateId, roomId);
+            break;
+          case 'product':
+            this.handleProductRemoval(estimateId, roomId, productIndex);
+            break;
+        }
+      },
+      onCancel: () => {
+        this.log(`User cancelled deletion of ${type}`);
+        // No action needed on cancel
       }
-    }
+    });
   }
 
   /**
@@ -1000,7 +1259,7 @@ class ModalManager {
   }
 
   /**
-   * Show new estimate form
+   * Show new estimate form with correct loading indicator handling
    */
   showNewEstimateForm() {
     if (this.estimatesList) this.estimatesList.style.display = 'none';
@@ -1009,6 +1268,7 @@ class ModalManager {
     // Ensure new estimate form exists
     if (!this.newEstimateForm) {
       console.error('New estimate form not found');
+      this.hideLoading(); // Be sure to hide loader if there's an error
       return;
     }
 
@@ -1017,12 +1277,19 @@ class ModalManager {
 
     // Check if form content needs to be loaded
     if (!this.newEstimateForm.querySelector('form')) {
-      this.loadNewEstimateForm();
+      this.loadNewEstimateForm()
+        .finally(() => {
+          // Always hide loading when form is ready, regardless of success or error
+          this.hideLoading();
+        });
+    } else {
+      // Form already exists, just make sure loading is hidden
+      this.hideLoading();
     }
   }
 
   /**
-   * Load new estimate form via AJAX
+   * Load new estimate form via AJAX with improved loading handling
    * @returns {Promise} Promise that resolves when form is loaded
    */
   loadNewEstimateForm() {
@@ -1068,6 +1335,7 @@ class ModalManager {
           reject(error);
         },
         complete: () => {
+          // Hide loading indicator when AJAX completes, regardless of success or error
           this.hideLoading();
         }
       });
@@ -1421,74 +1689,100 @@ class ModalManager {
   }
 
   /**
-   * Handle room selection form submission
+   * Handle room selection form submission with multi-estimate support
    * @param {HTMLFormElement} form - The submitted form
    */
   handleRoomSelection(form) {
-    // Force room ID to string to ensure consistency
-    const roomId = String(form.querySelector('#room-dropdown').value || '0');
-    const productId = this.currentProductId;
+    // Ensure all form values are strings to avoid type issues
+    const roomId = String(form.querySelector('#room-dropdown').value || '').trim();
+    const productId = String(this.currentProductId || '').trim();
 
-    if (!roomId) {
+    // Get the estimate ID from the form's data attribute
+    const estimateId = String(this.roomSelectionForm.dataset.estimateId || '').trim();
+
+    // Validate required data - check for undefined, null, or empty string, but allow '0'
+    if (roomId === undefined || roomId === null || roomId === '') {
       this.showError('Please select a room');
+      console.error('Room selection requires a valid room ID but it was empty or invalid');
       return;
     }
 
+    if (productId === undefined || productId === null || productId === '' || productId === '0') {
+      this.showError('No product selected');
+      console.error('Room selection requires a valid product ID but it was empty or invalid');
+      return;
+    }
+
+    // Debug information - log before submission
+    console.log('Room selection validated with:', {
+      roomId,
+      productId,
+      estimateId,
+      formData: Object.fromEntries(new FormData(form))
+    });
+
     this.showLoading();
 
-    this.dataService.addProductToRoom(roomId, productId)
-      .then(response => {
-        // Hide selection forms
-        this.estimateSelection.style.display = 'none';
-        this.roomSelectionForm.style.display = 'none';
+    // Make the AJAX request
+    jQuery.ajax({
+      url: productEstimatorVars.ajax_url,
+      type: 'POST',
+      data: {
+        action: 'add_product_to_room',
+        nonce: productEstimatorVars.nonce,
+        room_id: roomId,
+        product_id: productId,
+        estimate_id: estimateId
+      },
+      success: (response) => {
+        console.log('Add product AJAX response:', response);
 
-        // Clear the product ID from the modal after successful addition
-        delete this.modal.dataset.productId;
-        this.currentProductId = null;
+        if (response.success) {
+          // Hide selection forms
+          this.estimateSelection.style.display = 'none';
+          this.roomSelectionForm.style.display = 'none';
 
-        // Refresh estimates list and show it
-        this.loadEstimatesList()
-          .then(() => {
-            // After refreshing the list, find and expand the room
-            const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-            if (roomElement) {
-              // Make sure the room is expanded
-              const header = roomElement.querySelector('.accordion-header');
-              if (header) {
-                header.classList.add('active');
-                const content = roomElement.querySelector('.accordion-content');
-                if (content) content.style.display = 'block';
-              }
+          // Clear the product ID from the modal after successful addition
+          delete this.modal.dataset.productId;
+          this.currentProductId = null;
 
-              // Scroll to the room to ensure it's visible
-              roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+          // Get the estimate and room IDs from the response
+          const responseEstimateId = response.data?.estimate_id || estimateId;
+          const responseRoomId = response.data?.room_id || roomId;
 
-            // After refreshing the list, check if we should show suggestions
-            const estimateId = this.roomSelectionForm.dataset.estimateId;
-            if (estimateId) {
-              this.updateSuggestionVisibility(estimateId, roomId);
-            }
+          console.log(`Product added to estimate ${responseEstimateId}, room ${responseRoomId}`);
 
-            // Show success message
-            this.showMessage('Product added successfully!', 'success');
-          })
-          .catch(error => {
-            this.log('Error refreshing estimates list:', error);
-            this.showError('Error refreshing estimates list. Please try again.');
-          });
-      })
-      .catch(error => {
-        this.log('Error adding product to room:', error);
-        this.showError(error.message || 'Error adding product to room. Please try again.');
-      })
-      .finally(() => {
+          // Refresh estimates list and show it
+          this.loadEstimatesList(responseRoomId, responseEstimateId)
+            .then(() => {
+              // Show success message
+              this.showMessage('Product added successfully!', 'success');
+            })
+            .catch(error => {
+              this.log('Error refreshing estimates list:', error);
+              this.showError('Error refreshing estimates list. Please try again.');
+            });
+        } else {
+          // Handle error response
+          const errorMessage = response.data?.message || 'Error adding product to room. Please try again.';
+          this.showError(errorMessage);
+          console.error('AJAX error response:', response);
+        }
+      },
+      error: (jqXHR, textStatus, errorThrown) => {
+        this.log('Error adding product to room:', textStatus, errorThrown);
+        this.showError('Error adding product to room. Please try again.');
+        console.error('AJAX error details:', {jqXHR, textStatus, errorThrown});
+      },
+      complete: () => {
         this.hideLoading();
-      });
+      }
+    });
   }
 
+
   /**
-   * Handle new estimate form submission
+   * Handle new estimate form submission with improved loader handling
    * @param {HTMLFormElement} form - The submitted form
    */
   handleNewEstimateSubmission(form) {
@@ -1532,26 +1826,32 @@ class ModalManager {
 
           this.newRoomForm.dataset.productId = productId;
           this.forceElementVisibility(this.newRoomForm);
+
+          // Important - hide the loading indicator when showing the new form
+          this.hideLoading();
         } else {
           // Just refresh the estimates list
           this.loadEstimatesList()
             .catch(error => {
               this.log('Error refreshing estimates list:', error);
               this.showError('Error refreshing estimates list. Please try again.');
+            })
+            .finally(() => {
+              // Make sure to hide the loading indicator
+              this.hideLoading();
             });
         }
       })
       .catch(error => {
         this.log('Error creating estimate:', error);
         this.showError(error.message || 'Error creating estimate. Please try again.');
-      })
-      .finally(() => {
+        // Make sure to hide the loading indicator on error
         this.hideLoading();
       });
   }
 
   /**
-   * Handle new room form submission via AJAX
+   * Handle new room form submission with multi-estimate support
    * @param {HTMLFormElement} form - The submitted form
    * @param {Event} event - The form submission event
    */
@@ -1561,11 +1861,8 @@ class ModalManager {
     // Prevent default form submission which would cause page reload
     if (event) {
       event.preventDefault();
-    } else {
-      // This is for backward compatibility
-      if (typeof window.event !== 'undefined') {
-        window.event.preventDefault();
-      }
+    } else if (typeof window.event !== 'undefined') {
+      window.event.preventDefault();
     }
 
     // Check form validity
@@ -1626,25 +1923,13 @@ class ModalManager {
           delete this.modal.dataset.productId;
           this.currentProductId = null;
 
+          // Get estimate and room IDs from the response
+          const responseEstimateId = response.data?.estimate_id || estimateId;
+          const responseRoomId = response.data?.room_id || '0';
+
           // Refresh the estimates list to show the new room
-          this.loadEstimatesList()
+          this.loadEstimatesList(responseRoomId, responseEstimateId)
             .then(() => {
-              // If we had a room ID in the response, find and expand it
-              if (response.data.room_id) {
-                const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${response.data.room_id}"]`);
-                if (roomElement) {
-                  const header = roomElement.querySelector('.accordion-header');
-                  if (header) {
-                    header.classList.add('active');
-                    const content = roomElement.querySelector('.accordion-content');
-                    if (content) content.style.display = 'block';
-                  }
-
-                  // Scroll to the room to ensure it's visible
-                  roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-              }
-
               // Show success message
               this.showMessage('Room added successfully!', 'success');
             })
@@ -1667,6 +1952,7 @@ class ModalManager {
       }
     });
   }
+
 
 
   /**
@@ -1711,10 +1997,13 @@ class ModalManager {
     }
   }
 
+
   /**
-   * Initialize accordion functionality for rooms with duplicate prevention
+   * Initialize accordion functionality for rooms with better multi-estimate support
+   * @param {string|null} expandRoomId - Optional room ID to auto-expand after initialization
+   * @param {string|null} expandEstimateId - Optional estimate ID containing the room
    */
-  initializeAccordions() {
+  initializeAccordions(expandRoomId = null, expandEstimateId = null) {
     if (!this.modal) {
       console.error('[ModalManager] Modal not available for initializing accordions');
       return;
@@ -1740,11 +2029,65 @@ class ModalManager {
     if (this.estimatesList) {
       this.estimatesList.addEventListener('click', this.accordionHandler);
       this.log('Accordion event handler (re)attached');
+
+      // If a specific room ID is provided, expand that accordion item
+      if (expandRoomId) {
+        // More specific selector that includes estimate ID when available
+        let selector = `.accordion-item[data-room-id="${expandRoomId}"]`;
+
+        // If specific estimate ID is provided, make the selector more precise
+        if (expandEstimateId) {
+          selector = `.estimate-section[data-estimate-id="${expandEstimateId}"] ${selector}`;
+        }
+
+        const roomElement = this.modal.querySelector(selector);
+        if (roomElement) {
+          this.log(`Found room element to expand: ${selector}`);
+
+          // First ensure the estimate container is visible if it's a nested structure
+          const estimateSection = roomElement.closest('.estimate-section');
+          if (estimateSection) {
+            // Make sure the estimate section is visible
+            estimateSection.style.display = 'block';
+          }
+
+          // Now expand the room accordion
+          const header = roomElement.querySelector('.accordion-header');
+          if (header) {
+            // Add active class
+            header.classList.add('active');
+
+            // Find and show content
+            const content = roomElement.querySelector('.accordion-content');
+            if (content) {
+              content.style.display = 'block';
+
+              // Try jQuery if available for smoother animation
+              if (typeof jQuery !== 'undefined') {
+                jQuery(content).show(300);
+              }
+            }
+
+            // Scroll to the expanded room
+            setTimeout(() => {
+              roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+
+            this.log(`Auto-expanded room ID: ${expandRoomId} in estimate: ${expandEstimateId || 'any'}`);
+          }
+        } else {
+          this.log(`Room ID ${expandRoomId} not found for auto-expansion`);
+          // If room wasn't found, log all available rooms for debugging
+          const allRooms = this.modal.querySelectorAll('.accordion-item[data-room-id]');
+          this.log(`Available rooms: ${Array.from(allRooms).map(r => r.dataset.roomId).join(', ')}`);
+        }
+      }
     }
   }
 
+
   /**
-   * Toggle accordion item expansion
+   * Toggle accordion item expansion with enhanced animation
    * @param {HTMLElement} header - The accordion header element
    */
   toggleAccordionItem(header) {
@@ -1766,20 +2109,30 @@ class ModalManager {
       return;
     }
 
-    // Toggle display of content
+    // Toggle display of content with animation if jQuery is available
     if (header.classList.contains('active')) {
       this.log('Opening accordion content');
-      content.style.display = 'block';
+      if (typeof jQuery !== 'undefined') {
+        jQuery(content).slideDown(200);
+      } else {
+        content.style.display = 'block';
+      }
     } else {
       this.log('Closing accordion content');
-      content.style.display = 'none';
+      if (typeof jQuery !== 'undefined') {
+        jQuery(content).slideUp(200);
+      } else {
+        content.style.display = 'none';
+      }
     }
   }
 
   /**
-   * Initialize jQuery fallback for accordions
+   * Initialize jQuery fallback for accordions with improved multi-estimate support
+   * @param {string|null} expandRoomId - Optional room ID to expand after initialization
+   * @param {string|null} expandEstimateId - Optional estimate ID containing the room
    */
-  initializeJQueryAccordions() {
+  initializeJQueryAccordions(expandRoomId = null, expandEstimateId = null) {
     if (typeof jQuery === 'undefined') {
       this.log('jQuery not available for fallback');
       return;
@@ -1806,33 +2159,107 @@ class ModalManager {
         }
       }
     });
+
+    // Auto-expand specific room if provided
+    if (expandRoomId) {
+      // Add a small delay to ensure the DOM is ready
+      setTimeout(() => {
+        // Build selector based on available information
+        let selector = `.accordion-item[data-room-id="${expandRoomId}"]`;
+
+        // If we have an estimate ID, make the selector more precise
+        if (expandEstimateId) {
+          selector = `.estimate-section[data-estimate-id="${expandEstimateId}"] ${selector}`;
+        }
+
+        console.log(`Looking for room with selector: ${selector}`);
+
+        const $roomElement = jQuery(selector);
+        if ($roomElement.length) {
+          console.log(`Found room element using jQuery: ${selector}`);
+
+          // Make sure the estimate section is expanded if nested
+          const $estimateSection = $roomElement.closest('.estimate-section');
+          if ($estimateSection.length) {
+            $estimateSection.show();
+          }
+
+          const $header = $roomElement.find('.accordion-header');
+          if ($header.length) {
+            // Add active class
+            $header.addClass('active');
+
+            // Show the content
+            const $content = $roomElement.find('.accordion-content');
+            if ($content.length) {
+              $content.slideDown(300, function() {
+                // Scroll to room after animation completes
+                $roomElement[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+              });
+            }
+
+            console.log(`jQuery auto-expanded room ID: ${expandRoomId} in estimate: ${expandEstimateId || 'any'}`);
+          }
+        } else {
+          console.warn(`Room element not found with jQuery using selector: ${selector}`);
+          console.log('Available room elements:', jQuery('.accordion-item[data-room-id]').map(function() {
+            return jQuery(this).data('roomId');
+          }).get());
+        }
+      }, 300); // Longer delay for more reliability
+    }
   }
 
+
   /**
-   * Update the estimates list view
-   * This is called after loading the estimates list
+   * Update the estimates list view with enhanced room expansion
+   * @param {string|null} expandRoomId - Optional room ID to expand after update
+   * @param {string|null} expandEstimateId - Optional estimate ID containing the room
    */
-  updateEstimatesList() {
+  updateEstimatesList(expandRoomId = null, expandEstimateId = null) {
     // Check if there are any estimates
     const hasEstimates = !!this.modal.querySelector('.estimate-section');
 
-    // If no estimates, add create button
+    // If no estimates, DON'T add create button - it's already in the template
+    // We'll just ensure the existing no-estimates div is properly shown
     if (!hasEstimates) {
-      const noEstimatesDiv = document.createElement('div');
-      noEstimatesDiv.className = 'no-estimates';
-      noEstimatesDiv.innerHTML = `
-        <p>${this.config.i18n.no_estimates || 'You don\'t have any estimates yet.'}</p>
-        <button id="create-estimate-btn" class="button">
-          ${this.config.i18n.create_estimate || 'Create New Estimate'}
-        </button>
-      `;
+      const noEstimatesDiv = this.modal.querySelector('.no-estimates');
+      if (noEstimatesDiv) {
+        noEstimatesDiv.style.display = 'block';
 
-      this.estimatesList.appendChild(noEstimatesDiv);
+        // Make sure the button has the right event handler
+        const createButton = noEstimatesDiv.querySelector('#create-estimate-btn');
+        if (createButton) {
+          // Remove any existing event listeners to prevent duplication
+          if (this._createEstimateBtnHandler) {
+            createButton.removeEventListener('click', this._createEstimateBtnHandler);
+          }
+
+          // Create and store new handler
+          this._createEstimateBtnHandler = () => {
+            this.showNewEstimateForm();
+          };
+
+          // Add the new handler
+          createButton.addEventListener('click', this._createEstimateBtnHandler);
+          console.log('Added event handler to existing create estimate button');
+        }
+      }
+    } else {
+      // If we have estimates, make sure the no-estimates div is hidden
+      const noEstimatesDiv = this.modal.querySelector('.no-estimates');
+      if (noEstimatesDiv) {
+        noEstimatesDiv.style.display = 'none';
+      }
     }
 
     // Update all suggestions visibility
     this.updateAllSuggestionsVisibility();
+
+    // Initialize accordions with auto-expansion if a room ID is specified
+    this.initializeAccordions(expandRoomId, expandEstimateId);
   }
+
 
   /**
    * Update suggestion visibility based on room contents
@@ -1910,26 +2337,6 @@ class ModalManager {
    */
   showError(message) {
     this.showMessage(message, 'error');
-  }
-
-  /**
-   * Show loading overlay
-   */
-  showLoading() {
-    if (this.loadingIndicator) {
-      this.loadingIndicator.style.display = 'flex';
-    } else {
-      this.log('Loading indicator not available');
-    }
-  }
-
-  /**
-   * Hide loading overlay
-   */
-  hideLoading() {
-    if (this.loadingIndicator) {
-      this.loadingIndicator.style.display = 'none';
-    }
   }
 
   /**

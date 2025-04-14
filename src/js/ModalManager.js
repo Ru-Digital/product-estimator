@@ -744,6 +744,10 @@ class ModalManager {
               this.bindRoomRemovalEvents();
               this.bindEstimateRemovalEvents();
               this.bindEstimateListEventHandlers();
+
+              // Add this line to bind suggested product buttons
+              this.bindSuggestedProductButtons();
+
             }, 150); // Increased delay for more reliability
 
             resolve(response.data.html);
@@ -812,6 +816,126 @@ class ModalManager {
       .finally(() => {
         this.hideLoading();
       });
+  }
+
+  handleAddSuggestedProduct(productId, estimateId, roomId, buttonElement) {
+    // Show loading indicator
+    this.showLoading();
+
+    // Show loading state on the button
+    if (buttonElement) {
+      buttonElement.disabled = true;
+      buttonElement.classList.add('loading');
+      buttonElement.innerHTML = '<span class="loading-dots">Adding...</span>';
+    }
+
+    console.log(`Adding suggested product ${productId} to room ${roomId} in estimate ${estimateId}`);
+
+    // Make AJAX request to add product to room
+    jQuery.ajax({
+      url: productEstimatorVars.ajax_url,
+      type: 'POST',
+      data: {
+        action: 'add_product_to_room',
+        nonce: productEstimatorVars.nonce,
+        product_id: productId,
+        room_id: roomId,
+        estimate_id: estimateId
+      },
+      success: (response) => {
+        console.log('Add suggested product response:', response);
+
+        if (response.success) {
+          // Refresh the estimates list to show the updated room
+          this.loadEstimatesList(roomId, estimateId)
+            .then(() => {
+              // Auto-expand the room accordion after refreshing
+              setTimeout(() => {
+                const roomAccordion = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+                if (roomAccordion) {
+                  const header = roomAccordion.querySelector('.accordion-header');
+                  if (header && !header.classList.contains('active')) {
+                    header.click();
+                  }
+                }
+              }, 300);
+
+              // Show success message
+              this.showMessage('Product added successfully!', 'success');
+            })
+            .catch(error => {
+              console.error('Error refreshing estimates list:', error);
+              this.showError('Error refreshing list. Please try again.');
+            });
+        } else {
+          // Handle error response
+          this.showError(response.data?.message || 'Error adding product. Please try again.');
+        }
+      },
+      error: (jqXHR, textStatus, errorThrown) => {
+        console.error('AJAX error:', textStatus, errorThrown);
+        this.showError('Error adding product. Please try again.');
+      },
+      complete: () => {
+        // Reset button state
+        if (buttonElement) {
+          buttonElement.disabled = false;
+          buttonElement.classList.remove('loading');
+          buttonElement.textContent = 'Add';
+        }
+
+        // Hide loading
+        this.hideLoading();
+      }
+    });
+  }
+
+  bindSuggestedProductButtons() {
+    console.log('Binding suggested product buttons');
+
+    // Find all suggestion buttons in the modal
+    const suggestionButtons = this.modal.querySelectorAll('.add-suggestion-to-room');
+
+    if (suggestionButtons.length) {
+      console.log(`Found ${suggestionButtons.length} suggestion buttons to bind`);
+
+      // Loop through each button and bind click event
+      suggestionButtons.forEach(button => {
+        // Remove any existing handlers to prevent duplicates
+        button.removeEventListener('click', this._suggestionButtonHandler);
+
+        // Create and store new handler
+        this._suggestionButtonHandler = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Get data attributes
+          const productId = button.dataset.productId;
+          const estimateId = button.dataset.estimateId;
+          const roomId = button.dataset.roomId;
+
+          console.log('Add suggestion button clicked:', {
+            productId,
+            estimateId,
+            roomId
+          });
+
+          // Handle adding the suggested product
+          if (productId && estimateId && roomId) {
+            this.handleAddSuggestedProduct(productId, estimateId, roomId, button);
+          } else {
+            console.error('Missing required data attributes for adding suggested product');
+          }
+        };
+
+        // Add click event listener
+        button.addEventListener('click', this._suggestionButtonHandler);
+      });
+
+      console.log('Suggestion buttons bound successfully');
+    } else {
+      console.log('No suggestion buttons found to bind');
+    }
   }
 
   /**

@@ -73,9 +73,8 @@ class AjaxHandler {
             add_action('wp_ajax_get_room_selection_form', array($this, 'getRoomSelectionForm'));
             add_action('wp_ajax_nopriv_get_room_selection_form', array($this, 'getRoomSelectionForm'));
 
-
-
-
+            add_action('wp_ajax_get_similar_products', array($this, 'get_similar_products'));
+            add_action('wp_ajax_nopriv_get_similar_products', array($this, 'get_similar_products'));
 
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -1872,6 +1871,55 @@ class AjaxHandler {
         wp_send_json_success(array(
             'html' => $html
         ));
+    }
+
+    /**
+     * Add these methods to the existing AjaxHandler class in class-ajax-handler.php
+     */
+
+    /**
+     * Handle getting similar products for display in the estimator
+     * This method should be added to the AjaxHandler class
+     */
+    public function get_similar_products() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get parameters
+        $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+        $limit = isset($_POST['limit']) ? intval($_POST['limit']) : 5;
+
+        if (!$product_id) {
+            wp_send_json_error(['message' => __('Invalid product ID', 'product-estimator')]);
+            return;
+        }
+
+        // Ensure the similar products module is available
+        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\SimilarProductsSettingsModule')) {
+            wp_send_json_error(['message' => __('Similar Products module not available', 'product-estimator')]);
+            return;
+        }
+
+        try {
+            // Initialize the Similar Products module
+            $similar_products_module = new \RuDigital\ProductEstimator\Includes\Admin\Settings\SimilarProductsSettingsModule(
+                'product-estimator',
+                PRODUCT_ESTIMATOR_VERSION
+            );
+
+            // Get similar products
+            $similar_products = $similar_products_module->get_similar_products_for_display($product_id, $limit);
+
+            wp_send_json_success([
+                'products' => $similar_products,
+                'source_product_id' => $product_id
+            ]);
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => __('Error retrieving similar products', 'product-estimator'),
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }
 

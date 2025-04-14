@@ -5,6 +5,8 @@
  * This is the single source of truth for modal operations.
  */
 import ConfirmationDialog from './ConfirmationDialog';
+import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
+
 
 
 class ModalManager {
@@ -205,6 +207,20 @@ class ModalManager {
       console.log('Loading indicator hidden at:', new Date().toISOString());
     } else {
       console.warn('Loading indicator not available during hide operation');
+    }
+  }
+
+  initializeCarousels() {
+    console.log('Initializing carousels in modal');
+
+    // First try to find all carousel containers in the modal
+    const carouselContainers = this.modal.querySelectorAll('.suggestions-carousel');
+
+    if (carouselContainers.length > 0) {
+      console.log(`Found ${carouselContainers.length} carousel containers in modal`);
+      initSuggestionsCarousels();
+    } else {
+      console.log('No carousel containers found in modal');
     }
   }
 
@@ -745,8 +761,13 @@ class ModalManager {
               this.bindEstimateRemovalEvents();
               this.bindEstimateListEventHandlers();
 
-              // Add this line to bind suggested product buttons
+              initCarouselOnAccordionOpen();
+              this.initializeCarousels();
+
+
+              // Also bind the suggested product buttons
               this.bindSuggestedProductButtons();
+
 
             }, 150); // Increased delay for more reliability
 
@@ -902,10 +923,13 @@ class ModalManager {
       // Loop through each button and bind click event
       suggestionButtons.forEach(button => {
         // Remove any existing handlers to prevent duplicates
-        button.removeEventListener('click', this._suggestionButtonHandler);
+        // Store handler reference directly on the button element for easy removal
+        if (button._suggestionButtonHandler) {
+          button.removeEventListener('click', button._suggestionButtonHandler);
+        }
 
-        // Create and store new handler
-        this._suggestionButtonHandler = (e) => {
+        // Create and store new handler directly on button element
+        button._suggestionButtonHandler = (e) => {
           e.preventDefault();
           e.stopPropagation();
 
@@ -929,7 +953,7 @@ class ModalManager {
         };
 
         // Add click event listener
-        button.addEventListener('click', this._suggestionButtonHandler);
+        button.addEventListener('click', button._suggestionButtonHandler);
       });
 
       console.log('Suggestion buttons bound successfully');
@@ -2427,6 +2451,9 @@ class ModalManager {
 
     // Initialize accordions with auto-expansion if a room ID is specified
     this.initializeAccordions(expandRoomId, expandEstimateId);
+
+    this.initializeCarousels();
+
   }
 
 

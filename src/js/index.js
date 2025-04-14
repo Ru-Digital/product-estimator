@@ -7,7 +7,7 @@
 
 import EstimatorCore from './EstimatorCore';
 import ConfirmationDialog from './ConfirmationDialog';
-
+import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
 
 // Global initialization tracker - defined at the top level
 window._productEstimatorInitialized = window._productEstimatorInitialized || false;

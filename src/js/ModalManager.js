@@ -1265,13 +1265,6 @@ class ModalManager {
     if (this.estimatesList) this.estimatesList.style.display = 'none';
     if (this.estimateSelection) this.estimateSelection.style.display = 'none';
 
-    // Ensure new estimate form exists
-    if (!this.newEstimateForm) {
-      console.error('New estimate form not found');
-      this.hideLoading(); // Be sure to hide loader if there's an error
-      return;
-    }
-
     // Force visibility of the form
     this.forceElementVisibility(this.newEstimateForm);
 
@@ -1279,12 +1272,43 @@ class ModalManager {
     if (!this.newEstimateForm.querySelector('form')) {
       this.loadNewEstimateForm()
         .finally(() => {
-          // Always hide loading when form is ready, regardless of success or error
+          // Always hide loading when form is ready
           this.hideLoading();
+
+          // Add this: Ensure cancel button is properly bound
+          this.bindCancelButton(this.newEstimateForm, 'estimate');
         });
     } else {
-      // Form already exists, just make sure loading is hidden
+      // Form already exists, just make sure loading is hidden and cancel button is bound
       this.hideLoading();
+
+      // Add this: Ensure cancel button is properly bound
+      this.bindCancelButton(this.newEstimateForm, 'estimate');
+    }
+  }
+
+  bindCancelButton(formContainer, formType) {
+    if (!formContainer) return;
+
+    // Find the cancel button in this form
+    const cancelButton = formContainer.querySelector('.cancel-btn');
+
+    if (cancelButton) {
+      // Remove any existing event listeners to prevent duplicates
+      cancelButton.removeEventListener('click', this._cancelFormHandler);
+
+      // Create and store new handler
+      this._cancelFormHandler = () => {
+        console.log(`Cancel button clicked for ${formType} form`);
+        this.cancelForm(formType);
+      };
+
+      // Add the event listener
+      cancelButton.addEventListener('click', this._cancelFormHandler);
+
+      console.log(`Cancel button bound for ${formType} form`);
+    } else {
+      console.warn(`No cancel button found in ${formType} form`);
     }
   }
 
@@ -1960,39 +1984,60 @@ class ModalManager {
    * @param {string} formType - Form type ('estimate' or 'room')
    */
   cancelForm(formType) {
+    console.log(`Canceling form type: ${formType}`);
+
     switch (formType) {
       case 'estimate':
-        this.newEstimateForm.style.display = 'none';
+        // Hide the new estimate form
+        if (this.newEstimateForm) {
+          this.newEstimateForm.style.display = 'none';
+        }
 
         // If we have a product ID, go back to estimate selection if estimates exist
         if (this.currentProductId) {
           this.dataService.checkEstimatesExist()
             .then(hasEstimates => {
               if (hasEstimates) {
+                // Show estimate selection form (product flow)
                 this.forceElementVisibility(this.estimateSelectionForm);
                 this.forceElementVisibility(this.estimateSelection);
               } else {
+                // No estimates, show the estimates list
                 this.forceElementVisibility(this.estimatesList);
               }
             })
-            .catch(() => {
+            .catch(error => {
+              console.error('Error checking estimates:', error);
               // On error, just show the estimates list
               this.forceElementVisibility(this.estimatesList);
             });
         } else {
+          // No product ID, we're in the general flow, show the estimates list
           this.forceElementVisibility(this.estimatesList);
         }
         break;
+
       case 'room':
-        this.newRoomForm.style.display = 'none';
+        // Hide the new room form
+        if (this.newRoomForm) {
+          this.newRoomForm.style.display = 'none';
+        }
 
         // If we have a product ID and came from room selection
         if (this.currentProductId && this.roomSelectionForm.dataset.estimateId) {
+          // Return to room selection (we were adding a new room during product addition)
           this.forceElementVisibility(this.roomSelectionForm);
           this.forceElementVisibility(this.estimateSelection);
         } else {
+          // Regular flow (no product being added), return to estimates list
           this.forceElementVisibility(this.estimatesList);
         }
+        break;
+
+      default:
+        console.warn(`Unknown form type: ${formType}`);
+        // Default behavior - show the estimates list
+        this.forceElementVisibility(this.estimatesList);
         break;
     }
   }

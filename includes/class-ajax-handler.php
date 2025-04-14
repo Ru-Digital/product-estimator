@@ -59,6 +59,22 @@ class AjaxHandler {
             add_action('wp_ajax_search_category_products', array($this, 'ajaxSearchCategoryProducts'));
             add_action('wp_ajax_nopriv_search_category_products', array($this, 'ajaxSearchCategoryProducts'));
 
+            add_action('wp_ajax_get_estimate_selection_form', array($this, 'getEstimateSelectionForm'));
+            add_action('wp_ajax_nopriv_get_estimate_selection_form', array($this, 'getEstimateSelectionForm'));
+
+            // Register new AJAX handlers for form partials
+
+            add_action('wp_ajax_get_new_estimate_form', array($this, 'getNewEstimateForm'));
+            add_action('wp_ajax_nopriv_get_new_estimate_form', array($this, 'getNewEstimateForm'));
+
+            add_action('wp_ajax_get_new_room_form', array($this, 'getNewRoomForm'));
+            add_action('wp_ajax_nopriv_get_new_room_form', array($this, 'getNewRoomForm'));
+
+            add_action('wp_ajax_get_room_selection_form', array($this, 'getRoomSelectionForm'));
+            add_action('wp_ajax_nopriv_get_room_selection_form', array($this, 'getRoomSelectionForm'));
+
+
+
 
 
         } catch (\Exception $e) {
@@ -68,66 +84,67 @@ class AjaxHandler {
             }
         }
     }
-/**
- * * Get variation estimator content via AJAX
- * */
 
-public function getVariationEstimator() {
-    // Verify nonce
-    check_ajax_referer('product_estimator_nonce', 'nonce');
+    /**
+     * * Get variation estimator content via AJAX
+     * */
 
-    // Get variation ID
-    $variation_id = isset($_POST['variation_id']) ? intval($_POST['variation_id']) : 0;
+    public function getVariationEstimator() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
 
-    if (!$variation_id) {
-        wp_send_json_error([
-            'message' => __('Variation ID is required', 'product-estimator')
-        ]);
-        return;
-    }
+        // Get variation ID
+        $variation_id = isset($_POST['variation_id']) ? intval($_POST['variation_id']) : 0;
 
-    try {
-        // Get variation
-        $variation = wc_get_product($variation_id);
-
-        if (!$variation || !$variation->is_type('variation')) {
-            throw new \Exception(__('Invalid variation', 'product-estimator'));
+        if (!$variation_id) {
+            wp_send_json_error([
+                'message' => __('Variation ID is required', 'product-estimator')
+            ]);
+            return;
         }
 
-        // Check if estimator is enabled for this variation
-        if (!\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation_id)) {
-            throw new \Exception(__('Estimator not enabled for this variation', 'product-estimator'));
+        try {
+            // Get variation
+            $variation = wc_get_product($variation_id);
+
+            if (!$variation || !$variation->is_type('variation')) {
+                throw new \Exception(__('Invalid variation', 'product-estimator'));
+            }
+
+            // Check if estimator is enabled for this variation
+            if (!\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation_id)) {
+                throw new \Exception(__('Estimator not enabled for this variation', 'product-estimator'));
+            }
+
+            // Get parent product ID
+            $parent_id = $variation->get_parent_id();
+
+            // Start output buffer to capture estimator HTML
+            ob_start();
+
+            // Include the estimator partial with variation context
+            $atts = [
+                'title' => __('Product Estimate', 'product-estimator'),
+                'button_text' => __('Calculate', 'product-estimator'),
+                'product_id' => $variation_id,
+                'parent_id' => $parent_id,
+                'is_variation' => true
+            ];
+            include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-display.php';
+
+            // Get HTML
+            $html = ob_get_clean();
+
+            wp_send_json_success([
+                'html' => $html
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
         }
-
-        // Get parent product ID
-        $parent_id = $variation->get_parent_id();
-
-        // Start output buffer to capture estimator HTML
-        ob_start();
-
-        // Include the estimator partial with variation context
-        $atts = [
-            'title' => __('Product Estimate', 'product-estimator'),
-            'button_text' => __('Calculate', 'product-estimator'),
-            'product_id' => $variation_id,
-            'parent_id' => $parent_id,
-            'is_variation' => true
-        ];
-        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-display.php';
-
-        // Get HTML
-        $html = ob_get_clean();
-
-        wp_send_json_success([
-            'html' => $html
-        ]);
-
-    } catch (\Exception $e) {
-        wp_send_json_error([
-            'message' => $e->getMessage()
-        ]);
     }
-}
 
     /**
      * Get rooms for a specific estimate
@@ -211,81 +228,103 @@ public function getVariationEstimator() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
-        // Validate inputs
-        if (!isset($_POST['room_id']) || !isset($_POST['product_id'])) {
-            wp_send_json_error(['message' => __('Room ID and Product ID are required', 'product-estimator')]);
+        // Log raw request for debugging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Raw add_product_to_room request:');
+            error_log(print_r($_POST, true));
+        }
+
+        // Validate inputs with proper handling for '0'
+        if (!isset($_POST['room_id']) || $_POST['room_id'] === '' || (!is_string($_POST['room_id']) && !is_numeric($_POST['room_id']))) {
+            error_log('Room ID is missing or invalid in request');
+            wp_send_json_error(['message' => __('Room ID is required', 'product-estimator')]);
             return;
         }
 
-        $room_id = sanitize_text_field($_POST['room_id']);
+        if (!isset($_POST['product_id']) || !intval($_POST['product_id'])) {
+            error_log('Product ID is missing or invalid in request');
+            wp_send_json_error(['message' => __('Valid Product ID is required', 'product-estimator')]);
+            return;
+        }
+
+        // Get params, ensure consistent types for comparison
+        $room_id = (string)$_POST['room_id']; // Force string conversion
         $product_id = intval($_POST['product_id']);
+        $estimate_id = isset($_POST['estimate_id']) ? (string)$_POST['estimate_id'] : '';
 
         try {
-            // Use try-catch to handle potential session or database errors
-            $estimates = $this->session->getEstimates();
-
             // Debug logging
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('addProductToRoom called');
-                error_log('Room ID: ' . $room_id);
-                error_log('Product ID: ' . $product_id);
-                error_log('Available estimates: ' . print_r(array_keys($estimates), true));
+                error_log('addProductToRoom processing:');
+                error_log('Room ID: ' . $room_id . ' (type: ' . gettype($room_id) . ')');
+                error_log('Product ID: ' . $product_id . ' (type: ' . gettype($product_id) . ')');
+                error_log('Estimate ID: ' . $estimate_id . ' (type: ' . gettype($estimate_id) . ')');
             }
 
-            // Find the estimate that contains this room
-            $found_estimate_id = null;
-            $found_room_id = null;
+            // Get all estimates from session
+            $estimates = $this->session->getEstimates();
 
-            foreach ($estimates as $estimate_id => $estimate) {
-                if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
-                    foreach (array_keys($estimate['rooms']) as $key) {
-                        if ((string)$key === (string)$room_id) {
-                            $found_estimate_id = $estimate_id;
-                            $found_room_id = $key;
-                            break 2;
+            // If an estimate ID was explicitly provided
+            if (!empty($estimate_id)) {
+                // Make sure the estimate exists
+                if (!isset($estimates[$estimate_id])) {
+                    error_log("Specified estimate not found: $estimate_id");
+                    wp_send_json_error([
+                        'message' => __('Specified estimate not found', 'product-estimator'),
+                        'debug' => [
+                            'estimate_id' => $estimate_id,
+                            'available_estimates' => array_keys($estimates)
+                        ]
+                    ]);
+                    return;
+                }
+
+                // Make sure the room exists in this estimate
+                if (!isset($estimates[$estimate_id]['rooms'][$room_id])) {
+                    error_log("Room not found in specified estimate: $room_id in $estimate_id");
+                    wp_send_json_error([
+                        'message' => __('Room not found in specified estimate', 'product-estimator'),
+                        'debug' => [
+                            'estimate_id' => $estimate_id,
+                            'room_id' => $room_id
+                        ]
+                    ]);
+                    return;
+                }
+
+                $found_estimate_id = $estimate_id;
+                $found_room_id = $room_id;
+            } else {
+                // We need to find which estimate contains this room
+                $found_estimate_id = null;
+                $found_room_id = null;
+
+                // Loop through all estimates to find the room
+                foreach ($estimates as $est_id => $estimate) {
+                    if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
+                        foreach (array_keys($estimate['rooms']) as $r_id) {
+                            // Use string comparison to avoid type issues
+                            if ((string)$r_id === (string)$room_id) {
+                                $found_estimate_id = $est_id;
+                                $found_room_id = $r_id;
+                                break 2;
+                            }
                         }
                     }
-                }
-            }
-
-            // Handle fallback for '0' room ID
-            if ($found_estimate_id === null && ($room_id === '0' || $room_id === 0)) {
-                // Find first estimate with rooms
-                foreach ($estimates as $estimate_id => $estimate) {
-                    if (isset($estimate['rooms']) && !empty($estimate['rooms'])) {
-                        $first_room_key = array_key_first($estimate['rooms']);
-                        $found_estimate_id = $estimate_id;
-                        $found_room_id = $first_room_key;
-                        break;
-                    }
-                }
-
-                // If still no rooms, create a new room in first estimate
-                if ($found_estimate_id === null) {
-                    $first_estimate_key = array_key_first($estimates);
-                    $new_room_data = [
-                        'name' => 'Default Room',
-                        'width' => 0,
-                        'length' => 0,
-                        'products' => []
-                    ];
-
-                    $found_room_id = $this->session->addRoom($first_estimate_key, $new_room_data);
-                    $found_estimate_id = $first_estimate_key;
                 }
             }
 
             // Debugging output
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Room search results:');
-                error_log('Estimate ID: ' . print_r($found_estimate_id, true));
-                error_log('Room ID: ' . print_r($found_room_id, true));
+                error_log('Found Estimate ID: ' . print_r($found_estimate_id, true));
+                error_log('Found Room ID: ' . print_r($found_room_id, true));
             }
 
             // Validate found estimate and room
             if ($found_estimate_id === null || $found_room_id === null) {
                 wp_send_json_error([
-                    'message' => __('Room not found', 'product-estimator'),
+                    'message' => __('Room not found in any estimate', 'product-estimator'),
                     'debug' => [
                         'room_id' => $room_id,
                         'product_id' => $product_id,
@@ -318,7 +357,7 @@ public function getVariationEstimator() {
                 'estimate_id' => $found_estimate_id,
                 'room_id' => $found_room_id,
                 'product_data' => $result['product_data'],
-                'added_notes' => $result['added_notes'],
+                'added_notes' => $result['added_notes'] ?? 0,
                 'has_suggestions' => isset($_SESSION['product_estimator']['estimates'][$found_estimate_id]['rooms'][$found_room_id]['product_suggestions'])
             ]);
 
@@ -328,7 +367,9 @@ public function getVariationEstimator() {
                 'error' => $e->getMessage()
             ]);
         }
-    }    /**
+    }
+
+    /**
      * Get the full estimates list HTML
      */
     public function getEstimatesList()
@@ -346,6 +387,11 @@ public function getVariationEstimator() {
         if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
             $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
 
+            // Debug log the process
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Generating suggestions during getEstimatesList');
+            }
+
             // Generate suggestions for each room in each estimate
             foreach ($estimates as $estimate_id => &$estimate) {
                 if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
@@ -353,6 +399,8 @@ public function getVariationEstimator() {
                         if (isset($room['products']) && is_array($room['products'])) {
                             // Check if there are any regular (non-note) products in the room
                             $has_regular_products = false;
+                            $product_ids = [];
+
                             foreach ($room['products'] as $product) {
                                 // Skip notes or products without IDs
                                 if (isset($product['type']) && $product['type'] === 'note') {
@@ -362,16 +410,38 @@ public function getVariationEstimator() {
                                     continue;
                                 }
                                 $has_regular_products = true;
-                                break;
+                                $product_ids[] = $product['id']; // Track product IDs for debugging
                             }
 
                             // Only generate suggestions if there are actual products in the room
                             if ($has_regular_products) {
-                                $this->generateAndStoreSuggestions($estimate_id, $room_id, $room['products']);
+                                // Debug logging
+                                if (defined('WP_DEBUG') && WP_DEBUG) {
+                                    error_log("Generating suggestions for estimate {$estimate_id}, room {$room_id}");
+                                    error_log("Products in room: " . implode(', ', $product_ids));
+                                }
+
+                                // Generate and store suggestions only for this specific room
+                                $suggestions = $this->generateAndStoreSuggestions($estimate_id, $room_id, $room['products']);
+
+                                // Add suggestions directly to the room data for this render
+                                if (!empty($suggestions)) {
+                                    $room['product_suggestions'] = $suggestions;
+
+                                    // Debug logging
+                                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                                        error_log("Generated " . count($suggestions) . " suggestions");
+                                    }
+                                }
                             } else {
                                 // No regular products in this room, remove any existing suggestions
                                 if (isset($room['product_suggestions'])) {
                                     unset($room['product_suggestions']);
+
+                                    // Debug logging
+                                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                                        error_log("Removed suggestions for room {$room_id} - no products");
+                                    }
                                 }
                             }
                         }
@@ -388,9 +458,19 @@ public function getVariationEstimator() {
                                 // Only update the suggestions, not the entire room data
                                 $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'] =
                                     $room['product_suggestions'];
+
+                                // Debug logging
+                                if (defined('WP_DEBUG') && WP_DEBUG) {
+                                    error_log("Updated session suggestions for estimate {$estimate_id}, room {$room_id}");
+                                }
                             } else if (isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'])) {
                                 // Remove suggestions if they've been removed from our local copy
                                 unset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions']);
+
+                                // Debug logging
+                                if (defined('WP_DEBUG') && WP_DEBUG) {
+                                    error_log("Removed session suggestions for estimate {$estimate_id}, room {$room_id}");
+                                }
                             }
                         }
                     }
@@ -409,6 +489,7 @@ public function getVariationEstimator() {
             'html' => $html
         ));
     }
+
     /**
      * Get estimates data for dropdown
      */
@@ -611,6 +692,13 @@ public function getVariationEstimator() {
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
 
         error_log("Estimate ID: $estimate_id, Product ID: $product_id");
+
+        error_log("PROCESSING ROOM FOR ESTIMATE ID: $estimate_id");
+        error_log("Product ID: $product_id");
+
+        $current_estimates = $this->session->getEstimates();
+        error_log('Available estimates with keys: ' . implode(', ', array_keys($current_estimates)));
+
 
         // Parse form data
         parse_str($_POST['form_data'], $form_data);
@@ -838,13 +926,13 @@ public function getVariationEstimator() {
             // Update totals after removing the product
             $this->updateTotals($estimate_id);
 
-            // Check if any remaining products trigger suggestions
+            // Check if any remaining products trigger suggestions - ONLY FOR THIS SPECIFIC ROOM
             $show_suggestions = false;
             $updatedRoom = $this->session->getRoom($estimate_id, $room_id);
 
             if ($updatedRoom && isset($updatedRoom['products']) && !empty($updatedRoom['products'])) {
                 // Check if we have the ProductAdditionsManager class
-                if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductAdditionsManager')) {
+                if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductAdditionsSettingsModule')) {
                     $manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
 
                     // Check remaining products for categories that trigger suggestions
@@ -873,18 +961,18 @@ public function getVariationEstimator() {
                     }
 
                     if ($categoryProductsExist) {
-                        // Regenerate suggestions for the room
+                        // Regenerate suggestions ONLY for this room
                         $suggestions = $this->generateAndStoreSuggestions($estimate_id, $room_id, $updatedRoom['products']);
                         $show_suggestions = !empty($suggestions);
                     } else {
-                        // No triggering categories left, remove any existing suggestions
+                        // No triggering categories left, remove any existing suggestions from THIS ROOM ONLY
                         if (isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'])) {
                             unset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions']);
                         }
                     }
                 }
             } else {
-                // No products left in room, remove any existing suggestions
+                // No products left in room, remove any existing suggestions from THIS ROOM ONLY
                 if (isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'])) {
                     unset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions']);
                 }
@@ -919,6 +1007,11 @@ public function getVariationEstimator() {
         $estimate_id = sanitize_text_field($_POST['estimate_id']);
         $room_id = sanitize_text_field($_POST['room_id']);
 
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("removeRoom called with estimate_id: $estimate_id, room_id: $room_id");
+        }
+
         try {
             // Get the estimate from session
             $estimate = $this->session->getEstimate($estimate_id);
@@ -942,21 +1035,27 @@ public function getVariationEstimator() {
                 return;
             }
 
+            // Update totals after removing the room
             $this->updateTotals($estimate_id);
 
+            // Check if the estimate has any rooms left
+            $updated_estimate = $this->session->getEstimate($estimate_id);
+            $has_rooms = !empty($updated_estimate['rooms']);
 
             wp_send_json_success([
-                'message' => __('Room and all its products removed successfully', 'product-estimator')
+                'message' => __('Room and all its products removed successfully', 'product-estimator'),
+                'has_rooms' => $has_rooms,
+                'estimate_id' => $estimate_id
             ]);
 
         } catch (\Exception $e) {
+            error_log('Exception in removeRoom: ' . $e->getMessage());
+
             wp_send_json_error([
                 'message' => __('An error occurred while processing your request', 'product-estimator'),
                 'error' => $e->getMessage()
             ]);
         }
-
-
     }
 
 
@@ -1017,6 +1116,7 @@ public function getVariationEstimator() {
         $estimates = &$_SESSION['product_estimator']['estimates'];
 
         if (!isset($estimates[$estimate_id])) {
+            error_log("Cannot update totals - estimate $estimate_id not found");
             return;
         }
 
@@ -1038,6 +1138,10 @@ public function getVariationEstimator() {
                 $room_length = isset($room['length']) ? floatval($room['length']) : 0;
                 $room_area = $room_width * $room_length;
 
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Calculating totals for room $room_id with area $room_area");
+                }
+
                 if (isset($room['products']) && is_array($room['products'])) {
                     foreach ($room['products'] as &$product) {
                         // Skip notes
@@ -1045,8 +1149,8 @@ public function getVariationEstimator() {
                             continue;
                         }
 
-                        // Get pricing method from the product data or from the pricing rules
-                        $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : $this->getPricingMethodForProduct($product['id']);
+                        // Get pricing method from the product data
+                        $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'sqm';
 
                         // Calculate main product price
                         if (isset($product['min_price']) && isset($product['max_price'])) {
@@ -1054,28 +1158,39 @@ public function getVariationEstimator() {
                             $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
                             $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
 
-                            // Update pricing method in product data for future reference
-                            $product['pricing_method'] = $pricing_method;
-
                             // Calculate totals based on pricing method
-                            if ($pricing_method === 'sqm') {
+                            if ($pricing_method === 'sqm' && $room_area > 0) {
                                 $min_total = $min_price * $room_area;
                                 $max_total = $max_price * $room_area;
                                 $product['min_price_total'] = $min_total;
                                 $product['max_price_total'] = $max_total;
                                 $room_min_total += $min_total;
                                 $room_max_total += $max_total;
+
+                                if (defined('WP_DEBUG') && WP_DEBUG) {
+                                    error_log("Product {$product['name']} price: $min_price-$max_price, total: $min_total-$max_total (sqm)");
+                                }
                             } else {
                                 // Fixed pricing
                                 $product['min_price_total'] = $min_price;
                                 $product['max_price_total'] = $max_price;
                                 $room_min_total += $min_price;
                                 $room_max_total += $max_price;
+
+                                if (defined('WP_DEBUG') && WP_DEBUG) {
+                                    error_log("Product {$product['name']} price: $min_price-$max_price (fixed)");
+                                }
                             }
                         } elseif (isset($product['min_price_total']) && isset($product['max_price_total'])) {
                             // For pre-calculated totals
-                            $room_min_total += floatval($product['min_price_total']) * (1 - ($default_markup / 100));
-                            $room_max_total += floatval($product['max_price_total']) * (1 + ($default_markup / 100));
+                            $min_total = floatval($product['min_price_total']) * (1 - ($default_markup / 100));
+                            $max_total = floatval($product['max_price_total']) * (1 + ($default_markup / 100));
+                            $room_min_total += $min_total;
+                            $room_max_total += $max_total;
+
+                            if (defined('WP_DEBUG') && WP_DEBUG) {
+                                error_log("Product {$product['name']} pre-calculated total: {$product['min_price_total']}-{$product['max_price_total']}");
+                            }
                         }
 
                         // Calculate additional products prices
@@ -1083,11 +1198,7 @@ public function getVariationEstimator() {
                             foreach ($product['additional_products'] as &$additional_product) {
                                 // Get additional product pricing method - default to same as parent product
                                 $add_pricing_method = isset($additional_product['pricing_method']) ?
-                                    $additional_product['pricing_method'] :
-                                    $this->getPricingMethodForProduct($additional_product['id']);
-
-                                // Update pricing method in additional product data
-                                $additional_product['pricing_method'] = $add_pricing_method;
+                                    $additional_product['pricing_method'] : $pricing_method;
 
                                 if (isset($additional_product['min_price']) && isset($additional_product['max_price'])) {
                                     // Apply markup adjustment
@@ -1095,24 +1206,38 @@ public function getVariationEstimator() {
                                     $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
 
                                     // Add to totals based on pricing method
-                                    if ($add_pricing_method === 'sqm') {
+                                    if ($add_pricing_method === 'sqm' && $room_area > 0) {
                                         $min_total = $add_min_price * $room_area;
                                         $max_total = $add_max_price * $room_area;
                                         $additional_product['min_price_total'] = $min_total;
                                         $additional_product['max_price_total'] = $max_total;
                                         $room_min_total += $min_total;
                                         $room_max_total += $max_total;
+
+                                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                                            error_log("Add-on {$additional_product['name']} price: $add_min_price-$add_max_price, total: $min_total-$max_total (sqm)");
+                                        }
                                     } else {
                                         // Fixed pricing
                                         $additional_product['min_price_total'] = $add_min_price;
                                         $additional_product['max_price_total'] = $add_max_price;
                                         $room_min_total += $add_min_price;
                                         $room_max_total += $add_max_price;
+
+                                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                                            error_log("Add-on {$additional_product['name']} price: $add_min_price-$add_max_price (fixed)");
+                                        }
                                     }
                                 } elseif (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])) {
                                     // For pre-calculated totals
-                                    $room_min_total += floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
-                                    $room_max_total += floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
+                                    $min_total = floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
+                                    $max_total = floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
+                                    $room_min_total += $min_total;
+                                    $room_max_total += $max_total;
+
+                                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                                        error_log("Add-on {$additional_product['name']} pre-calculated total: {$additional_product['min_price_total']}-{$additional_product['max_price_total']}");
+                                    }
                                 }
                             }
                         }
@@ -1123,6 +1248,10 @@ public function getVariationEstimator() {
                 $room['min_total'] = $room_min_total;
                 $room['max_total'] = $room_max_total;
 
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Room $room_id totals: $room_min_total-$room_max_total");
+                }
+
                 // Add to estimate totals
                 $estimate_min_total += $room_min_total;
                 $estimate_max_total += $room_max_total;
@@ -1132,7 +1261,12 @@ public function getVariationEstimator() {
         // Store estimate totals directly in the session
         $estimates[$estimate_id]['min_total'] = $estimate_min_total;
         $estimates[$estimate_id]['max_total'] = $estimate_max_total;
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Estimate $estimate_id totals: $estimate_min_total-$estimate_max_total");
+        }
     }
+
     /**
      * Generate and store suggestions for a room in the session
      *
@@ -1142,51 +1276,68 @@ public function getVariationEstimator() {
      * @return array The generated suggestions
      */
     private function generateAndStoreSuggestions($estimate_id, $room_id, $room_products) {
-    if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
-        $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
+        if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
+            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
 
-        // Get product categories
-        $product_categories = array();
-        foreach ($room_products as $product) {
-            if (isset($product['id']) && $product['id'] > 0) {
-                $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
-                if (is_array($categories)) {
-                    $product_categories = array_merge($product_categories, $categories);
+            // Get product categories
+            $product_categories = array();
+            foreach ($room_products as $product) {
+                // Skip notes
+                if (isset($product['type']) && $product['type'] === 'note') {
+                    continue;
+                }
+
+                if (isset($product['id']) && $product['id'] > 0) {
+                    $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+                    if (is_array($categories)) {
+                        $product_categories = array_merge($product_categories, $categories);
+                    }
+                }
+            }
+
+            // Remove duplicates
+            $product_categories = array_unique($product_categories);
+
+            // Check if any categories have suggestion relationships
+            $has_suggestion_relationships = false;
+            foreach ($product_categories as $category_id) {
+                $suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
+                if (!empty($suggestions)) {
+                    $has_suggestion_relationships = true;
+                    break;
+                }
+            }
+
+            // Only generate suggestions if there are relationship rules
+            if ($has_suggestion_relationships) {
+                // Generate suggestions
+                $suggestions = $product_additions_manager->get_suggestions_for_room($room_products);
+
+                // Store in session - ONLY for this specific room
+                if (!empty($suggestions)) {
+                    // Make sure the storage location exists
+                    if (!isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id])) {
+                        // This is a safety check - if the room doesn't exist, don't try to add suggestions
+                        return array();
+                    }
+
+                    // Store suggestions only for this specific room
+                    $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'] = $suggestions;
+
+                    // Log for debugging
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("Stored suggestions for estimate {$estimate_id}, room {$room_id}");
+                        error_log("Suggestion count: " . count($suggestions));
+                    }
+
+                    return $suggestions;
                 }
             }
         }
 
-        // Remove duplicates
-        $product_categories = array_unique($product_categories);
-
-        // Check if any categories have suggestion relationships
-        $has_suggestion_relationships = false;
-        foreach ($product_categories as $category_id) {
-            $suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
-            if (!empty($suggestions)) {
-                $has_suggestion_relationships = true;
-                break;
-            }
-        }
-
-        // Only generate suggestions if there are relationship rules
-        if ($has_suggestion_relationships) {
-            // Generate suggestions
-            $suggestions = $product_additions_manager->get_suggestions_for_room($room_products);
-
-            // Store in session
-            if (!empty($suggestions)) {
-                $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'] = $suggestions;
-                return $suggestions;
-            }
-        }
+        return array();
     }
 
-    return array();
-}
-
-
-    /**
     /**
      * Helper method to prepare product data and add to room
      *
@@ -1208,15 +1359,6 @@ public function getVariationEstimator() {
                 ];
             }
 
-            // Prepare base product data
-            $product_data = [
-                'id' => $product_id,
-                'name' => $product->get_name(),
-                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
-                'additional_products' => [],
-                'additional_notes' => []
-            ];
-
             // Calculate room area
             $room_area = 0;
 
@@ -1234,6 +1376,10 @@ public function getVariationEstimator() {
                 }
             }
 
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Room area calculated: $room_area");
+            }
+
             // Get pricing rule for this product
             $pricing_rule = $this->getPricingRuleForProduct($product_id);
             $pricing_method = $pricing_rule['method']; // 'fixed' or 'sqm'
@@ -1244,28 +1390,31 @@ public function getVariationEstimator() {
             $max_price = 0;
 
             // Get price based on source
-            if ($pricing_source === 'website') {
+            if ($pricing_source === 'website' || !function_exists('wc_get_product')) {
                 // Use WooCommerce price
                 $base_price = (float)$product->get_price();
                 $min_price = $base_price;
                 $max_price = $base_price;
             } else {
-                // NetSuite pricing
+                // NetSuite pricing - include fallback to WC price
                 try {
-                    // Initialize NetSuite Integration
-                    $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
+                    // Check if NetSuite Integration class exists
+                    if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Integration\\NetsuiteIntegration')) {
+                        // Initialize NetSuite Integration
+                        $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
 
-                    // Get pricing data for this product
-                    $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
+                        // Get pricing data for this product
+                        $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
 
-                    // Check if we received valid pricing data
-                    if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
-                        foreach ($pricing_data['prices'] as $price_item) {
-                            if ($price_item['product_id'] == $product_id) {
-                                // Add NetSuite pricing data to product
-                                $min_price = $price_item['min_price'];
-                                $max_price = $price_item['max_price'];
-                                break;
+                        // Check if we received valid pricing data
+                        if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
+                            foreach ($pricing_data['prices'] as $price_item) {
+                                if ($price_item['product_id'] == $product_id) {
+                                    // Add NetSuite pricing data to product
+                                    $min_price = $price_item['min_price'];
+                                    $max_price = $price_item['max_price'];
+                                    break;
+                                }
                             }
                         }
                     }
@@ -1287,11 +1436,19 @@ public function getVariationEstimator() {
                 }
             }
 
-            // Store pricing data in product_data
-            $product_data['min_price'] = $min_price;
-            $product_data['max_price'] = $max_price;
-            $product_data['pricing_method'] = $pricing_method;
-            $product_data['pricing_source'] = $pricing_source;
+            // Prepare base product data
+            $product_data = [
+                'id' => $product_id,
+                'name' => $product->get_name(),
+                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
+                'min_price' => $min_price,
+                'max_price' => $max_price,
+                'pricing_method' => $pricing_method,
+                'pricing_source' => $pricing_source,
+                'room_area' => $room_area,
+                'additional_products' => [],
+                'additional_notes' => []
+            ];
 
             // Calculate price totals based on pricing method
             if ($pricing_method === 'sqm' && $room_area > 0) {
@@ -1306,12 +1463,12 @@ public function getVariationEstimator() {
 
             // PRODUCT ADDITIONS - auto-add related products and notes
             $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
+            $auto_add_products = array();
+            $auto_add_notes = array();
 
             // Check if ProductAdditionsManager is accessible
             if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
                 $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.3');
-                $auto_add_products = array();
-                $auto_add_notes = array();
 
                 foreach ($product_categories as $category_id) {
                     // Get auto-add products
@@ -1363,7 +1520,7 @@ public function getVariationEstimator() {
                     $related_max_price = 0;
 
                     // Get price based on source for related product
-                    if ($related_pricing_source === 'website') {
+                    if ($related_pricing_source === 'website' || !function_exists('wc_get_product')) {
                         // Use WooCommerce price for related product
                         $related_base_price = (float)$related_product->get_price();
                         $related_min_price = $related_base_price;
@@ -1371,15 +1528,18 @@ public function getVariationEstimator() {
                     } else {
                         // Add pricing data (similar to original product)
                         try {
-                            // Try to get pricing from NetSuite for related product
-                            $pricing_data = $netsuite_integration->get_product_prices([$related_product_id]);
+                            if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Integration\\NetsuiteIntegration')) {
+                                // Try to get pricing from NetSuite for related product
+                                $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
+                                $pricing_data = $netsuite_integration->get_product_prices([$related_product_id]);
 
-                            if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
-                                foreach ($pricing_data['prices'] as $price_item) {
-                                    if ($price_item['product_id'] == $related_product_id) {
-                                        $related_min_price = $price_item['min_price'];
-                                        $related_max_price = $price_item['max_price'];
-                                        break;
+                                if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
+                                    foreach ($pricing_data['prices'] as $price_item) {
+                                        if ($price_item['product_id'] == $related_product_id) {
+                                            $related_min_price = $price_item['min_price'];
+                                            $related_max_price = $price_item['max_price'];
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -1433,6 +1593,12 @@ public function getVariationEstimator() {
                 }
             }
 
+            // Debug log the full product data
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Full product data prepared:');
+                error_log(print_r($product_data, true));
+            }
+
             // Add product to room
             $success = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
 
@@ -1454,10 +1620,10 @@ public function getVariationEstimator() {
                 'success' => true,
                 'message' => __('Product added successfully', 'product-estimator'),
                 'product_data' => $product_data,
-                'added_notes' => !empty($auto_add_notes) ? count($auto_add_notes) : 0
+                'added_notes' => count($auto_add_notes)
             ];
-
         } catch (\Exception $e) {
+            error_log('Exception in prepareAndAddProductToRoom: ' . $e->getMessage());
             return [
                 'success' => false,
                 'message' => __('An error occurred while processing your request', 'product-estimator'),
@@ -1479,8 +1645,13 @@ public function getVariationEstimator() {
         // Use defaults from settings if available, otherwise fall back to hardcoded defaults
         $default_rule = [
             'method' => isset($settings['default_pricing_method']) ? $settings['default_pricing_method'] : 'sqm',
-            'source' => isset($settings['default_pricing_source']) ? $settings['default_pricing_source'] : 'netsuite'
+            'source' => isset($settings['default_pricing_source']) ? $settings['default_pricing_source'] : 'website'
         ];
+
+        // Return default rule if WooCommerce is not active or product ID is invalid
+        if (!function_exists('wp_get_post_terms') || empty($product_id)) {
+            return $default_rule;
+        }
 
         // Get product categories
         $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
@@ -1635,6 +1806,72 @@ public function getVariationEstimator() {
                 'message' => __('Error searching products:', 'product-estimator') . ' ' . $e->getMessage()
             ));
         }
+    }
+
+    /**
+     * Get estimate selection form HTML
+     */
+    public function getEstimateSelectionForm() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Start output buffer to capture form HTML
+        ob_start();
+
+        // Include the form partial
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-estimate-selection-form.php';
+
+        // Get HTML
+        $html = ob_get_clean();
+
+        wp_send_json_success(array(
+            'html' => $html
+        ));
+    }
+
+    /**
+     * Get new estimate form HTML
+     */
+    public function getNewEstimateForm() {
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        ob_start();
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-new-estimate-form.php';
+        $html = ob_get_clean();
+
+        wp_send_json_success(array(
+            'html' => $html
+        ));
+    }
+
+    /**
+     * Get new room form HTML
+     */
+    public function getNewRoomForm() {
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        ob_start();
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-new-room-form.php';
+        $html = ob_get_clean();
+
+        wp_send_json_success(array(
+            'html' => $html
+        ));
+    }
+
+    /**
+     * Get room selection form HTML
+     */
+    public function getRoomSelectionForm() {
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        ob_start();
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-room-selection-form.php';
+        $html = ob_get_clean();
+
+        wp_send_json_success(array(
+            'html' => $html
+        ));
     }
 }
 

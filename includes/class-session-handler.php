@@ -159,7 +159,7 @@ class SessionHandler {
     }
 
     /**
-     * Add a product to a room
+     * Add a product to a room - with improved handling for '0' room ID
      *
      * @param string|int $estimate_id Estimate ID
      * @param string|int $room_id Room ID
@@ -172,42 +172,48 @@ class SessionHandler {
 
         // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('addProductToRoom called');
-            error_log('Estimate ID: ' . print_r($estimate_id, true));
-            error_log('Room ID: ' . print_r($room_id, true));
+            error_log('SessionHandler::addProductToRoom called');
+            error_log('Estimate ID: ' . print_r($estimate_id, true) . ' (' . gettype($estimate_id) . ')');
+            error_log('Room ID: ' . print_r($room_id, true) . ' (' . gettype($room_id) . ')');
             error_log('Product Data: ' . print_r($product_data, true));
-            error_log('Current session data: ' . print_r($this->session_data, true));
         }
 
-        // Validate inputs
-        if (!isset($this->session_data['estimates'][$estimate_id])) {
-            error_log("Estimate $estimate_id not found");
+        // Important: Cast IDs to strings for consistent array access
+        $estimate_id_str = (string)$estimate_id;
+        $room_id_str = (string)$room_id;
+
+        // Validate inputs - ensure estimate exists
+        if (!isset($this->session_data['estimates'][$estimate_id_str])) {
+            error_log("Estimate {$estimate_id_str} not found");
+            error_log("Available estimates: " . implode(', ', array_keys($this->session_data['estimates'] ?? [])));
             return false;
         }
 
-        // Ensure rooms and products arrays exist
-        if (!isset($this->session_data['estimates'][$estimate_id]['rooms'])) {
-            $this->session_data['estimates'][$estimate_id]['rooms'] = [];
+        // Ensure rooms array exists
+        if (!isset($this->session_data['estimates'][$estimate_id_str]['rooms'])) {
+            // Initialize rooms array if it doesn't exist
+            $this->session_data['estimates'][$estimate_id_str]['rooms'] = [];
         }
 
-        // Validate room
-        if (!isset($this->session_data['estimates'][$estimate_id]['rooms'][$room_id])) {
-            error_log("Room $room_id not found in estimate $estimate_id");
+        // Validate room exists in this specific estimate
+        if (!isset($this->session_data['estimates'][$estimate_id_str]['rooms'][$room_id_str])) {
+            error_log("Room {$room_id_str} not found in estimate {$estimate_id_str}");
+            error_log("Available rooms: " . implode(', ', array_keys($this->session_data['estimates'][$estimate_id_str]['rooms'] ?? [])));
             return false;
         }
 
         // Ensure products array exists for the room
-        if (!isset($this->session_data['estimates'][$estimate_id]['rooms'][$room_id]['products'])) {
-            $this->session_data['estimates'][$estimate_id]['rooms'][$room_id]['products'] = [];
+        if (!isset($this->session_data['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products'])) {
+            $this->session_data['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products'] = [];
         }
 
         // Add product to room
-        $this->session_data['estimates'][$estimate_id]['rooms'][$room_id]['products'][] = $product_data;
+        $this->session_data['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products'][] = $product_data;
 
         // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('Product added successfully');
-            error_log('Updated session data: ' . print_r($this->session_data, true));
+            error_log("Room now has " . count($this->session_data['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products']) . " products");
         }
 
         return true;
@@ -252,7 +258,7 @@ class SessionHandler {
     }
 
     /**
-     * Get a specific estimate by ID
+     * Get a specific room by ID with improved handling for '0' room ID
      *
      * @param string|int $estimate_id Estimate ID
      * @param string|int $room_id Room ID
@@ -261,18 +267,35 @@ class SessionHandler {
     public function getRoom($estimate_id, $room_id) {
         $this->startSession();
 
+        // Cast IDs to strings for consistent array access
+        $estimate_id_str = (string)$estimate_id;
+        $room_id_str = (string)$room_id;
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("getRoom called for estimate: {$estimate_id_str}, room: {$room_id_str}");
+        }
+
         // Check if estimate exists
-        if (!isset($this->session_data['estimates'][$estimate_id])) {
+        if (!isset($this->session_data['estimates'][$estimate_id_str])) {
+            error_log("Estimate {$estimate_id_str} not found in getRoom");
             return null;
         }
 
         // Check if rooms exist in the estimate
-        if (!isset($this->session_data['estimates'][$estimate_id]['rooms'])) {
+        if (!isset($this->session_data['estimates'][$estimate_id_str]['rooms'])) {
+            error_log("No rooms found in estimate {$estimate_id_str}");
             return null;
         }
 
         // Try to find the room
-        return $this->session_data['estimates'][$estimate_id]['rooms'][$room_id] ?? null;
+        if (isset($this->session_data['estimates'][$estimate_id_str]['rooms'][$room_id_str])) {
+            return $this->session_data['estimates'][$estimate_id_str]['rooms'][$room_id_str];
+        } else {
+            error_log("Room {$room_id_str} not found in estimate {$estimate_id_str}");
+            error_log("Available rooms: " . implode(', ', array_keys($this->session_data['estimates'][$estimate_id_str]['rooms'])));
+            return null;
+        }
     }
 
     /**
@@ -358,6 +381,10 @@ class SessionHandler {
             error_log('Room ID: ' . print_r($room_id, true));
         }
 
+        // Force string conversion for consistency
+        $estimate_id = (string)$estimate_id;
+        $room_id = (string)$room_id;
+
         // Validate inputs
         if (!isset($this->session_data['estimates'][$estimate_id])) {
             error_log("Estimate $estimate_id not found");
@@ -369,12 +396,21 @@ class SessionHandler {
             return false;
         }
 
-        // Remove the room
-        unset($this->session_data['estimates'][$estimate_id]['rooms'][$room_id]);
+        // Get a reference to the rooms array for direct manipulation
+        $rooms = &$this->session_data['estimates'][$estimate_id]['rooms'];
 
-        // Debug logging
+        // Remove the room
+        unset($rooms[$room_id]);
+
+        // Debug logging of the result
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('Room removed successfully');
+            error_log('Remaining rooms: ' . count($rooms));
+            if (count($rooms) > 0) {
+                error_log('Remaining room IDs: ' . implode(', ', array_keys($rooms)));
+            } else {
+                error_log('No rooms left in the estimate');
+            }
         }
 
         return true;

@@ -70,9 +70,18 @@ class ScriptHandler {
             'all'
         );
 
+        wp_register_style(
+            $this->plugin_name . '-dialog',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-dialog.css',
+            array(),
+            $this->version,
+            'all'
+        );
+
         // Always load styles on all pages
         wp_enqueue_style($this->plugin_name . '-public');
         wp_enqueue_style($this->plugin_name . '-modal');
+        wp_enqueue_style($this->plugin_name . '-dialog');
     }
 
     /**
@@ -83,64 +92,26 @@ class ScriptHandler {
     public function enqueue_scripts() {
         // Always register scripts - this doesn't affect performance as they're only loaded when needed
         wp_register_script(
-            $this->plugin_name . '-public',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-public.js',
-            array('jquery'),
-            $this->version,
-            true
-        );
-
-        wp_register_script(
             $this->plugin_name . '-modal',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-modal.js',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator.bundle.js',
             array('jquery'),
             $this->version,
             true
         );
 
-        // Register variation-related scripts
-        wp_register_script(
-            $this->plugin_name . '-variation-handler',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'assets/js/product-variation-handler.js',
-            array('jquery'),
-            $this->version,
-            true
-        );
+        // Create a fresh nonce for AJAX requests - ensure this name matches what's used in AjaxHandler.php
+        $nonce = wp_create_nonce('product_estimator_nonce');
 
-        wp_register_script(
-            $this->plugin_name . '-variation-integration',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'assets/js/variation-integration.js',
-            array('jquery'),
-            $this->version,
-            true
-        );
-
-        wp_register_script(
-            $this->plugin_name . '-modal-variation',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'assets/js/modal-variation-integration.js',
-            array('jquery', $this->plugin_name . '-modal'),
-            $this->version,
-            true
-        );
-
-        // Register integration loader
-        wp_register_script(
-            $this->plugin_name . '-integration',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'assets/js/product-estimator-integration.js',
-            array('jquery', $this->plugin_name . '-public', $this->plugin_name . '-modal'),
-            $this->version,
-            true
-        );
-
-        // Localize script with all necessary data
+        // Localize the script with your data
         wp_localize_script(
-            $this->plugin_name . '-public',
+            $this->plugin_name . '-modal',
             'productEstimatorVars',
             array(
                 'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('product_estimator_nonce'),
+                'nonce' => $nonce,
                 'plugin_url' => PRODUCT_ESTIMATOR_PLUGIN_URL,
                 'estimator_url' => home_url('/estimator/'),
+                'debug' => defined('WP_DEBUG') && WP_DEBUG, // Pass debug mode to JS
                 'i18n' => array(
                     'loading' => __('Loading...', 'product-estimator'),
                     'error' => __('Error loading content. Please try again.', 'product-estimator'),
@@ -149,24 +120,26 @@ class ScriptHandler {
                     'close' => __('Close', 'product-estimator'),
                     'cancel' => __('Cancel', 'product-estimator'),
                     'confirm' => __('Confirm', 'product-estimator'),
-                    'select_estimate' => __('-- Select an Estimate --', 'product-estimator')
+                    'delete' => __('Delete', 'product-estimator'),
+                    'remove' => __('Remove', 'product-estimator'),
+                    'select_estimate' => __('-- Select an Estimate --', 'product-estimator'),
+                    // Dialog translations
+                    'dialog_titles' => array(
+                        'product' => __('Remove Product', 'product-estimator'),
+                        'room' => __('Delete Room', 'product-estimator'),
+                        'estimate' => __('Delete Estimate', 'product-estimator'),
+                    ),
+                    'dialog_messages' => array(
+                        'product' => __('Are you sure you want to remove this product from the room?', 'product-estimator'),
+                        'room' => __('Are you sure you want to delete this room and all its products?', 'product-estimator'),
+                        'estimate' => __('Are you sure you want to delete this estimate and all its rooms?', 'product-estimator'),
+                    ),
                 )
             )
         );
 
-        // Always enqueue core scripts and modal scripts on all pages
-        wp_enqueue_script($this->plugin_name . '-public');
+        // Enqueue the modal script
         wp_enqueue_script($this->plugin_name . '-modal');
-
-        // If on variable product page, load variation scripts
-        if (is_product() && function_exists('wc_get_product') && wc_get_product() && wc_get_product()->is_type('variable')) {
-            wp_enqueue_script($this->plugin_name . '-variation-handler');
-            wp_enqueue_script($this->plugin_name . '-variation-integration');
-            wp_enqueue_script($this->plugin_name . '-modal-variation');
-        }
-
-        // Always load integration script
-        wp_enqueue_script($this->plugin_name . '-integration');
 
         // Set a flag to avoid duplicate enqueuing
         do_action('product_estimator_scripts_enqueued');

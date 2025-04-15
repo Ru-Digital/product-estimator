@@ -27,6 +27,24 @@ $product_class .= isset($product['type']) && $product['type'] === 'note' ? ' pro
 $product_class .= $has_similar_products ? ' has-similar-products' : '';
 $product_class .= $has_notes ? ' has-notes' : '';
 $product_class .= $has_includes ? ' has-includes' : '';
+
+// Get default markup from the parent estimate if available
+$default_markup = 0;
+if (isset($estimate_id)) {
+    $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
+    $estimate = $session_handler->getEstimate($estimate_id);
+    if ($estimate && isset($estimate['default_markup'])) {
+        $default_markup = floatval($estimate['default_markup']);
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Using estimate's markup for product item: $default_markup%");
+        }
+    } else {
+        // If no markup found in the estimate, fall back to global settings
+        $options = get_option('product_estimator_settings');
+        $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+    }
+}
 ?>
 
 <div class="<?php echo esc_attr($product_class); ?>" data-product-index="<?php echo esc_attr($product_index); ?>">

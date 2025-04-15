@@ -22,11 +22,14 @@ $estimates = $session_handler->getEstimates();
 
 // Get default markup from settings
 $options = get_option('product_estimator_settings');
-$default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
 ?>
 
 <?php if (!empty($estimates)): ?>
     <?php foreach ($estimates as $estimate_id => $estimate): ?>
+    <?php $default_markup = isset($estimate['default_markup'])
+            ? floatval($estimate['default_markup'])
+            : 0; ?>
+
         <div class="estimate-section<?php echo isset($_GET['expand']) ? '' : ' collapsed'; ?>" data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
             <!-- For the estimate header -->
             <div class="estimate-header">

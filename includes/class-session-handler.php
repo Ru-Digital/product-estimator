@@ -454,15 +454,16 @@ class SessionHandler {
      * Calculate total price range for a room
      *
      * @param array $room Room data with products
+     * @param float $estimate_markup The markup percentage from the parent estimate
      * @return array Array with min_total and max_total values
      */
-    public function calculateRoomTotals($room) {
+    public function calculateRoomTotals($room, $estimate_markup = null) {
         $min_total = 0;
         $max_total = 0;
 
         // Get default markup from settings
         $options = get_option('product_estimator_settings');
-        $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+        $default_markup = $estimate_markup !== null ? $estimate_markup : 0;
 
         // Calculate room area
         $room_width = isset($room['width']) ? floatval($room['width']) : 0;
@@ -587,9 +588,12 @@ class SessionHandler {
         $estimate_min = 0;
         $estimate_max = 0;
 
+        $estimate_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : null;
+
+
         if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
             foreach ($estimate['rooms'] as $room) {
-                $room_totals = $this->calculateRoomTotals($room);
+                $room_totals = $this->calculateRoomTotals($room, $estimate_markup);
                 $estimate_min += $room_totals['min_total'];
                 $estimate_max += $room_totals['max_total'];
             }
@@ -616,14 +620,16 @@ class SessionHandler {
 
         $estimates = &$_SESSION['product_estimator']['estimates'];
 
-        // Get default markup from settings
-        $options = get_option('product_estimator_settings');
-        $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
 
         // Get all pricing rules
         $pricing_rules = get_option('product_estimator_pricing_rules', []);
 
         foreach ($estimates as $estimate_id => &$estimate) {
+
+            $default_markup = isset($estimate['default_markup'])
+                ? floatval($estimate['default_markup'])
+                : 0;
+
             $estimate_min_total = 0;
             $estimate_max_total = 0;
 

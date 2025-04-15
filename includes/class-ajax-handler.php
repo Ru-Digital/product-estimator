@@ -1009,8 +1009,9 @@ class AjaxHandler {
 
         // Get default markup from settings
         $options = get_option('product_estimator_settings');
-        $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
-
+        $default_markup = isset($estimates[$estimate_id]['default_markup'])
+            ? floatval($estimates[$estimate_id]['default_markup'])
+            : 0;
         // Get all pricing rules
         $pricing_rules = get_option('product_estimator_pricing_rules', []);
 

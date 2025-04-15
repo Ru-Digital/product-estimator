@@ -90,9 +90,26 @@ if (empty($suggestions)) {
     return; // Don't display anything if no suggestions
 }
 
-// Get default markup from settings
-$options = get_option('product_estimator_settings');
-$default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+// Get default markup from the parent estimate if available
+$default_markup = 0;
+if (isset($estimate_id)) {
+    $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
+    $estimate = $session_handler->getEstimate($estimate_id);
+    if ($estimate && isset($estimate['default_markup'])) {
+        $default_markup = floatval($estimate['default_markup']);
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Using estimate's markup for suggestions carousel: $default_markup%");
+        }
+    }
+}
+
+// If no markup found in the estimate, fall back to global settings
+if ($default_markup === 0) {
+    $options = get_option('product_estimator_settings');
+    $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+}
+
 ?>
 
 <div class="product-suggestions">

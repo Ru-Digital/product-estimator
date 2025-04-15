@@ -20,6 +20,9 @@ $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInsta
             <h2><?php esc_html_e('Product Estimator', 'product-estimator'); ?></h2>
         </div>
         <div class="product-estimator-modal-form-container">
+            <div class="modal-message-container"></div>
+
+
             <!-- Estimates List View -->
             <div id="estimates">
                 <?php include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-estimates-list.php'; ?>

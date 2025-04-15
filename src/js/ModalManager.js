@@ -2675,8 +2675,17 @@ class ModalManager {
    * @param {string} type - Message type ('success' or 'error')
    */
   showMessage(message, type = 'success') {
+    // Find the form container first
+    const formContainer = this.contentContainer || document.querySelector('.product-estimator-modal-form-container');
+
+    if (!formContainer) {
+      // If we can't find the container, log the error but don't try to prepend
+      console.error('Form container not found for message display:', message);
+      return;
+    }
+
     // Remove any existing messages
-    const existingMessages = this.modal.querySelectorAll('.modal-message');
+    const existingMessages = document.querySelectorAll('.modal-message');
     existingMessages.forEach(msg => msg.remove());
 
     // Create message element
@@ -2685,15 +2694,20 @@ class ModalManager {
     messageEl.className = `modal-message ${messageClass}`;
     messageEl.textContent = message;
 
-    // Add to modal container
-    this.contentContainer.prepend(messageEl);
+    // Safely prepend to container
+    try {
+      formContainer.prepend(messageEl);
+    } catch (e) {
+      console.error('Error adding message to container:', e);
+    }
 
     // Auto-remove after 5 seconds
     setTimeout(() => {
-      messageEl.remove();
+      if (messageEl.parentNode) {
+        messageEl.remove();
+      }
     }, 5000);
   }
-
   /**
    * Show error message
    * @param {string} message - Error message

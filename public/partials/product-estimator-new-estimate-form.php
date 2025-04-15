@@ -1,6 +1,6 @@
 <?php
 /**
- * New Estimate Form Template
+ * New Estimate Form Template with editable customer details
  *
  * @package    Product_Estimator
  * @subpackage Product_Estimator/public/partials
@@ -45,9 +45,20 @@ $customer_details = $customer_details_manager->getDetails();
             </div>
         </div>
     <?php else: ?>
-        <!-- Show a confirmation of the saved customer details -->
+        <!-- Show a confirmation of the saved customer details with edit/delete options -->
         <div class="customer-details-confirmation">
-            <p><?php esc_html_e('Using your saved details:', 'product-estimator'); ?></p>
+            <div class="customer-details-header">
+                <h4><?php esc_html_e('Using your saved details:', 'product-estimator'); ?></h4>
+                <div class="customer-details-actions">
+                    <button type="button" class="edit-customer-details" id="edit-customer-details-btn">
+                        <?php esc_html_e('Edit', 'product-estimator'); ?>
+                    </button>
+                    <button type="button" class="delete-customer-details" id="delete-customer-details-btn">
+                        <?php esc_html_e('Delete', 'product-estimator'); ?>
+                    </button>
+                </div>
+            </div>
+
             <div class="saved-customer-details">
                 <p><strong><?php echo esc_html($customer_details['name']); ?></strong><br>
                     <?php echo esc_html($customer_details['email']); ?><br>
@@ -55,6 +66,44 @@ $customer_details = $customer_details_manager->getDetails();
                         <?php echo esc_html($customer_details['phone']); ?><br>
                     <?php endif; ?>
                     <?php echo esc_html($customer_details['postcode']); ?></p>
+            </div>
+
+            <!-- Hidden edit form - will be shown when edit button is clicked -->
+            <div class="customer-details-edit-form" style="display: none;">
+                <h4><?php esc_html_e('Edit Your Details', 'product-estimator'); ?></h4>
+
+                <div class="form-group">
+                    <label for="edit-customer-name"><?php esc_html_e('Full Name', 'product-estimator'); ?></label>
+                    <input type="text" id="edit-customer-name" name="edit_customer_name"
+                           value="<?php echo esc_attr($customer_details['name']); ?>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-customer-email"><?php esc_html_e('Email Address', 'product-estimator'); ?></label>
+                    <input type="email" id="edit-customer-email" name="edit_customer_email"
+                           value="<?php echo esc_attr($customer_details['email']); ?>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-customer-phone"><?php esc_html_e('Phone Number', 'product-estimator'); ?></label>
+                    <input type="tel" id="edit-customer-phone" name="edit_customer_phone"
+                           value="<?php echo esc_attr($customer_details['phone'] ?? ''); ?>">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-customer-postcode"><?php esc_html_e('Postcode', 'product-estimator'); ?></label>
+                    <input type="text" id="edit-customer-postcode" name="edit_customer_postcode"
+                           value="<?php echo esc_attr($customer_details['postcode']); ?>" required>
+                </div>
+
+                <div class="customer-details-edit-actions">
+                    <button type="button" class="save-customer-details" id="save-customer-details-btn">
+                        <?php esc_html_e('Save Details', 'product-estimator'); ?>
+                    </button>
+                    <button type="button" class="cancel-edit-customer-details" id="cancel-edit-customer-details-btn">
+                        <?php esc_html_e('Cancel', 'product-estimator'); ?>
+                    </button>
+                </div>
             </div>
         </div>
     <?php endif; ?>

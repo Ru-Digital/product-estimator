@@ -82,6 +82,12 @@ class AjaxHandler {
             add_action('wp_ajax_get_suggestions', array($this, 'generateSuggestions'));
             add_action('wp_ajax_nopriv_get_suggestions', array($this, 'generateSuggestions'));
 
+            add_action('wp_ajax_update_customer_details', array($this, 'updateCustomerDetails'));
+            add_action('wp_ajax_nopriv_update_customer_details', array($this, 'updateCustomerDetails'));
+
+            add_action('wp_ajax_delete_customer_details', array($this, 'deleteCustomerDetails'));
+            add_action('wp_ajax_nopriv_delete_customer_details', array($this, 'deleteCustomerDetails'));
+
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Exception in AjaxHandler constructor: ' . $e->getMessage());
@@ -1867,6 +1873,140 @@ class AjaxHandler {
         } catch (\Exception $e) {
             wp_send_json_error([
                 'message' => __('An error occurred while processing your request', 'product-estimator'),
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
+// Add these methods to the AjaxHandler class in class-ajax-handler.php
+
+    /**
+     * Update customer details via AJAX
+     */
+    public function updateCustomerDetails() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        if (!isset($_POST['details'])) {
+            wp_send_json_error(['message' => __('Invalid details provided', 'product-estimator')]);
+            return;
+        }
+
+        $details_data = $_POST['details'];
+        if (is_string($details_data)) {
+            $details_data = json_decode(stripslashes($details_data), true);
+        }
+
+        // Validate details structure
+        if (!is_array($details_data)) {
+            wp_send_json_error(['message' => __('Invalid details format', 'product-estimator')]);
+            return;
+        }
+
+
+        // Get the details from the request
+        $details = [
+            'name' => isset($details_data['name']) ? sanitize_text_field($details_data['name']) : '',
+            'email' => isset($details_data['email']) ? sanitize_email($details_data['email']) : '',
+            'phone' => isset($details_data['phone']) ? sanitize_text_field($details_data['phone']) : '',
+            'postcode' => isset($details_data['postcode']) ? sanitize_text_field($details_data['postcode']) : ''
+        ];
+
+
+        // Validate required fields
+        if (empty($details['name']) || empty($details['email']) || empty($details['postcode'])) {
+            wp_send_json_error(['message' => __('Please fill in all required fields', 'product-estimator')]);
+            return;
+        }
+
+        // Validate email format
+        if (!is_email($details['email'])) {
+            wp_send_json_error(['message' => __('Please enter a valid email address', 'product-estimator')]);
+            return;
+        }
+
+        try {
+            // Initialize CustomerDetails
+            $customer_details = new \RuDigital\ProductEstimator\Includes\CustomerDetails();
+
+            // Update the details
+            $success = $customer_details->setDetails($details);
+
+            if ($success) {
+                // Get the updated details to confirm they were set correctly
+                $updated_details = $customer_details->getDetails();
+
+                wp_send_json_success([
+                    'message' => __('Customer details updated successfully', 'product-estimator'),
+                    'details' => $updated_details
+                ]);
+            } else {
+                wp_send_json_error(['message' => __('Failed to update customer details', 'product-estimator')]);
+            }
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => __('An error occurred while updating details', 'product-estimator'),
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Delete customer details via AJAX
+     */
+    public function deleteCustomerDetails() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        try {
+            // Initialize CustomerDetails
+            $customer_details = new \RuDigital\ProductEstimator\Includes\CustomerDetails();
+
+            // Delete the details
+            $success = $customer_details->clearDetails();
+
+            if ($success) {
+                // Get the HTML for the empty form
+                ob_start();
+                ?>
+                <!-- New empty customer details form -->
+                <div class="customer-details-section">
+                    <h4><?php esc_html_e('Your Details', 'product-estimator'); ?></h4>
+
+                    <div class="form-group">
+                        <label for="customer-name"><?php esc_html_e('Full Name', 'product-estimator'); ?></label>
+                        <input type="text" id="customer-name" name="customer_name" placeholder="<?php esc_attr_e('Your full name', 'product-estimator'); ?>" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-email"><?php esc_html_e('Email Address', 'product-estimator'); ?></label>
+                        <input type="email" id="customer-email" name="customer_email" placeholder="<?php esc_attr_e('Your email address', 'product-estimator'); ?>" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-phone"><?php esc_html_e('Phone Number', 'product-estimator'); ?></label>
+                        <input type="tel" id="customer-phone" name="customer_phone" placeholder="<?php esc_attr_e('Your phone number (optional)', 'product-estimator'); ?>">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="customer-postcode"><?php esc_html_e('Postcode', 'product-estimator'); ?></label>
+                        <input type="text" id="customer-postcode" name="customer_postcode" placeholder="<?php esc_attr_e('Your postcode', 'product-estimator'); ?>" required>
+                    </div>
+                </div>
+                <?php
+                $html = ob_get_clean();
+
+                wp_send_json_success([
+                    'message' => __('Customer details deleted successfully', 'product-estimator'),
+                    'html' => $html
+                ]);
+            } else {
+                wp_send_json_error(['message' => __('Failed to delete customer details', 'product-estimator')]);
+            }
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => __('An error occurred while deleting details', 'product-estimator'),
                 'error' => $e->getMessage()
             ]);
         }

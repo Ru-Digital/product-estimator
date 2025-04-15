@@ -8,6 +8,8 @@
 import DataService from './DataService';
 import ModalManager from './ModalManager';
 import VariationHandler from './VariationHandler';
+import CustomerDetailsManager from './CustomerDetailsManager';
+
 
 class EstimatorCore {
   /**
@@ -30,6 +32,7 @@ class EstimatorCore {
     this.dataService = null;
     this.modalManager = null;
     this.variationHandler = null;
+    this.customerDetailsManager = null;
 
     // State
     this.initialized = false;
@@ -87,6 +90,11 @@ class EstimatorCore {
         this.modalManager = new ModalManager({
           debug: this.config.debug,
           selectors: this.config.selectors
+        }, this.dataService);
+
+        // Initialize customer details manager
+        this.customerDetailsManager = new CustomerDetailsManager({
+          debug: this.config.debug
         }, this.dataService);
 
         // Initialize variation handler if on product page

@@ -94,12 +94,21 @@ class ScriptHandler {
             'all'
         );
 
+        wp_register_style(
+            $this->plugin_name . '-customer-details',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-customer-details.css',
+            array(),
+            $this->version,
+            'all'
+        );
+
         // Always load styles on all pages
         wp_enqueue_style($this->plugin_name . '-public');
         wp_enqueue_style($this->plugin_name . '-modal');
         wp_enqueue_style($this->plugin_name . '-dialog');
         wp_enqueue_style($this->plugin_name . '-carousel');
         wp_enqueue_style($this->plugin_name . '-similar-products');
+        wp_enqueue_style($this->plugin_name . '-customer-details');
     }
 
     /**
@@ -141,6 +150,11 @@ class ScriptHandler {
                     'delete' => __('Delete', 'product-estimator'),
                     'remove' => __('Remove', 'product-estimator'),
                     'select_estimate' => __('-- Select an Estimate --', 'product-estimator'),
+                    'delete_customer_details' => __('Delete Customer Details', 'product-estimator'),
+                    'confirm_delete_details' => __('Are you sure you want to delete your saved details?', 'product-estimator'),
+                    'saving' => __('Saving...', 'product-estimator'),
+                    'details_updated' => __('Details updated successfully!', 'product-estimator'),
+                    'details_deleted' => __('Details deleted successfully!', 'product-estimator'),
                     // Dialog translations
                     'dialog_titles' => array(
                         'product' => __('Remove Product', 'product-estimator'),

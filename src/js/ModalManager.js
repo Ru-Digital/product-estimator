@@ -1482,6 +1482,14 @@ class ModalManager {
           if (response.success && response.data.html) {
             this.newEstimateForm.innerHTML = response.data.html;
 
+            if (window.productEstimator && window.productEstimator.core &&
+              window.productEstimator.core.customerDetailsManager) {
+              // Slight delay to ensure DOM is updated
+              setTimeout(() => {
+                window.productEstimator.core.customerDetailsManager.init();
+              }, 100);
+            }
+
             // Bind form events
             const form = this.newEstimateForm.querySelector('form');
             if (form) {
@@ -1497,6 +1505,10 @@ class ModalManager {
                 });
               }
             }
+
+
+            // Dispatch a custom event that modal content has been loaded
+            document.dispatchEvent(new CustomEvent('product_estimator_modal_loaded'));
 
             resolve(response.data.html);
           } else {

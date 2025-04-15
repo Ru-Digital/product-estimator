@@ -136,8 +136,6 @@
   flex-grow: 1;
 }
 
-
-
 .estimate-header:after {
   content: "\f142"; /* Dashicons minus */
   font-family: dashicons;
@@ -149,10 +147,6 @@
 .estimate-section.collapsed .estimate-header:after {
   content: "\f140"; /* Dashicons plus */
 }
-
-
-
-
 
 .estimate-content {
   padding: 15px;
@@ -234,10 +228,36 @@
   justify-content: space-between;
   align-items: center;
   transition: background 0.2s ease;
+  position: relative;
+  padding-right: 30px; /* Make room for the indicator */
 }
 
 .accordion-header-wrapper .accordion-header:hover {
   background-color: #f0f0f0;
+}
+
+/* Accordion expand/collapse indicator */
+.accordion-header-wrapper .accordion-header::after {
+  content: "\f140"; /* WordPress dashicons - arrow-down */
+  font-family: dashicons;
+  display: inline-block;
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: transform 0.2s ease;
+  color: #777;
+  font-size: 20px;
+}
+
+.accordion-header-wrapper .accordion-header.active::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* Additional spacing for room dimensions and total price */
+.accordion-header .room-dimensions,
+.accordion-header .room-total-price {
+  margin-right: 30px; /* Ensure text doesn't overlap with indicator */
 }
 
 .accordion-header .room-name {
@@ -866,6 +886,7 @@ body.modal-open {
   margin-top: 15px;
   display: flex;
   justify-content: flex-end;
+  margin-bottom: 15px;
 }
 .estimate-actions ul {
   list-style: none;

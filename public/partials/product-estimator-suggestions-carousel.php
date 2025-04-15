@@ -19,15 +19,71 @@ foreach ($room['products'] as $product) {
     }
 }
 
-// Get suggestions from the room data
-$suggestions = isset($room['product_suggestions']) ? $room['product_suggestions'] : [];
+// Generate suggestions at template render time instead of from session
+$suggestions = [];
 
-// Filter out any products that are already in the room
-if (!empty($suggestions)) {
-    $suggestions = array_filter($suggestions, function($suggestion) use ($room_product_ids) {
-        return !in_array($suggestion['id'], $room_product_ids);
-    });
+// Check if we have the ProductAdditionsManager class
+if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductAdditionsSettingsModule')) {
+    $manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
+
+    // Generate suggestions based on products in this room
+    foreach ($room['products'] as $product) {
+        // Skip notes or products without IDs
+        if (isset($product['type']) && $product['type'] === 'note') {
+            continue;
+        }
+        if (!isset($product['id']) || empty($product['id'])) {
+            continue;
+        }
+
+        // Get product categories
+        $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+        if (!empty($categories)) {
+            // Check each category for suggestions
+            foreach ($categories as $category_id) {
+                // Get suggested products for this category
+                $category_suggestions = $manager->get_suggested_products_for_category($category_id);
+                if (!empty($category_suggestions)) {
+                    // Add each suggested product to the array
+                    foreach ($category_suggestions as $suggestion_id) {
+                        // Skip if this product is already in the room
+                        if (in_array($suggestion_id, $room_product_ids)) {
+                            continue;
+                        }
+
+                        // Get product data
+                        $product_obj = wc_get_product($suggestion_id);
+                        if ($product_obj) {
+                            // Get pricing rule for this product
+                            $pricing_method = 'sqm'; // Default method
+                            $pricing_rules = get_option('product_estimator_pricing_rules', []);
+                            $product_categories = wp_get_post_terms($suggestion_id, 'product_cat', ['fields' => 'ids']);
+
+                            foreach ($pricing_rules as $rule) {
+                                if (isset($rule['categories']) && !empty(array_intersect($product_categories, $rule['categories']))) {
+                                    $pricing_method = isset($rule['pricing_method']) ? $rule['pricing_method'] : 'sqm';
+                                    break;
+                                }
+                            }
+
+                            // Add to suggestions array - using product ID as key to avoid duplicates
+                            $suggestions[$suggestion_id] = [
+                                'id' => $suggestion_id,
+                                'name' => $product_obj->get_name(),
+                                'price' => $product_obj->get_price(),
+                                'image' => wp_get_attachment_image_url($product_obj->get_image_id(), 'thumbnail') ?: '',
+                                'pricing_method' => $pricing_method
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
+
+// Convert to indexed array
+$suggestions = array_values($suggestions);
 
 // Check if we have any suggestions to display
 if (empty($suggestions)) {

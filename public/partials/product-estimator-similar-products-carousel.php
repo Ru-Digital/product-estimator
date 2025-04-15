@@ -9,7 +9,7 @@ if (isset($product['id']) && !empty($product['id'])):
         );
 
         // Get similar products for this specific product (limited to 5 for better carousel)
-        $similar_products = $similar_products_module->get_similar_products_for_display($product['id'], 5);
+        $similar_products = $similar_products_module->get_similar_products_for_display($product['id'], 10);
 
         // Filter out products already in this room
         if (!empty($similar_products) && !empty($room['products'])):

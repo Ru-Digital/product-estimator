@@ -811,7 +811,7 @@ class ModalManager {
         // Refresh estimates list
         this.loadEstimatesList()
           .then(() => {
-            // After refreshing the list, find the room
+            // After refreshing the list, find the room to keep it expanded
             const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
 
             if (roomElement) {
@@ -821,12 +821,6 @@ class ModalManager {
                 header.classList.add('active');
                 const content = roomElement.querySelector('.accordion-content');
                 if (content) content.style.display = 'block';
-              }
-
-              // Handle suggestions visibility ONLY for this specific room
-              const suggestions = roomElement.querySelector('.product-suggestions');
-              if (suggestions) {
-                suggestions.style.display = response.show_suggestions ? 'block' : 'none';
               }
             }
 
@@ -969,7 +963,6 @@ class ModalManager {
       console.log('No suggestion buttons found to bind');
     }
   }
-
   /**
    * Handle room removal
    * @param {string} estimateId - Estimate ID
@@ -2223,6 +2216,25 @@ class ModalManager {
         e.stopPropagation();
         this.log('Accordion header clicked via delegation');
         this.toggleAccordionItem(header);
+
+        // After toggling, initialize carousels in this accordion
+        const accordionItem = header.closest('.accordion-item');
+        if (accordionItem) {
+          const content = accordionItem.querySelector('.accordion-content');
+          if (content && window.getComputedStyle(content).display !== 'none') {
+            // Content is visible, initialize carousels
+            setTimeout(() => {
+              // Find carousels within this content - check for both types
+              const carousels = content.querySelectorAll('.suggestions-carousel');
+              if (carousels.length) {
+                this.log(`Found ${carousels.length} carousels in opened accordion`);
+                if (typeof initSuggestionsCarousels === 'function') {
+                  initSuggestionsCarousels();
+                }
+              }
+            }, 100);
+          }
+        }
       }
     };
 
@@ -2267,6 +2279,13 @@ class ModalManager {
               if (typeof jQuery !== 'undefined') {
                 jQuery(content).show(300);
               }
+
+              // Initialize carousels in the expanded room
+              setTimeout(() => {
+                if (typeof initSuggestionsCarousels === 'function') {
+                  initSuggestionsCarousels();
+                }
+              }, 150);
             }
 
             // Scroll to the expanded room
@@ -2285,7 +2304,6 @@ class ModalManager {
       }
     }
   }
-
 
   /**
    * Toggle accordion item expansion with enhanced animation

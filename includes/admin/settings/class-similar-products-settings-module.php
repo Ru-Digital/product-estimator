@@ -719,7 +719,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      * @return   array                   Array of product data for display
      * @since    1.0.5
      */
-    public function get_similar_products_for_display($product_id, $limit = 5)
+    public function get_similar_products_for_display($product_id, $limit = 10)
     {
         $similar_ids = $this->find_similar_products($product_id);
 

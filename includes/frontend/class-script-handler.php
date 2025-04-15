@@ -86,11 +86,20 @@ class ScriptHandler {
             'all'
         );
 
+        wp_register_style(
+            $this->plugin_name . '-carousel',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-similar-products.css',
+            array(),
+            $this->version,
+            'all'
+        );
+
         // Always load styles on all pages
         wp_enqueue_style($this->plugin_name . '-public');
         wp_enqueue_style($this->plugin_name . '-modal');
         wp_enqueue_style($this->plugin_name . '-dialog');
         wp_enqueue_style($this->plugin_name . '-carousel');
+        wp_enqueue_style($this->plugin_name . '-similar-products');
     }
 
     /**
@@ -137,11 +146,13 @@ class ScriptHandler {
                         'product' => __('Remove Product', 'product-estimator'),
                         'room' => __('Delete Room', 'product-estimator'),
                         'estimate' => __('Delete Estimate', 'product-estimator'),
+                        'replace' => __('Confirm Replacement', 'product-estimator'),
                     ),
                     'dialog_messages' => array(
                         'product' => __('Are you sure you want to remove this product from the room?', 'product-estimator'),
                         'room' => __('Are you sure you want to delete this room and all its products?', 'product-estimator'),
                         'estimate' => __('Are you sure you want to delete this estimate and all its rooms?', 'product-estimator'),
+                        'replace' => __('Are you sure you want to replace "%old%" with "%new%"?', 'product-estimator'),
                     ),
                 )
             )

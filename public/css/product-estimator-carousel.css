@@ -1,9 +1,13 @@
 /* Enhanced Carousel Styling for Suggested Products */
 .product-suggestions {
-  margin: 20px 0;
-  position: relative;
-  border-top: 1px solid #eee;
+  margin-top: 20px;
   padding-top: 15px;
+  border-top: 1px dashed #e5e5e5;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
 }
 
 .product-suggestions h5 {

@@ -1,7 +1,8 @@
 /**
- * Enhanced Carousel for Suggested Products
+ * Enhanced Carousel for Suggested and Similar Products with strict width containment
  * - Properly handles multiple carousels on the same page
  * - Each carousel operates independently
+ * - Strictly maintains container width constraints
  */
 class SuggestionsCarousel {
   constructor(container) {
@@ -15,7 +16,10 @@ class SuggestionsCarousel {
     this.prevBtn = container.querySelector('.suggestions-nav.prev');
     this.nextBtn = container.querySelector('.suggestions-nav.next');
 
-    console.log(`[${this.id}] Initializing carousel with ${this.items.length} items`);
+    // Determine if this is a similar products carousel
+    this.isSimilarProducts = container.classList.contains('similar-products-carousel');
+
+    console.log(`[${this.id}] Initializing carousel with ${this.items.length} items, isSimilarProducts: ${this.isSimilarProducts}`);
 
     // Only proceed if we have all necessary elements
     if (!this.itemsContainer || !this.items.length) {
@@ -26,24 +30,89 @@ class SuggestionsCarousel {
     // Store instance reference on the container
     container.carouselInstance = this;
 
-    // Configuration
-    this.itemWidth = 215; // Width of item + gap (200px + 15px)
+    // Configuration based on carousel type
+    if (this.isSimilarProducts) {
+      // Similar products - fixed small size
+      this.itemWidth = 130;
+      this.itemGap = 5;
+    } else {
+      // Regular suggestions - larger items
+      this.itemWidth = 200;
+      this.itemGap = 15;
+    }
+
     this.visibleItems = this.calculateVisibleItems();
     this.currentPosition = 0;
     this.maxPosition = Math.max(0, this.items.length - this.visibleItems);
 
+    // Set up container and items
+    this.setContainerSize();
+
     // Initialize
     this.bindEvents();
     this.updateButtons();
-
-    console.log(`[${this.id}] Carousel initialized with ${this.items.length} items, ${this.visibleItems} visible`);
   }
+
+  getContainerWidth() {
+    if (this.isSimilarProducts) {
+      // For similar products, find the product-item width
+      const parentItem = this.container.closest('.product-item');
+      if (parentItem) {
+        const parentWidth = parentItem.offsetWidth;
+        console.log(`[${this.id}] Found product-item parent: ${parentWidth}px`);
+        return parentWidth - 10; // Subtract a small buffer
+      }
+    }
+
+    // Default - use container's width
+    const containerWidth = this.container.offsetWidth;
+    console.log(`[${this.id}] Using container width: ${containerWidth}px`);
+    return containerWidth;
+  }
+
+
+  setContainerSize() {
+    // Force consistent sizing for similar products
+    if (this.isSimilarProducts) {
+      // Set max-width explicitly for similar products
+      const parentEl = this.container.closest('.product-item');
+      if (parentEl) {
+        const parentWidth = parentEl.offsetWidth;
+        console.log(`[${this.id}] Similar products parent width: ${parentWidth}px`);
+        this.container.style.maxWidth = `${parentWidth - 10}px`;
+      }
+
+      // Ensure all items have consistent width
+      Array.from(this.items).forEach(item => {
+        item.style.width = `${this.itemWidth}px`;
+        item.style.flexShrink = '0';
+        item.style.flexGrow = '0';
+      });
+
+      // Set container width and gap
+      this.itemsContainer.style.gap = `${this.itemGap}px`;
+    }
+  }
+
 
   calculateVisibleItems() {
-    // Calculate how many items can be visible based on container width
-    const containerWidth = this.container.clientWidth - 80; // Subtract padding
-    return Math.max(1, Math.floor(containerWidth / this.itemWidth));
+    // Calculate available width
+    const containerWidth = this.getContainerWidth();
+    const availableWidth = containerWidth - 50; // Allow space for navigation
+
+    // Fixed item widths for similar products carousel
+    const effectiveItemWidth = this.isSimilarProducts ? 130 : this.itemWidth;
+    const effectiveGap = this.isSimilarProducts ? 5 : this.itemGap;
+
+    // Calculate how many items fit
+    const totalItemWidth = effectiveItemWidth + effectiveGap;
+    const visibleItems = Math.max(1, Math.floor(availableWidth / totalItemWidth));
+
+    console.log(`[${this.id}] Container width: ${containerWidth}px, available: ${availableWidth}px, visible items: ${visibleItems}`);
+
+    return visibleItems;
   }
+
 
   bindEvents() {
     // Create handler functions with proper 'this' binding
@@ -99,6 +168,9 @@ class SuggestionsCarousel {
   }
 
   handleResize() {
+    // Update container size on resize
+    this.setContainerSize();
+
     // Recalculate values on resize
     const oldVisibleItems = this.visibleItems;
     this.visibleItems = this.calculateVisibleItems();
@@ -115,10 +187,57 @@ class SuggestionsCarousel {
     this.updateButtons();
   }
 
+  /**
+   * Get available width for carousel items considering all parent containers
+   * This method makes sure we respect the product-item width
+   */
+  getAvailableWidth() {
+    // Start with the basic container width
+    let availableWidth = this.container.clientWidth - 50; // Subtract arrow space
+
+    // Check if this is a similar products carousel (within product-item)
+    if (this.isSimilarProducts) {
+      // Find the product-item parent to ensure we respect its width
+      let parentProductItem = this.container.closest('.product-item');
+      if (parentProductItem) {
+        // Get product-item width and consider its padding
+        const productItemStyles = window.getComputedStyle(parentProductItem);
+        const productItemWidth = parentProductItem.clientWidth -
+          (parseFloat(productItemStyles.paddingLeft) +
+            parseFloat(productItemStyles.paddingRight));
+
+        // Use the minimum of container width or product-item width
+        availableWidth = Math.min(availableWidth, productItemWidth);
+
+        console.log(`Product item width: ${productItemWidth}px, Available width: ${availableWidth}px`);
+      }
+    } else {
+      // For suggested products - respect the accordion item width
+      let accordionContent = this.container.closest('.accordion-content');
+      if (accordionContent) {
+        const accordionWidth = accordionContent.clientWidth - 30; // Allow for padding
+        availableWidth = Math.min(availableWidth, accordionWidth);
+        console.log(`Accordion content width: ${accordionWidth}px, Available width: ${availableWidth}px`);
+      }
+    }
+
+    return Math.max(availableWidth, 100); // Ensure minimum reasonable width
+  }
+
+
   updatePosition() {
     if (!this.itemsContainer) return;
 
-    const translateX = -this.currentPosition * this.itemWidth;
+    // Calculate total width of an item including gap
+    const totalItemWidth = this.itemWidth + this.itemGap;
+
+    // Calculate translateX value
+    const translateX = -this.currentPosition * totalItemWidth;
+
+    // Set transition for smooth movement
+    this.itemsContainer.style.transition = 'transform 0.3s ease';
+
+    // Apply the transform
     this.itemsContainer.style.transform = `translateX(${translateX}px)`;
 
     console.log(`[${this.id}] Position updated to ${this.currentPosition}, translateX: ${translateX}px`);
@@ -177,7 +296,7 @@ class SuggestionsCarousel {
 function initSuggestionsCarousels() {
   console.log('Initializing all suggestion carousels');
 
-  // Find all carousel containers
+  // Find all carousel containers (both types: suggestions and similar products)
   const carouselContainers = document.querySelectorAll('.suggestions-carousel');
   console.log(`Found ${carouselContainers.length} carousel containers`);
 
@@ -233,7 +352,7 @@ function handleAccordionClick(e) {
     if (window.getComputedStyle(content).display !== 'none') {
       console.log('Accordion opened, checking for carousels to initialize');
 
-      // Find carousels within this accordion content
+      // Find carousels within this accordion content - check for both types
       const carousels = content.querySelectorAll('.suggestions-carousel');
       console.log(`Found ${carousels.length} carousels in opened accordion`);
 

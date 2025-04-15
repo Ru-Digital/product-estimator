@@ -27,7 +27,7 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
 
 <?php if (!empty($estimates)): ?>
     <?php foreach ($estimates as $estimate_id => $estimate): ?>
-        <div class="estimate-section" data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
+        <div class="estimate-section<?php echo isset($_GET['expand']) ? '' : ' collapsed'; ?>" data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
             <!-- For the estimate header -->
             <div class="estimate-header">
                 <h3 class="estimate-name">
@@ -56,6 +56,7 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                     <span class="dashicons dashicons-trash"></span>
                 </button>
             </div>
+            <div class="estimate-content">
 
             <div id="rooms">
                 <div class="room-header">
@@ -340,6 +341,9 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                     </p>
                 <?php endif; ?>
             </div>
+            </div>
+        </div>
+
             <div class="estimate-actions">
                 <ul>
                     <li>
@@ -366,7 +370,6 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                     </li>
                 </ul>
             </div>
-        </div>
     <?php endforeach; ?>
 <?php else: ?>
     <div class="no-estimates">

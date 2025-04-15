@@ -2203,6 +2203,92 @@ class ModalManager {
     }
   }
 
+  /**
+   * Initialize estimate accordions
+   * This should be added as a new method in the ModalManager class
+   */
+  initializeEstimateAccordions() {
+    if (!this.modal) {
+      console.error('[ModalManager] Modal not available for initializing estimate accordions');
+      return;
+    }
+
+    // Find all estimate headers
+    const estimateHeaders = this.modal.querySelectorAll('.estimate-header');
+
+    if (estimateHeaders.length === 0) {
+      this.log('No estimate headers found for accordion initialization');
+      return;
+    }
+
+    this.log(`Initializing ${estimateHeaders.length} estimate accordions`);
+
+    // Remove any existing event listener with same function
+    if (this.estimateAccordionHandler) {
+      this.estimatesList.removeEventListener('click', this.estimateAccordionHandler);
+    }
+
+    // Create a new handler function and store reference for later removal
+    this.estimateAccordionHandler = (e) => {
+      const header = e.target.closest('.estimate-header');
+      if (header && !e.target.closest('.remove-estimate')) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        this.log('Estimate header clicked via delegation');
+        this.toggleEstimateAccordion(header);
+      }
+    };
+
+    // Add the event listener to the estimates list container
+    if (this.estimatesList) {
+      this.estimatesList.addEventListener('click', this.estimateAccordionHandler);
+      this.log('Estimate accordion event handler attached');
+    }
+  }
+
+  /**
+   * Toggle estimate accordion expansion
+   * @param {HTMLElement} header - The estimate header element
+   */
+  toggleEstimateAccordion(header) {
+    this.log('Toggling estimate accordion');
+
+    // Find the estimate section
+    const estimateSection = header.closest('.estimate-section');
+    if (!estimateSection) {
+      this.log('No parent estimate section found');
+      return;
+    }
+
+    // Toggle collapsed class
+    estimateSection.classList.toggle('collapsed');
+
+    // Find the content container
+    const content = estimateSection.querySelector('.estimate-content');
+    if (!content) {
+      this.log('No estimate content found');
+      return;
+    }
+
+    // Toggle display of content with animation if jQuery is available
+    if (estimateSection.classList.contains('collapsed')) {
+      this.log('Collapsing estimate content');
+      if (typeof jQuery !== 'undefined') {
+        jQuery(content).slideUp(200);
+      } else {
+        content.style.display = 'none';
+      }
+    } else {
+      this.log('Expanding estimate content');
+      if (typeof jQuery !== 'undefined') {
+        jQuery(content).slideDown(200);
+      } else {
+        content.style.display = 'block';
+      }
+    }
+  }
+
 
   /**
    * Initialize accordion functionality for rooms with better multi-estimate support
@@ -2490,6 +2576,9 @@ class ModalManager {
     // Initialize accordions with auto-expansion if a room ID is specified
     this.initializeAccordions(expandRoomId, expandEstimateId);
 
+    // Initialize estimate accordions
+    this.initializeEstimateAccordions();
+
     this.initializeCarousels();
 
     // Bind the replace product buttons
@@ -2497,7 +2586,6 @@ class ModalManager {
 
     // Also bind the suggested product buttons again
     this.bindSuggestedProductButtons();
-
   }
 
 

@@ -123,15 +123,46 @@
 
 
 .estimate-section {
-  margin-bottom: 30px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 30px;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  overflow: hidden;
 }
 
 .estimate-name {
-  font-size: 16px;
-  margin-bottom: 15px;
+  margin: 0;
+  font-size: 1.2rem;
   color: #00833F;
+  flex-grow: 1;
+}
+
+
+
+.estimate-header:after {
+  content: "\f142"; /* Dashicons minus */
+  font-family: dashicons;
+  font-size: 20px;
+  color: #00833F;
+  transition: transform 0.2s ease;
+}
+
+.estimate-section.collapsed .estimate-header:after {
+  content: "\f140"; /* Dashicons plus */
+}
+
+
+
+
+
+.estimate-content {
+  padding: 15px;
+  display: block;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.estimate-section.collapsed .estimate-content {
+  display: none;
 }
 
 /* Room Header */
@@ -724,10 +755,22 @@ body.modal-open {
 
 /* Estimate header with delete button */
 .estimate-header {
+  background-color: #f3f3f3;
+  padding: 12px 15px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 15px;
+  border-bottom: 1px solid transparent;
+  transition: background-color 0.2s;
+}
+
+.estimate-header:hover {
+  background-color: #ebebeb;
+}
+
+.estimate-section.collapsed .estimate-header {
+  border-bottom-color: transparent;
 }
 
 .estimate-header h3 {
@@ -744,6 +787,7 @@ body.modal-open {
   align-items: center;
   justify-content: center;
   transition: color 0.2s ease;
+  z-index: 5;
 }
 
 .remove-estimate:hover {

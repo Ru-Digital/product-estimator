@@ -734,6 +734,7 @@ class ModalManager {
 
             // Initialize accordions with a slight delay to ensure DOM is updated
             setTimeout(() => {
+
               // Update estimate-specific data attributes if needed
               if (expandEstimateId) {
                 const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${expandEstimateId}"]`);
@@ -760,7 +761,12 @@ class ModalManager {
                 }
               }
 
-              this.updateEstimatesList(expandRoomId, expandEstimateId);
+              // Initialize accordions with a slight delay to ensure DOM is updated
+              setTimeout(() => {
+                this.updateEstimatesList(expandRoomId, expandEstimateId);
+                // ... existing code ...
+              }, 150);
+
               this.initializeAccordions(expandRoomId, expandEstimateId);
 
               // Bind all the necessary event handlers
@@ -1937,7 +1943,7 @@ class ModalManager {
 
           console.log(`Product added to estimate ${responseEstimateId}, room ${responseRoomId}`);
 
-          // Refresh estimates list and show it
+          // Refresh estimates list and expand the specific estimate
           this.loadEstimatesList(responseRoomId, responseEstimateId)
             .then(() => {
               // Show success message
@@ -1947,6 +1953,8 @@ class ModalManager {
               this.log('Error refreshing estimates list:', error);
               this.showError('Error refreshing estimates list. Please try again.');
             });
+
+
         } else {
           // Handle error response
           const errorMessage = response.data?.message || 'Error adding product to room. Please try again.';
@@ -2204,48 +2212,73 @@ class ModalManager {
   }
 
   /**
-   * Initialize estimate accordions
-   * This should be added as a new method in the ModalManager class
+   * Initialize estimate accordions with support for auto-expanding specific estimates
+   * @param {string|null} expandRoomId - Optional room ID to auto-expand
+   * @param {string|null} expandEstimateId - Optional estimate ID to auto-expand
    */
-  initializeEstimateAccordions() {
-    if (!this.modal) {
-      console.error('[ModalManager] Modal not available for initializing estimate accordions');
-      return;
-    }
-
+  initializeEstimateAccordions(expandRoomId = null, expandEstimateId = null) {
     // Find all estimate headers
-    const estimateHeaders = this.modal.querySelectorAll('.estimate-header');
+    const estimateHeaders = document.querySelectorAll('.estimate-header');
 
-    if (estimateHeaders.length === 0) {
-      this.log('No estimate headers found for accordion initialization');
-      return;
-    }
-
-    this.log(`Initializing ${estimateHeaders.length} estimate accordions`);
-
-    // Remove any existing event listener with same function
-    if (this.estimateAccordionHandler) {
-      this.estimatesList.removeEventListener('click', this.estimateAccordionHandler);
-    }
-
-    // Create a new handler function and store reference for later removal
-    this.estimateAccordionHandler = (e) => {
-      const header = e.target.closest('.estimate-header');
-      if (header && !e.target.closest('.remove-estimate')) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        this.log('Estimate header clicked via delegation');
-        this.toggleEstimateAccordion(header);
+    estimateHeaders.forEach(header => {
+      // Remove existing event listeners to prevent duplicates
+      if (header._estimateAccordionHandler) {
+        header.removeEventListener('click', header._estimateAccordionHandler);
       }
-    };
 
-    // Add the event listener to the estimates list container
-    if (this.estimatesList) {
-      this.estimatesList.addEventListener('click', this.estimateAccordionHandler);
-      this.log('Estimate accordion event handler attached');
+      // Create new handler
+      header._estimateAccordionHandler = (e) => {
+        // Ignore clicks on buttons inside the header
+        if (e.target.closest('.remove-estimate')) {
+          return;
+        }
+
+        // Toggle collapsed class on the estimate section
+        const estimateSection = header.closest('.estimate-section');
+        if (estimateSection) {
+          estimateSection.classList.toggle('collapsed');
+
+          // Use slide animation if jQuery is available
+          if (typeof jQuery !== 'undefined') {
+            const content = estimateSection.querySelector('.estimate-content');
+            if (content) {
+              if (estimateSection.classList.contains('collapsed')) {
+                jQuery(content).slideUp(200);
+              } else {
+                jQuery(content).slideDown(200);
+              }
+            }
+          }
+        }
+      };
+
+      // Add the event listener
+      header.addEventListener('click', header._estimateAccordionHandler);
+    });
+
+    // Auto-expand specified estimate if provided
+    if (expandEstimateId) {
+      const estimateToExpand = document.querySelector(`.estimate-section[data-estimate-id="${expandEstimateId}"]`);
+      if (estimateToExpand && estimateToExpand.classList.contains('collapsed')) {
+        // Remove collapsed class
+        estimateToExpand.classList.remove('collapsed');
+
+        // Show content with animation if jQuery is available
+        if (typeof jQuery !== 'undefined') {
+          const content = estimateToExpand.querySelector('.estimate-content');
+          if (content) {
+            jQuery(content).slideDown(200);
+          }
+        }
+
+        // Log the auto-expansion for debugging
+        if (window.productEstimatorVars && window.productEstimatorVars.debug) {
+          console.log(`Auto-expanded estimate ID: ${expandEstimateId}`);
+        }
+      }
     }
   }
+
 
   /**
    * Toggle estimate accordion expansion
@@ -2573,11 +2606,13 @@ class ModalManager {
     // Update all suggestions visibility
     this.updateAllSuggestionsVisibility();
 
+    // Initialize estimate accordions
+    this.initializeEstimateAccordions(expandRoomId, expandEstimateId);
+
     // Initialize accordions with auto-expansion if a room ID is specified
     this.initializeAccordions(expandRoomId, expandEstimateId);
 
-    // Initialize estimate accordions
-    this.initializeEstimateAccordions();
+
 
     this.initializeCarousels();
 

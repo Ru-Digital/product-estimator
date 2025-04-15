@@ -86,11 +86,20 @@ class ScriptHandler {
             'all'
         );
 
+        wp_register_style(
+            $this->plugin_name . '-carousel',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-similar-products.css',
+            array(),
+            $this->version,
+            'all'
+        );
+
         // Always load styles on all pages
         wp_enqueue_style($this->plugin_name . '-public');
         wp_enqueue_style($this->plugin_name . '-modal');
         wp_enqueue_style($this->plugin_name . '-dialog');
         wp_enqueue_style($this->plugin_name . '-carousel');
+        wp_enqueue_style($this->plugin_name . '-similar-products');
     }
 
     /**

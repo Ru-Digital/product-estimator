@@ -26,7 +26,7 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
 ?>
 
 <?php if (!empty($estimates)): ?>
-    <?php foreach($estimates as $estimate_id => $estimate): ?>
+    <?php foreach ($estimates as $estimate_id => $estimate): ?>
         <div class="estimate-section" data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
             <!-- For the estimate header -->
             <div class="estimate-header">
@@ -67,8 +67,9 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
 
                 <?php if (!empty($estimate['rooms'])): ?>
                     <div class="accordion">
-                        <?php foreach($estimate['rooms'] as $room_id => $room): ?>
-                            <div class="accordion-item" data-room-id="<?php echo esc_attr($room_id); ?>" data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
+                        <?php foreach ($estimate['rooms'] as $room_id => $room): ?>
+                            <div class="accordion-item" data-room-id="<?php echo esc_attr($room_id); ?>"
+                                 data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
                                 <div class="accordion-header-wrapper">
                                     <button class="accordion-header">
                                         <span class="room-name"><?php echo esc_html($room['name']); ?>: </span>
@@ -104,30 +105,33 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                     <?php if (!empty($room['products'])): ?>
                                         <div class="room-products">
                                             <h5><?php esc_html_e('Products', 'product-estimator'); ?></h5>
-                                            <ul class="product-list">
-                                                <?php foreach($room['products'] as $product_index => $product): ?>
-
-                                                    <li class="product-item <?php echo isset($product['type']) && $product['type'] === 'note' ? 'product-note-item' : ''; ?>" data-product-index="<?php echo esc_attr($product_index); ?>">
-                                                        <?php if (isset($product['type']) && $product['type'] === 'note'): ?>
-                                                            <!-- Note Item Display -->
-                                                            <div class="note-details-wrapper">
-                                                                <div class="note-details">
-                                <span class="note-icon">
-                                    <span class="dashicons dashicons-sticky"></span>
-                                </span>
-                                                                    <div class="note-content">
-                                                                        <?php echo wpautop(esc_html($product['note_text'])); ?>
+                                            <div class="product-list">
+                                                <?php foreach ($room['products'] as $product_index => $product): ?>
+                                                    <div
+                                                        class="product-item <?php echo isset($product['type']) && $product['type'] === 'note' ? 'product-note-item' : ''; ?>"
+                                                        data-product-index="<?php echo esc_attr($product_index); ?>">
+                                                        <div class="product-wrapper">
+                                                            <?php if (isset($product['type']) && $product['type'] === 'note'): ?>
+                                                                <!-- Note Item Display -->
+                                                                <div class="note-details-wrapper">
+                                                                    <div class="note-details">
+                <span class="note-icon">
+                    <span class="dashicons dashicons-sticky"></span>
+                </span>
+                                                                        <div class="note-content">
+                                                                            <?php echo wpautop(esc_html($product['note_text'])); ?>
+                                                                        </div>
+                                                                        <button class="remove-product"
+                                                                                data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
+                                                                                data-room-id="<?php echo esc_attr($room_id); ?>"
+                                                                                data-product-index="<?php echo esc_attr($product_index); ?>"
+                                                                                title="<?php esc_attr_e('Remove Product', 'product-estimator'); ?>">
+                                                                            <span
+                                                                                class="dashicons dashicons-trash"></span>
+                                                                        </button>
                                                                     </div>
-                                                                    <button class="remove-product"
-                                                                            data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
-                                                                            data-room-id="<?php echo esc_attr($room_id); ?>"
-                                                                            data-product-index="<?php echo esc_attr($product_index); ?>"
-                                                                            title="<?php esc_attr_e('Remove Product', 'product-estimator'); ?>">
-                                                                        <span class="dashicons dashicons-trash"></span>
-                                                                    </button>
                                                                 </div>
-                                                            </div>
-                                                        <?php else: ?>
+                                                            <?php else: ?>
                                                             <!-- Regular Product Item Display -->
                                                             <?php if (!empty($product['image'])): ?>
                                                                 <img src="<?php echo esc_url($product['image']); ?>"
@@ -136,9 +140,9 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                                             <?php endif; ?>
                                                             <div class="product-details-wrapper">
                                                                 <div class="product-details">
-                                <span class="product-name">
-                                    <?php echo esc_html($product['name']); ?>
-                                </span>
+                <span class="product-name">
+                    <?php echo esc_html($product['name']); ?>
+                </span>
 
                                                                     <?php
                                                                     // Room area display - ensure values are floats
@@ -147,60 +151,60 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                                                     $room_area = isset($product['room_area']) ? floatval($product['room_area']) : ($room_width * $room_length);
                                                                     ?>
                                                                     <span class="product-room-area">
-                                    <?php echo sprintf(__('Area: %.2f m²', 'product-estimator'), $room_area); ?>
-                                </span>
+                    <?php echo sprintf(__('Area: %.2f m²', 'product-estimator'), $room_area); ?>
+                </span>
 
 
-<?php if (isset($product['min_price']) && isset($product['max_price'])): ?>
-                                                                    <?php
-                                                                    // Apply markup adjustment - subtract from min, add to max
-                                                                    $min_price = floatval($product['min_price']);
-                                                                    $max_price = floatval($product['max_price']);
-                                                                    $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'sqm';
+                                                                    <?php if (isset($product['min_price']) && isset($product['max_price'])): ?>
+                                                                        <?php
+                                                                        // Apply markup adjustment - subtract from min, add to max
+                                                                        $min_price = floatval($product['min_price']);
+                                                                        $max_price = floatval($product['max_price']);
+                                                                        $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'sqm';
 
-                                                                    // Calculate adjusted prices with markup
-                                                                    $min_price_adjusted = $min_price * (1 - ($default_markup / 100));
-                                                                    $max_price_adjusted = $max_price * (1 + ($default_markup / 100));
+                                                                        // Calculate adjusted prices with markup
+                                                                        $min_price_adjusted = $min_price * (1 - ($default_markup / 100));
+                                                                        $max_price_adjusted = $max_price * (1 + ($default_markup / 100));
 
-                                                                    // Calculate totals based on pricing method
-                                                                    if ($pricing_method === 'sqm') {
-                                                                        // Per square meter - multiply by room area
-                                                                        $min_total = $min_price_adjusted * $room_area;
-                                                                        $max_total = $max_price_adjusted * $room_area;
-                                                                        $unit_price_text = '/m²'; // Show unit price for sqm pricing
-                                                                    } else {
-                                                                        // Fixed pricing - use price directly
-                                                                        $min_total = $min_price_adjusted;
-                                                                        $max_total = $max_price_adjusted;
-                                                                        $unit_price_text = ''; // No unit price for fixed pricing
-                                                                    }
-                                                                    ?>
+                                                                        // Calculate totals based on pricing method
+                                                                        if ($pricing_method === 'sqm') {
+                                                                            // Per square meter - multiply by room area
+                                                                            $min_total = $min_price_adjusted * $room_area;
+                                                                            $max_total = $max_price_adjusted * $room_area;
+                                                                            $unit_price_text = '/m²'; // Show unit price for sqm pricing
+                                                                        } else {
+                                                                            // Fixed pricing - use price directly
+                                                                            $min_total = $min_price_adjusted;
+                                                                            $max_total = $max_price_adjusted;
+                                                                            $unit_price_text = ''; // No unit price for fixed pricing
+                                                                        }
+                                                                        ?>
 
-                                                                    <?php if (round($min_total, 2) === round($max_total, 2)): ?>
-                                                                    <span class="product-price">
-            <?php echo wc_price($min_total); ?>
-        </span>
-                                                                    <?php else: ?>
-                                                                    <span class="product-price">
-            <?php echo wc_price($min_total); ?> - <?php echo wc_price($max_total); ?>
-        </span>
-                                                                    <?php endif; ?>
+                                                                        <?php if (round($min_total, 2) === round($max_total, 2)): ?>
+                                                                            <span class="product-price">
+                            <?php echo wc_price($min_total); ?>
+                        </span>
+                                                                        <?php else: ?>
+                                                                            <span class="product-price">
+                            <?php echo wc_price($min_total); ?> - <?php echo wc_price($max_total); ?>
+                        </span>
+                                                                        <?php endif; ?>
 
-                                                                    <!-- Unit price display - only for sqm pricing method -->
-                                                                    <?php if ($pricing_method === 'sqm'): ?>
-                                                                    <span class="product-unit-price">
-            <?php
-            if (round($min_price_adjusted, 2) === round($max_price_adjusted, 2)) {
-                echo sprintf(__('Unit Price: %s/m²', 'product-estimator'),
-                    wc_price($min_price_adjusted));
-            } else {
-                echo sprintf(__('Unit Price: %s - %s/m²', 'product-estimator'),
-                    wc_price($min_price_adjusted),
-                    wc_price($max_price_adjusted));
-            }
-            ?>
-        </span>
-                                                                    <?php endif; ?>
+                                                                        <!-- Unit price display - only for sqm pricing method -->
+                                                                        <?php if ($pricing_method === 'sqm'): ?>
+                                                                            <span class="product-unit-price">
+                            <?php
+                            if (round($min_price_adjusted, 2) === round($max_price_adjusted, 2)) {
+                                echo sprintf(__('Unit Price: %s/m²', 'product-estimator'),
+                                    wc_price($min_price_adjusted));
+                            } else {
+                                echo sprintf(__('Unit Price: %s - %s/m²', 'product-estimator'),
+                                    wc_price($min_price_adjusted),
+                                    wc_price($max_price_adjusted));
+                            }
+                            ?>
+                        </span>
+                                                                        <?php endif; ?>
                                                                     <?php endif; ?>
 
                                                                     <button class="remove-product"
@@ -218,15 +222,15 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                                                     ?>
                                                                     <div class="product-includes">
                                                                         <div class="product-includes-header">
-
-                                                                            <span class="product-includes-title"><?php esc_html_e('Includes', 'product-estimator'); ?></span>
+                                                                            <span
+                                                                                class="product-includes-title"><?php esc_html_e('Includes', 'product-estimator'); ?></span>
                                                                         </div>
                                                                         <div class="product-includes-items">
-                                                                            <?php foreach($product['additional_products'] as $additional_product): ?>
+                                                                            <?php foreach ($product['additional_products'] as $additional_product): ?>
                                                                                 <div class="include-item">
-                                                                                      <span class="product-includes-icon">
-                                        <span class="dashicons dashicons-plus-alt"></span>
-                                    </span>
+                                <span class="product-includes-icon">
+                                    <span class="dashicons dashicons-plus-alt"></span>
+                                </span>
                                                                                     <div class="include-item-name">
                                                                                         <?php echo esc_html($additional_product['name']); ?>
                                                                                     </div>
@@ -239,12 +243,15 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
 
                                                                                             if (round($add_min_total, 2) === round($add_max_total, 2)):
                                                                                                 ?>
-                                                                                                <div class="include-item-total-price">
+                                                                                                <div
+                                                                                                    class="include-item-total-price">
                                                                                                     <?php echo wc_price($add_min_total); ?>
                                                                                                 </div>
                                                                                             <?php else: ?>
-                                                                                                <div class="include-item-total-price">
-                                                                                                    <?php echo wc_price($add_min_total); ?> - <?php echo wc_price($add_max_total); ?>
+                                                                                                <div
+                                                                                                    class="include-item-total-price">
+                                                                                                    <?php echo wc_price($add_min_total); ?>
+                                                                                                    - <?php echo wc_price($add_max_total); ?>
                                                                                                 </div>
                                                                                             <?php endif; ?>
                                                                                         <?php endif; ?>
@@ -257,11 +264,13 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
 
                                                                                             if (round($add_min_price_unit, 2) === round($add_max_price_unit, 2)):
                                                                                                 ?>
-                                                                                                <div class="include-item-unit-price">
+                                                                                                <div
+                                                                                                    class="include-item-unit-price">
                                                                                                     <?php echo sprintf(__('%s/m²', 'product-estimator'), wc_price($add_min_price_unit)); ?>
                                                                                                 </div>
                                                                                             <?php else: ?>
-                                                                                                <div class="include-item-unit-price">
+                                                                                                <div
+                                                                                                    class="include-item-unit-price">
                                                                                                     <?php echo sprintf(__('%s - %s/m²', 'product-estimator'),
                                                                                                         wc_price($add_min_price_unit),
                                                                                                         wc_price($add_max_price_unit)); ?>
@@ -281,15 +290,15 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                                                     ?>
                                                                     <div class="product-includes product-notes">
                                                                         <div class="product-includes-header">
-
-                                                                            <span class="product-includes-title"><?php esc_html_e('Notes', 'product-estimator'); ?></span>
+                                                                            <span
+                                                                                class="product-includes-title"><?php esc_html_e('Notes', 'product-estimator'); ?></span>
                                                                         </div>
                                                                         <div class="product-includes-items">
-                                                                            <?php foreach($product['additional_notes'] as $additional_note): ?>
+                                                                            <?php foreach ($product['additional_notes'] as $additional_note): ?>
                                                                                 <div class="include-item note-item">
-                                                                                    <span class="product-includes-icon">
-                                        <span class="dashicons dashicons-sticky"></span>
-                                    </span>
+                                <span class="product-includes-icon">
+                                    <span class="dashicons dashicons-sticky"></span>
+                                </span>
                                                                                     <div class="include-item-note">
                                                                                         <?php echo wpautop(esc_html($additional_note['note_text'])); ?>
                                                                                     </div>
@@ -298,67 +307,29 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                                                         </div>
                                                                     </div>
                                                                 <?php endif; ?>
+
+
+                                                                <?php endif; ?>
+
                                                             </div>
-                                                        <?php endif; ?>
-                                                    </li>
+                                                        </div>
+                                                        <?php
+                                                        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-similar-products-carousel.php';
+                                                        ?>
+
+
+                                                    </div>
+
                                                 <?php endforeach; ?>
-                                            </ul>
+                                            </div>
                                         </div>
                                     <?php else: ?>
                                         <p class="no-products">
                                             <?php esc_html_e('No products added to this room yet.', 'product-estimator'); ?>
                                         </p>
                                     <?php endif; ?>
+                                    <?php include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-suggestions-carousel.php'; ?>
 
-                                    <?php // Display product suggestions inside the accordion content ?>
-                                    <?php if (!empty($room['product_suggestions'])): ?>
-                                        <div class="product-suggestions">
-                                            <h5><?php esc_html_e('Suggested Products', 'product-estimator'); ?></h5>
-
-                                            <?php if (count($room['product_suggestions']) > 0): ?>
-                                                <div class="suggestions-carousel">
-                                                    <!-- Navigation Arrows -->
-                                                    <div class="suggestions-nav prev">
-                                                        <span class="dashicons dashicons-arrow-left-alt2"></span>
-                                                    </div>
-                                                    <div class="suggestions-nav next">
-                                                        <span class="dashicons dashicons-arrow-right-alt2"></span>
-                                                    </div>
-
-                                                    <!-- Suggestions Container -->
-                                                    <div class="suggestions-container">
-                                                        <?php foreach ($room['product_suggestions'] as $suggestion): ?>
-                                                            <div class="suggestion-item">
-                                                                <div class="suggestion-image">
-                                                                    <?php if (!empty($suggestion['image'])): ?>
-                                                                        <img src="<?php echo esc_url($suggestion['image']); ?>" alt="<?php echo esc_attr($suggestion['name']); ?>">
-                                                                    <?php else: ?>
-                                                                        <div class="no-image"></div>
-                                                                    <?php endif; ?>
-                                                                </div>
-                                                                <div class="suggestion-details">
-                                                                    <div class="suggestion-name"><?php echo esc_html($suggestion['name']); ?></div>
-                                                                    <div class="suggestion-price"><?php echo $suggestion['formatted_price']; ?></div>
-                                                                </div>
-                                                                <div class="suggestion-actions">
-                                                                    <button class="add-suggestion-to-room"
-                                                                            data-product-id="<?php echo esc_attr($suggestion['id']); ?>"
-                                                                            data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
-                                                                            data-room-id="<?php echo esc_attr($room_id); ?>">
-                                                                        <?php esc_html_e('Add', 'product-estimator'); ?>
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        <?php endforeach; ?>
-                                                    </div>
-                                                </div>
-                                            <?php else: ?>
-                                                <div class="no-suggestions">
-                                                    <?php esc_html_e('No product suggestions available for this room.', 'product-estimator'); ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endif; ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -389,7 +360,8 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                         <a class="schedule-designer-estimate"
                            data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
                            title="<?php esc_attr_e('Schedule a free discussion with a designer', 'product-estimator'); ?>">
-                            <span class="dashicons dashicons-businessman"></span> Schedule a free discussion with a designer
+                            <span class="dashicons dashicons-businessman"></span> Schedule a free discussion with a
+                            designer
                         </a>
                     </li>
                 </ul>

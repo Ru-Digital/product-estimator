@@ -213,11 +213,19 @@ class ModalManager {
   initializeCarousels() {
     console.log('Initializing carousels in modal');
 
-    // First try to find all carousel containers in the modal
+    // Find all carousel containers in the modal (both suggestions and similar products)
     const carouselContainers = this.modal.querySelectorAll('.suggestions-carousel');
 
     if (carouselContainers.length > 0) {
       console.log(`Found ${carouselContainers.length} carousel containers in modal`);
+
+      // Count each type for better debugging
+      const suggestionCarousels = this.modal.querySelectorAll('.product-suggestions .suggestions-carousel').length;
+      const similarProductCarousels = this.modal.querySelectorAll('.product-similar-products .suggestions-carousel').length;
+
+      console.log(`Carousel types: ${suggestionCarousels} suggestion carousels, ${similarProductCarousels} similar product carousels`);
+
+      // Initialize all carousels
       initSuggestionsCarousels();
     } else {
       console.log('No carousel containers found in modal');

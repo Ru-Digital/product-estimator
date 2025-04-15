@@ -70,7 +70,7 @@ if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\Produc
                             $suggestions[$suggestion_id] = [
                                 'id' => $suggestion_id,
                                 'name' => $product_obj->get_name(),
-                                'price' => $product_obj->get_price(),
+                                'price' => product_estimator_round_price($product_obj->get_price()),
                                 'image' => wp_get_attachment_image_url($product_obj->get_image_id(), 'thumbnail') ?: '',
                                 'pricing_method' => $pricing_method
                             ];
@@ -123,8 +123,8 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                         $pricing_method = isset($suggestion['pricing_method']) ? $suggestion['pricing_method'] : 'sqm';
 
                         // Use min_price and max_price if available, otherwise use regular price
-                        $min_price = isset($suggestion['min_price']) ? floatval($suggestion['min_price']) : floatval($suggestion['price']);
-                        $max_price = isset($suggestion['max_price']) ? floatval($suggestion['max_price']) : floatval($suggestion['price']);
+                        $min_price = product_estimator_round_price(isset($suggestion['min_price']) ? floatval($suggestion['min_price']) : floatval($suggestion['price']));
+                        $max_price = product_estimator_round_price(isset($suggestion['max_price']) ? floatval($suggestion['max_price']) : floatval($suggestion['price']));
 
                         // If min and max are the same, create a small range based on markup
                         if ($min_price == $max_price) {

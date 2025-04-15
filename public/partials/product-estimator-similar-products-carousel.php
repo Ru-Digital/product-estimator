@@ -66,19 +66,19 @@ if (isset($product['id']) && !empty($product['id'])):
                                     $pricing_method = isset($similar['pricing_method']) ? $similar['pricing_method'] : 'sqm';
 
                                     // Use min_price and max_price if available, otherwise use regular price
-                                    $min_price = isset($similar['min_price']) ? floatval($similar['min_price']) : floatval($similar['price']);
-                                    $max_price = isset($similar['max_price']) ? floatval($similar['max_price']) : floatval($similar['price']);
+                                    $min_price = product_estimator_round_price(isset($similar['min_price']) ? floatval($similar['min_price']) : floatval($similar['price']));
+                                    $max_price = product_estimator_round_price(isset($similar['max_price']) ? floatval($similar['max_price']) : floatval($similar['price']));
 
                                     // If min and max are the same, create a small range based on markup
                                     if ($min_price == $max_price) {
                                         $base_price = $min_price;
                                         // Apply markup adjustment - subtract from min, add to max
-                                        $min_price_adjusted = $base_price * (1 - ($default_markup / 100));
-                                        $max_price_adjusted = $base_price * (1 + ($default_markup / 100));
+                                        $min_price_adjusted = product_estimator_round_price($base_price * (1 - ($default_markup / 100)));
+                                        $max_price_adjusted = product_estimator_round_price($base_price * (1 + ($default_markup / 100)));
                                     } else {
                                         // Apply markup adjustment - already a range
-                                        $min_price_adjusted = $min_price * (1 - ($default_markup / 100));
-                                        $max_price_adjusted = $max_price * (1 + ($default_markup / 100));
+                                        $min_price_adjusted = product_estimator_round_price($min_price * (1 - ($default_markup / 100)));
+                                        $max_price_adjusted = product_estimator_round_price($max_price * (1 + ($default_markup / 100)));
                                     }
 
                                     // Determine if we need to show a price range or single price

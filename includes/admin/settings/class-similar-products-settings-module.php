@@ -751,8 +751,8 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
                 'id' => $id,
                 'name' => $product->get_name(),
                 'price' => $product->get_price(), // Default WC price
-                'min_price' => $price_data['min_price'],
-                'max_price' => $price_data['max_price'],
+                'min_price' => product_estimator_round_price($price_data['min_price']),
+                'max_price' => product_estimator_round_price($price_data['max_price']),
                 'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail') ?: '',
                 'url' => get_permalink($id),
                 'pricing_method' => $pricing_method,
@@ -776,7 +776,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
         }
 
         // Get base price from WooCommerce
-        $base_price = floatval($product->get_price());
+        $base_price = product_estimator_round_price(floatval($product->get_price()));
 
         if ($source === 'website' || !function_exists('wc_get_product')) {
             // Use WooCommerce price
@@ -798,8 +798,8 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
                         foreach ($pricing_data['prices'] as $price_item) {
                             if ($price_item['product_id'] == $product_id) {
                                 // Add NetSuite pricing data to product
-                                $price_data['min_price'] = $price_item['min_price'];
-                                $price_data['max_price'] = $price_item['max_price'];
+                                $price_data['min_price'] = product_estimator_round_price($price_item['min_price']);
+                                $price_data['max_price'] = product_estimator_round_price($price_item['max_price']);
                                 break;
                             }
                         }
@@ -808,16 +808,16 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
 
                 // If NetSuite data not found, set defaults based on WC price
                 if ($price_data['min_price'] === 0) {
-                    $price_data['min_price'] = $base_price;
-                    $price_data['max_price'] = $base_price;
+                    $price_data['min_price'] = product_estimator_round_price($base_price);
+                    $price_data['max_price'] = product_estimator_round_price($base_price);
                 }
             } catch (\Exception $e) {
                 // If NetSuite API fails, log the error but continue with base price
                 error_log('NetSuite API Error: ' . $e->getMessage());
 
                 // Set default price range from WooCommerce price
-                $price_data['min_price'] = $base_price;
-                $price_data['max_price'] = $base_price;
+                $price_data['min_price'] = product_estimator_round_price($base_price);
+                $price_data['max_price'] = product_estimator_round_price($base_price);
             }
         }
 

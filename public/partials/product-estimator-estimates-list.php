@@ -152,7 +152,7 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
                                                                     $room_area = isset($product['room_area']) ? floatval($product['room_area']) : ($room_width * $room_length);
                                                                     ?>
                                                                     <span class="product-room-area">
-                    <?php echo sprintf(__('Area: %.2f m²', 'product-estimator'), $room_area); ?>
+                    <?php echo sprintf(__('%.2f m²', 'product-estimator'), $room_area); ?>
                 </span>
 
 
@@ -193,18 +193,18 @@ $default_markup = isset($options['default_markup']) ? floatval($options['default
 
                                                                         <!-- Unit price display - only for sqm pricing method -->
                                                                         <?php if ($pricing_method === 'sqm'): ?>
-                                                                            <span class="product-unit-price">
-                            <?php
-                            if (round($min_price_adjusted, 2) === round($max_price_adjusted, 2)) {
-                                echo sprintf(__('Unit Price: %s/m²', 'product-estimator'),
-                                    wc_price($min_price_adjusted));
-                            } else {
-                                echo sprintf(__('Unit Price: %s - %s/m²', 'product-estimator'),
-                                    wc_price($min_price_adjusted),
-                                    wc_price($max_price_adjusted));
-                            }
-                            ?>
-                        </span>
+<!--                                                                            <span class="product-unit-price">-->
+<!--                            --><?php
+//                            if (round($min_price_adjusted, 2) === round($max_price_adjusted, 2)) {
+//                                echo sprintf(__('Unit Price: %s/m²', 'product-estimator'),
+//                                    wc_price($min_price_adjusted));
+//                            } else {
+//                                echo sprintf(__('Unit Price: %s - %s/m²', 'product-estimator'),
+//                                    wc_price($min_price_adjusted),
+//                                    wc_price($max_price_adjusted));
+//                            }
+//                            ?>
+<!--                        </span>-->
                                                                         <?php endif; ?>
                                                                     <?php endif; ?>
 

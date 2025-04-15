@@ -115,6 +115,12 @@ function product_estimator_is_debug() {
     return defined('WP_DEBUG') && WP_DEBUG;
 }
 
+function product_estimator_round_price($price) {
+    // Round to the nearest whole number (full amount)
+    return round($price);
+}
+
+
 /**
  * Write to debug log if enabled
  *

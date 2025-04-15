@@ -2180,9 +2180,8 @@ class ModalManager {
       formData: Object.fromEntries(formData)
     });
 
-    if (!estimateId) {
+    if (estimateId === undefined || estimateId === null || estimateId === '') {
       this.showError('No estimate selected for this room.');
-      console.error('Missing estimate ID for room submission');
       return;
     }
 

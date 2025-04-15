@@ -176,3 +176,92 @@
     font-size: 11px;
   }
 }
+
+
+/**
+ * Product Includes Toggle Styling
+ * This adds show/hide functionality for the product includes section
+ */
+
+/* Includes toggle button styling */
+.product-includes-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f8f8;
+  border: none;
+  border-top: 1px dashed #e5e5e5;
+  width: 100%;
+  padding: 8px 0;
+  margin-top: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #555;
+  transition: background-color 0.2s ease;
+}
+
+.product-includes-toggle:hover {
+  background-color: #f0f0f0;
+}
+
+.product-includes-toggle .toggle-icon {
+  margin-left: 5px;
+  transition: transform 0.3s ease;
+}
+
+/* Rotate icon when includes are expanded */
+.product-includes-toggle.expanded .toggle-icon {
+  /*transform: rotate(180deg);*/
+}
+
+/* Container for includes section */
+.includes-container {
+  display: none; /* Hidden by default */
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.includes-container.visible {
+  display: block;
+}
+
+/* Style the includes container */
+.includes-container .product-includes {
+  margin-top: 0;
+  padding-top: 10px;
+  border-top: none;
+}
+
+/* Ensure the toggle is only shown when there are includes */
+.product-item:not(.has-includes) .product-includes-toggle {
+  display: none;
+}
+
+/* Add visual distinction between similar products and includes toggle */
+.product-includes-toggle {
+  background-color: #f5f5f5;
+  border-top: 1px dashed #e0e0e0;
+}
+
+.product-includes-toggle:hover {
+  background-color: #ebebeb;
+}
+
+/* Loading state */
+.product-includes-toggle.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.product-includes-toggle.loading::after {
+  content: "...";
+  animation: loading-dots 1.5s infinite;
+}
+
+/* Mobile responsiveness */
+@media screen and (max-width: 768px) {
+  .product-includes-toggle {
+    padding: 6px 0;
+    font-size: 11px;
+  }
+}

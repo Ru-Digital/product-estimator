@@ -90,7 +90,7 @@ class ScriptHandler {
         );
 
         wp_register_style(
-            $this->plugin_name . '-carousel',
+            $this->plugin_name . '-similar-products',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-similar-products.css',
             array(),
             $this->version,

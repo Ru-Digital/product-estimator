@@ -127,7 +127,7 @@
 }
 
 .add-suggestion-to-room:hover {
-  background-color: #333; /* Lighter blue on hover */
+  background-color: #00833F; /* Lighter blue on hover */
 }
 
 .add-suggestion-to-room.loading {

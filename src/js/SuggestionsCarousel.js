@@ -84,7 +84,7 @@ class SuggestionsCarousel {
 
       // Ensure all items have consistent width
       Array.from(this.items).forEach(item => {
-        item.style.width = `${this.itemWidth}px`;
+        // item.style.width = `${this.itemWidth}px`;
         item.style.flexShrink = '0';
         item.style.flexGrow = '0';
       });

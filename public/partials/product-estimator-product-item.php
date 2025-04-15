@@ -4,8 +4,8 @@
  *
  * This template displays a product item with:
  * - Main product details always visible
- * - "Includes" section always visible
- * - "Notes" section can be toggled (hidden by default)
+ * - "Includes" section can be toggled (expanded by default)
+ * - "Notes" section can be toggled (expanded by default)
  * - "Similar Products" section can be toggled (hidden by default)
  *
  * @package    Product_Estimator
@@ -18,11 +18,15 @@ $has_similar_products = isset($product['id']) && !empty($product['id']);
 // Check if product has notes that need to be toggled
 $has_notes = !empty($product['additional_notes']) && is_array($product['additional_notes']);
 
+// Check if product has includes that need to be toggled
+$has_includes = !empty($product['additional_products']) && is_array($product['additional_products']);
+
 // Add classes for styling
 $product_class = 'product-item';
 $product_class .= isset($product['type']) && $product['type'] === 'note' ? ' product-note-item' : '';
 $product_class .= $has_similar_products ? ' has-similar-products' : '';
 $product_class .= $has_notes ? ' has-notes' : '';
+$product_class .= $has_includes ? ' has-includes' : '';
 ?>
 
 <div class="<?php echo esc_attr($product_class); ?>" data-product-index="<?php echo esc_attr($product_index); ?>">
@@ -123,63 +127,69 @@ $product_class .= $has_notes ? ' has-notes' : '';
     </div>
 
     <?php
-    // Display additional products if available - ALWAYS VISIBLE
-    if (!empty($product['additional_products']) && is_array($product['additional_products'])):
+    // Display additional products if available - NOW TOGGLEABLE
+    if ($has_includes):
         ?>
-        <div class="product-includes">
-            <div class="product-includes-header">
-                <span class="product-includes-title"><?php esc_html_e('Includes', 'product-estimator'); ?></span>
-            </div>
-            <div class="product-includes-items">
-                <?php foreach ($product['additional_products'] as $additional_product): ?>
-                    <div class="include-item">
-                        <span class="product-includes-icon">
-                            <span class="dashicons dashicons-plus-alt"></span>
-                        </span>
-                        <div class="include-item-name">
-                            <?php echo esc_html($additional_product['name']); ?>
-                        </div>
-                        <div class="include-item-prices">
-                            <?php if (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])): ?>
-                                <?php
-                                // Apply markup to additional product prices for total
-                                $add_min_total = floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
-                                $add_max_total = floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
+        <!-- Includes Toggle Button -->
+        <button class="product-includes-toggle expanded">
+            <?php esc_html_e('Product Includes', 'product-estimator'); ?>
+            <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+        </button>
 
-                                if (round($add_min_total, 2) === round($add_max_total, 2)):
-                                    ?>
-                                    <div class="include-item-total-price">
-                                        <?php echo wc_price($add_min_total); ?>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="include-item-total-price">
-                                        <?php echo wc_price($add_min_total); ?> - <?php echo wc_price($add_max_total); ?>
-                                    </div>
+        <!-- Includes Container - TOGGLEABLE -->
+        <div class="includes-container visible" style="display: block;">
+            <div class="product-includes">
+                <div class="product-includes-items">
+                    <?php foreach ($product['additional_products'] as $additional_product): ?>
+                        <div class="include-item">
+                            <span class="product-includes-icon">
+                                <span class="dashicons dashicons-plus-alt"></span>
+                            </span>
+                            <div class="include-item-name">
+                                <?php echo esc_html($additional_product['name']); ?>
+                            </div>
+                            <div class="include-item-prices">
+                                <?php if (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])): ?>
+                                    <?php
+                                    // Apply markup to additional product prices for total
+                                    $add_min_total = floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
+                                    $add_max_total = floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
+
+                                    if (round($add_min_total, 2) === round($add_max_total, 2)):
+                                        ?>
+                                        <div class="include-item-total-price">
+                                            <?php echo wc_price($add_min_total); ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="include-item-total-price">
+                                            <?php echo wc_price($add_min_total); ?> - <?php echo wc_price($add_max_total); ?>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php endif; ?>
-                            <?php endif; ?>
 
-                            <?php if (isset($additional_product['min_price']) && isset($additional_product['max_price'])): ?>
-                                <?php
-                                // Apply markup to unit prices
-                                $add_min_price_unit = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
-                                $add_max_price_unit = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
+                                <?php if (isset($additional_product['min_price']) && isset($additional_product['max_price'])): ?>
+                                    <?php
+                                    // Apply markup to unit prices
+                                    $add_min_price_unit = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
+                                    $add_max_price_unit = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
 
-                                if (round($add_min_price_unit, 2) === round($add_max_price_unit, 2)):
-                                    ?>
-                                    <div class="include-item-unit-price">
-                                        <?php echo sprintf(__('%s/m²', 'product-estimator'), wc_price($add_min_price_unit)); ?>
-                                    </div>
-                                <?php else: ?>
-                                    <div class="include-item-unit-price">
-                                        <?php echo sprintf(__('%s - %s/m²', 'product-estimator'),
-                                            wc_price($add_min_price_unit),
-                                            wc_price($add_max_price_unit)); ?>
-                                    </div>
+                                    if (round($add_min_price_unit, 2) === round($add_max_price_unit, 2)):
+                                        ?>
+                                        <div class="include-item-unit-price">
+                                            <?php echo sprintf(__('%s/m²', 'product-estimator'), wc_price($add_min_price_unit)); ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="include-item-unit-price">
+                                            <?php echo sprintf(__('%s - %s/m²', 'product-estimator'),
+                                                wc_price($add_min_price_unit),
+                                                wc_price($add_max_price_unit)); ?>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php endif; ?>
-                            <?php endif; ?>
+                            </div>
                         </div>
-                    </div>
-                <?php endforeach; ?>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
     <?php endif; ?>
@@ -197,9 +207,6 @@ $product_class .= $has_notes ? ' has-notes' : '';
         <!-- Notes Container - TOGGLEABLE -->
         <div class="notes-container visible" style="display: block;">
             <div class="product-includes product-notes">
-<!--                <div class="product-includes-header">-->
-<!--                    <span class="product-includes-title">--><?php //esc_html_e('Notes', 'product-estimator'); ?><!--</span>-->
-<!--                </div>-->
                 <div class="product-includes-items">
                     <?php foreach ($product['additional_notes'] as $additional_note): ?>
                         <div class="include-item note-item">
@@ -218,13 +225,13 @@ $product_class .= $has_notes ? ' has-notes' : '';
 
     <?php if ($has_similar_products): ?>
         <!-- Similar Products Toggle Button -->
-        <button class="product-details-toggle expanded">
+        <button class="product-details-toggle">
             <?php esc_html_e('Similar Products', 'product-estimator'); ?>
-            <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+            <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span>
         </button>
 
-        <!-- Similar Products Container - TOGGLEABLE -->
-        <div class="similar-products-container visible" style="display: block;">
+        <!-- Similar Products Container - TOGGLEABLE (Hidden by default) -->
+        <div class="similar-products-container" style="display: none;">
             <?php include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-similar-products-carousel.php'; ?>
         </div>
     <?php endif; ?>

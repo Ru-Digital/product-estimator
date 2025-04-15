@@ -1126,7 +1126,7 @@ body.modal-open {
 
 .include-item.note-item {
   padding: 8px 10px;
-  background-color: #f3f3f3;
+  /*background-color: #f3f3f3;*/
   /*border-left: 2px solid #00833F;*/
   margin-top: 5px;
   justify-content: start;

@@ -16,18 +16,22 @@ class ProductDetailsToggle {
       selectors: {
         productToggleButton: '.product-details-toggle',
         notesToggleButton: '.product-notes-toggle',
+        includesToggleButton: '.product-includes-toggle', // Add new selector
         productItem: '.product-item',
         similarProductsContainer: '.similar-products-container',
         productIncludes: '.product-includes',
         similarProducts: '.product-similar-products',
         productNotes: '.product-notes',
-        notesContainer: '.notes-container'
+        notesContainer: '.notes-container',
+        includesContainer: '.includes-container' // Add new selector
       },
       i18n: {
         showProducts: 'Similar Products',
         hideProducts: 'Similar Products',
         showNotes: 'Product Notes',
         hideNotes: 'Product Notes',
+        showIncludes: 'Product Includes', // Add new translation
+        hideIncludes: 'Product Includes', // Add new translation
         loading: 'Loading...'
       }
     }, config);
@@ -113,9 +117,10 @@ class ProductDetailsToggle {
   setup() {
     this.log('Setting up product details toggles');
 
-    // Prepare the DOM structure for both toggle types
+    // Prepare the DOM structure for all toggle types
     this.prepareProductsToggle();
     this.prepareNotesToggle();
+    this.prepareIncludesToggle(); // Add call to new method
 
     // Then bind events to all toggle buttons
     this.bindEvents();
@@ -123,7 +128,6 @@ class ProductDetailsToggle {
     // Re-initialize carousels after setup
     this.initializeAllCarousels();
   }
-
   /**
    * Prepare the DOM for similar products toggle
    */
@@ -356,9 +360,32 @@ class ProductDetailsToggle {
       button._toggleBound = true;
     });
 
+    // Bind includes toggle buttons
+    const includesToggleButtons = document.querySelectorAll(this.config.selectors.includesToggleButton);
+    this.log(`Found ${includesToggleButtons.length} includes toggle buttons to bind`);
+
+    includesToggleButtons.forEach(button => {
+      // Skip if already bound
+      if (button._toggleBound) {
+        return;
+      }
+
+      // Store reference to handler for potential removal
+      button._toggleHandler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.toggleIncludes(button);
+      };
+
+      // Add event listener
+      button.addEventListener('click', button._toggleHandler);
+
+      // Mark as bound to avoid duplicate handlers
+      button._toggleBound = true;
+    });
+
     this.log('All toggle events bound');
   }
-
   /**
    * Toggle the visibility of similar products
    * @param {HTMLElement} toggleButton - The button that was clicked
@@ -506,6 +533,155 @@ class ProductDetailsToggle {
       window.initSuggestionsCarousels();
     } else if (typeof initSuggestionsCarousels === 'function') {
       initSuggestionsCarousels();
+    }
+  }
+
+  /**
+   * Prepare the DOM for includes toggle
+   */
+  prepareIncludesToggle() {
+    // Find all product items
+    const productItems = document.querySelectorAll(this.config.selectors.productItem);
+    this.log(`Found ${productItems.length} product items to process for includes toggle`);
+
+    productItems.forEach(productItem => {
+      // Skip if already processed for includes toggle
+      if (productItem.classList.contains('includes-toggle-processed')) {
+        return;
+      }
+
+      // Find product includes section
+      const includesSection = productItem.querySelector(this.config.selectors.productIncludes);
+
+      // Check if product has includes to toggle
+      if (!includesSection) {
+        this.log('No includes section found for product item, skipping', productItem);
+        return; // No includes to toggle
+      }
+
+      this.log('Found includes section, processing', includesSection);
+
+      // Mark the product item as having includes
+      productItem.classList.add('has-includes');
+
+      // Check if container already exists
+      let includesContainer = productItem.querySelector('.includes-container');
+
+      // If no container exists but there is an includes section, we need to create one
+      if (!includesContainer) {
+        this.log('Creating new includes container');
+        // Create a container to wrap includes
+        includesContainer = document.createElement('div');
+        includesContainer.className = 'includes-container visible'; // Add visible class
+
+        // Move includes into the container (if not already in one)
+        if (includesSection.parentNode !== includesContainer) {
+          // Clone the node to prevent reference issues
+          const clonedSection = includesSection.cloneNode(true);
+          includesContainer.appendChild(clonedSection);
+
+          // Remove the original from DOM
+          includesSection.parentNode.removeChild(includesSection);
+        }
+
+        // Add the container to the product item
+        productItem.appendChild(includesContainer);
+      }
+
+      // Add toggle button if not already present
+      let toggleButton = productItem.querySelector('.product-includes-toggle');
+      if (!toggleButton) {
+        this.log('Adding includes toggle button to product item');
+        toggleButton = document.createElement('button');
+
+        // Mark as expanded by default and use the proper class for the arrow
+        toggleButton.className = 'product-includes-toggle expanded';
+        toggleButton.setAttribute('data-toggle-type', 'includes');
+
+        // Use the hideIncludes text (since it's expanded) and arrow-up icon
+        toggleButton.innerHTML = `
+        ${this.config.i18n.hideIncludes || 'Product Includes'}
+        <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+      `;
+
+        // Insert button before the includes container
+        productItem.insertBefore(toggleButton, includesContainer);
+      } else {
+        // Make sure existing button has the correct state
+        toggleButton.classList.add('expanded');
+        const iconElement = toggleButton.querySelector('.toggle-icon');
+        if (iconElement) {
+          iconElement.classList.remove('dashicons-arrow-down-alt2');
+          iconElement.classList.add('dashicons-arrow-up-alt2');
+        }
+      }
+
+      // Initially show the includes container (expanded by default)
+      includesContainer.style.display = 'block';
+      includesContainer.classList.add('visible');
+
+      // Mark as processed to avoid duplicating
+      productItem.classList.add('includes-toggle-processed');
+      this.log('Product item processed for includes toggle');
+    });
+  }
+
+  /**
+   * Toggle the visibility of product includes
+   * @param {HTMLElement} toggleButton - The button that was clicked
+   */
+  toggleIncludes(toggleButton) {
+    // Find parent product item
+    const productItem = toggleButton.closest(this.config.selectors.productItem);
+
+    if (!productItem) {
+      this.log('Product item not found for includes toggle button');
+      return;
+    }
+
+    // Find includes container
+    const includesContainer = productItem.querySelector('.includes-container');
+
+    if (!includesContainer) {
+      this.log('Includes container not found');
+      return;
+    }
+
+    // Toggle expanded state
+    const isExpanded = toggleButton.classList.contains('expanded');
+    this.log(`Includes toggle clicked, current expanded state: ${isExpanded}`);
+
+    // Get the icon element
+    const iconElement = toggleButton.querySelector('.toggle-icon');
+
+    if (isExpanded) {
+      // Hide includes
+      includesContainer.classList.remove('visible');
+      includesContainer.style.display = 'none';
+      toggleButton.classList.remove('expanded');
+
+      // Update icon - directly manipulate the classes instead of relying on HTML replacement
+      if (iconElement) {
+        iconElement.classList.remove('dashicons-arrow-up-alt2');
+        iconElement.classList.add('dashicons-arrow-down-alt2');
+      }
+
+      // Keep the text the same per design requirements
+      this.log('Includes hidden');
+    } else {
+      // Show includes
+      includesContainer.classList.add('visible');
+      includesContainer.style.display = 'block';
+      toggleButton.classList.add('expanded');
+
+      // Update icon - directly manipulate the classes
+      if (iconElement) {
+        iconElement.classList.remove('dashicons-arrow-down-alt2');
+        iconElement.classList.add('dashicons-arrow-up-alt2');
+      }
+
+      // Keep the text the same per design requirements
+      this.log('Includes shown');
     }
   }
 

@@ -168,10 +168,6 @@ function initializeProductDetailsToggle(debugMode) {
           toggleButton.classList.remove('expanded');
           similarProductsContainer.style.display = 'none';
           similarProductsContainer.classList.remove('visible');
-          toggleButton.innerHTML = toggleButton.innerHTML.replace(
-            'Similar Products',
-            'Similar Products'
-          );
           const icon = toggleButton.querySelector('.toggle-icon');
           if (icon) {
             icon.classList.remove('dashicons-arrow-up-alt2');
@@ -182,10 +178,6 @@ function initializeProductDetailsToggle(debugMode) {
           toggleButton.classList.add('expanded');
           similarProductsContainer.style.display = 'block';
           similarProductsContainer.classList.add('visible');
-          toggleButton.innerHTML = toggleButton.innerHTML.replace(
-            'Similar Products',
-            'Similar Products'
-          );
           const icon = toggleButton.querySelector('.toggle-icon');
           if (icon) {
             icon.classList.remove('dashicons-arrow-down-alt2');
@@ -220,10 +212,6 @@ function initializeProductDetailsToggle(debugMode) {
           toggleButton.classList.remove('expanded');
           notesContainer.style.display = 'none';
           notesContainer.classList.remove('visible');
-          toggleButton.innerHTML = toggleButton.innerHTML.replace(
-            'Product Notes',
-            'Product Notes'
-          );
           const icon = toggleButton.querySelector('.toggle-icon');
           if (icon) {
             icon.classList.remove('dashicons-arrow-up-alt2');
@@ -234,10 +222,6 @@ function initializeProductDetailsToggle(debugMode) {
           toggleButton.classList.add('expanded');
           notesContainer.style.display = 'block';
           notesContainer.classList.add('visible');
-          toggleButton.innerHTML = toggleButton.innerHTML.replace(
-            'Product Notes',
-            'Product Notes'
-          );
           const icon = toggleButton.querySelector('.toggle-icon');
           if (icon) {
             icon.classList.remove('dashicons-arrow-down-alt2');
@@ -248,7 +232,46 @@ function initializeProductDetailsToggle(debugMode) {
         e.preventDefault();
         e.stopPropagation();
       }
-    });
+
+    // Handle includes toggle
+    if (e.target.closest('.product-includes-toggle')) {
+      const toggleButton = e.target.closest('.product-includes-toggle');
+      const productItem = toggleButton.closest('.product-item');
+
+      if (!productItem) return;
+
+      const isExpanded = toggleButton.classList.contains('expanded');
+      const includesContainer = productItem.querySelector('.includes-container');
+
+      if (!includesContainer) return;
+
+      // Toggle state
+      if (isExpanded) {
+        // Hide container
+        toggleButton.classList.remove('expanded');
+        includesContainer.style.display = 'none';
+        includesContainer.classList.remove('visible');
+        const icon = toggleButton.querySelector('.toggle-icon');
+        if (icon) {
+          icon.classList.remove('dashicons-arrow-up-alt2');
+          icon.classList.add('dashicons-arrow-down-alt2');
+        }
+      } else {
+        // Show container
+        toggleButton.classList.add('expanded');
+        includesContainer.style.display = 'block';
+        includesContainer.classList.add('visible');
+        const icon = toggleButton.querySelector('.toggle-icon');
+        if (icon) {
+          icon.classList.remove('dashicons-arrow-down-alt2');
+          icon.classList.add('dashicons-arrow-up-alt2');
+        }
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
 
     console.log('ProductDetailsToggle initialization complete');
   } catch (error) {

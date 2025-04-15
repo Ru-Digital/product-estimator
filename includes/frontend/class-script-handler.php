@@ -54,6 +54,9 @@ class ScriptHandler {
      */
     public function enqueue_styles() {
         // Always register and enqueue styles on all pages
+        wp_enqueue_style('dashicons');
+
+
         wp_register_style(
             $this->plugin_name . '-public',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-public.css',
@@ -150,6 +153,8 @@ class ScriptHandler {
                     'delete' => __('Delete', 'product-estimator'),
                     'remove' => __('Remove', 'product-estimator'),
                     'select_estimate' => __('-- Select an Estimate --', 'product-estimator'),
+                    'expand_accordion' => __('Expand', 'product-estimator'),
+                    'collapse_accordion' => __('Collapse', 'product-estimator'),
                     'delete_customer_details' => __('Delete Customer Details', 'product-estimator'),
                     'confirm_delete_details' => __('Are you sure you want to delete your saved details?', 'product-estimator'),
                     'saving' => __('Saving...', 'product-estimator'),

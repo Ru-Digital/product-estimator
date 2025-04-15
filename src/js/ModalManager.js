@@ -734,6 +734,7 @@ class ModalManager {
 
             // Initialize accordions with a slight delay to ensure DOM is updated
             setTimeout(() => {
+
               // Update estimate-specific data attributes if needed
               if (expandEstimateId) {
                 const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${expandEstimateId}"]`);
@@ -760,7 +761,12 @@ class ModalManager {
                 }
               }
 
-              this.updateEstimatesList(expandRoomId, expandEstimateId);
+              // Initialize accordions with a slight delay to ensure DOM is updated
+              setTimeout(() => {
+                this.updateEstimatesList(expandRoomId, expandEstimateId);
+                // ... existing code ...
+              }, 150);
+
               this.initializeAccordions(expandRoomId, expandEstimateId);
 
               // Bind all the necessary event handlers
@@ -1937,7 +1943,7 @@ class ModalManager {
 
           console.log(`Product added to estimate ${responseEstimateId}, room ${responseRoomId}`);
 
-          // Refresh estimates list and show it
+          // Refresh estimates list and expand the specific estimate
           this.loadEstimatesList(responseRoomId, responseEstimateId)
             .then(() => {
               // Show success message
@@ -1947,6 +1953,8 @@ class ModalManager {
               this.log('Error refreshing estimates list:', error);
               this.showError('Error refreshing estimates list. Please try again.');
             });
+
+
         } else {
           // Handle error response
           const errorMessage = response.data?.message || 'Error adding product to room. Please try again.';
@@ -2200,6 +2208,117 @@ class ModalManager {
         // Default behavior - show the estimates list
         this.forceElementVisibility(this.estimatesList);
         break;
+    }
+  }
+
+  /**
+   * Initialize estimate accordions with support for auto-expanding specific estimates
+   * @param {string|null} expandRoomId - Optional room ID to auto-expand
+   * @param {string|null} expandEstimateId - Optional estimate ID to auto-expand
+   */
+  initializeEstimateAccordions(expandRoomId = null, expandEstimateId = null) {
+    // Find all estimate headers
+    const estimateHeaders = document.querySelectorAll('.estimate-header');
+
+    estimateHeaders.forEach(header => {
+      // Remove existing event listeners to prevent duplicates
+      if (header._estimateAccordionHandler) {
+        header.removeEventListener('click', header._estimateAccordionHandler);
+      }
+
+      // Create new handler
+      header._estimateAccordionHandler = (e) => {
+        // Ignore clicks on buttons inside the header
+        if (e.target.closest('.remove-estimate')) {
+          return;
+        }
+
+        // Toggle collapsed class on the estimate section
+        const estimateSection = header.closest('.estimate-section');
+        if (estimateSection) {
+          estimateSection.classList.toggle('collapsed');
+
+          // Use slide animation if jQuery is available
+          if (typeof jQuery !== 'undefined') {
+            const content = estimateSection.querySelector('.estimate-content');
+            if (content) {
+              if (estimateSection.classList.contains('collapsed')) {
+                jQuery(content).slideUp(200);
+              } else {
+                jQuery(content).slideDown(200);
+              }
+            }
+          }
+        }
+      };
+
+      // Add the event listener
+      header.addEventListener('click', header._estimateAccordionHandler);
+    });
+
+    // Auto-expand specified estimate if provided
+    if (expandEstimateId) {
+      const estimateToExpand = document.querySelector(`.estimate-section[data-estimate-id="${expandEstimateId}"]`);
+      if (estimateToExpand && estimateToExpand.classList.contains('collapsed')) {
+        // Remove collapsed class
+        estimateToExpand.classList.remove('collapsed');
+
+        // Show content with animation if jQuery is available
+        if (typeof jQuery !== 'undefined') {
+          const content = estimateToExpand.querySelector('.estimate-content');
+          if (content) {
+            jQuery(content).slideDown(200);
+          }
+        }
+
+        // Log the auto-expansion for debugging
+        if (window.productEstimatorVars && window.productEstimatorVars.debug) {
+          console.log(`Auto-expanded estimate ID: ${expandEstimateId}`);
+        }
+      }
+    }
+  }
+
+
+  /**
+   * Toggle estimate accordion expansion
+   * @param {HTMLElement} header - The estimate header element
+   */
+  toggleEstimateAccordion(header) {
+    this.log('Toggling estimate accordion');
+
+    // Find the estimate section
+    const estimateSection = header.closest('.estimate-section');
+    if (!estimateSection) {
+      this.log('No parent estimate section found');
+      return;
+    }
+
+    // Toggle collapsed class
+    estimateSection.classList.toggle('collapsed');
+
+    // Find the content container
+    const content = estimateSection.querySelector('.estimate-content');
+    if (!content) {
+      this.log('No estimate content found');
+      return;
+    }
+
+    // Toggle display of content with animation if jQuery is available
+    if (estimateSection.classList.contains('collapsed')) {
+      this.log('Collapsing estimate content');
+      if (typeof jQuery !== 'undefined') {
+        jQuery(content).slideUp(200);
+      } else {
+        content.style.display = 'none';
+      }
+    } else {
+      this.log('Expanding estimate content');
+      if (typeof jQuery !== 'undefined') {
+        jQuery(content).slideDown(200);
+      } else {
+        content.style.display = 'block';
+      }
     }
   }
 
@@ -2487,8 +2606,13 @@ class ModalManager {
     // Update all suggestions visibility
     this.updateAllSuggestionsVisibility();
 
+    // Initialize estimate accordions
+    this.initializeEstimateAccordions(expandRoomId, expandEstimateId);
+
     // Initialize accordions with auto-expansion if a room ID is specified
     this.initializeAccordions(expandRoomId, expandEstimateId);
+
+
 
     this.initializeCarousels();
 
@@ -2497,7 +2621,6 @@ class ModalManager {
 
     // Also bind the suggested product buttons again
     this.bindSuggestedProductButtons();
-
   }
 
 

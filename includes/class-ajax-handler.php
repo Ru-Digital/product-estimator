@@ -265,6 +265,10 @@ class AjaxHandler {
      * Modified version of the AjaxHandler addProductToRoom method
      * Removes the reference to storing suggestions in session
      */
+    /**
+     * Modified version of the AjaxHandler addProductToRoom method
+     * Removes the reference to storing suggestions in session
+     */
     public function addProductToRoom() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
@@ -379,15 +383,23 @@ class AjaxHandler {
             $result = $this->prepareAndAddProductToRoom($product_id, $found_estimate_id, $found_room_id);
 
             if (!$result['success']) {
+                // Check if this is a duplicate product case
+                if (isset($result['duplicate']) && $result['duplicate']) {
+                    wp_send_json_error([
+                        'message' => $result['message'],
+                        'duplicate' => true,
+                        'estimate_id' => $result['estimate_id'],
+                        'room_id' => $result['room_id']
+                    ]);
+                    return;
+                }
+
                 wp_send_json_error([
                     'message' => $result['message'],
                     'debug' => $result['debug'] ?? null
                 ]);
                 return;
             }
-
-            // No longer need to store suggestions in session
-            // Template will generate them at render time
 
             wp_send_json_success([
                 'message' => $result['message'],
@@ -1284,6 +1296,28 @@ class AjaxHandler {
      */
     private function prepareAndAddProductToRoom($product_id, $estimate_id, $room_id, $room_width = null, $room_length = null) {
         try {
+            // First, check if this product already exists in the room
+            $estimate = $this->session->getEstimate($estimate_id);
+
+            if ($estimate && isset($estimate['rooms'][$room_id]['products'])) {
+                foreach ($estimate['rooms'][$room_id]['products'] as $existing_product) {
+                    // Check if this is a product (not a note) and has matching ID
+                    if (!isset($existing_product['type']) &&
+                        isset($existing_product['id']) &&
+                        intval($existing_product['id']) === intval($product_id)) {
+
+                        // Product already exists in this room
+                        return [
+                            'success' => false,
+                            'duplicate' => true,
+                            'message' => __('This product already exists in the selected room.', 'product-estimator'),
+                            'estimate_id' => $estimate_id,
+                            'room_id' => $room_id
+                        ];
+                    }
+                }
+            }
+
             // Get product data
             $product = wc_get_product($product_id);
             if (!$product) {
@@ -1587,7 +1621,6 @@ class AjaxHandler {
             ];
         }
     }
-
     /**
      * Get the appropriate pricing rule for a product
      *

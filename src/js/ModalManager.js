@@ -897,8 +897,18 @@ class ModalManager {
               this.showError('Error refreshing list. Please try again.');
             });
         } else {
-          // Handle error response
-          this.showError(response.data?.message || 'Error adding product. Please try again.');
+          // Check if this is a duplicate product error
+          if (response.data?.duplicate) {
+            console.log('Duplicate suggested product detected:', response.data);
+
+            // Show specific error message
+            this.showMessage(response.data.message || 'This product already exists in this room.', 'error');
+
+            // The room is already open, so we don't need to refresh or expand
+          } else {
+            // Handle error response
+            this.showError(response.data?.message || 'Error adding product. Please try again.');
+          }
         }
       },
       error: (jqXHR, textStatus, errorThrown) => {
@@ -1953,13 +1963,83 @@ class ModalManager {
               this.log('Error refreshing estimates list:', error);
               this.showError('Error refreshing estimates list. Please try again.');
             });
-
-
         } else {
-          // Handle error response
-          const errorMessage = response.data?.message || 'Error adding product to room. Please try again.';
-          this.showError(errorMessage);
-          console.error('AJAX error response:', response);
+          // Check if this is a duplicate product error
+          if (response.data?.duplicate) {
+            console.log('Duplicate product detected:', response.data);
+
+            // Hide selection forms
+            this.estimateSelection.style.display = 'none';
+            this.roomSelectionForm.style.display = 'none';
+
+            // Clear the product ID after handling
+            delete this.modal.dataset.productId;
+            this.currentProductId = null;
+
+            const duplicateEstimateId = response.data.estimate_id;
+            const duplicateRoomId = response.data.room_id;
+
+            // Show specific error message
+            this.showError(response.data.message || 'This product already exists in the selected room.');
+
+            // Load the estimates and expand the specific room where the product already exists
+            this.loadEstimatesList(duplicateRoomId, duplicateEstimateId)
+              .then(() => {
+                console.log('Estimates list refreshed to show duplicate product location');
+                setTimeout(() => {
+                  // Find and expand the estimate containing the room
+                  const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${duplicateEstimateId}"]`);
+                  if (estimateSection && estimateSection.classList.contains('collapsed')) {
+                    // Remove collapsed class
+                    estimateSection.classList.remove('collapsed');
+                    // Show content
+                    const estimateContent = estimateSection.querySelector('.estimate-content');
+                    if (estimateContent) {
+                      if (typeof jQuery !== 'undefined') {
+                        jQuery(estimateContent).slideDown(200);
+                      } else {
+                        estimateContent.style.display = 'block';
+                      }
+                    }
+                  }
+
+                  // Find and expand the room accordion
+                  const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${duplicateRoomId}"]`);
+                  if (roomElement) {
+                    const header = roomElement.querySelector('.accordion-header');
+                    if (header && !header.classList.contains('active')) {
+                      // Add active class
+                      header.classList.add('active');
+
+                      // Show room content
+                      const content = roomElement.querySelector('.accordion-content');
+                      if (content) {
+                        if (typeof jQuery !== 'undefined') {
+                          jQuery(content).slideDown(300, function() {
+                            // Scroll to room after animation completes
+                            roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          });
+                        } else {
+                          content.style.display = 'block';
+                          roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }
+                    } else {
+                      // Room is already expanded, just scroll to it
+                      roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }
+                }, 300); // Wa
+              })
+              .catch(error => {
+                console.error('Error refreshing estimates list:', error);
+              });
+          } else {
+            // Handle regular error response
+            const errorMessage = response.data?.message || 'Error adding product to room. Please try again.';
+            this.showError(errorMessage);
+            console.error('AJAX error response:', response);
+          }
         }
       },
       error: (jqXHR, textStatus, errorThrown) => {
@@ -1972,7 +2052,6 @@ class ModalManager {
       }
     });
   }
-
 
   /**
    * Handle new estimate form submission with improved loader handling

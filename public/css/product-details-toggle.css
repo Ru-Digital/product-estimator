@@ -1,0 +1,178 @@
+/**
+ * Product Details Toggle Styling
+ * This adds show/hide functionality for additional product details
+ * Note: "Includes" section remains visible while "Similar Products" can be toggled
+ */
+
+/* Toggle button styling */
+.product-details-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f8f8;
+  border: none;
+  border-top: 1px dashed #e5e5e5;
+  width: 100%;
+  padding: 8px 0;
+  margin-top: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #555;
+  transition: background-color 0.2s ease;
+}
+
+.product-details-toggle:hover {
+  background-color: #f0f0f0;
+}
+
+.product-details-toggle .toggle-icon {
+  margin-left: 5px;
+  transition: transform 0.3s ease;
+}
+
+/* Rotate icon when details are expanded */
+.product-details-toggle.expanded .toggle-icon {
+  /*transform: rotate(180deg);*/
+}
+
+/* Container for toggleable details (similar products) */
+.similar-products-container {
+  display: none; /* Hidden by default */
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.similar-products-container.visible {
+  display: block;
+}
+
+/* The "Includes" section should always be visible */
+.product-includes {
+  display: block !important; /* Force display */
+}
+
+/* Ensure the toggle is only shown when there are similar products */
+.product-item:not(.has-similar-products) .product-details-toggle {
+  display: none;
+}
+
+/* Loading state */
+.product-details-toggle.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.product-details-toggle.loading::after {
+  content: "...";
+  animation: loading-dots 1.5s infinite;
+}
+
+@keyframes loading-dots {
+  0% { content: "."; }
+  33% { content: ".."; }
+  66% { content: "..."; }
+}
+
+/* Mobile responsiveness */
+@media screen and (max-width: 768px) {
+  .product-details-toggle {
+    padding: 6px 0;
+    font-size: 11px;
+  }
+}
+
+
+/**
+ * Product Notes Toggle Styling
+ * This adds show/hide functionality for product notes section
+ */
+
+/* Notes toggle button styling */
+.product-notes-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8f8f8;
+  border: none;
+  border-top: 1px dashed #e5e5e5;
+  width: 100%;
+  padding: 8px 0;
+  margin-top: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #555;
+  transition: background-color 0.2s ease;
+}
+
+.product-notes-toggle:hover {
+  background-color: #f0f0f0;
+}
+
+.product-notes-toggle .toggle-icon {
+  margin-left: 5px;
+  transition: transform 0.3s ease;
+}
+
+/* Rotate icon when notes are expanded */
+.product-notes-toggle.expanded .toggle-icon {
+  /*transform: rotate(180deg);*/
+}
+
+/* Container for toggleable notes */
+.notes-container {
+  display: none; /* Hidden by default */
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  width: 100%;
+}
+
+.notes-container.visible {
+  display: block;
+}
+
+/* Style the notes container */
+.notes-container .product-notes {
+  margin-top: 0;
+  padding-top: 10px;
+  border-top: none;
+}
+
+/* Ensure the toggle is only shown when there are notes */
+.product-item:not(.has-notes) .product-notes-toggle {
+  display: none;
+}
+
+/* Add visual distinction between similar products and notes toggle */
+.product-notes-toggle {
+  background-color: #f5f5f5;
+  border-top: 1px dashed #e0e0e0;
+}
+
+.product-notes-toggle:hover {
+  background-color: #ebebeb;
+}
+
+/* Loading state */
+.product-notes-toggle.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.product-notes-toggle.loading::after {
+  content: "...";
+  animation: loading-dots 1.5s infinite;
+}
+
+@keyframes loading-dots {
+  0% { content: "."; }
+  33% { content: ".."; }
+  66% { content: "..."; }
+}
+
+/* Mobile responsiveness */
+@media screen and (max-width: 768px) {
+  .product-notes-toggle {
+    padding: 6px 0;
+    font-size: 11px;
+  }
+}

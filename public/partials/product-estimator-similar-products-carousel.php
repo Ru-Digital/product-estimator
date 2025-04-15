@@ -35,7 +35,7 @@ if (isset($product['id']) && !empty($product['id'])):
             ?>
             <!-- This is a similar products carousel - should be bound by product-item -->
             <div class="product-similar-products">
-                <h5><?php esc_html_e('Similar Products', 'product-estimator'); ?></h5>
+<!--                <h5>--><?php //esc_html_e('Similar Products', 'product-estimator'); ?><!--</h5>-->
 
                 <div class="suggestions-carousel similar-products-carousel">
                     <div class="suggestions-nav prev" aria-label="<?php esc_attr_e('Previous', 'product-estimator'); ?>">

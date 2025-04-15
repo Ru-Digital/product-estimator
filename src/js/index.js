@@ -8,6 +8,7 @@
 import EstimatorCore from './EstimatorCore';
 import ConfirmationDialog from './ConfirmationDialog';
 import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
+import ProductDetailsToggle from './ProductDetailsToggle';  // Import the default instance
 
 // Global initialization tracker - defined at the top level
 window._productEstimatorInitialized = window._productEstimatorInitialized || false;
@@ -104,9 +105,154 @@ function initEstimator(debugMode) {
     window.productEstimator.core = EstimatorCore;
     window.productEstimator.dialog = ConfirmationDialog; // Add dialog to global object
 
+    // Make ProductDetailsToggle available globally
+    window.productEstimator.detailsToggle = ProductDetailsToggle; // Add toggle module to global object
+
+    // Make initSuggestionsCarousels available globally for the toggle functionality
+    window.initSuggestionsCarousels = initSuggestionsCarousels;
+
+    // Initialize toggle functionality explicitly
+    initializeProductDetailsToggle(debugMode);
+
     console.log(`Product Estimator initialized${debugMode ? ' (debug mode)' : ''}`);
+
+    // Dispatch an event that initialization is complete
+    document.dispatchEvent(new CustomEvent('product_estimator_initialized'));
   } catch (e) {
     console.error('Error during EstimatorCore initialization:', e);
+  }
+}
+
+/**
+ * Initialize the ProductDetailsToggle functionality
+ */
+function initializeProductDetailsToggle(debugMode) {
+  try {
+    // Attach a global click handler to init toggle on product items
+    document.addEventListener('click', function(e) {
+      // If clicking an accordion header
+      if (e.target.closest('.accordion-header')) {
+        // Wait for content to be visible
+        setTimeout(() => {
+          // Force toggle module to scan for new content
+          if (ProductDetailsToggle && typeof ProductDetailsToggle.setup === 'function') {
+            console.log('Accordion clicked, reinitializing product details toggle');
+            ProductDetailsToggle.setup();
+          }
+
+          // Also initialize carousels
+          if (typeof initSuggestionsCarousels === 'function') {
+            initSuggestionsCarousels();
+          }
+        }, 300);
+      }
+    });
+
+    // Set up explicit click handlers for toggle buttons
+    document.body.addEventListener('click', function(e) {
+      // Handle similar products toggle
+      if (e.target.closest('.product-details-toggle')) {
+        const toggleButton = e.target.closest('.product-details-toggle');
+        const productItem = toggleButton.closest('.product-item');
+
+        if (!productItem) return;
+
+        const isExpanded = toggleButton.classList.contains('expanded');
+        const similarProductsContainer = productItem.querySelector('.similar-products-container');
+
+        if (!similarProductsContainer) return;
+
+        // Toggle state
+        if (isExpanded) {
+          // Hide container
+          toggleButton.classList.remove('expanded');
+          similarProductsContainer.style.display = 'none';
+          similarProductsContainer.classList.remove('visible');
+          toggleButton.innerHTML = toggleButton.innerHTML.replace(
+            'Similar Products',
+            'Similar Products'
+          );
+          const icon = toggleButton.querySelector('.toggle-icon');
+          if (icon) {
+            icon.classList.remove('dashicons-arrow-up-alt2');
+            icon.classList.add('dashicons-arrow-down-alt2');
+          }
+        } else {
+          // Show container
+          toggleButton.classList.add('expanded');
+          similarProductsContainer.style.display = 'block';
+          similarProductsContainer.classList.add('visible');
+          toggleButton.innerHTML = toggleButton.innerHTML.replace(
+            'Similar Products',
+            'Similar Products'
+          );
+          const icon = toggleButton.querySelector('.toggle-icon');
+          if (icon) {
+            icon.classList.remove('dashicons-arrow-down-alt2');
+            icon.classList.add('dashicons-arrow-up-alt2');
+          }
+
+          // Initialize carousels when shown
+          if (typeof initSuggestionsCarousels === 'function') {
+            initSuggestionsCarousels();
+          }
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      // Handle notes toggle
+      if (e.target.closest('.product-notes-toggle')) {
+        const toggleButton = e.target.closest('.product-notes-toggle');
+        const productItem = toggleButton.closest('.product-item');
+
+        if (!productItem) return;
+
+        const isExpanded = toggleButton.classList.contains('expanded');
+        const notesContainer = productItem.querySelector('.notes-container');
+
+        if (!notesContainer) return;
+
+        // Toggle state
+        if (isExpanded) {
+          // Hide container
+          toggleButton.classList.remove('expanded');
+          notesContainer.style.display = 'none';
+          notesContainer.classList.remove('visible');
+          toggleButton.innerHTML = toggleButton.innerHTML.replace(
+            'Product Notes',
+            'Product Notes'
+          );
+          const icon = toggleButton.querySelector('.toggle-icon');
+          if (icon) {
+            icon.classList.remove('dashicons-arrow-up-alt2');
+            icon.classList.add('dashicons-arrow-down-alt2');
+          }
+        } else {
+          // Show container
+          toggleButton.classList.add('expanded');
+          notesContainer.style.display = 'block';
+          notesContainer.classList.add('visible');
+          toggleButton.innerHTML = toggleButton.innerHTML.replace(
+            'Product Notes',
+            'Product Notes'
+          );
+          const icon = toggleButton.querySelector('.toggle-icon');
+          if (icon) {
+            icon.classList.remove('dashicons-arrow-down-alt2');
+            icon.classList.add('dashicons-arrow-up-alt2');
+          }
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+
+    console.log('ProductDetailsToggle initialization complete');
+  } catch (error) {
+    console.error('Error initializing ProductDetailsToggle:', error);
   }
 }
 
@@ -182,4 +328,4 @@ function getDebugMode() {
 }
 
 // Export the core for potential external access
-export default EstimatorCore;
+export default EstimatorCore

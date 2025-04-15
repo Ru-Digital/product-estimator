@@ -17,7 +17,7 @@
 .suggestions-carousel {
   overflow: hidden;
   position: relative;
-  padding: 0 40px; /* Space for navigation arrows */
+  padding: 10px 40px; /* Space for navigation arrows */
   margin-bottom: 15px;
 }
 

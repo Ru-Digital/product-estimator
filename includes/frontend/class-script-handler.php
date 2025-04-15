@@ -105,6 +105,14 @@ class ScriptHandler {
             'all'
         );
 
+        wp_register_style(
+            $this->plugin_name . '-details-toggle',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-details-toggle.css',
+            array(),
+            $this->version,
+            'all'
+        );
+
         // Always load styles on all pages
         wp_enqueue_style($this->plugin_name . '-public');
         wp_enqueue_style($this->plugin_name . '-modal');
@@ -112,6 +120,8 @@ class ScriptHandler {
         wp_enqueue_style($this->plugin_name . '-carousel');
         wp_enqueue_style($this->plugin_name . '-similar-products');
         wp_enqueue_style($this->plugin_name . '-customer-details');
+        wp_enqueue_style($this->plugin_name . '-details-toggle');
+
     }
 
     /**
@@ -160,6 +170,11 @@ class ScriptHandler {
                     'saving' => __('Saving...', 'product-estimator'),
                     'details_updated' => __('Details updated successfully!', 'product-estimator'),
                     'details_deleted' => __('Details deleted successfully!', 'product-estimator'),
+                    'showDetails' => __('Show additional details', 'product-estimator'),
+                    'hideDetails' => __('Hide additional details', 'product-estimator'),
+                    'showNotes' => __('Product Notes', 'product-estimator'),
+                    'hideNotes' => __('Product Notes', 'product-estimator'),
+                    'loadingDetails' => __('Loading details', 'product-estimator'),
                     // Dialog translations
                     'dialog_titles' => array(
                         'product' => __('Remove Product', 'product-estimator'),

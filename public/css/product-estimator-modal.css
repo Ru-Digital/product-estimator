@@ -317,12 +317,12 @@
 .product-item {
   display: flex;
   align-items: start;
-  padding: 10px;
+  /*padding: 10px;*/
   border: 1px solid #eee;
   border-radius: 4px;
   margin-bottom: 10px;
   position: relative;
-  padding-right: 30px; /* Make room for the remove button */
+  /*padding-right: 30px; !* Make room for the remove button *!*/
   flex-direction: column;
 }
 
@@ -330,6 +330,7 @@
   display: flex;
   width: 100%;
   align-items: flex-start;
+  padding: 10px;
 
 }
 
@@ -928,7 +929,7 @@ body.modal-open {
 /* Product Includes Section */
 .product-includes {
   margin-top: 12px;
-  padding-top: 8px;
+  padding: 10px;
   border-top: 1px dashed #e5e5e5;
   width: 100%;
   clear: both;

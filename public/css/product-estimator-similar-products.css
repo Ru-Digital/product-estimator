@@ -17,7 +17,7 @@
   max-width: 100% !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
-  padding: 0 25px !important; /* Reduced padding */
+  padding: 10px 25px !important; /* Reduced padding */
   position: relative !important; /* Create positioning context */
 }
 

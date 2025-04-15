@@ -812,34 +812,55 @@ class ModalManager {
   handleProductRemoval(estimateId, roomId, productIndex) {
     this.showLoading();
 
+    console.log(`Removing product at index ${productIndex} from room ${roomId} in estimate ${estimateId}`);
+
     this.dataService.removeProductFromRoom(estimateId, roomId, productIndex)
       .then(response => {
-        // Refresh estimates list
-        this.loadEstimatesList()
+        // Call loadEstimatesList with the IDs to expand
+        return this.loadEstimatesList(roomId, estimateId)
           .then(() => {
-            // After refreshing the list, find the room to keep it expanded
-            const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+            console.log(`Estimates list refreshed, attempting to expand room ${roomId} in estimate ${estimateId}`);
+
+            // Ensure the estimate section is expanded
+            const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
+            if (estimateSection) {
+              estimateSection.classList.remove('collapsed');
+              const estimateContent = estimateSection.querySelector('.estimate-content');
+              if (estimateContent) {
+                estimateContent.style.display = 'block';
+              }
+            }
+
+            // Find the specific room that needs to be expanded
+            const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+            if (!roomElement) {
+              // Try a more general selector if the specific one fails
+              console.log('Using fallback room selector');
+              roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+            }
 
             if (roomElement) {
-              // Always ensure the room stays expanded after deleting a product
+              console.log('Found room element, expanding it');
               const header = roomElement.querySelector('.accordion-header');
-              if (header) {
-                header.classList.add('active');
-                const content = roomElement.querySelector('.accordion-content');
-                if (content) content.style.display = 'block';
-              }
+              const content = roomElement.querySelector('.accordion-content');
+
+              if (header) header.classList.add('active');
+              if (content) content.style.display = 'block';
+
+              // Scroll to the room to ensure it's visible
+              setTimeout(() => {
+                roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 200);
+            } else {
+              console.warn(`Could not find room element for room ID ${roomId}`);
             }
 
             // Show success message
             this.showMessage('Product removed successfully', 'success');
-          })
-          .catch(error => {
-            this.log('Error refreshing estimates list:', error);
-            this.showError('Error refreshing estimates list. Please try again.');
           });
       })
       .catch(error => {
-        this.log('Error removing product:', error);
+        console.error('Error removing product:', error);
         this.showError(error.message || 'Error removing product. Please try again.');
       })
       .finally(() => {
@@ -897,8 +918,18 @@ class ModalManager {
               this.showError('Error refreshing list. Please try again.');
             });
         } else {
-          // Handle error response
-          this.showError(response.data?.message || 'Error adding product. Please try again.');
+          // Check if this is a duplicate product error
+          if (response.data?.duplicate) {
+            console.log('Duplicate suggested product detected:', response.data);
+
+            // Show specific error message
+            this.showMessage(response.data.message || 'This product already exists in this room.', 'error');
+
+            // The room is already open, so we don't need to refresh or expand
+          } else {
+            // Handle error response
+            this.showError(response.data?.message || 'Error adding product. Please try again.');
+          }
         }
       },
       error: (jqXHR, textStatus, errorThrown) => {
@@ -992,7 +1023,7 @@ class ModalManager {
         console.log('Room removal response:', response);
 
         // Refresh estimates list
-        this.loadEstimatesList()
+        this.loadEstimatesList(null, estimateId)
           .then(() => {
             // Show success message
             this.showMessage(`${roomName} removed successfully`, 'success');
@@ -1953,13 +1984,83 @@ class ModalManager {
               this.log('Error refreshing estimates list:', error);
               this.showError('Error refreshing estimates list. Please try again.');
             });
-
-
         } else {
-          // Handle error response
-          const errorMessage = response.data?.message || 'Error adding product to room. Please try again.';
-          this.showError(errorMessage);
-          console.error('AJAX error response:', response);
+          // Check if this is a duplicate product error
+          if (response.data?.duplicate) {
+            console.log('Duplicate product detected:', response.data);
+
+            // Hide selection forms
+            this.estimateSelection.style.display = 'none';
+            this.roomSelectionForm.style.display = 'none';
+
+            // Clear the product ID after handling
+            delete this.modal.dataset.productId;
+            this.currentProductId = null;
+
+            const duplicateEstimateId = response.data.estimate_id;
+            const duplicateRoomId = response.data.room_id;
+
+            // Show specific error message
+            this.showError(response.data.message || 'This product already exists in the selected room.');
+
+            // Load the estimates and expand the specific room where the product already exists
+            this.loadEstimatesList(duplicateRoomId, duplicateEstimateId)
+              .then(() => {
+                console.log('Estimates list refreshed to show duplicate product location');
+                setTimeout(() => {
+                  // Find and expand the estimate containing the room
+                  const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${duplicateEstimateId}"]`);
+                  if (estimateSection && estimateSection.classList.contains('collapsed')) {
+                    // Remove collapsed class
+                    estimateSection.classList.remove('collapsed');
+                    // Show content
+                    const estimateContent = estimateSection.querySelector('.estimate-content');
+                    if (estimateContent) {
+                      if (typeof jQuery !== 'undefined') {
+                        jQuery(estimateContent).slideDown(200);
+                      } else {
+                        estimateContent.style.display = 'block';
+                      }
+                    }
+                  }
+
+                  // Find and expand the room accordion
+                  const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${duplicateRoomId}"]`);
+                  if (roomElement) {
+                    const header = roomElement.querySelector('.accordion-header');
+                    if (header && !header.classList.contains('active')) {
+                      // Add active class
+                      header.classList.add('active');
+
+                      // Show room content
+                      const content = roomElement.querySelector('.accordion-content');
+                      if (content) {
+                        if (typeof jQuery !== 'undefined') {
+                          jQuery(content).slideDown(300, function() {
+                            // Scroll to room after animation completes
+                            roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          });
+                        } else {
+                          content.style.display = 'block';
+                          roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }
+                    } else {
+                      // Room is already expanded, just scroll to it
+                      roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }
+                }, 300); // Wa
+              })
+              .catch(error => {
+                console.error('Error refreshing estimates list:', error);
+              });
+          } else {
+            // Handle regular error response
+            const errorMessage = response.data?.message || 'Error adding product to room. Please try again.';
+            this.showError(errorMessage);
+            console.error('AJAX error response:', response);
+          }
         }
       },
       error: (jqXHR, textStatus, errorThrown) => {
@@ -1972,7 +2073,6 @@ class ModalManager {
       }
     });
   }
-
 
   /**
    * Handle new estimate form submission with improved loader handling
@@ -2675,8 +2775,17 @@ class ModalManager {
    * @param {string} type - Message type ('success' or 'error')
    */
   showMessage(message, type = 'success') {
+    // Find the form container first
+    const formContainer = this.contentContainer || document.querySelector('.product-estimator-modal-form-container');
+
+    if (!formContainer) {
+      // If we can't find the container, log the error but don't try to prepend
+      console.error('Form container not found for message display:', message);
+      return;
+    }
+
     // Remove any existing messages
-    const existingMessages = this.modal.querySelectorAll('.modal-message');
+    const existingMessages = document.querySelectorAll('.modal-message');
     existingMessages.forEach(msg => msg.remove());
 
     // Create message element
@@ -2685,15 +2794,20 @@ class ModalManager {
     messageEl.className = `modal-message ${messageClass}`;
     messageEl.textContent = message;
 
-    // Add to modal container
-    this.contentContainer.prepend(messageEl);
+    // Safely prepend to container
+    try {
+      formContainer.prepend(messageEl);
+    } catch (e) {
+      console.error('Error adding message to container:', e);
+    }
 
     // Auto-remove after 5 seconds
     setTimeout(() => {
-      messageEl.remove();
+      if (messageEl.parentNode) {
+        messageEl.remove();
+      }
     }, 5000);
   }
-
   /**
    * Show error message
    * @param {string} message - Error message

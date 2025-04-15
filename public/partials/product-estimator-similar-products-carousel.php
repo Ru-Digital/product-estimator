@@ -33,6 +33,7 @@ if (isset($product['id']) && !empty($product['id'])):
         // Display similar products if we have any
         if (!empty($similar_products)):
             ?>
+            <!-- This is a similar products carousel - should be bound by product-item -->
             <div class="product-similar-products">
                 <h5><?php esc_html_e('Similar Products', 'product-estimator'); ?></h5>
 

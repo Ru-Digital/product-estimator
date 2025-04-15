@@ -30,18 +30,14 @@ class SuggestionsCarousel {
     // Store instance reference on the container
     container.carouselInstance = this;
 
-    // Get container width before setting configuration
-    const containerWidth = this.getContainerWidth();
-
-    // Configuration
-    // Use container width to determine item width and gap
+    // Configuration based on carousel type
     if (this.isSimilarProducts) {
-      // For similar products: use smaller items, narrower gaps
-      this.itemWidth = Math.min(130, Math.floor((containerWidth - 40) / 2)); // At least 2 items visible
+      // Similar products - fixed small size
+      this.itemWidth = 130;
       this.itemGap = 5;
     } else {
-      // For regular suggestions: larger items, wider gaps
-      this.itemWidth = Math.min(200, Math.floor((containerWidth - 80) / 2)); // At least 2 items visible
+      // Regular suggestions - larger items
+      this.itemWidth = 200;
       this.itemGap = 15;
     }
 
@@ -49,81 +45,74 @@ class SuggestionsCarousel {
     this.currentPosition = 0;
     this.maxPosition = Math.max(0, this.items.length - this.visibleItems);
 
-    // Set container size
+    // Set up container and items
     this.setContainerSize();
 
     // Initialize
     this.bindEvents();
     this.updateButtons();
-
-    console.log(`[${this.id}] Carousel initialized - container width: ${containerWidth}px, item width: ${this.itemWidth}px, visible items: ${this.visibleItems}, maxPosition: ${this.maxPosition}`);
   }
 
   getContainerWidth() {
-    // Get computed width of container
-    const computedStyle = window.getComputedStyle(this.container);
-    const paddingLeft = parseFloat(computedStyle.paddingLeft);
-    const paddingRight = parseFloat(computedStyle.paddingRight);
+    if (this.isSimilarProducts) {
+      // For similar products, find the product-item width
+      const parentItem = this.container.closest('.product-item');
+      if (parentItem) {
+        const parentWidth = parentItem.offsetWidth;
+        console.log(`[${this.id}] Found product-item parent: ${parentWidth}px`);
+        return parentWidth - 10; // Subtract a small buffer
+      }
+    }
 
-    // Use offsetWidth which includes padding
+    // Default - use container's width
     const containerWidth = this.container.offsetWidth;
-    const contentWidth = containerWidth - paddingLeft - paddingRight;
-
-    console.log(`[${this.id}] Container dimensions - offsetWidth: ${containerWidth}px, content width: ${contentWidth}px, padding: ${paddingLeft}px ${paddingRight}px`);
-
-    return contentWidth;
+    console.log(`[${this.id}] Using container width: ${containerWidth}px`);
+    return containerWidth;
   }
 
+
   setContainerSize() {
-    // Force container size via inline style for similar products carousel
+    // Force consistent sizing for similar products
     if (this.isSimilarProducts) {
-      // Get parent width (product item)
-      let parentWidth = 0;
-      let parentEl = this.container.parentElement;
-
-      // Find the closest product-item parent
-      while (parentEl && !parentEl.classList.contains('product-item')) {
-        parentEl = parentEl.parentElement;
-      }
-
+      // Set max-width explicitly for similar products
+      const parentEl = this.container.closest('.product-item');
       if (parentEl) {
-        parentWidth = parentEl.offsetWidth;
-        console.log(`[${this.id}] Found parent product-item width: ${parentWidth}px`);
-
-        // Set max-width based on parent
-        if (parentWidth > 0) {
-          this.container.style.maxWidth = `${parentWidth - 20}px`; // 20px buffer
-        }
+        const parentWidth = parentEl.offsetWidth;
+        console.log(`[${this.id}] Similar products parent width: ${parentWidth}px`);
+        this.container.style.maxWidth = `${parentWidth - 10}px`;
       }
 
-      // Set item widths to ensure they fit
+      // Ensure all items have consistent width
       Array.from(this.items).forEach(item => {
         item.style.width = `${this.itemWidth}px`;
         item.style.flexShrink = '0';
         item.style.flexGrow = '0';
       });
 
-      // Set container width
+      // Set container width and gap
       this.itemsContainer.style.gap = `${this.itemGap}px`;
     }
   }
 
+
   calculateVisibleItems() {
-    // Use the more precise available width
-    const availableWidth = this.getAvailableWidth();
+    // Calculate available width
+    const containerWidth = this.getContainerWidth();
+    const availableWidth = containerWidth - 50; // Allow space for navigation
 
     // Fixed item widths for similar products carousel
-    const itemWidth = this.container.classList.contains('similar-products-carousel')
-      ? 110 // Small fixed width
-      : this.itemWidth;
+    const effectiveItemWidth = this.isSimilarProducts ? 130 : this.itemWidth;
+    const effectiveGap = this.isSimilarProducts ? 5 : this.itemGap;
 
-    // Calculate and ensure at least 1 item shows
-    const visibleItems = Math.max(1, Math.floor(availableWidth / itemWidth));
+    // Calculate how many items fit
+    const totalItemWidth = effectiveItemWidth + effectiveGap;
+    const visibleItems = Math.max(1, Math.floor(availableWidth / totalItemWidth));
 
-    console.log(`Available width: ${availableWidth}px, item width: ${itemWidth}px, visible items: ${visibleItems}`);
+    console.log(`[${this.id}] Container width: ${containerWidth}px, available: ${availableWidth}px, visible items: ${visibleItems}`);
 
     return visibleItems;
   }
+
 
   bindEvents() {
     // Create handler functions with proper 'this' binding
@@ -206,23 +195,35 @@ class SuggestionsCarousel {
     // Start with the basic container width
     let availableWidth = this.container.clientWidth - 50; // Subtract arrow space
 
-    // Find the product-item parent to ensure we respect its width
-    let parentProductItem = this.container.closest('.product-item');
-    if (parentProductItem) {
-      // Get product-item width and consider its padding
-      const productItemStyles = window.getComputedStyle(parentProductItem);
-      const productItemWidth = parentProductItem.clientWidth -
-        (parseFloat(productItemStyles.paddingLeft) +
-          parseFloat(productItemStyles.paddingRight));
+    // Check if this is a similar products carousel (within product-item)
+    if (this.isSimilarProducts) {
+      // Find the product-item parent to ensure we respect its width
+      let parentProductItem = this.container.closest('.product-item');
+      if (parentProductItem) {
+        // Get product-item width and consider its padding
+        const productItemStyles = window.getComputedStyle(parentProductItem);
+        const productItemWidth = parentProductItem.clientWidth -
+          (parseFloat(productItemStyles.paddingLeft) +
+            parseFloat(productItemStyles.paddingRight));
 
-      // Use the minimum of container width or product-item width
-      availableWidth = Math.min(availableWidth, productItemWidth);
+        // Use the minimum of container width or product-item width
+        availableWidth = Math.min(availableWidth, productItemWidth);
 
-      console.log(`Product item width: ${productItemWidth}px, Available width: ${availableWidth}px`);
+        console.log(`Product item width: ${productItemWidth}px, Available width: ${availableWidth}px`);
+      }
+    } else {
+      // For suggested products - respect the accordion item width
+      let accordionContent = this.container.closest('.accordion-content');
+      if (accordionContent) {
+        const accordionWidth = accordionContent.clientWidth - 30; // Allow for padding
+        availableWidth = Math.min(availableWidth, accordionWidth);
+        console.log(`Accordion content width: ${accordionWidth}px, Available width: ${availableWidth}px`);
+      }
     }
 
     return Math.max(availableWidth, 100); // Ensure minimum reasonable width
   }
+
 
   updatePosition() {
     if (!this.itemsContainer) return;

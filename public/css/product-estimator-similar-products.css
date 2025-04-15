@@ -10,35 +10,6 @@
   position: relative; /* Create positioning context */
 }
 
-.product-similar-products h5 {
-  font-size: 1rem;
-  margin: 0 0 12px;
-  color: #333;
-  display: flex;
-  align-items: center;
-}
-
-.product-similar-products h5:before {
-  content: "";
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  background-color: #00833F;
-  border-radius: 50%;
-  margin-right: 8px;
-  position: relative;
-}
-
-.product-similar-products h5:after {
-  content: "+";
-  color: white;
-  position: absolute;
-  font-size: 12px;
-  font-weight: bold;
-  margin-left: -18px;
-  margin-top: -1px;
-}
-
 /* Contain carousel completely */
 .similar-products-carousel {
   margin-bottom: 0 !important;
@@ -77,12 +48,6 @@
   gap: 5px !important; /* Smaller gap */
 }
 
-/* Ensure product items are contained */
-.product-item {
-  position: relative !important;
-  overflow: hidden !important;
-}
-
 /* Make similar products items smaller */
 .similar-products-carousel .suggestion-item {
   flex: 0 0 auto !important;
@@ -109,50 +74,6 @@
 .similar-products-carousel .add-suggestion-to-room {
   padding: 4px 8px !important;
   font-size: 11px !important;
-}
-
-/* Keep existing similar items styles for non-carousel elements */
-.similar-item {
-  display: flex;
-  align-items: center;
-  padding: 5px 8px;
-  background: #f9f9f9;
-  border-radius: 4px;
-  font-size: 12px;
-  border: 1px solid #eee;
-}
-
-.similar-item-name {
-  flex-grow: 1;
-  margin-right: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 150px;
-}
-
-.similar-item-price {
-  font-weight: bold;
-  margin-right: 8px;
-  white-space: nowrap;
-  color: #555;
-}
-
-.add-suggestion-to-room.small-btn {
-  padding: 3px 8px;
-  font-size: 11px;
-  min-width: 40px;
-  white-space: nowrap;
-  background-color: #333;
-  color: white;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.add-suggestion-to-room.small-btn:hover {
-  background-color: #444;
 }
 
 /* Fix for parent elements */
@@ -198,44 +119,4 @@
   max-width: 100% !important;
   width: 100% !important;
   display: block !important;
-}
-
-/* Ensure carousel item widths are calculated properly */
-.similar-products-carousel .suggestion-item {
-  flex: 0 0 110px !important; /* Fixed width that doesn't grow or shrink */
-  min-width: 0 !important; /* Allow minimum width if needed */
-}
-
-/* Responsive Adjustments */
-@media screen and (max-width: 768px) {
-  .product-similar-products h5 {
-    font-size: 0.9rem;
-  }
-
-  .similar-products-carousel .suggestion-item {
-    width: 110px !important; /* Even smaller for mobile */
-  }
-
-  .similar-products-carousel {
-    padding: 0 20px !important;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .similar-products-carousel .suggestions-container {
-    gap: 5px !important;
-    max-width: calc(100% - 40px) !important;
-  }
-
-  .similar-products-carousel .suggestion-image {
-    height: 60px !important;
-  }
-
-  .similar-products-carousel {
-    padding: 0 20px !important;
-  }
-
-  .similar-products-carousel .suggestion-item {
-    width: 100px !important; /* Even smaller for mobile */
-  }
 }

@@ -628,9 +628,6 @@ class AjaxHandler {
     /**
      * Handle new room submission
      */
-    /**
-     * Handle new room submission
-     */
     public function addNewRoom() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
@@ -859,7 +856,10 @@ class AjaxHandler {
 
             wp_send_json_success([
                 'message' => __('Product removed successfully', 'product-estimator'),
-                'show_suggestions' => $show_suggestions
+                'show_suggestions' => $show_suggestions,
+                // Include IDs to help maintain expanded state on the frontend
+                'estimate_id' => $estimate_id,
+                'room_id' => $room_id
             ]);
 
         } catch (\Exception $e) {
@@ -868,8 +868,7 @@ class AjaxHandler {
                 'error' => $e->getMessage()
             ]);
         }
-    }
-    /**
+    }    /**
      * Remove a room from an estimate
      */
     public function removeRoom()

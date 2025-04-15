@@ -812,34 +812,55 @@ class ModalManager {
   handleProductRemoval(estimateId, roomId, productIndex) {
     this.showLoading();
 
+    console.log(`Removing product at index ${productIndex} from room ${roomId} in estimate ${estimateId}`);
+
     this.dataService.removeProductFromRoom(estimateId, roomId, productIndex)
       .then(response => {
-        // Refresh estimates list
-        this.loadEstimatesList()
+        // Call loadEstimatesList with the IDs to expand
+        return this.loadEstimatesList(roomId, estimateId)
           .then(() => {
-            // After refreshing the list, find the room to keep it expanded
-            const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+            console.log(`Estimates list refreshed, attempting to expand room ${roomId} in estimate ${estimateId}`);
+
+            // Ensure the estimate section is expanded
+            const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
+            if (estimateSection) {
+              estimateSection.classList.remove('collapsed');
+              const estimateContent = estimateSection.querySelector('.estimate-content');
+              if (estimateContent) {
+                estimateContent.style.display = 'block';
+              }
+            }
+
+            // Find the specific room that needs to be expanded
+            const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+            if (!roomElement) {
+              // Try a more general selector if the specific one fails
+              console.log('Using fallback room selector');
+              roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+            }
 
             if (roomElement) {
-              // Always ensure the room stays expanded after deleting a product
+              console.log('Found room element, expanding it');
               const header = roomElement.querySelector('.accordion-header');
-              if (header) {
-                header.classList.add('active');
-                const content = roomElement.querySelector('.accordion-content');
-                if (content) content.style.display = 'block';
-              }
+              const content = roomElement.querySelector('.accordion-content');
+
+              if (header) header.classList.add('active');
+              if (content) content.style.display = 'block';
+
+              // Scroll to the room to ensure it's visible
+              setTimeout(() => {
+                roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 200);
+            } else {
+              console.warn(`Could not find room element for room ID ${roomId}`);
             }
 
             // Show success message
             this.showMessage('Product removed successfully', 'success');
-          })
-          .catch(error => {
-            this.log('Error refreshing estimates list:', error);
-            this.showError('Error refreshing estimates list. Please try again.');
           });
       })
       .catch(error => {
-        this.log('Error removing product:', error);
+        console.error('Error removing product:', error);
         this.showError(error.message || 'Error removing product. Please try again.');
       })
       .finally(() => {
@@ -1002,7 +1023,7 @@ class ModalManager {
         console.log('Room removal response:', response);
 
         // Refresh estimates list
-        this.loadEstimatesList()
+        this.loadEstimatesList(null, estimateId)
           .then(() => {
             // Show success message
             this.showMessage(`${roomName} removed successfully`, 'success');

@@ -33,6 +33,10 @@ if (!empty($suggestions)) {
 if (empty($suggestions)) {
     return; // Don't display anything if no suggestions
 }
+
+// Get default markup from settings
+$options = get_option('product_estimator_settings');
+$default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
 ?>
 
 <div class="product-suggestions">
@@ -58,11 +62,41 @@ if (empty($suggestions)) {
                     <div class="suggestion-details">
                         <div class="suggestion-name"><?php echo esc_html($suggestion['name']); ?></div>
 
-                        <?php if (isset($suggestion['price'])): ?>
-                            <div class="suggestion-price">
-                                <?php echo wc_price($suggestion['price']); ?>
-                            </div>
-                        <?php endif; ?>
+                        <?php
+                        // Get pricing method
+                        $pricing_method = isset($suggestion['pricing_method']) ? $suggestion['pricing_method'] : 'sqm';
+
+                        // Use min_price and max_price if available, otherwise use regular price
+                        $min_price = isset($suggestion['min_price']) ? floatval($suggestion['min_price']) : floatval($suggestion['price']);
+                        $max_price = isset($suggestion['max_price']) ? floatval($suggestion['max_price']) : floatval($suggestion['price']);
+
+                        // If min and max are the same, create a small range based on markup
+                        if ($min_price == $max_price) {
+                            $base_price = $min_price;
+                            // Apply markup adjustment
+                            $min_price_adjusted = $base_price * (1 - ($default_markup / 100));
+                            $max_price_adjusted = $base_price * (1 + ($default_markup / 100));
+                        } else {
+                            // Apply markup adjustment - already a range
+                            $min_price_adjusted = $min_price * (1 - ($default_markup / 100));
+                            $max_price_adjusted = $max_price * (1 + ($default_markup / 100));
+                        }
+
+                        // Determine if we need to show a price range or single price
+                        $show_range = round($min_price_adjusted, 2) !== round($max_price_adjusted, 2);
+                        ?>
+
+                        <div class="suggestion-price">
+                            <?php if ($show_range): ?>
+                                <?php echo wc_price($min_price_adjusted); ?> - <?php echo wc_price($max_price_adjusted); ?>
+                            <?php else: ?>
+                                <?php echo wc_price($min_price_adjusted); ?>
+                            <?php endif; ?>
+
+                            <?php if ($pricing_method === 'sqm'): ?>
+                                <span class="unit-price">/m²</span>
+                            <?php endif; ?>
+                        </div>
 
                         <div class="suggestion-actions">
                             <button type="button"

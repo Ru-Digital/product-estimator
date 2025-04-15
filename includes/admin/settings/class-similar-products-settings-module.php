@@ -739,15 +739,140 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
                 continue;
             }
 
+            // Get pricing rule for this product
+            $pricing_rule = $this->get_pricing_rule_for_product($id);
+            $pricing_method = isset($pricing_rule['method']) ? $pricing_rule['method'] : 'sqm';
+            $pricing_source = isset($pricing_rule['source']) ? $pricing_rule['source'] : 'website';
+
+            // Get price based on source
+            $price_data = $this->get_product_price_by_source($id, $pricing_source);
+
             $products[] = array(
                 'id' => $id,
                 'name' => $product->get_name(),
-                'price' => $product->get_price(),
+                'price' => $product->get_price(), // Default WC price
+                'min_price' => $price_data['min_price'],
+                'max_price' => $price_data['max_price'],
                 'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail') ?: '',
-                'url' => get_permalink($id)
+                'url' => get_permalink($id),
+                'pricing_method' => $pricing_method,
+                'pricing_source' => $pricing_source
             );
         }
 
         return $products;
+    }
+
+    private function get_product_price_by_source($product_id, $source = 'website')
+    {
+        $product = wc_get_product($product_id);
+        $price_data = array(
+            'min_price' => 0,
+            'max_price' => 0
+        );
+
+        if (!$product) {
+            return $price_data;
+        }
+
+        // Get base price from WooCommerce
+        $base_price = floatval($product->get_price());
+
+        if ($source === 'website' || !function_exists('wc_get_product')) {
+            // Use WooCommerce price
+            $price_data['min_price'] = $base_price;
+            $price_data['max_price'] = $base_price;
+        } else {
+            // Check if we should get NetSuite pricing
+            try {
+                // Check if NetSuite Integration class exists
+                if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Integration\\NetsuiteIntegration')) {
+                    // Initialize NetSuite Integration
+                    $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
+
+                    // Get pricing data for this product
+                    $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
+
+                    // Check if we received valid pricing data
+                    if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
+                        foreach ($pricing_data['prices'] as $price_item) {
+                            if ($price_item['product_id'] == $product_id) {
+                                // Add NetSuite pricing data to product
+                                $price_data['min_price'] = $price_item['min_price'];
+                                $price_data['max_price'] = $price_item['max_price'];
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // If NetSuite data not found, set defaults based on WC price
+                if ($price_data['min_price'] === 0) {
+                    $price_data['min_price'] = $base_price;
+                    $price_data['max_price'] = $base_price;
+                }
+            } catch (\Exception $e) {
+                // If NetSuite API fails, log the error but continue with base price
+                error_log('NetSuite API Error: ' . $e->getMessage());
+
+                // Set default price range from WooCommerce price
+                $price_data['min_price'] = $base_price;
+                $price_data['max_price'] = $base_price;
+            }
+        }
+
+        return $price_data;
+    }
+
+    /**
+     * Get the appropriate pricing rule for a product
+     *
+     * @param int $product_id The product ID
+     * @return array The pricing rule with 'method' and 'source' keys
+     */
+    private function get_pricing_rule_for_product($product_id) {
+        // Get global settings
+        $settings = get_option('product_estimator_settings');
+
+        // Use defaults from settings if available
+        $default_rule = [
+            'method' => isset($settings['default_pricing_method']) ? $settings['default_pricing_method'] : 'sqm',
+            'source' => isset($settings['default_pricing_source']) ? $settings['default_pricing_source'] : 'website'
+        ];
+
+        // Get product categories
+        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+
+        if (empty($product_categories) || is_wp_error($product_categories)) {
+            return $default_rule;
+        }
+
+        // Get all pricing rules
+        $pricing_rules = get_option('product_estimator_pricing_rules', []);
+
+        if (empty($pricing_rules)) {
+            return $default_rule;
+        }
+
+        // Check each rule for matching categories
+        foreach ($pricing_rules as $rule) {
+            if (!isset($rule['categories']) || !is_array($rule['categories'])) {
+                continue;
+            }
+
+            // Check if any of this product's categories match the rule's categories
+            $matching_categories = array_intersect($product_categories, $rule['categories']);
+
+            if (!empty($matching_categories)) {
+                // Found a matching rule, return its method and source
+                return [
+                    'method' => isset($rule['pricing_method']) ? $rule['pricing_method'] : $default_rule['method'],
+                    'source' => isset($rule['pricing_source']) ? $rule['pricing_source'] : $default_rule['source']
+                ];
+            }
+        }
+
+        // No matching rule found, return default
+        return $default_rule;
     }
 }

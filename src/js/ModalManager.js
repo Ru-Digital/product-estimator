@@ -2462,6 +2462,12 @@ class ModalManager {
 
     this.initializeCarousels();
 
+    // Bind the replace product buttons
+    this.bindReplaceProductButtons();
+
+    // Also bind the suggested product buttons again
+    this.bindSuggestedProductButtons();
+
   }
 
 
@@ -2616,6 +2622,218 @@ class ModalManager {
       console.log('[ModalManager]', ...args);
     }
   }
+
+  /**
+   * Bind similar products replace buttons events
+   * This needs to be added to the ModalManager class
+   */
+  bindReplaceProductButtons() {
+    console.log('Binding replace product buttons');
+
+    // Find all replacement buttons in the modal
+    const replaceButtons = this.modal.querySelectorAll('.replace-product-in-room');
+
+    if (replaceButtons.length) {
+      console.log(`Found ${replaceButtons.length} replace buttons to bind`);
+
+      // Loop through each button and bind click event
+      replaceButtons.forEach(button => {
+        // Remove any existing handlers to prevent duplicates
+        if (button._replaceButtonHandler) {
+          button.removeEventListener('click', button._replaceButtonHandler);
+        }
+
+        // Create and store new handler directly on button element
+        button._replaceButtonHandler = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Get data attributes
+          const newProductId = button.dataset.productId;
+          const estimateId = button.dataset.estimateId;
+          const roomId = button.dataset.roomId;
+          const oldProductId = button.dataset.replaceProductId;
+
+          console.log('Replace product button clicked:', {
+            estimateId,
+            roomId,
+            oldProductId,
+            newProductId
+          });
+
+          // Handle replacing the product
+          this.handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, button);
+        };
+
+        // Add click event listener
+        button.addEventListener('click', button._replaceButtonHandler);
+      });
+
+      console.log('Replace product buttons bound successfully');
+    } else {
+      console.log('No replace product buttons found to bind');
+    }
+  }
+
+  /**
+   * Handle replacing a product with another product
+   * @param {string} estimateId - Estimate ID
+   * @param {string} roomId - Room ID
+   * @param {string} oldProductId - ID of product to replace
+   * @param {string} newProductId - ID of new product
+   * @param {HTMLElement} buttonElement - Button element for UI feedback
+   */
+  handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, buttonElement) {
+    // First show a confirmation dialog
+    // Get product names if available (from button attributes or nearby elements)
+    let oldProductName = "this product";
+    let newProductName = "the selected product";
+
+    try {
+      // Try to get product names from DOM
+      if (buttonElement) {
+        // Get name of new product (the one in the carousel)
+        const productItem = buttonElement.closest('.suggestion-item');
+        if (productItem) {
+          const nameEl = productItem.querySelector('.suggestion-name');
+          if (nameEl) {
+            newProductName = nameEl.textContent.trim();
+          }
+        }
+
+        // Get name of the current product (more complex)
+        const productWrapper = buttonElement.closest('.product-item');
+        if (productWrapper) {
+          const nameEl = productWrapper.querySelector('.product-name');
+          if (nameEl) {
+            oldProductName = nameEl.textContent.trim();
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not determine product names for confirmation dialog:', e);
+    }
+
+    // Build confirmation message
+    const confirmMessage = `Are you sure you want to replace "${oldProductName}" with "${newProductName}"?`;
+
+    // Use the confirmation dialog
+    if (window.productEstimator && window.productEstimator.dialog) {
+      window.productEstimator.dialog.show({
+        title: 'Confirm Replacement',
+        message: confirmMessage,
+        type: 'product', // Using product type for styling
+        confirmText: 'Replace',
+        cancelText: 'Cancel',
+        onConfirm: () => {
+          // Proceed with replacement
+          this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement);
+        },
+        onCancel: () => {
+          // Reset button state if needed
+          if (buttonElement) {
+            buttonElement.disabled = false;
+            buttonElement.classList.remove('loading');
+            buttonElement.textContent = 'Replace';
+          }
+          console.log('Product replacement cancelled');
+        }
+      });
+    } else {
+      // Fallback to browser confirm if custom dialog isn't available
+      if (confirm(confirmMessage)) {
+        this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement);
+      } else {
+        // Reset button state if needed
+        if (buttonElement) {
+          buttonElement.disabled = false;
+          buttonElement.classList.remove('loading');
+          buttonElement.textContent = 'Replace';
+        }
+      }
+    }
+  }
+  /**
+   * Execute the actual product replacement after confirmation
+   * @param {string} estimateId - Estimate ID
+   * @param {string} roomId - Room ID
+   * @param {string} oldProductId - ID of product to replace
+   * @param {string} newProductId - ID of new product
+   * @param {HTMLElement} buttonElement - Button element for UI feedback
+   */
+  executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement) {
+    // Show loading indicator
+    this.showLoading();
+
+    // Show loading state on the button
+    if (buttonElement) {
+      buttonElement.disabled = true;
+      buttonElement.classList.add('loading');
+      buttonElement.innerHTML = '<span class="loading-dots">Replacing...</span>';
+    }
+
+    console.log(`Replacing product ${oldProductId} with ${newProductId} in room ${roomId}`);
+
+    // Make AJAX request to replace product
+    jQuery.ajax({
+      url: productEstimatorVars.ajax_url,
+      type: 'POST',
+      data: {
+        action: 'replace_product_in_room',
+        nonce: productEstimatorVars.nonce,
+        estimate_id: estimateId,
+        room_id: roomId,
+        product_id: newProductId,
+        replace_product_id: oldProductId
+      },
+      success: (response) => {
+        console.log('Replace product response:', response);
+
+        if (response.success) {
+          // Refresh the estimates list to show the updated room
+          this.loadEstimatesList(roomId, estimateId)
+            .then(() => {
+              // Auto-expand the room accordion after refreshing
+              setTimeout(() => {
+                const roomAccordion = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+                if (roomAccordion) {
+                  const header = roomAccordion.querySelector('.accordion-header');
+                  if (header && !header.classList.contains('active')) {
+                    header.click();
+                  }
+                }
+              }, 300);
+
+              // Show success message
+              this.showMessage('Product replaced successfully!', 'success');
+            })
+            .catch(error => {
+              console.error('Error refreshing estimates list:', error);
+              this.showError('Error refreshing list. Please try again.');
+            });
+        } else {
+          // Handle error response
+          this.showError(response.data?.message || 'Error replacing product. Please try again.');
+        }
+      },
+      error: (jqXHR, textStatus, errorThrown) => {
+        console.error('AJAX error:', textStatus, errorThrown);
+        this.showError('Error replacing product. Please try again.');
+      },
+      complete: () => {
+        // Reset button state
+        if (buttonElement) {
+          buttonElement.disabled = false;
+          buttonElement.classList.remove('loading');
+          buttonElement.textContent = 'Replace';
+        }
+
+        // Hide loading
+        this.hideLoading();
+      }
+    });
+  }
+
 }
 
 // Export the class

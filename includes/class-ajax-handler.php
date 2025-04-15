@@ -548,12 +548,18 @@ class AjaxHandler {
                 }
                 $_SESSION['product_estimator']['customer_details'] = $customer_details;
 
+                // Get default markup from settings
+//                $options = get_option('product_estimator_settings');
+                $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+
                 // Create new estimate data
                 $estimate_data = [
                     'name' => sanitize_text_field($form_data['estimate_name']),
                     'created_at' => current_time('mysql'),
                     'rooms' => [],
-                    'customer_details' => $customer_details
+                    'customer_details' => $customer_details,
+                    'plugin_version' => PRODUCT_ESTIMATOR_VERSION,
+                    'default_markup' => $default_markup
                 ];
 
                 $estimate_id = $this->session->addEstimate($estimate_data);
@@ -588,12 +594,16 @@ class AjaxHandler {
                 $customer_details = $customer_details_manager->getDetails();
             }
 
+            $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+
             // Create new estimate data
             $estimate_data = [
                 'name' => sanitize_text_field($form_data['estimate_name']),
                 'created_at' => current_time('mysql'),
                 'rooms' => [],
-                'customer_details' => $customer_details // Use standard naming
+                'customer_details' => $customer_details,
+                'plugin_version' => PRODUCT_ESTIMATOR_VERSION,
+                'default_markup' => $default_markup
             ];
 
             // Add estimate to session

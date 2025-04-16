@@ -508,8 +508,11 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
             return array();
         }
 
+
         // Get product categories
         $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
+
+
 
         if (empty($product_categories)) {
             return array();
@@ -525,6 +528,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
         // Find matching rules for this product's categories
         $matching_rules = array();
 
+
         foreach ($settings as $rule) {
             // Skip if no source categories
             if (empty($rule['source_categories'])) {
@@ -534,6 +538,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
                 }
                 continue;
             }
+
 
             // Check if any of the product's categories match any of the rule's source categories
             $intersect = array_intersect($product_categories, $rule['source_categories']);
@@ -546,6 +551,8 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
             return array();
         }
 
+
+
         // Get products in same categories (from all matching rules)
         $all_rule_categories = array();
         foreach ($matching_rules as $rule) {
@@ -557,6 +564,8 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
             }
         }
         $all_rule_categories = array_unique($all_rule_categories);
+
+
 
         $category_products = $this->get_products_in_categories($all_rule_categories);
 
@@ -721,16 +730,30 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      */
     public function get_similar_products_for_display($product_id, $limit = 10)
     {
-        $similar_ids = $this->find_similar_products($product_id);
+
+        $product = wc_get_product($product_id);
+        $parent_product_id = $product_id;
+
+        if ($product && $product->is_type('variation')) {
+            $parent_product_id = $product->get_parent_id();
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Product ID {$product_id} is a variation of parent ID {$parent_product_id}");
+            }
+        }
+
+        $similar_ids = $this->find_similar_products($parent_product_id);
 
         if (empty($similar_ids)) {
             return array();
         }
 
+
+
         // Limit the number of results
         $similar_ids = array_slice($similar_ids, 0, $limit);
 
         $products = array();
+
 
         foreach ($similar_ids as $id) {
             $product = wc_get_product($id);
@@ -759,6 +782,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
                 'pricing_source' => $pricing_source
             );
         }
+
 
         return $products;
     }

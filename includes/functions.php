@@ -161,8 +161,33 @@ function product_estimator_get_product_price($product_id, $room_area = null, $ap
         return $result;
     }
 
+    // Check if product is a variation and get parent if needed
+    $parent_product_id = null;
+    $is_variation = false;
+
+    if ($product->is_type('variation')) {
+        $is_variation = true;
+        $parent_product_id = $product->get_parent_id();
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Product ID {$product_id} is a variation of parent ID {$parent_product_id}");
+        }
+    }
+
     // Get pricing rule for this product
-    $pricing_rule = product_estimator_get_pricing_rule_for_product($product_id);
+    // Get pricing rule for this product - use proper categories based on whether it's a variation
+    if ($is_variation && $parent_product_id) {
+        // For variations, use parent product categories for pricing rules
+        $pricing_rule = product_estimator_get_pricing_rule_for_product_with_parent($product_id, $parent_product_id);
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Using parent-based pricing rule for variation: " . print_r($pricing_rule, true));
+        }
+    } else {
+        // For regular products, use their own categories
+        $pricing_rule = product_estimator_get_pricing_rule_for_product($product_id);
+    }
+
     $result['pricing_method'] = $pricing_rule['method'];
     $result['pricing_source'] = $pricing_rule['source'];
 
@@ -375,54 +400,16 @@ function product_estimator_get_product_price_for_display($product_id, $room_area
  * @return array The pricing rule with 'method' and 'source' keys, or default values
  */
 function product_estimator_get_pricing_rule_for_product($product_id) {
-    // Get global settings
-    $settings = get_option('product_estimator_settings');
+    // Check if this is a variation and get the parent ID if it is
+    $product = wc_get_product($product_id);
+    $parent_id = null;
 
-    // Use defaults from settings if available, otherwise fall back to hardcoded defaults
-    $default_rule = [
-        'method' => isset($settings['default_pricing_method']) ? $settings['default_pricing_method'] : 'sqm',
-        'source' => isset($settings['default_pricing_source']) ? $settings['default_pricing_source'] : 'website'
-    ];
-
-    // Return default rule if WooCommerce is not active or product ID is invalid
-    if (!function_exists('wp_get_post_terms') || empty($product_id)) {
-        return $default_rule;
+    if ($product && $product->is_type('variation')) {
+        $parent_id = $product->get_parent_id();
     }
 
-    // Get product categories
-    $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
-
-    if (empty($product_categories) || is_wp_error($product_categories)) {
-        return $default_rule;
-    }
-
-    // Get all pricing rules
-    $pricing_rules = get_option('product_estimator_pricing_rules', []);
-
-    if (empty($pricing_rules)) {
-        return $default_rule;
-    }
-
-    // Check each rule to find one that applies to this product's categories
-    foreach ($pricing_rules as $rule) {
-        if (!isset($rule['categories']) || !is_array($rule['categories'])) {
-            continue;
-        }
-
-        // Check if any of this product's categories match the rule's categories
-        $matching_categories = array_intersect($product_categories, $rule['categories']);
-
-        if (!empty($matching_categories)) {
-            // Found a matching rule, return its method and source
-            return [
-                'method' => isset($rule['pricing_method']) ? $rule['pricing_method'] : $default_rule['method'],
-                'source' => isset($rule['pricing_source']) ? $rule['pricing_source'] : $default_rule['source']
-            ];
-        }
-    }
-
-    // No matching rule found, return default
-    return $default_rule;
+    // Use the more comprehensive function
+    return product_estimator_get_pricing_rule_for_product_with_parent($product_id, $parent_id);
 }
 
 /**
@@ -556,8 +543,21 @@ function product_estimator_calculate_total_price_with_additions_for_display($pro
             PRODUCT_ESTIMATOR_VERSION
         );
 
+        $product_id_for_categories = $product['id'];
+        $productObj = wc_get_product($product['id']);
+        if ($productObj->is_type('variation')) {
+            // Get the parent product ID for getting categories
+            $product_id_for_categories = $productObj->get_parent_id();
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Using parent product ID {$product_id_for_categories} for categories of variation {$product['id']}");
+            }
+        }
+
+
+
         // Get product categories
-        $product_categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+        $product_categories = wp_get_post_terms($product_id_for_categories, 'product_cat', array('fields' => 'ids'));
         $auto_add_products = array();
 
         // Get auto-add products for all categories
@@ -610,4 +610,71 @@ function display_price_with_markup($price, $markup, $direction = null) {
             break;
     }
     return wc_price($final_price_with_markup);
+}
+
+/**
+ * Get the pricing rule for a product with proper handling for variations
+ * This function specifically considers the parent product categories for variations
+ *
+ * @param int $product_id The product ID
+ * @param int|null $parent_id The parent product ID (for variations)
+ * @return array The pricing rule with 'method' and 'source' keys, or default values
+ */
+function product_estimator_get_pricing_rule_for_product_with_parent($product_id, $parent_id = null) {
+    // Get global settings
+    $settings = get_option('product_estimator_settings');
+
+    // Use defaults from settings if available, otherwise fall back to hardcoded defaults
+    $default_rule = [
+        'method' => isset($settings['default_pricing_method']) ? $settings['default_pricing_method'] : 'sqm',
+        'source' => isset($settings['default_pricing_source']) ? $settings['default_pricing_source'] : 'website'
+    ];
+
+    // Return default rule if WooCommerce is not active or product ID is invalid
+    if (!function_exists('wp_get_post_terms') || (empty($product_id) && empty($parent_id))) {
+        return $default_rule;
+    }
+
+    // Get product categories - use parent product categories for variations
+    if ($parent_id) {
+        $product_categories = wp_get_post_terms($parent_id, 'product_cat', ['fields' => 'ids']);
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Using parent product categories for pricing rules: " . implode(', ', $product_categories));
+        }
+    } else {
+        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+    }
+
+    if (empty($product_categories) || is_wp_error($product_categories)) {
+        return $default_rule;
+    }
+
+    // Get all pricing rules
+    $pricing_rules = get_option('product_estimator_pricing_rules', []);
+
+    if (empty($pricing_rules)) {
+        return $default_rule;
+    }
+
+    // Check each rule to find one that applies to this product's categories
+    foreach ($pricing_rules as $rule) {
+        if (!isset($rule['categories']) || !is_array($rule['categories'])) {
+            continue;
+        }
+
+        // Check if any of this product's categories match the rule's categories
+        $matching_categories = array_intersect($product_categories, $rule['categories']);
+
+        if (!empty($matching_categories)) {
+            // Found a matching rule, return its method and source
+            return [
+                'method' => isset($rule['pricing_method']) ? $rule['pricing_method'] : $default_rule['method'],
+                'source' => isset($rule['pricing_source']) ? $rule['pricing_source'] : $default_rule['source']
+            ];
+        }
+    }
+
+    // No matching rule found, return default
+    return $default_rule;
 }

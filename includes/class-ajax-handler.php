@@ -1298,6 +1298,22 @@ class AjaxHandler {
      * @param float $room_length Room length (optional, will use existing room data if not provided)
      * @return array Result with status and product data
      */
+    /**
+     * Modified version of the method in class-ajax-handler.php
+     *
+     * This fixes the issue with product variations not correctly following
+     * the parent product's category product additions.
+     */
+    /**
+     * Helper method to prepare product data and add to room
+     *
+     * @param int $product_id The product ID
+     * @param string|int $estimate_id The estimate ID
+     * @param string|int $room_id The room ID
+     * @param float $room_width Room width (optional, will use existing room data if not provided)
+     * @param float $room_length Room length (optional, will use existing room data if not provided)
+     * @return array Result with status and product data
+     */
     private function prepareAndAddProductToRoom($product_id, $estimate_id, $room_id, $room_width = null, $room_length = null) {
         try {
             // First, check if this product already exists in the room
@@ -1398,17 +1414,33 @@ class AjaxHandler {
             }
 
             // PRODUCT ADDITIONS - auto-add related products and notes
-            $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
             $auto_add_products = array();
             $auto_add_notes = array();
 
+            // Get product ID for categories - FIXED: For variations, use parent product ID
+            $product_id_for_categories = $product_id;
+
+            // Check if this is a variation
+            if ($product->is_type('variation')) {
+                // Get the parent product ID for getting categories
+                $product_id_for_categories = $product->get_parent_id();
+
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Using parent product ID {$product_id_for_categories} for categories of variation {$product_id}");
+                }
+            }
+
+            // Now get the categories using the appropriate product ID
+            $product_categories = wp_get_post_terms($product_id_for_categories, 'product_cat', array('fields' => 'ids'));
+
             // Check if ProductAdditionsManager is accessible
-            if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
+            if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductAdditionsSettingsModule')) {
                 $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.3');
 
                 foreach ($product_categories as $category_id) {
                     // Get auto-add products
                     $category_auto_add_products = $product_additions_manager->get_auto_add_products_for_category($category_id);
+
                     if (!empty($category_auto_add_products)) {
                         $auto_add_products = array_merge($auto_add_products, $category_auto_add_products);
                     }
@@ -1471,11 +1503,10 @@ class AjaxHandler {
 
                 // Handle auto-add notes
                 foreach ($auto_add_notes as $note_text) {
-                    // Create note data
+                    // Create note data - FIX: Put notes in additional_notes array, NOT additional_products
                     $note_data = [
                         'id' => 'note_' . uniqid(),
                         'type' => 'note',
-                        'name' => __('Note', 'product-estimator'),
                         'note_text' => $note_text,
                     ];
 
@@ -1521,7 +1552,8 @@ class AjaxHandler {
                 'error' => $e->getMessage()
             ];
         }
-    }    /**
+    }
+    /**
      * Get the appropriate pricing rule for a product
      *
      * @param int $product_id The product ID
@@ -1541,9 +1573,30 @@ class AjaxHandler {
         if (!function_exists('wp_get_post_terms') || empty($product_id)) {
             return $default_rule;
         }
+        // Check if product is a variation and get parent if needed
+        $product = wc_get_product($product_id);
+        $parent_product_id = null;
+
+        if ($product && $product->is_type('variation')) {
+            $parent_product_id = $product->get_parent_id();
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Product ID {$product_id} is a variation of parent ID {$parent_product_id}");
+            }
+        }
+
+
 
         // Get product categories
-        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+        if ($parent_product_id) {
+            $product_categories = wp_get_post_terms($parent_product_id, 'product_cat', ['fields' => 'ids']);
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Using parent product categories for pricing rules: " . implode(', ', $product_categories));
+            }
+        } else {
+            $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+        }
 
         if (empty($product_categories) || is_wp_error($product_categories)) {
             return $default_rule;

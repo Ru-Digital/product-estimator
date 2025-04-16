@@ -13,18 +13,20 @@ class VariationHandler {
   constructor(config = {}) {
     // Default configuration
     this.config = Object.assign({
-      debug: false,
+      debug: true, // Set to true for more verbose logging
       selectors: {
         variationsForm: '.variations_form',
-        estimatorButton: '.single_add_to_estimator_button'
+        estimatorButton: '.single_add_to_estimator_button',
+        variationIdInput: 'input[name="variation_id"]'
       }
     }, config);
 
     // Store references to DOM elements
     this.variationsForm = document.querySelector(this.config.selectors.variationsForm);
     this.estimatorButton = document.querySelector(this.config.selectors.estimatorButton);
+    this.variationIdInput = this.variationsForm ? this.variationsForm.querySelector(this.config.selectors.variationIdInput) : null;
 
-    // Get variations data from global variable
+    // Get variations data from global variable - add fallback for safety
     this.variationsData = window.product_estimator_variations || {};
 
     // State
@@ -50,7 +52,19 @@ class VariationHandler {
       return this;
     }
 
+    // Log the initial state for debugging
+    this.log('Initializing VariationHandler with variations data:', this.variationsData);
+    this.log('Estimator button found:', !!this.estimatorButton);
+
+    // If we have the button, log its initial attributes
+    if (this.estimatorButton) {
+      this.log('Initial button data-product-id:', this.estimatorButton.dataset.productId);
+    }
+
     this.bindEvents();
+
+    // Check if there's already a selected variation (page could have loaded with a variation in URL)
+    this.checkCurrentVariation();
 
     this.initialized = true;
     this.log('VariationHandler initialized');
@@ -67,6 +81,8 @@ class VariationHandler {
   bindEvents() {
     if (!this.variationsForm) return;
 
+    this.log('Binding variation events');
+
     // Listen for WooCommerce variation events
     this.variationsForm.addEventListener('found_variation', this.handleFoundVariation.bind(this));
     this.variationsForm.addEventListener('reset_data', this.handleResetVariation.bind(this));
@@ -74,6 +90,32 @@ class VariationHandler {
 
     // Also handle some custom events that themes might use
     document.addEventListener('woocommerce_variation_has_changed', this.checkCurrentVariation.bind(this));
+
+    // Handle direct changes to the variation_id input field
+    if (this.variationIdInput) {
+      this.variationIdInput.addEventListener('change', () => {
+        const variationId = this.variationIdInput.value;
+        if (variationId) {
+          this.log(`Variation ID input changed to: ${variationId}`);
+          this.currentVariationId = variationId;
+          const enableEstimator = this.isEstimatorEnabled(variationId);
+          this.updateEstimatorButton(enableEstimator, variationId);
+        }
+      });
+    }
+
+    // Add a listener for jQuery's change event on the form (some themes use this)
+    if (typeof jQuery !== 'undefined') {
+      jQuery(this.variationsForm).on('change', 'input[name="variation_id"]', (e) => {
+        const variationId = e.target.value;
+        if (variationId) {
+          this.log(`jQuery variation ID change detected: ${variationId}`);
+          this.currentVariationId = variationId;
+          const enableEstimator = this.isEstimatorEnabled(variationId);
+          this.updateEstimatorButton(enableEstimator, variationId);
+        }
+      });
+    }
 
     this.log('Variation events bound');
   }
@@ -97,6 +139,8 @@ class VariationHandler {
 
     // Check if this variation has estimator enabled
     const enableEstimator = this.isEstimatorEnabled(variationId);
+
+    this.log(`Variation ${variationId} has estimator enabled: ${enableEstimator}`);
 
     // Update UI based on variation
     this.updateEstimatorButton(enableEstimator, variationId);
@@ -147,10 +191,12 @@ class VariationHandler {
     const currentVariation = this.getCurrentVariation();
 
     if (currentVariation) {
+      this.log(`Current variation detected: ${currentVariation.variation_id}`);
       this.currentVariationId = currentVariation.variation_id;
       const enableEstimator = this.isEstimatorEnabled(currentVariation.variation_id);
       this.updateEstimatorButton(enableEstimator, currentVariation.variation_id);
     } else {
+      this.log('No current variation detected');
       this.currentVariationId = null;
       // If no variation is selected, hide the button
       this.updateEstimatorButton(false);
@@ -172,16 +218,27 @@ class VariationHandler {
       return this.variationsForm.currentVariation;
     }
 
-    // Method 2: Check for data attribute
+    // Method 2: Check for hidden input
+    const hiddenInput = this.variationsForm.querySelector('input[name="variation_id"]');
+    if (hiddenInput && hiddenInput.value) {
+      return { variation_id: hiddenInput.value };
+    }
+
+    // Method 3: Check for data attribute
     const variationId = this.variationsForm.dataset.productVariations;
     if (variationId) {
       return { variation_id: variationId };
     }
 
-    // Method 3: Check for hidden input
-    const hiddenInput = this.variationsForm.querySelector('input[name="variation_id"]');
-    if (hiddenInput && hiddenInput.value) {
-      return { variation_id: hiddenInput.value };
+    // Method 4: Use jQuery data if available
+    if (typeof jQuery !== 'undefined') {
+      const $form = jQuery(this.variationsForm);
+      const jqueryData = $form.data('product_variations');
+      const currentVal = $form.find('input[name="variation_id"]').val();
+
+      if (currentVal) {
+        return { variation_id: currentVal };
+      }
     }
 
     // No variation found
@@ -196,19 +253,27 @@ class VariationHandler {
   isEstimatorEnabled(variationId) {
     if (!variationId) return false;
 
+    this.log(`Checking if estimator is enabled for variation: ${variationId}`);
+    this.log('Available variations data:', this.variationsData);
+
     // Check if this variation has estimator enabled in our data
     if (this.variationsData[variationId]) {
-      return this.variationsData[variationId].enable_estimator === 'yes';
+      const isEnabled = this.variationsData[variationId].enable_estimator === 'yes';
+      this.log(`Found variation data, estimator enabled: ${isEnabled}`);
+      return isEnabled;
     }
 
-    // If no data for this variation, check the parent product
-    // Fall back to checking the parent product's button visibility
+    // If no specific data for this variation is found, check the parent product
     const parentButton = document.querySelector('.single_add_to_estimator_button[data-product-id]:not([data-variation-id])');
     if (parentButton) {
-      // If parent button is visible and doesn't have a product ID, estimator is enabled for parent
-      return !parentButton.classList.contains('hidden') && !parentButton.style.display === 'none';
+      // Check if parent button is visible, which suggests estimator is enabled for parent
+      const parentEnabled = !parentButton.classList.contains('hidden') &&
+        getComputedStyle(parentButton).display !== 'none';
+      this.log(`Using parent product as fallback, estimator enabled: ${parentEnabled}`);
+      return parentEnabled;
     }
 
+    this.log('No variation or parent data found, estimator disabled by default');
     return false;
   }
 
@@ -226,23 +291,25 @@ class VariationHandler {
       return;
     }
 
+    this.log(`Updating button visibility: ${show ? 'show' : 'hide'}, variation ID: ${variationId}`);
+
     buttons.forEach(button => {
       if (show) {
         button.style.display = '';
 
         // Update product ID if variation ID provided
         if (variationId) {
+          this.log(`Setting button data-product-id to variation ID: ${variationId}`);
           button.dataset.productId = variationId;
 
           // Also set variation ID attribute for clarity
           button.dataset.variationId = variationId;
         }
       } else {
+        this.log('Hiding estimator button');
         button.style.display = 'none';
       }
     });
-
-    this.log(`${show ? 'Showed' : 'Hid'} estimator button${variationId ? ' for variation ' + variationId : ''}`);
   }
 
   /**

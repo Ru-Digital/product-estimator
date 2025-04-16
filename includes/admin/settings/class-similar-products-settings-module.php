@@ -753,7 +753,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
                 'price' => $product->get_price(), // Default WC price
                 'min_price' => $price_data['min_price'],
                 'max_price' => $price_data['max_price'],
-                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail') ?: '',
+                'image' => wp_get_attachment_image_url($product->get_image_id(), [300.300]) ?: '',
                 'url' => get_permalink($id),
                 'pricing_method' => $pricing_method,
                 'pricing_source' => $pricing_source

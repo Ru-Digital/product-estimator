@@ -6,7 +6,7 @@
  * Plugin Name: Product Estimator
  * Plugin URI: https://github.com/Ru-Digital/product-estimator
  * Description: A customizable product estimation tool for WordPress.
- * Version: 1.0.11
+ * Version: 1.0.12
  * Author: RU Digital
  * Author URI: https://rudigital.com.au
  * License: GPL2
@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin Constants
-define('PRODUCT_ESTIMATOR_VERSION', '1.0.11');
+define('PRODUCT_ESTIMATOR_VERSION', '1.0.12');
 define('PRODUCT_ESTIMATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PRODUCT_ESTIMATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('PRODUCT_ESTIMATOR_BASENAME', plugin_basename(__FILE__));

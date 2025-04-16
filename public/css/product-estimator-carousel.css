@@ -39,7 +39,7 @@
   flex-direction: column;
   align-items: center;
   transition: transform 0.2s, box-shadow 0.2s;
-  height: 230px; /* Fixed height for consistent carousel */
+  height: 275px; /* Fixed height for consistent carousel */
 }
 
 .suggestion-item:hover {
@@ -207,7 +207,7 @@
 
   .suggestion-item {
     width: 160px;
-    height: 210px;
+    height: 275px;
   }
 
   .suggestion-image {

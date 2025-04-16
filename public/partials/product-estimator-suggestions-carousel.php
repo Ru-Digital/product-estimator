@@ -86,7 +86,7 @@ if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\Produc
                                 'id' => $suggestion_id,
                                 'name' => $product_obj->get_name(),
                                 'price' => $product_obj->get_price(),
-                                'image' => wp_get_attachment_image_url($product_obj->get_image_id(), 'thumbnail') ?: '',
+                                'image' => wp_get_attachment_image_url($product_obj->get_image_id(), [300,300]) ?: '',
                                 'pricing_method' => $pricing_method
                             ];
                         }

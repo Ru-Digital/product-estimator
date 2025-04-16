@@ -285,7 +285,7 @@
 /* Fix for the carousel container width and overflow */
 .suggestions-carousel {
   width: 100% !important;
-  max-width: 100% !important;
+  /*max-width: 100% !important;*/
   box-sizing: border-box !important;
   padding: 0 40px !important; /* Ensure there's room for navigation arrows */
   position: relative !important;
@@ -396,17 +396,18 @@
 /* Make sure the images display correctly */
 .suggestion-image {
   width: 100% !important;
-  height: 100px !important;
+  height: 250px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   overflow: hidden !important;
   margin-bottom: 10px !important;
+  min-height: 115px;
 }
 
 .suggestion-image img {
   max-width: 100% !important;
-  max-height: 100% !important;
+  max-height: 250px !important;
   object-fit: contain !important;
 }
 

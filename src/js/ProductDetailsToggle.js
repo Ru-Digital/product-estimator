@@ -23,15 +23,18 @@ class ProductDetailsToggle {
         similarProducts: '.product-similar-products',
         productNotes: '.product-notes',
         notesContainer: '.notes-container',
-        includesContainer: '.includes-container' // Add new selector
+        includesContainer: '.includes-container',
+        suggestionsContainer: '.suggestions-container'
       },
       i18n: {
         showProducts: 'Similar Products',
         hideProducts: 'Similar Products',
         showNotes: 'Product Notes',
         hideNotes: 'Product Notes',
-        showIncludes: 'Product Includes', // Add new translation
-        hideIncludes: 'Product Includes', // Add new translation
+        showIncludes: 'Product Includes',
+        hideIncludes: 'Product Includes',
+        showSuggestions: 'Suggested Products',
+        hideSuggestions: 'Suggested Products',
         loading: 'Loading...'
       }
     }, config);
@@ -71,6 +74,84 @@ class ProductDetailsToggle {
     // Mark as initialized
     this.initialized = true;
     this.log('ProductDetailsToggle initialized');
+  }
+
+  /**
+   * Prepare the DOM for suggested products toggle
+   */
+  prepareSuggestionsToggle() {
+    // Find all accordion content elements
+    const accordionContents = document.querySelectorAll(this.config.selectors.accordionContent);
+    this.log(`Found ${accordionContents.length} accordion content elements to process for suggestions toggle`);
+
+    accordionContents.forEach(accordionContent => {
+      // Skip if already processed for suggestions toggle
+      if (accordionContent.classList.contains('suggestions-toggle-processed')) {
+        return;
+      }
+
+      // Find product suggestions section
+      const suggestionsSection = accordionContent.querySelector(this.config.selectors.productSuggestions);
+
+      // Check if accordion content has suggestions to toggle
+      if (!suggestionsSection) {
+        this.log('No suggestions section found for accordion content, skipping', accordionContent);
+        return; // No suggestions to toggle
+      }
+
+      this.log('Found suggestions section, processing', suggestionsSection);
+
+      // Mark the accordion content as having suggestions
+      accordionContent.classList.add('has-suggestions');
+
+      // Check if container already exists
+      let suggestionsContainer = accordionContent.querySelector(this.config.selectors.suggestionsContainer);
+
+      // If no container exists but there is a suggestions section, we need to create one
+      if (!suggestionsContainer) {
+        this.log('Creating new suggestions container');
+        // Create a container to wrap suggestions
+        suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'suggestions-container visible'; // Initially visible
+
+        // Move suggestions into the container (if not already in one)
+        if (suggestionsSection.parentNode !== suggestionsContainer) {
+          // Clone the node to prevent reference issues
+          const clonedSection = suggestionsSection.cloneNode(true);
+          suggestionsContainer.appendChild(clonedSection);
+
+          // Remove the original from DOM
+          suggestionsSection.parentNode.removeChild(suggestionsSection);
+        }
+
+        // Add the container to the accordion content
+        accordionContent.appendChild(suggestionsContainer);
+      }
+
+      // Add toggle button if not already present
+      let toggleButton = accordionContent.querySelector(this.config.selectors.suggestionsToggleButton);
+      if (!toggleButton) {
+        this.log('Adding suggestions toggle button to accordion content');
+        toggleButton = document.createElement('button');
+        toggleButton.className = 'product-suggestions-toggle expanded'; // Initially expanded
+        toggleButton.setAttribute('data-toggle-type', 'suggestions');
+        toggleButton.innerHTML = `
+        ${this.config.i18n.hideSuggestions}
+        <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+      `;
+
+        // Insert button before the suggestions container
+        accordionContent.insertBefore(toggleButton, suggestionsContainer);
+      }
+
+      // Initially show the suggestions container (expanded by default)
+      suggestionsContainer.style.display = 'block';
+      suggestionsContainer.classList.add('visible');
+
+      // Mark as processed to avoid duplicating
+      accordionContent.classList.add('suggestions-toggle-processed');
+      this.log('Accordion content processed for suggestions toggle');
+    });
   }
 
   /**
@@ -120,7 +201,9 @@ class ProductDetailsToggle {
     // Prepare the DOM structure for all toggle types
     this.prepareProductsToggle();
     this.prepareNotesToggle();
-    this.prepareIncludesToggle(); // Add call to new method
+    this.prepareIncludesToggle();
+    this.prepareSuggestionsToggle();
+
 
     // Then bind events to all toggle buttons
     this.bindEvents();
@@ -353,6 +436,8 @@ class ProductDetailsToggle {
         this.toggleNotes(button);
       };
 
+
+
       // Add event listener
       button.addEventListener('click', button._toggleHandler);
 
@@ -384,8 +469,105 @@ class ProductDetailsToggle {
       button._toggleBound = true;
     });
 
+    // Bind suggestions toggle buttons
+    const suggestionsToggleButtons = document.querySelectorAll(this.config.selectors.suggestionsToggleButton);
+    this.log(`Found ${suggestionsToggleButtons.length} suggestions toggle buttons to bind`);
+
+    suggestionsToggleButtons.forEach(button => {
+      // Skip if already bound
+      if (button._toggleBound) {
+        return;
+      }
+
+      // Store reference to handler for potential removal
+      button._toggleHandler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.toggleSuggestions(button);
+      };
+
+      // Add event listener
+      button.addEventListener('click', button._toggleHandler);
+
+      // Mark as bound to avoid duplicate handlers
+      button._toggleBound = true;
+    });
+
     this.log('All toggle events bound');
   }
+
+  // Add a new method to toggle suggestions visibility
+  /**
+   * Toggle the visibility of suggested products
+   * @param {HTMLElement} toggleButton - The button that was clicked
+   */
+  toggleSuggestions(toggleButton) {
+    // Find parent accordion content
+    const accordionContent = toggleButton.closest(this.config.selectors.accordionContent);
+
+    if (!accordionContent) {
+      this.log('Accordion content not found for toggle button');
+      return;
+    }
+
+    // Find suggestions container
+    const suggestionsContainer = accordionContent.querySelector(this.config.selectors.suggestionsContainer);
+
+    if (!suggestionsContainer) {
+      this.log('Suggestions container not found');
+      return;
+    }
+
+    // Toggle expanded state
+    const isExpanded = toggleButton.classList.contains('expanded');
+    this.log(`Suggestions toggle clicked, current expanded state: ${isExpanded}`);
+
+    if (isExpanded) {
+      // Hide suggestions
+      suggestionsContainer.classList.remove('visible');
+      suggestionsContainer.style.display = 'none';
+      toggleButton.classList.remove('expanded');
+
+      // Update icon
+      const iconElement = toggleButton.querySelector('.toggle-icon');
+      if (iconElement) {
+        iconElement.classList.remove('dashicons-arrow-up-alt2');
+        iconElement.classList.add('dashicons-arrow-down-alt2');
+      }
+
+      // Update text (safely)
+      toggleButton.innerHTML = toggleButton.innerHTML.replace(
+        this.config.i18n.hideSuggestions,
+        this.config.i18n.showSuggestions
+      );
+
+      this.log('Suggestions hidden');
+    } else {
+      // Show suggestions
+      suggestionsContainer.classList.add('visible');
+      suggestionsContainer.style.display = 'block';
+      toggleButton.classList.add('expanded');
+
+      // Update icon
+      const iconElement = toggleButton.querySelector('.toggle-icon');
+      if (iconElement) {
+        iconElement.classList.remove('dashicons-arrow-down-alt2');
+        iconElement.classList.add('dashicons-arrow-up-alt2');
+      }
+
+      // Update text (safely)
+      toggleButton.innerHTML = toggleButton.innerHTML.replace(
+        this.config.i18n.showSuggestions,
+        this.config.i18n.hideSuggestions
+      );
+
+      // Initialize carousels if they exist
+      this.initializeCarousels(suggestionsContainer);
+      this.log('Suggestions shown');
+    }
+  }
+
+
   /**
    * Toggle the visibility of similar products
    * @param {HTMLElement} toggleButton - The button that was clicked

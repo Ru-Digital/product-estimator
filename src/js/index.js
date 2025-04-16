@@ -271,6 +271,52 @@ function initializeProductDetailsToggle(debugMode) {
       e.preventDefault();
       e.stopPropagation();
     }
+
+      // Handle suggestions toggle
+      if (e.target.closest('.product-suggestions-toggle')) {
+        const toggleButton = e.target.closest('.product-suggestions-toggle');
+        const accordionContent = toggleButton.closest('.accordion-content');
+
+        if (!accordionContent) return;
+
+        const isExpanded = toggleButton.classList.contains('expanded');
+        const suggestionsContainer = accordionContent.querySelector('.suggestions-container');
+
+        if (!suggestionsContainer) return;
+
+        // Toggle state
+        if (isExpanded) {
+          // Hide container
+          toggleButton.classList.remove('expanded');
+          suggestionsContainer.style.display = 'none';
+          suggestionsContainer.classList.remove('visible');
+          const icon = toggleButton.querySelector('.toggle-icon');
+          if (icon) {
+            icon.classList.remove('dashicons-arrow-up-alt2');
+            icon.classList.add('dashicons-arrow-down-alt2');
+          }
+        } else {
+          // Show container
+          toggleButton.classList.add('expanded');
+          suggestionsContainer.style.display = 'block';
+          suggestionsContainer.classList.add('visible');
+          const icon = toggleButton.querySelector('.toggle-icon');
+          if (icon) {
+            icon.classList.remove('dashicons-arrow-down-alt2');
+            icon.classList.add('dashicons-arrow-up-alt2');
+          }
+
+          // Initialize carousels when shown
+          if (typeof initSuggestionsCarousels === 'function') {
+            initSuggestionsCarousels();
+          }
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+
   });
 
     console.log('ProductDetailsToggle initialization complete');

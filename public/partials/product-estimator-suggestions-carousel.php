@@ -1,13 +1,24 @@
 <?php
 /**
- * Product Suggestions Carousel Template
+ * Product Suggestions Carousel Template - Enhanced with debug and fallbacks
  *
  * @package    Product_Estimator
  * @subpackage Product_Estimator/public/partials
  */
 
-// Skip this entire section if the room has no products
-if (empty($room['products'])) {
+// Add debugging if WP_DEBUG is enabled
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    error_log('Loading product-estimator-suggestions-carousel.php');
+    error_log('Room data: ' . (isset($room) ? print_r($room, true) : 'Not set'));
+    error_log('Room ID: ' . (isset($room_id) ? $room_id : 'Not set'));
+    error_log('Estimate ID: ' . (isset($estimate_id) ? $estimate_id : 'Not set'));
+}
+
+// Skip if no room data is available or room has no products
+if (!isset($room) || empty($room) || !isset($room['products']) || empty($room['products'])) {
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('Skipping suggestions carousel - no room data or products');
+    }
     return;
 }
 
@@ -19,12 +30,16 @@ foreach ($room['products'] as $product) {
     }
 }
 
-// Get suggestions from the room data
+// Get suggestions
 $suggestions = [];
 
 // Check if we have the ProductAdditionsManager class
 if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductAdditionsSettingsModule')) {
-    $manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
+    $manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('ProductAdditionsSettingsModule class found, generating suggestions');
+    }
 
     // Generate suggestions based on products in this room
     foreach ($room['products'] as $product) {
@@ -80,6 +95,10 @@ if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\Produc
             }
         }
     }
+} else {
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('ProductAdditionsSettingsModule class not found');
+    }
 }
 
 // Convert to indexed array
@@ -90,8 +109,16 @@ if (!empty($suggestions)) {
     $suggestions = array_values($suggestions);
 }
 
+// Debug our suggestions count
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    error_log('Generated ' . count($suggestions) . ' suggestions');
+}
+
 // Check if we have any suggestions to display
 if (empty($suggestions)) {
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        error_log('No suggestions to display, returning');
+    }
     return; // Don't display anything if no suggestions
 }
 
@@ -110,102 +137,89 @@ if ($default_markup === 0) {
     $options = get_option('product_estimator_settings');
     $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
 }
+
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    error_log('Rendering suggestions carousel with ' . count($suggestions) . ' items');
+}
 ?>
 
-<div class="product-suggestions">
-    <h5><?php esc_html_e('Suggested Products', 'product-estimator'); ?></h5>
+<!-- Suggestions Toggle Button -->
+<button class="product-suggestions-toggle expanded">
+    <?php esc_html_e('Suggested Products', 'product-estimator'); ?>
+    <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span>
+</button>
 
-    <div class="suggestions-carousel">
-        <div class="suggestions-nav prev" aria-label="<?php esc_attr_e('Previous', 'product-estimator'); ?>">
-            <span class="dashicons dashicons-arrow-left-alt2"></span>
-        </div>
+<!-- Suggestions Container - initially visible -->
+<div class="suggestions-container visible" style="display: block;">
+    <div class="product-suggestions">
+        <div class="suggestions-carousel">
+            <div class="suggestions-nav prev" aria-label="<?php esc_attr_e('Previous', 'product-estimator'); ?>">
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            </div>
 
-        <div class="suggestions-container">
-            <?php foreach ($suggestions as $suggestion):
-                // Use our helper function to calculate price with auto-add products
-                $price_data = product_estimator_calculate_total_price_with_additions(
-                    $suggestion['id'],
-                    $room_area
-                );
+            <div class="suggestions-container">
+                <?php foreach ($suggestions as $suggestion):
+                    // Use our helper function to calculate price with auto-add products
+                    $price_data = product_estimator_calculate_total_price_with_additions(
+                        $suggestion['id'],
+                        $room_area
+                    );
 
-                $min_total = $price_data['min_total'];
-                $max_total = $price_data['max_total'];
-                $price_breakdown = $price_data['breakdown'];
+                    $min_total = $price_data['min_total'];
+                    $max_total = $price_data['max_total'];
+                    $price_breakdown = $price_data['breakdown'];
 
-                // Get pricing method for display
-                $has_auto_add = count($price_breakdown) > 1;
-                $main_product = $price_breakdown[0];
-                $pricing_method = $main_product['pricing_method'];
-                ?>
-                <div class="suggestion-item">
-                    <div class="suggestion-image">
-                        <?php if (!empty($suggestion['image'])): ?>
-                            <img src="<?php echo esc_url($suggestion['image']); ?>"
-                                 alt="<?php echo esc_attr($suggestion['name']); ?>">
-                        <?php else: ?>
-                            <div class="no-image"></div>
-                        <?php endif; ?>
-                    </div>
-
-                    <div class="suggestion-details">
-                        <div class="suggestion-name"><?php echo esc_html($suggestion['name']); ?></div>
-
-                        <div class="suggestion-price">
-                            <?php if (round($min_total, 2) !== round($max_total, 2)): ?>
-                                <?php echo wc_price($min_total); ?> - <?php echo wc_price($max_total); ?>
+                    // Get pricing method for display
+                    $has_auto_add = count($price_breakdown) > 1;
+                    $main_product = $price_breakdown[0];
+                    $pricing_method = $main_product['pricing_method'];
+                    ?>
+                    <div class="suggestion-item">
+                        <div class="suggestion-image">
+                            <?php if (!empty($suggestion['image'])): ?>
+                                <img src="<?php echo esc_url($suggestion['image']); ?>"
+                                     alt="<?php echo esc_attr($suggestion['name']); ?>">
                             <?php else: ?>
-                                <?php echo wc_price($min_total); ?>
-                            <?php endif; ?>
-
-                            <?php if ($pricing_method === 'sqm'): ?>
-                                <span class="unit-price">/m²</span>
-                            <?php endif; ?>
-
-                            <?php if ($has_auto_add): ?>
-                                <span class="has-additions" title="<?php esc_attr_e('Includes additional products', 'product-estimator'); ?>">+</span>
+                                <div class="no-image"></div>
                             <?php endif; ?>
                         </div>
 
-                        <?php if ($has_auto_add): ?>
-                            <div class="suggestion-breakdown">
-                                <ul class="breakdown-list">
-                                    <?php foreach ($price_breakdown as $item): ?>
-                                        <li class="breakdown-item <?php echo esc_attr($item['type']); ?>">
-                                            <span class="breakdown-name">
-                                                <?php if ($item['type'] === 'auto_add'): ?>
-                                                    <span class="auto-add-indicator">+</span>
-                                                <?php endif; ?>
-                                                <?php echo esc_html($item['name']); ?>
-                                            </span>
-                                            <span class="breakdown-price">
-                                                <?php if (round($item['min_total'], 2) !== round($item['max_total'], 2)): ?>
-                                                    <?php echo wc_price($item['min_total']); ?> - <?php echo wc_price($item['max_total']); ?>
-                                                <?php else: ?>
-                                                    <?php echo wc_price($item['min_total']); ?>
-                                                <?php endif; ?>
-                                            </span>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </div>
-                        <?php endif; ?>
+                        <div class="suggestion-details">
+                            <div class="suggestion-name"><?php echo esc_html($suggestion['name']); ?></div>
 
-                        <div class="suggestion-actions">
-                            <button type="button"
-                                    class="add-suggestion-to-room"
-                                    data-product-id="<?php echo esc_attr($suggestion['id']); ?>"
-                                    data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
-                                    data-room-id="<?php echo esc_attr($room_id); ?>">
-                                <?php esc_html_e('Add', 'product-estimator'); ?>
-                            </button>
+                            <div class="suggestion-price">
+                                <?php if (round($min_total, 2) !== round($max_total, 2)): ?>
+                                    <?php echo wc_price($min_total); ?> - <?php echo wc_price($max_total); ?>
+                                <?php else: ?>
+                                    <?php echo wc_price($min_total); ?>
+                                <?php endif; ?>
+
+                                <?php if ($pricing_method === 'sqm'): ?>
+                                    <span class="unit-price">/m²</span>
+                                <?php endif; ?>
+
+                                <?php if ($has_auto_add): ?>
+                                    <span class="has-additions" title="<?php esc_attr_e('Includes additional products', 'product-estimator'); ?>">+</span>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="suggestion-actions">
+                                <button type="button"
+                                        class="add-suggestion-to-room"
+                                        data-product-id="<?php echo esc_attr($suggestion['id']); ?>"
+                                        data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
+                                        data-room-id="<?php echo esc_attr($room_id); ?>">
+                                    <?php esc_html_e('Add', 'product-estimator'); ?>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            <?php endforeach; ?>
-        </div>
+                <?php endforeach; ?>
+            </div>
 
-        <div class="suggestions-nav next" aria-label="<?php esc_attr_e('Next', 'product-estimator'); ?>">
-            <span class="dashicons dashicons-arrow-right-alt2"></span>
+            <div class="suggestions-nav next" aria-label="<?php esc_attr_e('Next', 'product-estimator'); ?>">
+                <span class="dashicons dashicons-arrow-right-alt2"></span>
+            </div>
         </div>
     </div>
 </div>

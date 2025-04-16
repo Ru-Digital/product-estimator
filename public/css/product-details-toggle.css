@@ -265,3 +265,175 @@
     font-size: 11px;
   }
 }
+
+
+/**
+ * CSS Fixes for Suggested Products in Product Estimator
+ *
+ * This file contains fixes for visibility issues with the suggestions carousel
+ */
+
+/* Ensure suggestions containers are visible by default */
+.product-suggestions,
+.suggestions-container,
+.suggestions-carousel {
+  display: block !important;
+  visibility: visible !important;
+  overflow: visible !important;
+}
+
+/* Fix for the carousel container width and overflow */
+.suggestions-carousel {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 0 40px !important; /* Ensure there's room for navigation arrows */
+  position: relative !important;
+  margin: 15px 0 !important;
+}
+
+/* Make sure the suggestions content container is properly visible */
+.suggestions-container {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 15px !important;
+  width: 100% !important;
+  max-width: calc(100% - 80px) !important; /* Account for nav arrows */
+  transition: transform 0.3s ease !important;
+  margin: 0 auto !important;
+}
+
+/* Fix for individual suggestion items */
+.suggestion-item {
+  flex: 0 0 auto !important;
+  width: 200px !important;
+  min-width: 200px !important;
+  max-width: 200px !important;
+  margin: 0 5px !important;
+  box-sizing: border-box !important;
+  padding: 10px !important;
+  position: relative !important;
+}
+
+/* Fix button styling for add suggestion buttons */
+.add-suggestion-to-room {
+  width: 100% !important;
+  display: block !important;
+  padding: 8px !important;
+  margin-top: 10px !important;
+  color: white !important;
+  background-color: #333 !important;
+  border: none !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+}
+
+.add-suggestion-to-room:hover {
+  background-color: #00833F !important;
+}
+/* Fix navigation arrows positioning */
+.suggestions-nav {
+  position: absolute !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 36px !important;
+  height: 36px !important;
+  z-index: 10 !important;
+  background: white !important;
+  border: 1px solid #ddd !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.suggestions-nav.prev {
+  left: 0 !important;
+}
+
+.suggestions-nav.next {
+  right: 0 !important;
+}
+
+/* Fix toggle button for suggestions */
+.product-suggestions-toggle {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: #f8f8f8 !important;
+  border: none !important;
+  border-top: 1px dashed #e5e5e5 !important;
+  padding: 8px 0 !important;
+  margin-top: 10px !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+  color: #555 !important;
+}
+
+/* Fix for container visibility in toggle state */
+.product-suggestions-toggle.expanded + .suggestions-container,
+.product-suggestions-toggle.expanded + .suggestions-container .product-suggestions {
+  display: block !important;
+}
+
+.product-suggestions-toggle:not(.expanded) + .suggestions-container {
+  display: none !important;
+}
+
+/* Fix product suggestions header and icon */
+.product-suggestions h5 {
+  margin-bottom: 15px !important;
+  font-size: 14px !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Make sure the images display correctly */
+.suggestion-image {
+  width: 100% !important;
+  height: 100px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  margin-bottom: 10px !important;
+}
+
+.suggestion-image img {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* Handle text overflow correctly */
+.suggestion-name {
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  margin-bottom: 5px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+}
+
+/* Ensure prices are visible */
+.suggestion-price {
+  font-weight: bold !important;
+  margin-bottom: 10px !important;
+  color: #00833F !important;
+}
+
+/* Ensure products toggle buttons are visible */
+.product-suggestions-toggle,
+.product-includes-toggle,
+.product-notes-toggle,
+.product-details-toggle {
+  opacity: 1 !important;
+  visibility: visible !important;
+}

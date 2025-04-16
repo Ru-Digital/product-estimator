@@ -48,21 +48,31 @@ if (isset($product['id']) && !empty($product['id'])):
                 $options = get_option('product_estimator_settings');
                 $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
             }
-
-            // Get pricing rules
-            $pricing_rules = get_option('product_estimator_pricing_rules', []);
             ?>
             <!-- This is a similar products carousel - should be bound by product-item -->
             <div class="product-similar-products">
-                <!--                <h5>--><?php //esc_html_e('Similar Products', 'product-estimator'); ?><!--</h5>-->
-
                 <div class="suggestions-carousel similar-products-carousel">
                     <div class="suggestions-nav prev" aria-label="<?php esc_attr_e('Previous', 'product-estimator'); ?>">
                         <span class="dashicons dashicons-arrow-left-alt2"></span>
                     </div>
 
                     <div class="suggestions-container">
-                        <?php foreach ($similar_products as $similar): ?>
+                        <?php foreach ($similar_products as $similar):
+                            // Use our new helper function to calculate price with auto-add products
+                            $price_data = product_estimator_calculate_total_price_with_additions(
+                                $similar['id'],
+                                $room_area
+                            );
+
+                            $min_total = $price_data['min_total'];
+                            $max_total = $price_data['max_total'];
+                            $price_breakdown = $price_data['breakdown'];
+
+                            // Get pricing method for display
+                            $has_auto_add = count($price_breakdown) > 1;
+                            $main_product = $price_breakdown[0];
+                            $pricing_method = $main_product['pricing_method'];
+                            ?>
                             <div class="suggestion-item similar-product-item">
                                 <div class="suggestion-image">
                                     <?php if (!empty($similar['image'])): ?>
@@ -76,77 +86,24 @@ if (isset($product['id']) && !empty($product['id'])):
                                 <div class="suggestion-details">
                                     <div class="suggestion-name"><?php echo esc_html($similar['name']); ?></div>
 
-                                    <?php
-                                    // PRICING CALCULATION SECTION - FIXED
-
-                                    // Determine pricing method from rules
-                                    $pricing_method = isset($similar['pricing_method']) ? $similar['pricing_method'] : 'sqm';
-
-                                    // If pricing method not directly provided, check pricing rules
-                                    if (!isset($similar['pricing_method']) && isset($similar['id'])) {
-                                        $product_categories = wp_get_post_terms($similar['id'], 'product_cat', ['fields' => 'ids']);
-
-                                        // Check each rule for matching categories
-                                        foreach ($pricing_rules as $rule) {
-                                            if (isset($rule['categories']) && is_array($rule['categories'])) {
-                                                $matching_categories = array_intersect($product_categories, $rule['categories']);
-                                                if (!empty($matching_categories)) {
-                                                    // Found a matching rule, use its method
-                                                    $pricing_method = isset($rule['pricing_method']) ? $rule['pricing_method'] : 'sqm';
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // Use min_price and max_price if available, otherwise use regular price
-                                    $min_price = isset($similar['min_price']) ? floatval($similar['min_price']) : floatval($similar['price']);
-                                    $max_price = isset($similar['max_price']) ? floatval($similar['max_price']) : floatval($similar['price']);
-
-                                    // Apply markup adjustment to prices
-                                    $min_price_adjusted = $min_price * (1 - ($default_markup / 100));
-                                    $max_price_adjusted = $max_price * (1 + ($default_markup / 100));
-
-                                    // Round the unit prices
-                                    $min_price_adjusted = function_exists('product_estimator_round_price')
-                                        ? product_estimator_round_price($min_price_adjusted)
-                                        : round($min_price_adjusted, 2);
-                                    $max_price_adjusted = function_exists('product_estimator_round_price')
-                                        ? product_estimator_round_price($max_price_adjusted)
-                                        : round($max_price_adjusted, 2);
-
-                                    // Calculate totals based on pricing method and room area
-                                    if ($pricing_method === 'sqm' && $room_area > 0) {
-                                        // Multiply unit price by room area to get total
-                                        $min_total = $min_price_adjusted * $room_area;
-                                        $max_total = $max_price_adjusted * $room_area;
-
-                                        // Round the calculated totals
-                                        $min_total = function_exists('product_estimator_round_price')
-                                            ? product_estimator_round_price($min_total)
-                                            : round($min_total, 2);
-                                        $max_total = function_exists('product_estimator_round_price')
-                                            ? product_estimator_round_price($max_total)
-                                            : round($max_total, 2);
-                                    } else {
-                                        // For fixed pricing, use the adjusted prices directly
-                                        $min_total = $min_price_adjusted;
-                                        $max_total = $max_price_adjusted;
-
-                                        // Already rounded above
-                                    }
-
-                                    // Determine if we need to show a price range or single price
-                                    $show_range = round($min_total, 2) !== round($max_total, 2);
-                                    ?>
+<!--                                    <div class="suggestion-price">-->
+<!--                                        --><?php //if ($min_total !== $max_total): ?>
+<!--                                            --><?php //echo wc_price($min_total); ?><!-- - --><?php //echo wc_price($max_total); ?>
+<!--                                        --><?php //else: ?>
+<!--                                            --><?php //echo wc_price($min_total); ?>
+<!--                                        --><?php //endif; ?>
+<!---->
+<!--                                    </div>-->
 
                                     <div class="suggestion-price">
-                                        <?php if ($show_range): ?>
-                                            <?php echo wc_price($min_total); ?> - <?php echo wc_price($max_total); ?>
+                                        <?php if ($min_total !== $max_total): ?>
+                                            <?php echo display_price_with_markup($min_total, $default_markup, "down"); ?> - <?php echo display_price_with_markup($max_total, $default_markup, "up" ); ?>
                                         <?php else: ?>
-                                            <?php echo wc_price($min_total); ?>
+                                            <?php echo display_price_with_markup($min_total, $default_markup, "up"); ?>
                                         <?php endif; ?>
+
                                     </div>
+
 
                                     <div class="suggestion-actions">
                                         <button type="button"
@@ -155,8 +112,7 @@ if (isset($product['id']) && !empty($product['id'])):
                                                 data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
                                                 data-room-id="<?php echo esc_attr($room_id); ?>"
                                                 data-replace-product-id="<?php echo esc_attr($product['id']); ?>"
-                                                data-pricing-method="<?php echo esc_attr($pricing_method); ?>"
-                                                data-pricing-source="<?php echo esc_attr($similar['pricing_source'] ?? 'website'); ?>">
+                                                data-pricing-method="<?php echo esc_attr($pricing_method); ?>">
                                             <?php esc_html_e('Replace', 'product-estimator'); ?>
                                         </button>
                                     </div>

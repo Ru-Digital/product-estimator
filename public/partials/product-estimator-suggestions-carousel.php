@@ -19,7 +19,7 @@ foreach ($room['products'] as $product) {
     }
 }
 
-// Generate suggestions at template render time instead of from session
+// Get suggestions from the room data
 $suggestions = [];
 
 // Check if we have the ProductAdditionsManager class
@@ -70,7 +70,7 @@ if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\Produc
                             $suggestions[$suggestion_id] = [
                                 'id' => $suggestion_id,
                                 'name' => $product_obj->get_name(),
-                                'price' => product_estimator_round_price($product_obj->get_price()),
+                                'price' => $product_obj->get_price(),
                                 'image' => wp_get_attachment_image_url($product_obj->get_image_id(), 'thumbnail') ?: '',
                                 'pricing_method' => $pricing_method
                             ];
@@ -85,31 +85,31 @@ if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\Produc
 // Convert to indexed array
 $suggestions = array_values($suggestions);
 
+// Filter out any products that are already in the room
+if (!empty($suggestions)) {
+    $suggestions = array_values($suggestions);
+}
+
 // Check if we have any suggestions to display
 if (empty($suggestions)) {
     return; // Don't display anything if no suggestions
 }
 
-// Get default markup from the parent estimate if available
-$default_markup = 0;
-if (isset($estimate_id)) {
-    $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
-    $estimate = $session_handler->getEstimate($estimate_id);
-    if ($estimate && isset($estimate['default_markup'])) {
-        $default_markup = floatval($estimate['default_markup']);
+// Calculate room area for pricing calculations
+$room_width = isset($room['width']) ? floatval($room['width']) : 0;
+$room_length = isset($room['length']) ? floatval($room['length']) : 0;
+$room_area = $room_width * $room_length;
 
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Using estimate's markup for suggestions carousel: $default_markup%");
-        }
-    }
-}
+// Get markup from the estimate if available
+$session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
+$estimate = $session_handler->getEstimate($estimate_id);
+$default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
 
 // If no markup found in the estimate, fall back to global settings
 if ($default_markup === 0) {
     $options = get_option('product_estimator_settings');
     $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
 }
-
 ?>
 
 <div class="product-suggestions">
@@ -121,7 +121,22 @@ if ($default_markup === 0) {
         </div>
 
         <div class="suggestions-container">
-            <?php foreach ($suggestions as $suggestion): ?>
+            <?php foreach ($suggestions as $suggestion):
+                // Use our helper function to calculate price with auto-add products
+                $price_data = product_estimator_calculate_total_price_with_additions(
+                    $suggestion['id'],
+                    $room_area
+                );
+
+                $min_total = $price_data['min_total'];
+                $max_total = $price_data['max_total'];
+                $price_breakdown = $price_data['breakdown'];
+
+                // Get pricing method for display
+                $has_auto_add = count($price_breakdown) > 1;
+                $main_product = $price_breakdown[0];
+                $pricing_method = $main_product['pricing_method'];
+                ?>
                 <div class="suggestion-item">
                     <div class="suggestion-image">
                         <?php if (!empty($suggestion['image'])): ?>
@@ -135,41 +150,45 @@ if ($default_markup === 0) {
                     <div class="suggestion-details">
                         <div class="suggestion-name"><?php echo esc_html($suggestion['name']); ?></div>
 
-                        <?php
-                        // Get pricing method
-                        $pricing_method = isset($suggestion['pricing_method']) ? $suggestion['pricing_method'] : 'sqm';
-
-                        // Use min_price and max_price if available, otherwise use regular price
-                        $min_price = product_estimator_round_price(isset($suggestion['min_price']) ? floatval($suggestion['min_price']) : floatval($suggestion['price']));
-                        $max_price = product_estimator_round_price(isset($suggestion['max_price']) ? floatval($suggestion['max_price']) : floatval($suggestion['price']));
-
-                        // If min and max are the same, create a small range based on markup
-                        if ($min_price == $max_price) {
-                            $base_price = $min_price;
-                            // Apply markup adjustment
-                            $min_price_adjusted = $base_price * (1 - ($default_markup / 100));
-                            $max_price_adjusted = $base_price * (1 + ($default_markup / 100));
-                        } else {
-                            // Apply markup adjustment - already a range
-                            $min_price_adjusted = $min_price * (1 - ($default_markup / 100));
-                            $max_price_adjusted = $max_price * (1 + ($default_markup / 100));
-                        }
-
-                        // Determine if we need to show a price range or single price
-                        $show_range = round($min_price_adjusted, 2) !== round($max_price_adjusted, 2);
-                        ?>
-
                         <div class="suggestion-price">
-                            <?php if ($show_range): ?>
-                                <?php echo wc_price($min_price_adjusted); ?> - <?php echo wc_price($max_price_adjusted); ?>
+                            <?php if (round($min_total, 2) !== round($max_total, 2)): ?>
+                                <?php echo wc_price($min_total); ?> - <?php echo wc_price($max_total); ?>
                             <?php else: ?>
-                                <?php echo wc_price($min_price_adjusted); ?>
+                                <?php echo wc_price($min_total); ?>
                             <?php endif; ?>
 
                             <?php if ($pricing_method === 'sqm'): ?>
                                 <span class="unit-price">/m²</span>
                             <?php endif; ?>
+
+                            <?php if ($has_auto_add): ?>
+                                <span class="has-additions" title="<?php esc_attr_e('Includes additional products', 'product-estimator'); ?>">+</span>
+                            <?php endif; ?>
                         </div>
+
+                        <?php if ($has_auto_add): ?>
+                            <div class="suggestion-breakdown">
+                                <ul class="breakdown-list">
+                                    <?php foreach ($price_breakdown as $item): ?>
+                                        <li class="breakdown-item <?php echo esc_attr($item['type']); ?>">
+                                            <span class="breakdown-name">
+                                                <?php if ($item['type'] === 'auto_add'): ?>
+                                                    <span class="auto-add-indicator">+</span>
+                                                <?php endif; ?>
+                                                <?php echo esc_html($item['name']); ?>
+                                            </span>
+                                            <span class="breakdown-price">
+                                                <?php if (round($item['min_total'], 2) !== round($item['max_total'], 2)): ?>
+                                                    <?php echo wc_price($item['min_total']); ?> - <?php echo wc_price($item['max_total']); ?>
+                                                <?php else: ?>
+                                                    <?php echo wc_price($item['min_total']); ?>
+                                                <?php endif; ?>
+                                            </span>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
 
                         <div class="suggestion-actions">
                             <button type="button"

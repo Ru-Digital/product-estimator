@@ -483,21 +483,17 @@ class SessionHandler {
                 // Calculate main product prices
                 if (isset($product['min_price']) && isset($product['max_price'])) {
                     // Apply markup adjustment
-                    $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
-                    $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
+//                    $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
+//                    $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
 
                     // Round the prices
-                    $min_price = product_estimator_round_price($min_price);
-                    $max_price = product_estimator_round_price($max_price);
+                    $min_price = $product['min_price'];
+                    $max_price = $product['max_price'];
 
                     // Calculate based on pricing method
                     if ($pricing_method === 'sqm' && $room_area > 0) {
                         $product_min_total = $min_price * $room_area;
                         $product_max_total = $max_price * $room_area;
-
-                        // Round the totals
-                        $product_min_total = product_estimator_round_price($product_min_total);
-                        $product_max_total = product_estimator_round_price($product_max_total);
 
                         $min_total += $product_min_total;
                         $max_total += $product_max_total;
@@ -508,12 +504,12 @@ class SessionHandler {
                     }
                 } elseif (isset($product['min_price_total']) && isset($product['max_price_total'])) {
                     // For pre-calculated totals
-                    $min_product_total = floatval($product['min_price_total']) * (1 - ($default_markup / 100));
-                    $max_product_total = floatval($product['max_price_total']) * (1 + ($default_markup / 100));
+//                    $min_product_total = floatval($product['min_price_total']) * (1 - ($default_markup / 100));
+//                    $max_product_total = floatval($product['max_price_total']) * (1 + ($default_markup / 100));
 
                     // Round the product totals
-                    $min_product_total = product_estimator_round_price($min_product_total);
-                    $max_product_total = product_estimator_round_price($max_product_total);
+                    $min_product_total = $product['min_price_total'];
+                    $max_product_total = $product['max_price_total'];
 
                     $min_total += $min_product_total;
                     $max_total += $max_product_total;
@@ -528,21 +524,17 @@ class SessionHandler {
 
                         if (isset($additional_product['min_price']) && isset($additional_product['max_price'])) {
                             // Apply markup adjustment
-                            $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
-                            $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
+//                            $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
+//                            $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
 
                             // Round the prices
-                            $add_min_price = product_estimator_round_price($add_min_price);
-                            $add_max_price = product_estimator_round_price($add_max_price);
+                            $add_min_price = $additional_product['min_price'];
+                            $add_max_price = $additional_product['max_price'];
 
                             // Calculate based on pricing method
                             if ($add_pricing_method === 'sqm' && $room_area > 0) {
                                 $add_min_total = $add_min_price * $room_area;
                                 $add_max_total = $add_max_price * $room_area;
-
-                                // Round the totals
-                                $add_min_total = product_estimator_round_price($add_min_total);
-                                $add_max_total = product_estimator_round_price($add_max_total);
 
                                 $min_total += $add_min_total;
                                 $max_total += $add_max_total;
@@ -553,12 +545,12 @@ class SessionHandler {
                             }
                         } elseif (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])) {
                             // For pre-calculated totals
-                            $add_min_total = floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
-                            $add_max_total = floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
+//                            $add_min_total = floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
+//                            $add_max_total = floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
 
                             // Round the totals
-                            $add_min_total = product_estimator_round_price($add_min_total);
-                            $add_max_total = product_estimator_round_price($add_max_total);
+                            $add_min_total = $additional_product['min_price_total'];
+                            $add_max_total = $additional_product['max_price_total'];
 
                             $min_total += $add_min_total;
                             $max_total += $add_max_total;
@@ -569,8 +561,8 @@ class SessionHandler {
         }
 
         // Round the final room totals
-        $min_total = product_estimator_round_price($min_total);
-        $max_total = product_estimator_round_price($max_total);
+        $min_total = $min_total;
+        $max_total = $max_total;
 
         return [
             'min_total' => $min_total,
@@ -677,21 +669,17 @@ class SessionHandler {
                             // Calculate main product prices
                             if (isset($product['min_price']) && isset($product['max_price'])) {
                                 // Apply markup adjustment
-                                $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
-                                $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
+//                                $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
+//                                $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
 
                                 // Round the unit prices
-                                $min_price = product_estimator_round_price($min_price);
-                                $max_price = product_estimator_round_price($max_price);
+                                $min_price = $product['min_price'];
+                                $max_price = $product['max_price'];
 
                                 // Calculate based on pricing method
                                 if ($pricing_method === 'sqm' && $room_area > 0) {
                                     $min_total = $min_price * $room_area;
                                     $max_total = $max_price * $room_area;
-
-                                    // Round the calculated totals
-                                    $min_total = product_estimator_round_price($min_total);
-                                    $max_total = product_estimator_round_price($max_total);
 
                                     // Store calculated totals
                                     $product['min_price_total'] = $min_total;
@@ -709,12 +697,12 @@ class SessionHandler {
                                 }
                             } elseif (isset($product['min_price_total']) && isset($product['max_price_total'])) {
                                 // For pre-calculated totals
-                                $min_total = floatval($product['min_price_total']) * (1 - ($default_markup / 100));
-                                $max_total = floatval($product['max_price_total']) * (1 + ($default_markup / 100));
+//                                $min_total = floatval($product['min_price_total']) * (1 - ($default_markup / 100));
+//                                $max_total = floatval($product['max_price_total']) * (1 + ($default_markup / 100));
 
                                 // Round the totals
-                                $min_total = product_estimator_round_price($min_total);
-                                $max_total = product_estimator_round_price($max_total);
+                                $min_total = $product['min_price_total'];
+                                $max_total = $product['max_price_total'];
 
                                 $room_min_total += $min_total;
                                 $room_max_total += $max_total;
@@ -743,21 +731,17 @@ class SessionHandler {
 
                                     if (isset($additional_product['min_price']) && isset($additional_product['max_price'])) {
                                         // Apply markup adjustment
-                                        $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
-                                        $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
+//                                        $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
+//                                        $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
 
                                         // Round the unit prices
-                                        $add_min_price = product_estimator_round_price($add_min_price);
-                                        $add_max_price = product_estimator_round_price($add_max_price);
+                                        $add_min_price = $additional_product['min_price'];
+                                        $add_max_price = $additional_product['max_price'];
 
                                         // Calculate based on pricing method
                                         if ($add_pricing_method === 'sqm' && $room_area > 0) {
                                             $add_min_total = $add_min_price * $room_area;
                                             $add_max_total = $add_max_price * $room_area;
-
-                                            // Round the calculated totals
-                                            $add_min_total = product_estimator_round_price($add_min_total);
-                                            $add_max_total = product_estimator_round_price($add_max_total);
 
                                             // Store calculated totals
                                             $additional_product['min_price_total'] = $add_min_total;
@@ -775,12 +759,12 @@ class SessionHandler {
                                         }
                                     } elseif (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])) {
                                         // For pre-calculated totals
-                                        $add_min_total = floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
-                                        $add_max_total = floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
+//                                        $add_min_total = floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
+//                                        $add_max_total = floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
 
                                         // Round the totals
-                                        $add_min_total = product_estimator_round_price($add_min_total);
-                                        $add_max_total = product_estimator_round_price($add_max_total);
+                                        $add_min_total = $additional_product['min_price_total'];
+                                        $add_max_total = $additional_product['max_price_total'];
 
                                         $room_min_total += $add_min_total;
                                         $room_max_total += $add_max_total;
@@ -794,10 +778,6 @@ class SessionHandler {
                         }
                     }
 
-                    // Round the room totals
-                    $room_min_total = product_estimator_round_price($room_min_total);
-                    $room_max_total = product_estimator_round_price($room_max_total);
-
                     // Store room totals
                     $room['min_total'] = $room_min_total;
                     $room['max_total'] = $room_max_total;
@@ -807,10 +787,6 @@ class SessionHandler {
                     $estimate_max_total += $room_max_total;
                 }
             }
-
-            // Round the estimate totals
-            $estimate_min_total = product_estimator_round_price($estimate_min_total);
-            $estimate_max_total = product_estimator_round_price($estimate_max_total);
 
             // Store estimate totals
             $estimate['min_total'] = $estimate_min_total;

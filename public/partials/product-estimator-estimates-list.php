@@ -39,14 +39,14 @@ $options = get_option('product_estimator_settings');
                     // Display estimate totals if available
                     if (isset($estimate['min_total']) && isset($estimate['max_total']) &&
                         ($estimate['min_total'] > 0 || $estimate['max_total'] > 0)):
-                        if (round($estimate['min_total'], 2) === round($estimate['max_total'], 2)):
+                        if ($estimate['min_total'] === $estimate['max_total']):
                             ?>
                             <span class="estimate-total-price">
-                (<?php echo wc_price($estimate['min_total']); ?>)
+                (<?php echo display_price_with_markup($estimate['min_total'], $default_markup, "up"); ?>)
             </span>
                         <?php else: ?>
                             <span class="estimate-total-price">
-                (<?php echo wc_price($estimate['min_total']); ?> - <?php echo wc_price($estimate['max_total']); ?>)
+                (<?php echo display_price_with_markup($estimate['min_total'], $default_markup, "down"); ?> - <?php echo display_price_with_markup($estimate['max_total'], $default_markup, "up"); ?>)
             </span>
                         <?php
                         endif;
@@ -84,14 +84,14 @@ $options = get_option('product_estimator_settings');
                                         // Display room totals if available
                                         if (isset($room['min_total']) && isset($room['max_total']) &&
                                             ($room['min_total'] > 0 || $room['max_total'] > 0)):
-                                            if (round($room['min_total'], 2) === round($room['max_total'], 2)):
+                                            if ($room['min_total'] === $room['max_total']):
                                                 ?>
                                                 <span class="room-total-price">
-            <?php echo wc_price($room['min_total']); ?>
+            <?php echo display_price_with_markup($room['min_total'], $default_markup, "up"); ?>
         </span>
                                             <?php else: ?>
                                                 <span class="room-total-price">
-            <?php echo wc_price($room['min_total']); ?> - <?php echo wc_price($room['max_total']); ?>
+            <?php echo display_price_with_markup($room['min_total'], $default_markup, "down"); ?> - <?php echo display_price_with_markup($room['max_total'], $default_markup, "up"); ?>
         </span>
                                             <?php
                                             endif;
@@ -107,6 +107,7 @@ $options = get_option('product_estimator_settings');
                                 </div>
                                 <div class="accordion-content">
                                     <?php if (!empty($room['products'])): ?>
+
                                         <div class="room-products">
                                             <h5><?php esc_html_e('Products', 'product-estimator'); ?></h5>
                                             <div class="product-list">

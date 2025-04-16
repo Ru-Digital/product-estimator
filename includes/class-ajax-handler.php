@@ -549,8 +549,8 @@ class AjaxHandler {
                 $_SESSION['product_estimator']['customer_details'] = $customer_details;
 
                 // Get default markup from settings
-//                $options = get_option('product_estimator_settings');
-                $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+             $settings = get_option('product_estimator_settings');
+            $default_markup = isset($settings['default_markup']) ? floatval($settings['default_markup']) : 0;
 
                 // Create new estimate data
                 $estimate_data = [
@@ -594,7 +594,8 @@ class AjaxHandler {
                 $customer_details = $customer_details_manager->getDetails();
             }
 
-            $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+            $settings = get_option('product_estimator_settings');
+            $default_markup = isset($settings['default_markup']) ? floatval($settings['default_markup']) : 0;
 
             // Create new estimate data
             $estimate_data = [
@@ -1065,21 +1066,17 @@ class AjaxHandler {
                         // Calculate main product prices
                         if (isset($product['min_price']) && isset($product['max_price'])) {
                             // Apply markup adjustment
-                            $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
-                            $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
+//                            $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
+//                            $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
 
                             // Round the unit prices
-                            $min_price = product_estimator_round_price($min_price);
-                            $max_price = product_estimator_round_price($max_price);
+                            $min_price = $product['min_price'];
+                            $max_price = $product['max_price'];
 
                             // Calculate based on pricing method
                             if ($pricing_method === 'sqm' && $room_area > 0) {
                                 $min_total = $min_price * $room_area;
                                 $max_total = $max_price * $room_area;
-
-                                // Round the calculated totals
-                                $min_total = product_estimator_round_price($min_total);
-                                $max_total = product_estimator_round_price($max_total);
 
                                 $product['min_price_total'] = $min_total;
                                 $product['max_price_total'] = $max_total;
@@ -1102,12 +1099,12 @@ class AjaxHandler {
                             }
                         } elseif (isset($product['min_price_total']) && isset($product['max_price_total'])) {
                             // For pre-calculated totals
-                            $min_total = floatval($product['min_price_total']) * (1 - ($default_markup / 100));
-                            $max_total = floatval($product['max_price_total']) * (1 + ($default_markup / 100));
+//                            $min_total = floatval($product['min_price_total']) * (1 - ($default_markup / 100));
+//                            $max_total = floatval($product['max_price_total']) * (1 + ($default_markup / 100));
 
                             // Round the totals
-                            $min_total = product_estimator_round_price($min_total);
-                            $max_total = product_estimator_round_price($max_total);
+                            $min_total = $product['min_price_total'];
+                            $max_total = $product['max_price_total'];
 
                             $room_min_total += $min_total;
                             $room_max_total += $max_total;
@@ -1150,21 +1147,17 @@ class AjaxHandler {
 
                                 if (isset($additional_product['min_price']) && isset($additional_product['max_price'])) {
                                     // Apply markup adjustment
-                                    $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
-                                    $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
+//                                    $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
+//                                    $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
 
                                     // Round the unit prices
-                                    $add_min_price = product_estimator_round_price($add_min_price);
-                                    $add_max_price = product_estimator_round_price($add_max_price);
+                                    $add_min_price = $additional_product['min_price'];
+                                    $add_max_price = $additional_product['max_price'];
 
                                     // Calculate based on pricing method
                                     if ($add_pricing_method === 'sqm' && $room_area > 0) {
                                         $add_min_total = $add_min_price * $room_area;
                                         $add_max_total = $add_max_price * $room_area;
-
-                                        // Round the calculated totals
-                                        $add_min_total = product_estimator_round_price($add_min_total);
-                                        $add_max_total = product_estimator_round_price($add_max_total);
 
                                         $additional_product['min_price_total'] = $add_min_total;
                                         $additional_product['max_price_total'] = $add_max_total;
@@ -1187,12 +1180,12 @@ class AjaxHandler {
                                     }
                                 } elseif (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])) {
                                     // For pre-calculated totals
-                                    $add_min_total = floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
-                                    $add_max_total = floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
+//                                    $add_min_total = floatval($additional_product['min_price_total']) * (1 - ($default_markup / 100));
+//                                    $add_max_total = floatval($additional_product['max_price_total']) * (1 + ($default_markup / 100));
 
                                     // Round the totals
-                                    $add_min_total = product_estimator_round_price($add_min_total);
-                                    $add_max_total = product_estimator_round_price($add_max_total);
+                                    $add_min_total = $additional_product['min_price_total'];
+                                    $add_max_total = $additional_product['max_price_total'];
 
                                     $room_min_total += $add_min_total;
                                     $room_max_total += $add_max_total;
@@ -1210,10 +1203,6 @@ class AjaxHandler {
                     }
                 }
 
-                // Round the room totals
-                $room_min_total = product_estimator_round_price($room_min_total);
-                $room_max_total = product_estimator_round_price($room_max_total);
-
                 // Store room totals
                 $room['min_total'] = $room_min_total;
                 $room['max_total'] = $room_max_total;
@@ -1227,10 +1216,6 @@ class AjaxHandler {
                 }
             }
         }
-
-        // Round the estimate totals
-        $estimate_min_total = product_estimator_round_price($estimate_min_total);
-        $estimate_max_total = product_estimator_round_price($estimate_max_total);
 
         // Store estimate totals
         $estimates[$estimate_id]['min_total'] = $estimate_min_total;
@@ -1303,6 +1288,16 @@ class AjaxHandler {
      * @param float $room_length Room length (optional, will use existing room data if not provided)
      * @return array Result with status and product data
      */
+    /**
+     * Helper method to prepare product data and add to room
+     *
+     * @param int $product_id The product ID
+     * @param string|int $estimate_id The estimate ID
+     * @param string|int $room_id The room ID
+     * @param float $room_width Room width (optional, will use existing room data if not provided)
+     * @param float $room_length Room length (optional, will use existing room data if not provided)
+     * @return array Result with status and product data
+     */
     private function prepareAndAddProductToRoom($product_id, $estimate_id, $room_id, $room_width = null, $room_length = null) {
         try {
             // First, check if this product already exists in the room
@@ -1357,65 +1352,22 @@ class AjaxHandler {
                 error_log("Room area calculated: $room_area");
             }
 
-            // Get pricing rule for this product
-            $pricing_rule = $this->getPricingRuleForProduct($product_id);
-            $pricing_method = $pricing_rule['method']; // 'fixed' or 'sqm'
-            $pricing_source = $pricing_rule['source']; // 'website' or 'netsuite'
-
-            // Initialize pricing data
-            $min_price = 0;
-            $max_price = 0;
-
-            // Get price based on source
-            if ($pricing_source === 'website' || !function_exists('wc_get_product')) {
-                // Use WooCommerce price
-                $base_price = (float)$product->get_price();
-                $min_price = $base_price;
-                $max_price = $base_price;
-            } else {
-                // NetSuite pricing - include fallback to WC price
-                try {
-                    // Check if NetSuite Integration class exists
-                    if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Integration\\NetsuiteIntegration')) {
-                        // Initialize NetSuite Integration
-                        $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
-
-                        // Get pricing data for this product
-                        $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
-
-                        // Check if we received valid pricing data
-                        if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
-                            foreach ($pricing_data['prices'] as $price_item) {
-                                if ($price_item['product_id'] == $product_id) {
-                                    // Add NetSuite pricing data to product
-                                    $min_price = $price_item['min_price'];
-                                    $max_price = $price_item['max_price'];
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    // If NetSuite data not found, set defaults based on WC price
-                    if ($min_price === 0) {
-                        $base_price = (float)$product->get_price();
-                        $min_price = $base_price;
-                        $max_price = $base_price;
-                    }
-                } catch (\Exception $e) {
-                    // If NetSuite API fails, log the error but continue with base price
-                    error_log('NetSuite API Error: ' . $e->getMessage());
-
-                    // Set default price range from WooCommerce price
-                    $base_price = (float)$product->get_price();
-                    $min_price = $base_price;
-                    $max_price = $base_price;
-                }
+            // Get markup from estimate if available
+            $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
+            if ($default_markup === 0) {
+                // Fall back to global settings
+                $options = get_option('product_estimator_settings');
+                $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
             }
 
-            // Round min and max prices to full amounts
-            $min_price = product_estimator_round_price($min_price);
-            $max_price = product_estimator_round_price($max_price);
+            // Get pricing data using our helper function
+            $pricing_data = product_estimator_get_product_price($product_id, $room_area, false); // Don't apply markup here
+
+            // Get pricing method and source
+            $pricing_method = $pricing_data['pricing_method'];
+            $pricing_source = $pricing_data['pricing_source'];
+            $min_price = $pricing_data['min_price'];
+            $max_price = $pricing_data['max_price'];
 
             // Prepare base product data
             $product_data = [
@@ -1436,10 +1388,6 @@ class AjaxHandler {
                 // Per square meter pricing - multiply by room area
                 $min_total = $min_price * $room_area;
                 $max_total = $max_price * $room_area;
-
-                // Round the totals to full amounts
-                $min_total = product_estimator_round_price($min_total);
-                $max_total = product_estimator_round_price($max_total);
 
                 $product_data['min_price_total'] = $min_total;
                 $product_data['max_price_total'] = $max_total;
@@ -1489,88 +1437,32 @@ class AjaxHandler {
                         continue;
                     }
 
-                    // Get pricing rule for related product
-                    $related_pricing_rule = $this->getPricingRuleForProduct($related_product_id);
-                    $related_pricing_method = $related_pricing_rule['method']; // 'fixed' or 'sqm'
-                    $related_pricing_source = $related_pricing_rule['source']; // 'website' or 'netsuite'
+                    // Get pricing data for related product using our helper function
+                    $related_pricing_data = product_estimator_get_product_price($related_product_id, $room_area, false);
 
                     // Prepare related product data
                     $related_product_data = [
                         'id' => $related_product_id,
                         'name' => $related_product->get_name(),
                         'image' => wp_get_attachment_image_url($related_product->get_image_id(), 'thumbnail'),
-                        'pricing_method' => $related_pricing_method,
-                        'pricing_source' => $related_pricing_source
+                        'pricing_method' => $related_pricing_data['pricing_method'],
+                        'pricing_source' => $related_pricing_data['pricing_source'],
+                        'min_price' => $related_pricing_data['min_price'],
+                        'max_price' => $related_pricing_data['max_price'],
                     ];
 
-                    // Initialize pricing data for related product
-                    $related_min_price = 0;
-                    $related_max_price = 0;
-
-                    // Get price based on source for related product
-                    if ($related_pricing_source === 'website' || !function_exists('wc_get_product')) {
-                        // Use WooCommerce price for related product
-                        $related_base_price = (float)$related_product->get_price();
-                        $related_min_price = $related_base_price;
-                        $related_max_price = $related_base_price;
-                    } else {
-                        // Add pricing data (similar to original product)
-                        try {
-                            if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Integration\\NetsuiteIntegration')) {
-                                // Try to get pricing from NetSuite for related product
-                                $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
-                                $pricing_data = $netsuite_integration->get_product_prices([$related_product_id]);
-
-                                if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
-                                    foreach ($pricing_data['prices'] as $price_item) {
-                                        if ($price_item['product_id'] == $related_product_id) {
-                                            $related_min_price = $price_item['min_price'];
-                                            $related_max_price = $price_item['max_price'];
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-
-                            // If NetSuite data not found, use WC price
-                            if ($related_min_price === 0) {
-                                $related_base_price = (float)$related_product->get_price();
-                                $related_min_price = $related_base_price;
-                                $related_max_price = $related_base_price;
-                            }
-                        } catch (\Exception $e) {
-                            error_log('Error adding related product: ' . $e->getMessage());
-                            // Use WC price on error
-                            $related_base_price = (float)$related_product->get_price();
-                            $related_min_price = $related_base_price;
-                            $related_max_price = $related_base_price;
-                        }
-                    }
-
-                    // Round the min and max prices for related product
-                    $related_min_price = product_estimator_round_price($related_min_price);
-                    $related_max_price = product_estimator_round_price($related_max_price);
-
-                    // Add min/max price to related product data
-                    $related_product_data['min_price'] = $related_min_price;
-                    $related_product_data['max_price'] = $related_max_price;
-
                     // Calculate totals based on pricing method
-                    if ($related_pricing_method === 'sqm' && $room_area > 0) {
+                    if ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) {
                         // Per square meter pricing
-                        $related_min_total = $related_min_price * $room_area;
-                        $related_max_total = $related_max_price * $room_area;
-
-                        // Round the totals
-                        $related_min_total = product_estimator_round_price($related_min_total);
-                        $related_max_total = product_estimator_round_price($related_max_total);
+                        $related_min_total = $related_pricing_data['min_price'] * $room_area;
+                        $related_max_total = $related_pricing_data['max_price'] * $room_area;
 
                         $related_product_data['min_price_total'] = $related_min_total;
                         $related_product_data['max_price_total'] = $related_max_total;
                     } else {
                         // Fixed pricing - already rounded above
-                        $related_product_data['min_price_total'] = $related_min_price;
-                        $related_product_data['max_price_total'] = $related_max_price;
+                        $related_product_data['min_price_total'] = $related_pricing_data['min_price'];
+                        $related_product_data['max_price_total'] = $related_pricing_data['max_price'];
                     }
 
                     // Add to product's additional products list
@@ -1629,8 +1521,7 @@ class AjaxHandler {
                 'error' => $e->getMessage()
             ];
         }
-    }
-    /**
+    }    /**
      * Get the appropriate pricing rule for a product
      *
      * @param int $product_id The product ID

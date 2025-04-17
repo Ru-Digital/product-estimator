@@ -794,12 +794,17 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
 <!--                    <span class="price-dimensions">--><?php //echo $dimensions; ?><!--</span>-->
                 <?php endif; ?>
             </span>
+            <?php if($min_price > 0 && $max_price > 0): ?>
             <span class="room-price"><?php echo $formatted_min; ?> - <?php echo $formatted_max; ?></span>
+            <?php endif; ?>
         </div>
 
+    <?php if($min_price > 0 && $max_price > 0): ?>
         <div class="price-graph-bar <?php echo $is_narrow_range ? 'narrow-range' : ''; ?>" style="height: <?php echo esc_attr($options['height']); ?>; background-color: <?php echo esc_attr($options['bg_color']); ?>; position: relative;">
             <div class="price-graph-range" style="position: absolute; left: <?php echo esc_attr($left_percent); ?>%; width: <?php echo esc_attr($width_percent); ?>%; top: 0; bottom: 0; background-color: <?php echo esc_attr($options['bar_color']); ?>;"></div>
         </div>
+    <?php endif; ?>
+    <?php if($min_price > 0 && $max_price > 0): ?>
 
         <?php if ($options['show_labels']): ?>
             <div class="price-graph-labels">
@@ -895,6 +900,7 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
                 ?>
             </div>
         <?php endif; ?>
+    <?php endif; ?>
     </div>
     <?php
 }

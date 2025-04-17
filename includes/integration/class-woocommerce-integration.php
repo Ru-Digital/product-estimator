@@ -14,6 +14,15 @@ class WoocommerceIntegration {
      * Initialize the integration
      */
     public function __construct() {
+        static $instance = 0;
+        if ($instance > 0) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('WoocommerceIntegration already initialized, preventing duplicate');
+            }
+            return;
+        }
+        $instance++;
+
         // Only proceed if WooCommerce is active
         if (!$this->isWooCommerceActive()) {
             return;
@@ -26,6 +35,10 @@ class WoocommerceIntegration {
         // Add fields to variations
         add_action('woocommerce_variation_options_pricing', array($this, 'addVariationFields'), 10, 3);
         add_action('woocommerce_save_product_variation', array($this, 'saveVariationFields'), 10, 2);
+
+        // Add filter to prevent synchronization of _enable_estimator meta
+        add_filter('woocommerce_product_get_meta', array($this, 'preventMetaSync'), 10, 4);
+        add_filter('update_post_metadata', array($this, 'preventParentEstimatorSync'), 10, 5);
 
         // Add estimator button to product page
         add_action('woocommerce_after_add_to_cart_button', array($this, 'displayEstimatorButton'), 20);
@@ -69,6 +82,11 @@ class WoocommerceIntegration {
      */
     public function saveProductFields($post_id) {
         $enable_estimator = isset($_POST['_enable_estimator']) ? 'yes' : 'no';
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Saving _enable_estimator for product $post_id: $enable_estimator");
+        }
+
         update_post_meta($post_id, '_enable_estimator', $enable_estimator);
     }
 
@@ -103,29 +121,135 @@ class WoocommerceIntegration {
      * @param int $loop The variation loop index
      */
     public function saveVariationFields($variation_id, $loop) {
+        // Add filter just before updating meta to prevent synchronization
+        add_filter('update_post_metadata', array($this, 'preventParentEstimatorSync'), 10, 5);
+
         $enable_estimator = isset($_POST['_enable_estimator'][$loop]) ? 'yes' : 'no';
-        update_post_meta($variation_id, '_enable_estimator', $enable_estimator);
 
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Saving estimator setting for variation {$variation_id}: {$enable_estimator}");
+            error_log("Saving _enable_estimator for variation $variation_id: $enable_estimator");
         }
+
+        // Direct SQL update to bypass WP filters that might cause sync
+        global $wpdb;
+        $meta_key = '_enable_estimator';
+
+        // Check if meta already exists
+        $meta_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT meta_id FROM $wpdb->postmeta WHERE post_id = %d AND meta_key = %s",
+            $variation_id, $meta_key
+        ));
+
+        if ($meta_id) {
+            // Update existing meta
+            $wpdb->update(
+                $wpdb->postmeta,
+                array('meta_value' => $enable_estimator),
+                array('meta_id' => $meta_id),
+                array('%s'),
+                array('%d')
+            );
+        } else {
+            // Insert new meta
+            $wpdb->insert(
+                $wpdb->postmeta,
+                array(
+                    'post_id' => $variation_id,
+                    'meta_key' => $meta_key,
+                    'meta_value' => $enable_estimator
+                ),
+                array('%d', '%s', '%s')
+            );
+        }
+
+        // Clear post meta cache
+        wp_cache_delete($variation_id, 'post_meta');
+
+        // Remove the filter after we're done
+        remove_filter('update_post_metadata', array($this, 'preventParentEstimatorSync'), 10);
+    }
+
+    /**
+     * Prevent unwanted synchronization of _enable_estimator between variations and parent
+     *
+     * @param mixed $check Whether to allow updating metadata
+     * @param int $object_id Object ID
+     * @param string $meta_key Meta key
+     * @param mixed $meta_value Meta value
+     * @param mixed $prev_value Previous value
+     * @return mixed
+     */
+    public function preventParentEstimatorSync($check, $object_id, $meta_key, $meta_value, $prev_value) {
+        // Only intercept _enable_estimator updates
+        if ($meta_key === '_enable_estimator') {
+            $product = wc_get_product($object_id);
+
+            // Check if this is a parent variable product
+            if ($product && $product->is_type('variable')) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Preventing _enable_estimator sync to parent product: $object_id");
+                }
+                // Prevent updating parent
+                return false;
+            }
+        }
+
+        // Allow all other updates
+        return $check;
+    }
+
+    /**
+     * Prevent meta sync with parent for _enable_estimator field
+     *
+     * @param mixed $value Meta value
+     * @param WC_Product $product Product object
+     * @param string $meta_key Meta key
+     * @param bool $single Whether to return a single value
+     * @return mixed
+     */
+    public function preventMetaSync($value, $product, $meta_key, $single) {
+        if ($meta_key === '_enable_estimator' && $product->is_type('variable')) {
+            // For variable products, don't automatically sync from variations
+            return $value;
+        }
+
+        return $value;
     }
 
     /**
      * Display the "Add to Estimator" button on product pages
      */
     public function displayEstimatorButton() {
+        static $button_displayed = false;
+
+        // Prevent multiple buttons from being displayed
+        if ($button_displayed) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Estimator button already displayed, skipping duplicate');
+            }
+            return;
+        }
+
         global $product;
 
         if (!$product) {
             return;
         }
 
-        // Only show button if estimator is enabled for this product
-        if (!self::isEstimatorEnabled($product->get_id())) {
+        // For variable products, we should show the button by default for the parent product
+        // JavaScript will handle visibility based on selected variation
+        $show_button = true;
+
+        // For simple products, only show if estimator is enabled
+        if (!$product->is_type('variable')) {
+            $show_button = self::isEstimatorEnabled($product->get_id());
+        }
+
+        if (!$show_button) {
             return;
         }
 
+        // Add a single button that will be updated by JavaScript
         ?>
         <button type="button"
                 class="single_add_to_estimator_button button alt open-estimator-modal"
@@ -133,6 +257,13 @@ class WoocommerceIntegration {
             <?php esc_html_e('Add to Estimate', 'product-estimator'); ?>
         </button>
         <?php
+
+        // Mark that the button has been displayed
+        $button_displayed = true;
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Estimator button displayed for product ID: ' . $product->get_id());
+        }
     }
 
     /**
@@ -241,7 +372,7 @@ class WoocommerceIntegration {
     }
 
     /**
-     * Check if estimator is enabled for a product/variation with improved logging
+     * Check if estimator is enabled for a product/variation with improved handling
      *
      * @param int $product_id The product/variation ID
      * @return bool Whether estimator is enabled
@@ -258,22 +389,31 @@ class WoocommerceIntegration {
 
         // Check if this is a variation
         if ($product->is_type('variation')) {
-            // Check variation first
-            $variation_enabled = get_post_meta($product_id, '_enable_estimator', true);
+            // Check variation first - if it has a specific setting, use that
+            $variation_meta = get_post_meta($product_id, '_enable_estimator', true);
 
-            if ($variation_enabled === 'yes') {
+            // Only if it's explicitly 'yes', consider it enabled
+            if ($variation_meta === 'yes') {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Variation {$product_id} has estimator enabled");
+                    error_log("Variation {$product_id} has estimator explicitly enabled");
                 }
                 return true;
             }
 
-            // Then check parent product
+            // If variation has explicitly 'no', respect that
+            if ($variation_meta === 'no') {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Variation {$product_id} has estimator explicitly disabled");
+                }
+                return false;
+            }
+
+            // Otherwise fall back to parent setting
             $parent_id = $product->get_parent_id();
             $parent_enabled = get_post_meta($parent_id, '_enable_estimator', true) === 'yes';
 
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Variation {$product_id} checking parent {$parent_id}: " . ($parent_enabled ? 'enabled' : 'disabled'));
+                error_log("Variation {$product_id} using parent setting: " . ($parent_enabled ? 'enabled' : 'disabled'));
             }
 
             return $parent_enabled;
@@ -287,5 +427,77 @@ class WoocommerceIntegration {
         }
 
         return $enabled;
+    }
+
+    /**
+     * Check if a variable product has any variations with estimator enabled
+     *
+     * This is a new helper method to find enabled variations in a variable product
+     *
+     * @param int $product_id The variable product ID
+     * @return array Array of variation IDs with estimator enabled, empty if none
+     */
+    public static function getEnabledVariations($product_id) {
+        $product = wc_get_product($product_id);
+        $enabled_variations = [];
+
+        if (!$product || !$product->is_type('variable')) {
+            return $enabled_variations;
+        }
+
+        // Get all available variations
+        $variations = $product->get_available_variations();
+
+        if (empty($variations)) {
+            return $enabled_variations;
+        }
+
+        // Check each variation
+        foreach ($variations as $variation) {
+            $variation_id = $variation['variation_id'];
+
+            // Check if this variation has estimator enabled
+            if (self::isEstimatorEnabled($variation_id)) {
+                $enabled_variations[] = [
+                    'id' => $variation_id,
+                    'attributes' => $variation['attributes'],
+                    'name' => $product->get_name() . ' - ' . wc_get_formatted_variation($variation['attributes'], true),
+                    'image' => isset($variation['image']['url']) ? $variation['image']['url'] : '',
+                    'price' => isset($variation['display_price']) ? $variation['display_price'] : 0
+                ];
+            }
+        }
+
+        return $enabled_variations;
+    }
+
+    /**
+     * Check if a product or any of its variations have estimator enabled
+     *
+     * This method handles both simple and variable products
+     *
+     * @param int $product_id The product ID
+     * @return bool Whether estimator is enabled for the product or any variation
+     */
+    public static function hasEstimatorEnabled($product_id) {
+        $product = wc_get_product($product_id);
+
+        if (!$product) {
+            return false;
+        }
+
+        // For simple products, just check directly
+        if (!$product->is_type('variable')) {
+            return self::isEstimatorEnabled($product_id);
+        }
+
+        // For variable products, check if product itself or any variation has estimator enabled
+        if (self::isEstimatorEnabled($product_id)) {
+            return true;
+        }
+
+        // Check variations
+        $enabled_variations = self::getEnabledVariations($product_id);
+        return !empty($enabled_variations);
     }
 }

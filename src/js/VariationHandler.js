@@ -16,7 +16,7 @@ class VariationHandler {
       debug: true, // Set to true for more verbose logging
       selectors: {
         variationsForm: '.variations_form',
-        estimatorButton: '.single_add_to_estimator_button',
+        estimatorButton: '.single_add_to_estimator_button, .button.alt.open-estimator-modal, .product-estimator-button, [data-product-id]',
         variationIdInput: 'input[name="variation_id"]'
       }
     }, config);
@@ -43,7 +43,7 @@ class VariationHandler {
   }
 
   /**
-   * Initialize the variation handler
+   * Initialize the core and check initial button state
    * @returns {VariationHandler} This instance for chaining
    */
   init() {
@@ -59,6 +59,18 @@ class VariationHandler {
     // If we have the button, log its initial attributes
     if (this.estimatorButton) {
       this.log('Initial button data-product-id:', this.estimatorButton.dataset.productId);
+
+      // Force visibility if product has estimator enabled
+      const productId = this.estimatorButton.dataset.productId;
+      if (productId) {
+        // Check if parent product has estimator enabled
+        const parentEnabled = this.isParentEstimatorEnabled(productId);
+        if (parentEnabled) {
+          this.log('Parent product has estimator enabled, ensuring button is visible');
+          this.estimatorButton.style.display = '';
+          this.estimatorButton.classList.remove('hidden');
+        }
+      }
     }
 
     this.bindEvents();
@@ -73,6 +85,75 @@ class VariationHandler {
     this.emit('initialized');
 
     return this;
+  }
+
+  /**
+   * Ensure the estimator button exists for variations with estimator enabled
+   * @param {number|string} variationId - Variation ID
+   */
+  ensureEstimatorButton(variationId) {
+    this.log(`Ensuring estimator button exists for variation: ${variationId}`);
+
+    // Check if button already exists
+    const existingButton = document.querySelector(this.config.selectors.estimatorButton);
+
+    if (existingButton) {
+      this.log('Estimator button already exists, updating visibility');
+      this.updateEstimatorButton(true, variationId);
+      return;
+    }
+
+    // Button doesn't exist, we need to create it if estimator is enabled
+    const isEnabled = this.isEstimatorEnabled(variationId);
+
+    if (!isEnabled) {
+      this.log('Estimator not enabled for this variation, not creating button');
+      return;
+    }
+
+    this.log('Creating estimator button dynamically');
+
+    // Find the add to cart button as reference point
+    const addToCartButton = document.querySelector('.single_add_to_cart_button');
+
+    if (!addToCartButton) {
+      this.log('Cannot find add to cart button to insert after');
+      return;
+    }
+
+    // Create new button
+    const newButton = document.createElement('button');
+    newButton.type = 'button';
+    newButton.className = 'single_add_to_estimator_button button alt open-estimator-modal';
+    newButton.dataset.productId = variationId;
+    newButton.textContent = 'Add to Estimate';
+
+    // Insert after add to cart button
+    addToCartButton.insertAdjacentElement('afterend', newButton);
+
+    this.log('Estimator button created and inserted');
+  }
+
+  /**
+   * Check if parent product has estimator enabled
+   * @param {number|string} productId - Product ID
+   * @returns {boolean} True if parent has estimator enabled
+   */
+  isParentEstimatorEnabled(productId) {
+    // Check if we have any data in the DOM about parent product
+    const button = document.querySelector('.single_add_to_estimator_button');
+    if (button) {
+      // Button presence suggests parent has estimator enabled
+      return true;
+    }
+
+    // Check for any hidden input or data attribute indicating parent status
+    const metaElement = document.querySelector('input[name="_enable_estimator"], [data-enable-estimator]');
+    if (metaElement) {
+      return metaElement.value === 'yes' || metaElement.dataset.enableEstimator === 'yes';
+    }
+
+    return false;
   }
 
   /**
@@ -142,6 +223,9 @@ class VariationHandler {
 
     this.log(`Variation ${variationId} has estimator enabled: ${enableEstimator}`);
 
+    // Ensure button exists before trying to update it
+    this.ensureEstimatorButton(variationId);
+
     // Update UI based on variation
     this.updateEstimatorButton(enableEstimator, variationId);
 
@@ -180,12 +264,24 @@ class VariationHandler {
   }
 
   /**
-   * Check current variation state
+   * Check current variation state with improved logging
    */
   checkCurrentVariation() {
     // This handles cases where the variation might have changed through
     // theme-specific mechanisms or direct manipulation
     if (!this.variationsForm) return;
+
+    // Debug the buttons we find
+    const buttons = document.querySelectorAll(this.config.selectors.estimatorButton);
+    this.log(`Found ${buttons.length} estimator buttons during checkCurrentVariation`);
+    if (buttons.length > 1) {
+      this.log('WARNING: Found multiple estimator buttons - this may cause issues. Check for duplicates.');
+
+      // Log the buttons for debugging
+      buttons.forEach((btn, idx) => {
+        this.log(`Button ${idx+1} HTML: ${btn.outerHTML}`);
+      });
+    }
 
     // Try to find the current variation ID
     const currentVariation = this.getCurrentVariation();
@@ -198,9 +294,26 @@ class VariationHandler {
     } else {
       this.log('No current variation detected');
       this.currentVariationId = null;
-      // If no variation is selected, hide the button
-      this.updateEstimatorButton(false);
+
+      // If no variation is selected, we need to check if the parent product
+      // has estimator enabled to decide whether to show the button
+      this.updateEstimatorButton(this.isParentProductEstimatorEnabled());
     }
+  }
+
+  /**
+   * Check if parent product has estimator enabled
+   * @returns {boolean} Whether parent product has estimator enabled
+   */
+  isParentProductEstimatorEnabled() {
+    // Check if we have information about the parent product
+    if (typeof window.product_estimator_variations !== 'undefined' &&
+      window.product_estimator_variations._parent_enabled) {
+      return window.product_estimator_variations._parent_enabled === 'yes';
+    }
+
+    // Default to true for variable products to be safe
+    return true;
   }
 
   /**
@@ -283,33 +396,30 @@ class VariationHandler {
    * @param {number|string|null} variationId - Variation ID if available
    */
   updateEstimatorButton(show, variationId = null) {
-    // Find all estimator buttons
-    const buttons = document.querySelectorAll(this.config.selectors.estimatorButton);
+    // Find the single estimator button
+    const button = document.querySelector('.single_add_to_estimator_button');
 
-    if (!buttons.length) {
-      this.log('No estimator buttons found to update');
+    if (!button) {
+      this.log('Estimator button not found');
       return;
     }
 
     this.log(`Updating button visibility: ${show ? 'show' : 'hide'}, variation ID: ${variationId}`);
 
-    buttons.forEach(button => {
-      if (show) {
-        button.style.display = '';
+    if (show) {
+      // Show the button
+      button.style.display = '';
 
-        // Update product ID if variation ID provided
-        if (variationId) {
-          this.log(`Setting button data-product-id to variation ID: ${variationId}`);
-          button.dataset.productId = variationId;
-
-          // Also set variation ID attribute for clarity
-          button.dataset.variationId = variationId;
-        }
-      } else {
-        this.log('Hiding estimator button');
-        button.style.display = 'none';
+      // Update product ID if variation ID provided
+      if (variationId) {
+        this.log(`Setting button data-product-id to variation ID: ${variationId}`);
+        button.dataset.productId = variationId;
       }
-    });
+    } else {
+      // Hide the button
+      button.style.display = 'none';
+      this.log('Hiding estimator button');
+    }
   }
 
   /**

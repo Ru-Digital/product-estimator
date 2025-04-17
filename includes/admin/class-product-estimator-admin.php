@@ -92,7 +92,7 @@ class ProductEstimatorAdmin {
 //        add_filter('plugin_action_links_' . PRODUCT_ESTIMATOR_BASENAME, array($this, 'add_action_links'));
 
         // WooCommerce product integration
-        $this->init_woocommerce_integration();
+//        $this->init_woocommerce_integration();
     }
 
     /**
@@ -185,69 +185,5 @@ class ProductEstimatorAdmin {
         } else {
             wp_die(__('Admin template file not found:', 'product-estimator') . ' ' . $template_path);
         }
-    }
-
-    /**
-     * Initialize WooCommerce product integration
-     *
-     * @since    1.0.0
-     */
-    public function init_woocommerce_integration() {
-        // Add estimator checkbox to simple products
-        add_action('woocommerce_product_options_pricing', array($this, 'add_estimator_checkbox_to_simple_product'));
-        add_action('woocommerce_process_product_meta', array($this, 'save_estimator_checkbox_for_simple_product'), 10, 1);
-
-        // Add estimator checkbox to product variations
-        add_action('woocommerce_product_after_variable_attributes', array($this, 'add_estimator_checkbox_to_variation'), 10, 3);
-        add_action('woocommerce_save_product_variation', array($this, 'save_estimator_checkbox_for_variation'), 10, 2);
-    }
-
-    /**
-     * Add estimator checkbox to simple products
-     */
-    public function add_estimator_checkbox_to_simple_product() {
-        woocommerce_wp_checkbox(array(
-            'id' => '_enable_product_estimator',
-            'label' => __('Enable Product Estimator', 'product-estimator'),
-            'description' => __('Allow this product to be added to the estimator', 'product-estimator')
-        ));
-    }
-
-    /**
-     * Save estimator checkbox for simple products
-     *
-     * @param int $post_id Product ID
-     */
-    public function save_estimator_checkbox_for_simple_product($post_id) {
-        $enable_estimator = isset($_POST['_enable_product_estimator']) ? 'yes' : 'no';
-        update_post_meta($post_id, '_enable_product_estimator', $enable_estimator);
-    }
-
-    /**
-     * Add estimator checkbox to product variations
-     *
-     * @param int $loop Variation loop index
-     * @param array $variation_data Variation data
-     * @param WP_Post $variation Variation post object
-     */
-    public function add_estimator_checkbox_to_variation($loop, $variation_data, $variation) {
-        woocommerce_wp_checkbox(array(
-            'id' => "_enable_product_estimator_variation_{$loop}",
-            'name' => "_enable_product_estimator_variation[{$loop}]",
-            'label' => __('Enable Product Estimator', 'product-estimator'),
-            'value' => get_post_meta($variation->ID, '_enable_product_estimator', true),
-            'description' => __('Allow this variation to be added to the estimator', 'product-estimator')
-        ));
-    }
-
-    /**
-     * Save estimator checkbox for product variations
-     *
-     * @param int $variation_id Variation ID
-     * @param int $loop Variation loop index
-     */
-    public function save_estimator_checkbox_for_variation($variation_id, $loop) {
-        $enable_estimator = isset($_POST['_enable_product_estimator_variation'][$loop]) ? 'yes' : 'no';
-        update_post_meta($variation_id, '_enable_product_estimator', $enable_estimator);
     }
 }

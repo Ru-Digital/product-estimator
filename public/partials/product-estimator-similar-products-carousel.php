@@ -8,7 +8,7 @@ if (isset($product['id']) && !empty($product['id'])):
             PRODUCT_ESTIMATOR_VERSION
         );
 
-        // Get similar products for this specific product (limited to 5 for better carousel)
+        // Get similar products for this specific product (limited to 10 for better carousel)
         $similar_products = $similar_products_module->get_similar_products_for_display($product['id'], 10);
 
         // Filter out products already in this room
@@ -28,6 +28,36 @@ if (isset($product['id']) && !empty($product['id'])):
             }
 
             $similar_products = $filtered_similar_products;
+        endif;
+
+        // FIXED: Filter to only include products with estimator enabled
+        if (!empty($similar_products)):
+            $estimator_enabled_products = [];
+            foreach ($similar_products as $similar_product) {
+                // Check if estimator is enabled using the WoocommerceIntegration class
+                if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($similar_product['id'])) {
+                    $estimator_enabled_products[] = $similar_product;
+                } else {
+                    // For variations, try to get the parent product and check its variations
+                    $product_obj = wc_get_product($similar_product['id']);
+                    if ($product_obj && $product_obj->is_type('variable')) {
+                        // Get available variations
+                        $variations = $product_obj->get_available_variations();
+
+                        // Check if any variation has estimator enabled
+                        foreach ($variations as $variation) {
+                            if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation['variation_id'])) {
+                                // Use the variation instead
+                                $similar_product['id'] = $variation['variation_id'];
+                                $similar_product['name'] = $product_obj->get_name() . ' - ' . wc_get_formatted_variation($variation['attributes'], true);
+                                $estimator_enabled_products[] = $similar_product;
+                                break; // Found an enabled variation, no need to check others
+                            }
+                        }
+                    }
+                }
+            }
+            $similar_products = $estimator_enabled_products;
         endif;
 
         // Display similar products if we have any
@@ -85,15 +115,6 @@ if (isset($product['id']) && !empty($product['id'])):
 
                                 <div class="suggestion-details">
                                     <div class="suggestion-name"><?php echo esc_html($similar['name']); ?></div>
-
-<!--                                    <div class="suggestion-price">-->
-<!--                                        --><?php //if ($min_total !== $max_total): ?>
-<!--                                            --><?php //echo wc_price($min_total); ?><!-- - --><?php //echo wc_price($max_total); ?>
-<!--                                        --><?php //else: ?>
-<!--                                            --><?php //echo wc_price($min_total); ?>
-<!--                                        --><?php //endif; ?>
-<!---->
-<!--                                    </div>-->
 
                                     <div class="suggestion-price">
                                         <?php if ($min_total !== $max_total): ?>

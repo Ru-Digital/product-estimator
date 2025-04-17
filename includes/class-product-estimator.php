@@ -94,9 +94,10 @@ class ProductEstimator {
         // This function will run after the main query is set up,
         // so it's safe to use conditional tags like is_product() here
 
-        // Example: Only set up product-specific features on product pages
+        // Only set up product-specific features on product pages
         if (function_exists('is_product') && is_product()) {
             // Product page specific setup
+            // BUT DO NOT CREATE WC INTEGRATION AGAIN!
         }
 
         // Check for shortcodes in content
@@ -116,11 +117,8 @@ class ProductEstimator {
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-customer-details.php';
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-ajax-handler.php';
 
-
         // Initialize AJAX handler
         $this->ajax_handler = new AjaxHandler();
-
-
 
         // Initialize script handler - this now enqueues scripts on all pages
         new ScriptHandler($this->plugin_name, $this->version);
@@ -128,8 +126,8 @@ class ProductEstimator {
         // Initialize shortcodes
         $shortcodes = new Shortcodes($this->plugin_name, $this->version);
 
-        // Initialize WooCommerce integration if WooCommerce is active
-        if ($this->isWooCommerceActive()) {
+        // Initialize WooCommerce integration if WooCommerce is active - ENSURE SINGLE INSTANCE
+        if ($this->isWooCommerceActive() && !isset($this->wc_integration)) {
             $this->wc_integration = new WoocommerceIntegration();
         }
 

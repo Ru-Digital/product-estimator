@@ -1462,3 +1462,139 @@ body.modal-open {
     width: 100%;
   }
 }
+
+.price-graph-container {
+  margin: 10px 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  width: 95%;
+}
+
+.price-range-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Price graph bar with longer gradient fade */
+.price-graph-bar {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 4px;
+  margin-left: 10px;
+  height: 8px;
+  background-color: #f0f0f0;
+  /*box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);*/
+
+  /* Longer gradient fade with more gradual transition */
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0,0,0,0.15) 5px,
+    rgba(0,0,0,0.3) 10px,
+    rgba(0,0,0,0.5) 15px,
+    rgba(0,0,0,0.7) 20px,
+    black 40px,
+    black calc(100% - 40px),
+    rgba(0,0,0,0.7) calc(100% - 20px),
+    rgba(0,0,0,0.5) calc(100% - 15px),
+    rgba(0,0,0,0.3) calc(100% - 10px),
+    rgba(0,0,0,0.15) calc(100% - 5px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0,0,0,0.15) 5px,
+    rgba(0,0,0,0.3) 10px,
+    rgba(0,0,0,0.5) 15px,
+    rgba(0,0,0,0.7) 20px,
+    black 40px,
+    black calc(100% - 40px),
+    rgba(0,0,0,0.7) calc(100% - 20px),
+    rgba(0,0,0,0.5) calc(100% - 15px),
+    rgba(0,0,0,0.3) calc(100% - 10px),
+    rgba(0,0,0,0.15) calc(100% - 5px),
+    transparent 100%
+  );
+}
+
+/* Enhanced styling for the range indicator */
+.price-graph-range {
+  border-radius: 4px;
+  height: 100%;
+  background: linear-gradient(to right, #4CAF50, #45a049);
+  /*box-shadow: 0 0 2px rgba(0,0,0,0.1);*/
+  transition: all 0.3s ease;
+}
+
+/* Add a subtle pulsing animation for very small ranges */
+.price-graph-range.small-range {
+  animation: pulse-highlight 2s infinite;
+}
+
+@keyframes pulse-highlight {
+  0% { opacity: 0.9; }
+  50% { opacity: 1; }
+  100% { opacity: 0.9; }
+}
+
+.price-graph-labels {
+  font-size: 11px;
+  color: #666;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  position: relative;
+  margin-left: 10px;
+}
+
+.price-label {
+  position: absolute;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.price-tick {
+  width: 1px;
+  height: 4px;
+  background-color: #999;
+  margin: 0 auto;
+}
+
+.price-value {
+  white-space: nowrap;
+}
+
+.price-dimensions {
+  font-weight: 400;
+  margin-left: 10px;
+}
+
+/* Dark mode support */
+/*@media (prefers-color-scheme: dark) {*/
+/*  .price-graph-bar {*/
+/*    background-color: #333;*/
+/*    !*box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);*!*/
+/*  }*/
+
+/*  .price-graph-range {*/
+/*    background: linear-gradient(to right, #4CAF50, #3d9140);*/
+/*  }*/
+
+/*  .price-graph-labels {*/
+/*    color: #aaa;*/
+/*  }*/
+
+/*  .price-tick {*/
+/*    background-color: #777;*/
+/*  }*/
+/*}*/
+
+@media (max-width: 767px) {
+  .price-graph-labels {
+    display: none;
+  }
+}

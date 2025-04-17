@@ -77,9 +77,12 @@ if (isset($estimate_id)) {
             <?php endif; ?>
             <div class="product-details-wrapper">
                 <div class="product-details">
-                    <span class="product-name">
-                        <?php echo esc_html($product['name']); ?>
-                    </span>
+                    <?php
+
+                    ?>
+<!--                    <span class="product-name">-->
+<!--                        --><?php //echo esc_html($product['name']); ?>
+<!--                    </span>-->
 
                     <?php
                     // Room area display - ensure values are floats
@@ -106,9 +109,9 @@ if (isset($estimate_id)) {
                     $pricing_method = $main_product['pricing_method'];
 
                     ?>
-                    <span class="product-room-area">
-                        <?php echo sprintf(__('%.2f m²', 'product-estimator'), $room_area); ?>
-                    </span>
+<!--                    <span class="product-room-area">-->
+<!--                        --><?php //echo sprintf(__('%.2f m²', 'product-estimator'), $room_area); ?>
+<!--                    </span>-->
 
                     <?php if (isset($min_total) && isset($max_total)): ?>
                         <?php
@@ -127,15 +130,15 @@ if (isset($estimate_id)) {
                         ?>
                         <?php if ($min_total === $max_total): ?>
 
-                            <span class="product-price">
-                                <?php echo display_price_with_markup($min_total, $default_markup, "up"); ?>
-                            </span>
+<!--                            <span class="product-price">-->
+<!--                                --><?php //echo display_price_with_markup($min_total, $default_markup, "up"); ?>
+<!--                            </span>-->
                         <?php else: ?>
 
 
-                            <span class="product-price">
-                                <?php echo display_price_with_markup($min_total, $default_markup, "down"); ?> - <?php echo display_price_with_markup($max_total, $default_markup, "up"); ?>
-                            </span>
+<!--                            <span class="product-price">-->
+<!--                                --><?php //echo display_price_with_markup($min_total, $default_markup, "down"); ?><!-- - --><?php //echo display_price_with_markup($max_total, $default_markup, "up"); ?>
+<!--                            </span>-->
                         <?php endif; ?>
 
                         <!-- Unit price display - only for sqm pricing method -->
@@ -143,6 +146,21 @@ if (isset($estimate_id)) {
                             <!-- Unit price commented out as in original template -->
                         <?php endif; ?>
                     <?php endif; ?>
+
+                    <?php
+                    display_price_graph(
+                        $min_total,
+                        $max_total,
+                        $default_markup,
+                        esc_html($product['name']),
+                        $room_area,
+                        $pricing_method,
+                        [
+                            'label_count' => 6, // Adjust number of labels as needed
+                            'round_to' => 500  // Round to nearest thousand
+                        ]
+                    );
+                    ?>
 
                     <button class="remove-product"
                             data-estimate-id="<?php echo esc_attr($estimate_id); ?>"

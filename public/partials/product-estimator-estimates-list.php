@@ -34,23 +34,37 @@ $options = get_option('product_estimator_settings');
             <!-- For the estimate header -->
             <div class="estimate-header">
                 <h3 class="estimate-name">
-                    <?php echo esc_html($estimate['name']); ?>
                     <?php
-                    // Display estimate totals if available
-                    if (isset($estimate['min_total']) && isset($estimate['max_total']) &&
-                        ($estimate['min_total'] > 0 || $estimate['max_total'] > 0)):
-                        if ($estimate['min_total'] === $estimate['max_total']):
-                            ?>
-                            <span class="estimate-total-price">
-                (<?php echo display_price_with_markup($estimate['min_total'], $default_markup, "up"); ?>)
-            </span>
-                        <?php else: ?>
-                            <span class="estimate-total-price">
-                (<?php echo display_price_with_markup($estimate['min_total'], $default_markup, "down"); ?> - <?php echo display_price_with_markup($estimate['max_total'], $default_markup, "up"); ?>)
-            </span>
-                        <?php
-                        endif;
-                    endif;
+                    display_price_graph(
+                        $estimate['min_total'],
+                        $estimate['max_total'],
+                        $default_markup,
+                        esc_html($estimate['name']),
+                        null,
+                        null,
+                        [
+                            'label_count' => 6, // Adjust number of labels as needed
+                            'round_to' => 1000  // Round to nearest thousand
+                        ]
+                    );
+                    ?>
+<!--                    --><?php //echo esc_html($estimate['name']); ?>
+                    <?php
+//                    // Display estimate totals if available
+//                    if (isset($estimate['min_total']) && isset($estimate['max_total']) &&
+//                        ($estimate['min_total'] > 0 || $estimate['max_total'] > 0)):
+//                        if ($estimate['min_total'] === $estimate['max_total']):
+//                            ?>
+<!--                            <span class="estimate-total-price">-->
+<!--                (--><?php //echo display_price_with_markup($estimate['min_total'], $default_markup, "up"); ?><!--)-->
+<!--            </span>-->
+<!--                        --><?php //else: ?>
+<!--                            <span class="estimate-total-price">-->
+<!--                (--><?php //echo display_price_with_markup($estimate['min_total'], $default_markup, "down"); ?><!-- - --><?php //echo display_price_with_markup($estimate['max_total'], $default_markup, "up"); ?><!--)-->
+<!--            </span>-->
+<!--                        --><?php
+//                        endif;
+//                    endif;
                     ?>
                 </h3>
                 <button class="remove-estimate"
@@ -64,6 +78,7 @@ $options = get_option('product_estimator_settings');
             <div id="rooms">
                 <div class="room-header">
                     <h4><?php esc_html_e('Rooms', 'product-estimator'); ?></h4>
+
                     <button class="add-room" data-estimate="<?php echo esc_attr($estimate_id); ?>">
                         <?php esc_html_e('Add New Room', 'product-estimator'); ?>
                     </button>
@@ -76,26 +91,42 @@ $options = get_option('product_estimator_settings');
                                  data-estimate-id="<?php echo esc_attr($estimate_id); ?>">
                                 <div class="accordion-header-wrapper">
                                     <button class="accordion-header">
-                                        <span class="room-name"><?php echo esc_html($room['name']); ?>: </span>
-                                        <span class="room-dimensions">
-        <?php echo esc_html($room['width']); ?>m × <?php echo esc_html($room['length']); ?>m
-    </span>
+<!--                                        <span class="room-name">--><?php //echo esc_html($room['name']); ?><!--: </span>-->
+<!--                                        <span class="room-dimensions">-->
+<!--        --><?php //echo esc_html($room['width']); ?><!--m × --><?php //echo esc_html($room['length']); ?><!--m-->
+<!--    </span>-->
+                                        <?php
+                                        $room_dimensions = esc_html($room['width']). "x" . esc_html($room['length']);
+                                        display_price_graph(
+                                            $room['min_total'],
+                                            $room['max_total'],
+                                            $default_markup,
+                                            esc_html($room['name']),
+                                            $room_dimensions,
+                                            'm',
+                                            [
+                                                'label_count' => 6, // Adjust number of labels as needed
+                                                'round_to' => 1000  // Round to nearest thousand
+                                            ]
+                                        );
+                                        ?>
+
                                         <?php
                                         // Display room totals if available
-                                        if (isset($room['min_total']) && isset($room['max_total']) &&
-                                            ($room['min_total'] > 0 || $room['max_total'] > 0)):
-                                            if ($room['min_total'] === $room['max_total']):
-                                                ?>
-                                                <span class="room-total-price">
-            <?php echo display_price_with_markup($room['min_total'], $default_markup, "up"); ?>
-        </span>
-                                            <?php else: ?>
-                                                <span class="room-total-price">
-            <?php echo display_price_with_markup($room['min_total'], $default_markup, "down"); ?> - <?php echo display_price_with_markup($room['max_total'], $default_markup, "up"); ?>
-        </span>
-                                            <?php
-                                            endif;
-                                        endif;
+//                                        if (isset($room['min_total']) && isset($room['max_total']) &&
+//                                            ($room['min_total'] > 0 || $room['max_total'] > 0)):
+//                                            if ($room['min_total'] === $room['max_total']):
+//                                                ?>
+<!--                                                <span class="room-total-price">-->
+<!--            --><?php //echo display_price_with_markup($room['min_total'], $default_markup, "up"); ?>
+<!--        </span>-->
+<!--                                            --><?php //else: ?>
+<!--                                                <span class="room-total-price">-->
+<!--            --><?php //echo display_price_with_markup($room['min_total'], $default_markup, "down"); ?><!-- - --><?php //echo display_price_with_markup($room['max_total'], $default_markup, "up"); ?>
+<!--        </span>-->
+<!--                                            --><?php
+//                                            endif;
+//                                        endif;
                                         ?>
                                     </button>
                                     <button class="remove-room"

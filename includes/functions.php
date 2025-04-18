@@ -6,6 +6,8 @@
  * @subpackage Product_Estimator/includes
  */
 
+use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -149,6 +151,14 @@ function product_estimator_get_product_price($product_id, $room_area = null, $ap
         'pricing_method' => $settings['default_pricing_method'], // Default
         'pricing_source' => $settings['default_pricing_source'], // Default
     );
+
+    if(WoocommerceIntegration::isPriceIncluded($product_id)) {
+
+        $result['pricing_method'] = 'price_included';
+        $result['pricing_source'] = 'system';
+
+        return $result;
+    }
 
     // Validate product ID
     if (!$product_id || $product_id <= 0) {
@@ -511,6 +521,7 @@ function product_estimator_calculate_total_price_with_additions($product_id, $ro
  * @return array Price data with min_total, max_total, breakdown
  */
 function product_estimator_calculate_total_price_with_additions_for_display($product, $custom_markup = null) {
+
     // Initialize result
     $result = [
         'min_total' => 0,
@@ -563,6 +574,7 @@ function product_estimator_calculate_total_price_with_additions_for_display($pro
         // Get auto-add products for all categories
         foreach ($product_categories as $category_id) {
             $category_auto_add_products = $product_additions_manager->get_auto_add_products_for_category($category_id);
+
             if (!empty($category_auto_add_products)) {
                 $auto_add_products = array_merge($auto_add_products, $category_auto_add_products);
             }
@@ -570,20 +582,23 @@ function product_estimator_calculate_total_price_with_additions_for_display($pro
 
         // Remove duplicates and the main product itself
         $auto_add_products = array_unique($auto_add_products);
+
         $auto_add_products = array_diff($auto_add_products, [$product['id']]);
 
+
         // Process each auto-add product
-        foreach ($auto_add_products as $add_product_id => $auto_add_product) {
+        foreach ($auto_add_products as $key => $auto_add_product) {
             // Get the auto-add product price
 
-            $add_product_price = $product['additional_products'][$add_product_id];
+
+            $add_product_price = $product['additional_products'][$key];
 
             // Add to totals
             $result['min_total'] += $add_product_price['min_price_total'];
             $result['max_total'] += $add_product_price['max_price_total'];
 
             $result['breakdown'][] = [
-                'id' => $add_product_id,
+                'id' => $auto_add_product,
                 'name' => $add_product_price['name'],
                 'min_price' => $add_product_price['min_price'],
                 'max_price' => $add_product_price['max_price'],

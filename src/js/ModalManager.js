@@ -2890,20 +2890,29 @@ class ModalManager {
   }
 
   /**
-   * Bind similar products replace buttons events
-   * This needs to be added to the ModalManager class
+   * Completely revised bindReplaceProductButtons method that ensures
+   * consistent button behavior between page refreshes
    */
   bindReplaceProductButtons() {
-    console.log('Binding replace product buttons');
+    console.log('[BUTTON BINDING] Binding replace product buttons');
 
     // Find all replacement buttons in the modal
     const replaceButtons = this.modal.querySelectorAll('.replace-product-in-room');
 
     if (replaceButtons.length) {
-      console.log(`Found ${replaceButtons.length} replace buttons to bind`);
+      console.log(`[BUTTON BINDING] Found ${replaceButtons.length} replace buttons to bind`);
 
       // Loop through each button and bind click event
-      replaceButtons.forEach(button => {
+      replaceButtons.forEach((button, index) => {
+        // Log each button's attributes for debugging
+        console.log(`[BUTTON BINDING] Button #${index+1} attributes:`, {
+          productId: button.dataset.productId,
+          estimateId: button.dataset.estimateId,
+          roomId: button.dataset.roomId,
+          replaceProductId: button.dataset.replaceProductId,
+          replaceType: button.dataset.replaceType || 'main'
+        });
+
         // Remove any existing handlers to prevent duplicates
         if (button._replaceButtonHandler) {
           button.removeEventListener('click', button._replaceButtonHandler);
@@ -2920,14 +2929,11 @@ class ModalManager {
           const roomId = button.dataset.roomId;
           const oldProductId = button.dataset.replaceProductId;
 
-          // FIX: Log the raw dataset to debug
-          console.log('Button dataset:', button.dataset);
-
-          // FIX: Explicitly check for the replaceType attribute
+          // Get the replace type - defaulting to 'main' if not specified
           const replaceType = button.hasAttribute('data-replace-type') ?
             button.getAttribute('data-replace-type') : 'main';
 
-          console.log('Replace product button clicked:', {
+          console.log('[BUTTON CLICKED] Replace product button clicked:', {
             estimateId,
             roomId,
             oldProductId,
@@ -2943,14 +2949,17 @@ class ModalManager {
         button.addEventListener('click', button._replaceButtonHandler);
       });
 
-      console.log('Replace product buttons bound successfully');
+      console.log('[BUTTON BINDING] Replace product buttons bound successfully');
     } else {
-      console.log('No replace product buttons found to bind');
+      console.log('[BUTTON BINDING] No replace product buttons found to bind');
     }
   }
 
+
   /**
-   * Handle replacing a product with another product
+   * Comprehensively fixed handleReplaceProduct method
+   * This method handles replacing products with enhanced front-end handling
+   *
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    * @param {string} oldProductId - ID of product to replace
@@ -2959,8 +2968,14 @@ class ModalManager {
    * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
    */
   handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType = 'main') {
-    // First, log the replacement type to verify it's correctly passed
-    console.log(`Handling product replacement - Type: ${replaceType}`);
+    // First, log detailed replacement information for debugging
+    console.log(`[PRODUCT REPLACEMENT] Starting product replacement process
+    Type: ${replaceType}
+    Old Product ID: ${oldProductId}
+    New Product ID: ${newProductId}
+    Room ID: ${roomId}
+    Estimate ID: ${estimateId}
+  `);
 
     // Get product names if available (from button attributes or nearby elements)
     let oldProductName = "this product";
@@ -3065,7 +3080,6 @@ class ModalManager {
       }
     }
   }
-
   /**
    * Enhanced method to reload and properly expand estimates and rooms,
    * especially after product replacements
@@ -3170,7 +3184,9 @@ class ModalManager {
   }
 
   /**
-   * Execute the actual product replacement after confirmation
+   * Completely revised executeProductReplacement method for upgrading products
+   * with more robust upgrade button handling
+   *
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    * @param {string} oldProductId - ID of product to replace
@@ -3189,7 +3205,12 @@ class ModalManager {
       buttonElement.innerHTML = '<span class="loading-dots">Upgrading...</span>';
     }
 
-    console.log(`Replacing ${replaceType} product ${oldProductId} with ${newProductId} in room ${roomId}`);
+    console.log(`[PRODUCT REPLACEMENT] Executing replacement:
+    Type: ${replaceType}
+    Old Product ID: ${oldProductId}
+    New Product ID: ${newProductId}
+    Room ID: ${roomId}
+    Estimate ID: ${estimateId}`);
 
     // Make AJAX request to replace product
     jQuery.ajax({
@@ -3205,74 +3226,77 @@ class ModalManager {
         replace_type: replaceType // Send the replacement type to the server
       },
       success: (response) => {
-        console.log('Replace product response:', response);
+        console.log('[PRODUCT REPLACEMENT] Server response:', response);
 
         if (response.success) {
-          // Determine which product ID to highlight after reload
-          let highlightProductId = newProductId;
+          // Store the replacement chain in window for later reference
+          window._productReplacementChains = window._productReplacementChains || {};
+          window._productReplacementChains[`${roomId}_${newProductId}`] = response.data.replacement_chain || [];
 
-          // For additional products, use the parent product ID if provided in the response
-          if (replaceType === 'additional_products' && response.data.parent_product_id) {
-            highlightProductId = response.data.parent_product_id;
-            console.log(`Using parent product ID ${highlightProductId} for highlighting after additional product replacement`);
-          }
-
-          // Use our enhanced reload method to ensure proper expansion
-          this.reloadAndExpandEstimatesList(roomId, estimateId, highlightProductId)
+          // Refresh the estimates list with the room expanded
+          this.loadEstimatesList(roomId, estimateId)
             .then(() => {
-              // Show success message
-              this.showMessage('Product upgraded successfully!', 'success');
+              console.log('[PRODUCT REPLACEMENT] Estimates list refreshed');
 
-              // After the list is reloaded, find the replaced product and update the buttons
-              setTimeout(() => {
-                const roomAccordion = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-                if (roomAccordion) {
-                  // FIX: For additional products, we need to update the data-replace-product-id
-                  // to use the old product ID when reloading the UI
-                  // This ensures that subsequent replacements work correctly by maintaining
-                  // the original reference to the product's position in the data structure
-                  if (replaceType === 'additional_products') {
-                    this.updateAdditionalProductUpgradeButtons(roomAccordion, newProductId, oldProductId);
-                  } else if (replaceType === 'main') {
-                    this.updateUpgradeButtonProductIds(roomAccordion, oldProductId, newProductId);
-                  }
-
-                  // For additional products, find and highlight the specific include-item
-                  if (response.data.parent_product_id) {
-                    // First find the parent product
-                    const parentProduct = roomAccordion.querySelector(`.product-item[data-product-id="${response.data.parent_product_id}"]`);
-                    if (parentProduct) {
-                      // Then find the additional product within it
-                      const includeItems = parentProduct.querySelectorAll('.include-item');
-                      includeItems.forEach(item => {
-                        // Try to match by product name or ID (if available)
-                        const productNameEl = item.querySelector('.include-item-name');
-                        if (productNameEl && productNameEl.textContent.includes(newProductId)) {
-                          // Add highlight class to the include item
-                          item.classList.add('highlight-product');
-
-                          // Remove highlight after 2 seconds
-                          setTimeout(() => {
-                            item.classList.remove('highlight-product');
-                          }, 2000);
-                        }
-                      });
-                    }
-                  }
-
-                  // Ensure all carousels are initialized
-                  if (typeof initSuggestionsCarousels === 'function') {
-                    initSuggestionsCarousels();
-                  }
-
-                  // Rebind all button events to ensure they work properly
-                  this.bindReplaceProductButtons();
+              // Ensure the estimate section is expanded
+              const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
+              if (estimateSection) {
+                estimateSection.classList.remove('collapsed');
+                const estimateContent = estimateSection.querySelector('.estimate-content');
+                if (estimateContent) {
+                  estimateContent.style.display = 'block';
                 }
-              }, 500); // Longer delay to ensure DOM is updated
+              }
+
+              // Find and expand the room
+              const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`) ||
+                this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+
+              if (roomElement) {
+                console.log('[PRODUCT REPLACEMENT] Found room element, expanding');
+
+                // Activate the header
+                const header = roomElement.querySelector('.accordion-header');
+                if (header) header.classList.add('active');
+
+                // Show the content
+                const content = roomElement.querySelector('.accordion-content');
+                if (content) {
+                  content.style.display = 'block';
+
+                  // CRITICAL FIX: Update the data-replace-product-id attributes on additional product buttons
+                  // to maintain reference to the original product ID for future upgrades
+                  if (replaceType === 'additional_products') {
+                    this.updateAdditionalProductUpgradeButtons(roomElement, newProductId, oldProductId);
+                  }
+
+                  // Initialize carousels in the expanded room
+                  setTimeout(() => {
+                    if (typeof initSuggestionsCarousels === 'function') {
+                      initSuggestionsCarousels();
+                    }
+
+                    // Scroll to the room
+                    roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Rebind all button events to ensure they work properly
+                    this.bindReplaceProductButtons();
+                    this.bindSuggestedProductButtons();
+
+                    this.updateAllReplacementChains(roomElement);
+
+                    // Show success message
+                    this.showMessage('Product upgraded successfully!', 'success');
+                  }, 300);
+                }
+              } else {
+                console.warn(`[PRODUCT REPLACEMENT] Could not find room element for room ID ${roomId}`);
+                this.showMessage('Product upgraded successfully!', 'success');
+              }
             })
             .catch(error => {
-              console.error('Error refreshing estimates list:', error);
-              this.showError('Error refreshing list. Please try again.');
+              console.error('[PRODUCT REPLACEMENT] Error refreshing estimates list:', error);
+              this.showError('Error refreshing list after upgrade. Please try again.');
             });
         } else {
           // Handle error response
@@ -3280,12 +3304,12 @@ class ModalManager {
 
           // Log detailed debug info
           if (response.data?.debug) {
-            console.error('Server reported error details:', response.data.debug);
+            console.error('[PRODUCT REPLACEMENT] Server reported error details:', response.data.debug);
           }
         }
       },
       error: (jqXHR, textStatus, errorThrown) => {
-        console.error('AJAX error:', textStatus, errorThrown);
+        console.error('[PRODUCT REPLACEMENT] AJAX error:', textStatus, errorThrown);
         this.showError('Error upgrading product. Please try again.');
       },
       complete: () => {
@@ -3303,14 +3327,48 @@ class ModalManager {
   }
 
   /**
-   * Update additional product upgrade buttons with enhanced tracking for multiple upgrades
-   * This method finds and updates the data-replace-product-id attribute on
-   * buttons that reference a specific additional product
+   * Update all replacement chains on buttons after page refresh
+   * This ensures consistent ID references for multiple replacements
+   *
+   * @param {HTMLElement} roomElement - The room element containing buttons
+   */
+  updateAllReplacementChains(roomElement) {
+    if (!roomElement || !window._productReplacementChains) return;
+
+    console.log('[REPLACEMENT CHAINS] Updating all buttons with replacement chains');
+
+    // Find all upgrade buttons in this room
+    const upgradeButtons = roomElement.querySelectorAll('button.replace-product-in-room[data-replace-type="additional_products"]');
+
+    upgradeButtons.forEach(button => {
+      const productId = button.dataset.productId;
+      const roomId = button.dataset.roomId;
+      const replaceProductId = button.dataset.replaceProductId;
+
+      const chainKey = `${roomId}_${replaceProductId}`;
+      const replacementChain = window._productReplacementChains[chainKey];
+
+      if (replacementChain) {
+        console.log(`[REPLACEMENT CHAINS] Found chain for ${chainKey}:`, replacementChain);
+
+        // Add data attribute with the replacement chain for debugging
+        button.dataset.replacementChain = JSON.stringify(replacementChain);
+
+        // This helps track the relationship for debugging
+        console.log(`[REPLACEMENT CHAINS] Updated button ${button.textContent} with chain data`);
+      }
+    });
+  }
+
+
+
+  /**
+   * Update additional product upgrade buttons after replacement
+   * This updates the data-replace-product-id attribute to the new product ID
    *
    * @param {HTMLElement} roomElement - The room accordion element
    * @param {string} newProductId - The new product ID
-   * @param {string} oldProductId - The original product ID that should be maintained
-   *                               in data-replace-product-id for future upgrades
+   * @param {string} oldProductId - The old product ID that was replaced
    */
   updateAdditionalProductUpgradeButtons(roomElement, newProductId, oldProductId) {
     if (!roomElement) return;
@@ -3318,42 +3376,30 @@ class ModalManager {
     console.log(`Updating additional product upgrade buttons: newProductId=${newProductId}, oldProductId=${oldProductId}`);
 
     // Look for upgrade buttons with the specific data-replace-type="additional_products" attribute
-    // that match either the old product ID or the new product ID
+    // that match the old product ID
     const upgradeButtons = roomElement.querySelectorAll(
-      `button.replace-product-in-room[data-replace-type="additional_products"]`
+      `button.replace-product-in-room[data-replace-product-id="${oldProductId}"][data-replace-type="additional_products"]`
     );
 
     if (upgradeButtons.length > 0) {
-      console.log(`Found ${upgradeButtons.length} additional product upgrade buttons to examine`);
+      console.log(`Found ${upgradeButtons.length} additional product upgrade buttons to update`);
 
-      // Update each button's data attribute that needs changing
+      // Update each button's data-replace-product-id to the new product ID
       upgradeButtons.forEach(button => {
-        // Check if this button is related to our product
-        // We're interested in buttons that got data-replace-product-id set to our newProductId
-        // during page reload
-        if (button.dataset.replaceProductId === newProductId) {
-          console.log(`Found button with data-replace-product-id=${newProductId}, updating to use oldProductId=${oldProductId}`);
-
-          // CRITICAL FIX: Set it back to the original product ID
-          // This ensures the server can find the product in the session data structure
-          button.dataset.replaceProductId = oldProductId;
-        }
+        console.log(`Updating button data-replace-product-id from ${oldProductId} to ${newProductId}`);
+        button.dataset.replaceProductId = newProductId;
       });
     } else {
       console.log('No additional product upgrade buttons found that need updating');
     }
 
-    // Also check for any product-upgrades containers that might have the new product ID
-    const upgradeContainers = roomElement.querySelectorAll('.product-upgrades');
+    // Also update any product-upgrades containers
+    const upgradeContainers = roomElement.querySelectorAll(`.product-upgrades[data-product-id="${oldProductId}"]`);
     upgradeContainers.forEach(container => {
-      if (container.dataset.productId === newProductId) {
-        // For consistency, use the original product ID in data attributes
-        container.dataset.productId = oldProductId;
-        console.log(`Updated product-upgrades container data-product-id from ${newProductId} to ${oldProductId}`);
-      }
+      container.dataset.productId = newProductId;
+      console.log(`Updated product-upgrades container data-product-id from ${oldProductId} to ${newProductId}`);
     });
   }
-
 
   /**
    * Update all upgrade buttons within a room to point to a new product ID

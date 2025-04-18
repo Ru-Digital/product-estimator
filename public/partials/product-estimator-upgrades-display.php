@@ -124,9 +124,28 @@ if (empty($upgrades['products'])) {
                                             data-replace-product-id="<?= $upgrade_product_id ?>"
                                             data-pricing-method="<?= $upgrade_product['pricing_method'] ?>"
                                             data-replace-type="<?= $upgrades['type'] ?>"
+                                        <?php if (!empty($replacement_chain)): ?>
+                                            data-replacement-chain="<?= htmlspecialchars(json_encode($replacement_chain), ENT_QUOTES, 'UTF-8') ?>"
+                                        <?php endif; ?>
                                     >
                                         Upgrade
                                     </button>
+
+
+
+
+
+
+                                    <!--                                    <button type="button" class="replace-product-in-room"-->
+<!--                                            data-product-id="--><?php //= $upgrade_product['id'] ?><!--"-->
+<!--                                            data-estimate-id="--><?php //= $estimate_id; ?><!--"-->
+<!--                                            data-room-id="--><?php //= $room_id ?><!--"-->
+<!--                                            data-replace-product-id="--><?php //= $upgrade_product_id ?><!--"-->
+<!--                                            data-pricing-method="--><?php //= $upgrade_product['pricing_method'] ?><!--"-->
+<!--                                            data-replace-type="--><?php //= $upgrades['type'] ?><!--"-->
+<!--                                    >-->
+<!--                                        Upgrade-->
+<!--                                    </button>-->
                                 </div>
                             <?php endforeach; ?>
                         </div>

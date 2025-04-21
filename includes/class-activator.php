@@ -22,6 +22,7 @@ class Activator {
      */
     public static function activate() {
         self::create_tables();
+        self::upgrade_tables();
         self::check_requirements();
 //        self::run_composer_install();
 
@@ -76,7 +77,9 @@ class Activator {
             email varchar(255) DEFAULT NULL,
             phone_number varchar(50) DEFAULT NULL,
             postcode varchar(10) DEFAULT NULL,
-            total decimal(10,2) NOT NULL,
+            total_min decimal(10,2) NOT NULL DEFAULT 0,
+            total_max decimal(10,2) NOT NULL DEFAULT 0,
+            markup decimal(10,2) NOT NULL DEFAULT 0,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             status varchar(20) DEFAULT 'completed',
@@ -90,11 +93,43 @@ class Activator {
         dbDelta($sql);
 
         // Store the current database version
-        update_option('product_estimator_db_version', '1.0.0');
+        update_option('product_estimator_db_version', '1.0.1');
 
         // Add debug logging
         error_log("Product Estimator table creation executed");
     }
+
+    /**
+     * Upgrade database tables if necessary
+     */
+    public static function upgrade_tables() {
+//        global $wpdb;
+
+//        $installed_version = get_option('product_estimator_db_version', '1.0.0');
+//
+//        // Check if we need to upgrade
+//        if (version_compare($installed_version, '1.0.1', '<')) {
+//            $table_name = $wpdb->prefix . 'product_estimator_estimates';
+//
+//            // Check if total_min and total_max columns already exist
+//            $columns = $wpdb->get_results("SHOW COLUMNS FROM {$table_name} LIKE 'total_min'");
+//            if (empty($columns)) {
+//                // Add total_min and total_max columns
+//                $wpdb->query("ALTER TABLE {$table_name}
+//                         ADD COLUMN total_min decimal(10,2) NOT NULL DEFAULT 0,
+//                         ADD COLUMN total_max decimal(10,2) NOT NULL DEFAULT 0");
+//
+//                // Copy existing total values to both min and max
+//                $wpdb->query("UPDATE {$table_name} SET total_min = total, total_max = total");
+//
+//                // Optionally, you can drop the total column after migration
+//                // $wpdb->query("ALTER TABLE {$table_name} DROP COLUMN total");
+//            }
+//
+//            update_option('product_estimator_db_version', '1.0.1');
+//        }
+    }
+
     /**
      * Check plugin requirements.
      *

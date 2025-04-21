@@ -9,6 +9,8 @@ import EstimatorCore from './EstimatorCore';
 import ConfirmationDialog from './ConfirmationDialog';
 import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
 import ProductDetailsToggle from './ProductDetailsToggle';  // Import the default instance
+import PrintEstimate from './PrintEstimate';
+
 
 // Global initialization tracker - defined at the top level
 window._productEstimatorInitialized = window._productEstimatorInitialized || false;
@@ -104,6 +106,10 @@ function initEstimator(debugMode) {
     window.productEstimator.initialized = true;
     window.productEstimator.core = EstimatorCore;
     window.productEstimator.dialog = ConfirmationDialog; // Add dialog to global object
+
+    // Initialize PrintEstimate and make it available globally
+    const printEstimate = new PrintEstimate({ debug: debugMode });
+    window.productEstimator.printEstimate = printEstimate;
 
     // Make ProductDetailsToggle available globally
     window.productEstimator.detailsToggle = ProductDetailsToggle; // Add toggle module to global object

@@ -50,7 +50,9 @@
             "includes/class-session-handler.php",
             "includes/class-session-debug-helper.php",
             "includes/class-ajax-handler.php",
-            "includes/class-customer-details.php"
+            "includes/class-customer-details.php",
+            "includes/class-estimate-handler.php",
+            "includes/traits/trait-estimate-db-handler.php"
         ],
         "files": [
             "includes/functions.php"

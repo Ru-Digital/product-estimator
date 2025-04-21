@@ -3,11 +3,14 @@ namespace RuDigital\ProductEstimator\Includes;
 
 use WP_Error;
 use RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule;
+use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
 
 /**
  * AJAX Handlers for Product Estimator
  */
 class AjaxHandler {
+    use EstimateDbHandler;
+
 
     /**
      * @var SessionHandler Session handler instance
@@ -97,6 +100,15 @@ class AjaxHandler {
             // Register the store session data handler
             add_action('wp_ajax_store_single_estimate', array($this, 'store_single_estimate'));
             add_action('wp_ajax_nopriv_store_single_estimate', array($this, 'store_single_estimate'));
+
+            // In the constructor of AjaxHandler class
+            add_action('wp_ajax_print_estimate', array($this, 'print_estimate'));
+            add_action('wp_ajax_nopriv_print_estimate', array($this, 'print_estimate'));
+
+            add_action('wp_ajax_check_estimate_stored', array($this, 'check_estimate_stored'));
+            add_action('wp_ajax_nopriv_check_estimate_stored', array($this, 'check_estimate_stored'));
+
+
 
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -209,7 +221,7 @@ class AjaxHandler {
         }
 
         // Get estimate_id and sanitize
-        $estimate_id = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : '';
+        $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
 
         if ($estimate_id === '') {
@@ -2423,17 +2435,14 @@ class AjaxHandler {
     }
 
     /**
-     * Store current session data in the database
-     */
-    /**
-     * Store a single estimate from the session in the database
+     * Store current session data in the database with optimized DB queries
      */
     public function store_single_estimate() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
         // Get the estimate ID to store
-        $estimate_id = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : '';
+        $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
 
         if (empty($estimate_id)) {
             wp_send_json_error([
@@ -2442,15 +2451,60 @@ class AjaxHandler {
             return;
         }
 
-        // Get customer details from request if provided
-        $customer_name = isset($_POST['customer_name']) ? sanitize_text_field($_POST['customer_name']) : '';
-        $customer_email = isset($_POST['customer_email']) ? sanitize_email($_POST['customer_email']) : '';
-        $customer_phone = isset($_POST['customer_phone']) ? sanitize_text_field($_POST['customer_phone']) : '';
-        $customer_postcode = isset($_POST['customer_postcode']) ? sanitize_text_field($_POST['customer_postcode']) : '';
+        // Get customer details from request
+        $customer_details = [
+            'name' => isset($_POST['customer_name']) ? sanitize_text_field($_POST['customer_name']) : '',
+            'email' => isset($_POST['customer_email']) ? sanitize_email($_POST['customer_email']) : '',
+            'phone' => isset($_POST['customer_phone']) ? sanitize_text_field($_POST['customer_phone']) : '',
+            'postcode' => isset($_POST['customer_postcode']) ? sanitize_text_field($_POST['customer_postcode']) : ''
+        ];
+
         $notes = isset($_POST['notes']) ? sanitize_textarea_field($_POST['notes']) : '';
 
         try {
-            // Get the specific estimate from session
+            // Store or update the estimate using our shared trait method
+            $db_id = $this->storeOrUpdateEstimate($estimate_id, $customer_details, $notes);
+
+            if (!$db_id) {
+                throw new \Exception(__('Error saving estimate to database', 'product-estimator'));
+            }
+
+            // No need to manually update the session as storeOrUpdateEstimate already did this
+            wp_send_json_success([
+                'message' => __('Estimate saved successfully', 'product-estimator'),
+                'estimate_id' => $db_id,
+                'session_id' => $estimate_id,
+                'is_update' => $this->getEstimateDbId($estimate_id) == $db_id
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+                'error' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
+
+    /**
+     * Check if an estimate is already stored in the database
+     */
+    public function check_estimate_stored() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get the estimate ID to check
+        $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
+
+        if (empty($estimate_id)) {
+            wp_send_json_error([
+                'message' => __('Estimate ID is required', 'product-estimator')
+            ]);
+            return;
+        }
+
+        try {
+            // Get the estimate from session
             $estimate = $this->session->getEstimate($estimate_id);
 
             if (empty($estimate)) {
@@ -2460,83 +2514,37 @@ class AjaxHandler {
                 return;
             }
 
-            // Get customer details from estimate if not provided in request
-            if (empty($customer_name) && isset($estimate['customer_details']['name'])) {
-                $customer_name = $estimate['customer_details']['name'];
-            }
-
-            if (empty($customer_email) && isset($estimate['customer_details']['email'])) {
-                $customer_email = $estimate['customer_details']['email'];
-            }
-
-            if (empty($customer_phone) && isset($estimate['customer_details']['phone'])) {
-                $customer_phone = $estimate['customer_details']['phone'];
-            }
-
-            if (empty($customer_postcode) && isset($estimate['customer_details']['postcode'])) {
-                $customer_postcode = $estimate['customer_details']['postcode'];
-            }
-
-            // Calculate total from estimate
-            $total = 0;
-            if (isset($estimate['max_total'])) {
-                $total = floatval($estimate['max_total']);
-            }
-
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'product_estimator_estimates';
-
-            // Insert into database
-            $result = $wpdb->insert(
-                $table_name,
-                [
-                    'name' => $customer_name,
-                    'email' => $customer_email,
-                    'phone_number' => $customer_phone,
-                    'postcode' => $customer_postcode,
-                    'total' => $total,
-                    'status' => 'saved',
-                    'notes' => $notes,
-                    'estimate_data' => json_encode($estimate)
-                ],
-                [
-                    '%s', // name
-                    '%s', // email
-                    '%s', // phone_number
-                    '%s', // postcode
-                    '%f', // total
-                    '%s', // status
-                    '%s', // notes
-                    '%s'  // estimate_data
-                ]
-            );
-
-            if ($result === false) {
-                // Log the database error
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Database error when saving estimate: ' . $wpdb->last_error);
-                }
-
-                throw new \Exception(__('Error saving estimate to database', 'product-estimator'));
-            }
-
-            $db_id = $wpdb->insert_id;
-
-            // Optionally, you can remove the estimate from session
-            // Uncomment if you want to remove after saving:
-            // $this->session->removeEstimate($estimate_id);
+            // Use the trait method to check if it's stored
+            $is_stored = $this->isEstimateStored($estimate);
+            $db_id = $this->getEstimateDbId($estimate);
 
             wp_send_json_success([
-                'message' => __('Estimate saved successfully', 'product-estimator'),
-                'estimate_id' => $db_id,
-                'session_id' => $estimate_id
+                'is_stored' => $is_stored,
+                'estimate_id' => $estimate_id,
+                'db_id' => $db_id
             ]);
 
         } catch (\Exception $e) {
             wp_send_json_error([
-                'message' => $e->getMessage(),
-                'error' => $e->getTraceAsString()
+                'message' => $e->getMessage()
             ]);
         }
-    }}
+    }
+
+    /**
+     * Forward print_estimate AJAX request to EstimateHandler
+     */
+    public function print_estimate() {
+        // Check if EstimateHandler is available
+        if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\EstimateHandler')) {
+            $handler = new \RuDigital\ProductEstimator\Includes\EstimateHandler();
+            $handler->handle_print_estimate();
+        } else {
+            wp_send_json_error([
+                'message' => __('Print functionality is unavailable', 'product-estimator')
+            ]);
+        }
+    }
+
+}
 

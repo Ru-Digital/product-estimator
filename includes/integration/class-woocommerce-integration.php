@@ -72,6 +72,14 @@ class WoocommerceIntegration {
             'value' => get_post_meta($post->ID, '_enable_estimator', true)
         ));
 
+        woocommerce_wp_checkbox(array(
+            'id' => '_price_included',
+            'label' => __('Price Included', 'product-estimator'),
+            'description' => __('Indicate if price is included in the product', 'product-estimator'),
+            'desc_tip' => true,
+            'value' => get_post_meta($post->ID, '_price_included', true)
+        ));
+
         echo '</div>';
     }
 
@@ -82,12 +90,17 @@ class WoocommerceIntegration {
      */
     public function saveProductFields($post_id) {
         $enable_estimator = isset($_POST['_enable_estimator']) ? 'yes' : 'no';
+        $price_included = isset($_POST['_price_included']) ? 'yes' : 'no';
+
 
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log("Saving _enable_estimator for product $post_id: $enable_estimator");
+            error_log("Saving _price_included for product $post_id: $price_included");
         }
 
         update_post_meta($post_id, '_enable_estimator', $enable_estimator);
+        update_post_meta($post_id, '_price_included', $price_included);
+
     }
 
     /**
@@ -112,6 +125,21 @@ class WoocommerceIntegration {
         ));
 
         echo '</div>';
+
+        // Add Price Included checkbox for variations
+        echo '<div class="form-row form-row-full price-included-variation-wrapper">';
+
+        woocommerce_wp_checkbox(array(
+            'id' => '_price_included_' . $variation->ID,
+            'name' => '_price_included[' . $loop . ']',
+            'label' => __('Price Included', 'product-estimator'),
+            'description' => __('Indicate if price is included in the product', 'product-estimator'),
+            'desc_tip' => true,
+            'value' => get_post_meta($variation->ID, '_price_included', true),
+            'wrapper_class' => 'form-row form-row-full'
+        ));
+
+        echo '</div>';
     }
 
     /**
@@ -123,11 +151,15 @@ class WoocommerceIntegration {
     public function saveVariationFields($variation_id, $loop) {
         // Add filter just before updating meta to prevent synchronization
         add_filter('update_post_metadata', array($this, 'preventParentEstimatorSync'), 10, 5);
+        $price_included = isset($_POST['_price_included'][$loop]) ? 'yes' : 'no';
+
 
         $enable_estimator = isset($_POST['_enable_estimator'][$loop]) ? 'yes' : 'no';
 
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log("Saving _enable_estimator for variation $variation_id: $enable_estimator");
+            error_log("Saving _price_included for variation $variation_id: $price_included");
+
         }
 
         // Direct SQL update to bypass WP filters that might cause sync
@@ -162,6 +194,8 @@ class WoocommerceIntegration {
             );
         }
 
+        update_post_meta($variation_id, '_price_included', $price_included);
+
         // Clear post meta cache
         wp_cache_delete($variation_id, 'post_meta');
 
@@ -181,7 +215,7 @@ class WoocommerceIntegration {
      */
     public function preventParentEstimatorSync($check, $object_id, $meta_key, $meta_value, $prev_value) {
         // Only intercept _enable_estimator updates
-        if ($meta_key === '_enable_estimator') {
+        if ($meta_key === '_enable_estimator' || $meta_key === '_price_included') {
             $product = wc_get_product($object_id);
 
             // Check if this is a parent variable product
@@ -499,5 +533,63 @@ class WoocommerceIntegration {
         // Check variations
         $enabled_variations = self::getEnabledVariations($product_id);
         return !empty($enabled_variations);
+    }
+
+    /**
+     * Check if price is included for a product/variation
+     *
+     * @param int $product_id The product/variation ID
+     * @return bool Whether price is included
+     */
+    public static function isPriceIncluded($product_id) {
+        $product = wc_get_product($product_id);
+
+        if (!$product) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Product ID {$product_id} not found when checking if price is included");
+            }
+            return false;
+        }
+
+        // Check if this is a variation
+        if ($product->is_type('variation')) {
+            // Check variation first - if it has a specific setting, use that
+            $variation_meta = get_post_meta($product_id, '_price_included', true);
+
+            // Only if it's explicitly 'yes', consider it enabled
+            if ($variation_meta === 'yes') {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Variation {$product_id} has price included explicitly enabled");
+                }
+                return true;
+            }
+
+            // If variation has explicitly 'no', respect that
+            if ($variation_meta === 'no') {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Variation {$product_id} has price included explicitly disabled");
+                }
+                return false;
+            }
+
+            // Otherwise fall back to parent setting
+            $parent_id = $product->get_parent_id();
+            $parent_enabled = get_post_meta($parent_id, '_price_included', true) === 'yes';
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Variation {$product_id} using parent price included setting: " . ($parent_enabled ? 'enabled' : 'disabled'));
+            }
+
+            return $parent_enabled;
+        }
+
+        // For simple products
+        $price_included = get_post_meta($product_id, '_price_included', true) === 'yes';
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Simple product {$product_id} price included: " . ($price_included ? 'yes' : 'no'));
+        }
+
+        return $price_included;
     }
 }

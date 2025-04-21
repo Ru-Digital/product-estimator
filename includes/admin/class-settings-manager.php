@@ -75,6 +75,8 @@ class SettingsManager {
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-product-additions-settings-module.php';
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-pricing-rules-settings-module.php';
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-similar-products-settings-module.php';
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-product-upgrades-settings-module.php'; // Added new module class
+
     }
 
     /**
@@ -92,6 +94,7 @@ class SettingsManager {
             new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule($this->plugin_name, $this->version),
             new \RuDigital\ProductEstimator\Includes\Admin\Settings\PricingRulesSettingsModule($this->plugin_name, $this->version),
             new \RuDigital\ProductEstimator\Includes\Admin\Settings\SimilarProductsSettingsModule($this->plugin_name, $this->version),
+            new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductUpgradesSettingsModule($this->plugin_name, $this->version),
         );
 
         // Store modules by their tab ID for easy access

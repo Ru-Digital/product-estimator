@@ -2890,20 +2890,29 @@ class ModalManager {
   }
 
   /**
-   * Bind similar products replace buttons events
-   * This needs to be added to the ModalManager class
+   * Completely revised bindReplaceProductButtons method that ensures
+   * consistent button behavior between page refreshes
    */
   bindReplaceProductButtons() {
-    console.log('Binding replace product buttons');
+    console.log('[BUTTON BINDING] Binding replace product buttons');
 
     // Find all replacement buttons in the modal
     const replaceButtons = this.modal.querySelectorAll('.replace-product-in-room');
 
     if (replaceButtons.length) {
-      console.log(`Found ${replaceButtons.length} replace buttons to bind`);
+      console.log(`[BUTTON BINDING] Found ${replaceButtons.length} replace buttons to bind`);
 
       // Loop through each button and bind click event
-      replaceButtons.forEach(button => {
+      replaceButtons.forEach((button, index) => {
+        // Log each button's attributes for debugging
+        console.log(`[BUTTON BINDING] Button #${index+1} attributes:`, {
+          productId: button.dataset.productId,
+          estimateId: button.dataset.estimateId,
+          roomId: button.dataset.roomId,
+          replaceProductId: button.dataset.replaceProductId,
+          replaceType: button.dataset.replaceType || 'main'
+        });
+
         // Remove any existing handlers to prevent duplicates
         if (button._replaceButtonHandler) {
           button.removeEventListener('click', button._replaceButtonHandler);
@@ -2914,43 +2923,60 @@ class ModalManager {
           e.preventDefault();
           e.stopPropagation();
 
-          // Get data attributes
+          // Get data attributes - explicitly check the button.dataset properties
           const newProductId = button.dataset.productId;
           const estimateId = button.dataset.estimateId;
           const roomId = button.dataset.roomId;
           const oldProductId = button.dataset.replaceProductId;
 
-          console.log('Replace product button clicked:', {
+          // Get the replace type - defaulting to 'main' if not specified
+          const replaceType = button.hasAttribute('data-replace-type') ?
+            button.getAttribute('data-replace-type') : 'main';
+
+          console.log('[BUTTON CLICKED] Replace product button clicked:', {
             estimateId,
             roomId,
             oldProductId,
-            newProductId
+            newProductId,
+            replaceType
           });
 
-          // Handle replacing the product
-          this.handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, button);
+          // Handle replacing the product with confirmation dialog
+          this.handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, button, replaceType);
         };
 
         // Add click event listener
         button.addEventListener('click', button._replaceButtonHandler);
       });
 
-      console.log('Replace product buttons bound successfully');
+      console.log('[BUTTON BINDING] Replace product buttons bound successfully');
     } else {
-      console.log('No replace product buttons found to bind');
+      console.log('[BUTTON BINDING] No replace product buttons found to bind');
     }
   }
 
+
   /**
-   * Handle replacing a product with another product
+   * Comprehensively fixed handleReplaceProduct method
+   * This method handles replacing products with enhanced front-end handling
+   *
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    * @param {string} oldProductId - ID of product to replace
    * @param {string} newProductId - ID of new product
    * @param {HTMLElement} buttonElement - Button element for UI feedback
+   * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
    */
-  handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, buttonElement) {
-    // First show a confirmation dialog
+  handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType = 'main') {
+    // First, log detailed replacement information for debugging
+    console.log(`[PRODUCT REPLACEMENT] Starting product replacement process
+    Type: ${replaceType}
+    Old Product ID: ${oldProductId}
+    New Product ID: ${newProductId}
+    Room ID: ${roomId}
+    Estimate ID: ${estimateId}
+  `);
+
     // Get product names if available (from button attributes or nearby elements)
     let oldProductName = "this product";
     let newProductName = "the selected product";
@@ -2958,21 +2984,56 @@ class ModalManager {
     try {
       // Try to get product names from DOM
       if (buttonElement) {
-        // Get name of new product (the one in the carousel)
-        const productItem = buttonElement.closest('.suggestion-item');
+        // Get name of new product (the one in the carousel or tile)
+        const productItem = buttonElement.closest('.suggestion-item, .upgrade-tile');
         if (productItem) {
-          const nameEl = productItem.querySelector('.suggestion-name');
+          const nameEl = productItem.querySelector('.suggestion-name, .tile-label');
           if (nameEl) {
             newProductName = nameEl.textContent.trim();
           }
         }
 
-        // Get name of the current product (more complex)
-        const productWrapper = buttonElement.closest('.product-item');
-        if (productWrapper) {
-          const nameEl = productWrapper.querySelector('.product-name');
-          if (nameEl) {
-            oldProductName = nameEl.textContent.trim();
+        // For additional products (find in the includes section)
+        if (replaceType === 'additional_products') {
+          console.log('Looking for additional product name to replace');
+
+          // Find the product item that contains this button (usually the outer parent)
+          const mainProductItem = buttonElement.closest('.product-item');
+
+          if (mainProductItem) {
+            // Look specifically within this product's includes section
+            // and find the include-item that matches our oldProductId
+            const includeItems = mainProductItem.querySelectorAll('.include-item');
+            console.log(`Found ${includeItems.length} include items to search through`);
+
+            for (const item of includeItems) {
+              const nameEl = item.querySelector('.include-item-name');
+              if (nameEl) {
+                // For additional products, we need a better way to match
+                // Look for data attributes if available
+                const includeProduct = item.closest('[data-product-id]');
+                if (includeProduct && includeProduct.dataset.productId === oldProductId) {
+                  oldProductName = nameEl.textContent.trim();
+                  console.log(`Found matching additional product: ${oldProductName}`);
+                  break;
+                } else {
+                  // If no data attribute, just use the first one we find
+                  // This is a fallback that might not be accurate
+                  oldProductName = nameEl.textContent.trim();
+                }
+              }
+            }
+          }
+        }
+        // For main products
+        else {
+          const productWrapper = buttonElement.closest('.product-item');
+          if (productWrapper) {
+            const nameEl = productWrapper.querySelector('.product-name, .price-title');
+            if (nameEl) {
+              oldProductName = nameEl.textContent.trim();
+              console.log(`Found main product name: ${oldProductName}`);
+            }
           }
         }
       }
@@ -2986,48 +3047,154 @@ class ModalManager {
     // Use the confirmation dialog
     if (window.productEstimator && window.productEstimator.dialog) {
       window.productEstimator.dialog.show({
-        title: 'Confirm Replacement',
+        title: 'Confirm Upgrade',
         message: confirmMessage,
         type: 'product', // Using product type for styling
-        confirmText: 'Replace',
+        confirmText: 'Upgrade',
         cancelText: 'Cancel',
         onConfirm: () => {
           // Proceed with replacement
-          this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement);
+          this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType);
         },
         onCancel: () => {
           // Reset button state if needed
           if (buttonElement) {
             buttonElement.disabled = false;
             buttonElement.classList.remove('loading');
-            buttonElement.textContent = 'Replace';
+            buttonElement.textContent = 'Upgrade';
           }
-          console.log('Product replacement cancelled');
+          console.log('Product upgrade cancelled');
         }
       });
     } else {
       // Fallback to browser confirm if custom dialog isn't available
       if (confirm(confirmMessage)) {
-        this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement);
+        this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType);
       } else {
         // Reset button state if needed
         if (buttonElement) {
           buttonElement.disabled = false;
           buttonElement.classList.remove('loading');
-          buttonElement.textContent = 'Replace';
+          buttonElement.textContent = 'Upgrade';
         }
       }
     }
   }
   /**
-   * Execute the actual product replacement after confirmation
+   * Enhanced method to reload and properly expand estimates and rooms,
+   * especially after product replacements
+   *
+   * @param {string} roomId - Room ID to expand
+   * @param {string} estimateId - Estimate ID to expand
+   * @param {string|null} productId - Optional product ID to highlight
+   * @returns {Promise} Promise that resolves when list is loaded and expanded
+   */
+  reloadAndExpandEstimatesList(roomId, estimateId, productId = null) {
+    return new Promise((resolve, reject) => {
+      this.showLoading();
+
+      console.log(`Reloading estimates list with expansion params - Room: ${roomId}, Estimate: ${estimateId}, Product: ${productId}`);
+
+      // Load the estimates list
+      this.loadEstimatesList(roomId, estimateId)
+        .then(() => {
+          // First, find and expand the estimate
+          setTimeout(() => {
+            const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
+            if (estimateSection) {
+              console.log(`Found estimate section: ${estimateId}`);
+
+              // Remove collapsed class
+              estimateSection.classList.remove('collapsed');
+
+              // Show estimate content
+              const estimateContent = estimateSection.querySelector('.estimate-content');
+              if (estimateContent) {
+                estimateContent.style.display = 'block';
+
+                // Now find and expand the room
+                setTimeout(() => {
+                  const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`) ||
+                    this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+
+                  if (roomElement) {
+                    console.log(`Found and expanding room: ${roomId}`);
+
+                    // Add active class to header
+                    const header = roomElement.querySelector('.accordion-header');
+                    if (header) header.classList.add('active');
+
+                    // Show room content
+                    const content = roomElement.querySelector('.accordion-content');
+                    if (content) {
+                      content.style.display = 'block';
+
+                      // Initialize carousels in the expanded room
+                      setTimeout(() => {
+                        if (typeof initSuggestionsCarousels === 'function') {
+                          initSuggestionsCarousels();
+                        }
+
+                        // If a product ID was provided, highlight it briefly
+                        if (productId) {
+                          const productElements = content.querySelectorAll('.product-item');
+                          productElements.forEach(productEl => {
+                            // Look for the product item that contains data for this product
+                            if (productEl.dataset.productId === productId ||
+                              productEl.querySelector(`[data-product-id="${productId}"]`)) {
+
+                              // Highlight the product for attention
+                              productEl.classList.add('highlight-product');
+
+                              // Remove highlight after 2 seconds
+                              setTimeout(() => {
+                                productEl.classList.remove('highlight-product');
+                              }, 2000);
+
+                              // Scroll to make the product visible
+                              productEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                          });
+                        } else {
+                          // No specific product to highlight, just scroll to the room
+                          roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }, 150);
+                    }
+                  } else {
+                    console.warn(`Room ID ${roomId} not found for auto-expansion`);
+                  }
+                }, 150);
+              }
+            } else {
+              console.warn(`Estimate ID ${estimateId} not found for auto-expansion`);
+            }
+
+            resolve();
+          }, 200);
+        })
+        .catch(error => {
+          console.error('Error reloading estimates list:', error);
+          reject(error);
+        })
+        .finally(() => {
+          this.hideLoading();
+        });
+    });
+  }
+
+  /**
+   * Completely revised executeProductReplacement method for upgrading products
+   * with more robust upgrade button handling
+   *
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    * @param {string} oldProductId - ID of product to replace
    * @param {string} newProductId - ID of new product
    * @param {HTMLElement} buttonElement - Button element for UI feedback
+   * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
    */
-  executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement) {
+  executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType = 'main') {
     // Show loading indicator
     this.showLoading();
 
@@ -3035,10 +3202,15 @@ class ModalManager {
     if (buttonElement) {
       buttonElement.disabled = true;
       buttonElement.classList.add('loading');
-      buttonElement.innerHTML = '<span class="loading-dots">Replacing...</span>';
+      buttonElement.innerHTML = '<span class="loading-dots">Upgrading...</span>';
     }
 
-    console.log(`Replacing product ${oldProductId} with ${newProductId} in room ${roomId}`);
+    console.log(`[PRODUCT REPLACEMENT] Executing replacement:
+    Type: ${replaceType}
+    Old Product ID: ${oldProductId}
+    New Product ID: ${newProductId}
+    Room ID: ${roomId}
+    Estimate ID: ${estimateId}`);
 
     // Make AJAX request to replace product
     jQuery.ajax({
@@ -3050,48 +3222,102 @@ class ModalManager {
         estimate_id: estimateId,
         room_id: roomId,
         product_id: newProductId,
-        replace_product_id: oldProductId
+        replace_product_id: oldProductId,
+        replace_type: replaceType // Send the replacement type to the server
       },
       success: (response) => {
-        console.log('Replace product response:', response);
+        console.log('[PRODUCT REPLACEMENT] Server response:', response);
 
         if (response.success) {
-          // Refresh the estimates list to show the updated room
+          // Store the replacement chain in window for later reference
+          window._productReplacementChains = window._productReplacementChains || {};
+          window._productReplacementChains[`${roomId}_${newProductId}`] = response.data.replacement_chain || [];
+
+          // Refresh the estimates list with the room expanded
           this.loadEstimatesList(roomId, estimateId)
             .then(() => {
-              // Auto-expand the room accordion after refreshing
-              setTimeout(() => {
-                const roomAccordion = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-                if (roomAccordion) {
-                  const header = roomAccordion.querySelector('.accordion-header');
-                  if (header && !header.classList.contains('active')) {
-                    header.click();
-                  }
-                }
-              }, 300);
+              console.log('[PRODUCT REPLACEMENT] Estimates list refreshed');
 
-              // Show success message
-              this.showMessage('Product replaced successfully!', 'success');
+              // Ensure the estimate section is expanded
+              const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
+              if (estimateSection) {
+                estimateSection.classList.remove('collapsed');
+                const estimateContent = estimateSection.querySelector('.estimate-content');
+                if (estimateContent) {
+                  estimateContent.style.display = 'block';
+                }
+              }
+
+              // Find and expand the room
+              const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`) ||
+                this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+
+              if (roomElement) {
+                console.log('[PRODUCT REPLACEMENT] Found room element, expanding');
+
+                // Activate the header
+                const header = roomElement.querySelector('.accordion-header');
+                if (header) header.classList.add('active');
+
+                // Show the content
+                const content = roomElement.querySelector('.accordion-content');
+                if (content) {
+                  content.style.display = 'block';
+
+                  // CRITICAL FIX: Update the data-replace-product-id attributes on additional product buttons
+                  // to maintain reference to the original product ID for future upgrades
+                  if (replaceType === 'additional_products') {
+                    this.updateAdditionalProductUpgradeButtons(roomElement, newProductId, oldProductId);
+                  }
+
+                  // Initialize carousels in the expanded room
+                  setTimeout(() => {
+                    if (typeof initSuggestionsCarousels === 'function') {
+                      initSuggestionsCarousels();
+                    }
+
+                    // Scroll to the room
+                    roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // Rebind all button events to ensure they work properly
+                    this.bindReplaceProductButtons();
+                    this.bindSuggestedProductButtons();
+
+                    this.updateAllReplacementChains(roomElement);
+
+                    // Show success message
+                    this.showMessage('Product upgraded successfully!', 'success');
+                  }, 300);
+                }
+              } else {
+                console.warn(`[PRODUCT REPLACEMENT] Could not find room element for room ID ${roomId}`);
+                this.showMessage('Product upgraded successfully!', 'success');
+              }
             })
             .catch(error => {
-              console.error('Error refreshing estimates list:', error);
-              this.showError('Error refreshing list. Please try again.');
+              console.error('[PRODUCT REPLACEMENT] Error refreshing estimates list:', error);
+              this.showError('Error refreshing list after upgrade. Please try again.');
             });
         } else {
           // Handle error response
-          this.showError(response.data?.message || 'Error replacing product. Please try again.');
+          this.showError(response.data?.message || 'Error upgrading product. Please try again.');
+
+          // Log detailed debug info
+          if (response.data?.debug) {
+            console.error('[PRODUCT REPLACEMENT] Server reported error details:', response.data.debug);
+          }
         }
       },
       error: (jqXHR, textStatus, errorThrown) => {
-        console.error('AJAX error:', textStatus, errorThrown);
-        this.showError('Error replacing product. Please try again.');
+        console.error('[PRODUCT REPLACEMENT] AJAX error:', textStatus, errorThrown);
+        this.showError('Error upgrading product. Please try again.');
       },
       complete: () => {
         // Reset button state
         if (buttonElement) {
           buttonElement.disabled = false;
           buttonElement.classList.remove('loading');
-          buttonElement.textContent = 'Replace';
+          buttonElement.textContent = 'Upgrade';
         }
 
         // Hide loading
@@ -3100,6 +3326,109 @@ class ModalManager {
     });
   }
 
+  /**
+   * Update all replacement chains on buttons after page refresh
+   * This ensures consistent ID references for multiple replacements
+   *
+   * @param {HTMLElement} roomElement - The room element containing buttons
+   */
+  updateAllReplacementChains(roomElement) {
+    if (!roomElement || !window._productReplacementChains) return;
+
+    console.log('[REPLACEMENT CHAINS] Updating all buttons with replacement chains');
+
+    // Find all upgrade buttons in this room
+    const upgradeButtons = roomElement.querySelectorAll('button.replace-product-in-room[data-replace-type="additional_products"]');
+
+    upgradeButtons.forEach(button => {
+      const productId = button.dataset.productId;
+      const roomId = button.dataset.roomId;
+      const replaceProductId = button.dataset.replaceProductId;
+
+      const chainKey = `${roomId}_${replaceProductId}`;
+      const replacementChain = window._productReplacementChains[chainKey];
+
+      if (replacementChain) {
+        console.log(`[REPLACEMENT CHAINS] Found chain for ${chainKey}:`, replacementChain);
+
+        // Add data attribute with the replacement chain for debugging
+        button.dataset.replacementChain = JSON.stringify(replacementChain);
+
+        // This helps track the relationship for debugging
+        console.log(`[REPLACEMENT CHAINS] Updated button ${button.textContent} with chain data`);
+      }
+    });
+  }
+
+
+
+  /**
+   * Update additional product upgrade buttons after replacement
+   * This updates the data-replace-product-id attribute to the new product ID
+   *
+   * @param {HTMLElement} roomElement - The room accordion element
+   * @param {string} newProductId - The new product ID
+   * @param {string} oldProductId - The old product ID that was replaced
+   */
+  updateAdditionalProductUpgradeButtons(roomElement, newProductId, oldProductId) {
+    if (!roomElement) return;
+
+    console.log(`Updating additional product upgrade buttons: newProductId=${newProductId}, oldProductId=${oldProductId}`);
+
+    // Look for upgrade buttons with the specific data-replace-type="additional_products" attribute
+    // that match the old product ID
+    const upgradeButtons = roomElement.querySelectorAll(
+      `button.replace-product-in-room[data-replace-product-id="${oldProductId}"][data-replace-type="additional_products"]`
+    );
+
+    if (upgradeButtons.length > 0) {
+      console.log(`Found ${upgradeButtons.length} additional product upgrade buttons to update`);
+
+      // Update each button's data-replace-product-id to the new product ID
+      upgradeButtons.forEach(button => {
+        console.log(`Updating button data-replace-product-id from ${oldProductId} to ${newProductId}`);
+        button.dataset.replaceProductId = newProductId;
+      });
+    } else {
+      console.log('No additional product upgrade buttons found that need updating');
+    }
+
+    // Also update any product-upgrades containers
+    const upgradeContainers = roomElement.querySelectorAll(`.product-upgrades[data-product-id="${oldProductId}"]`);
+    upgradeContainers.forEach(container => {
+      container.dataset.productId = newProductId;
+      console.log(`Updated product-upgrades container data-product-id from ${oldProductId} to ${newProductId}`);
+    });
+  }
+
+  /**
+   * Update all upgrade buttons within a room to point to a new product ID
+   * This ensures that after an upgrade, subsequent upgrade buttons work correctly
+   *
+   * @param {HTMLElement} roomElement - The room accordion element
+   * @param {string} oldProductId - The old product ID to replace
+   * @param {string} newProductId - The new product ID to use
+   */
+  updateUpgradeButtonProductIds(roomElement, oldProductId, newProductId) {
+    if (!roomElement) return;
+
+    console.log(`Updating upgrade buttons: replacing ${oldProductId} with ${newProductId}`);
+
+    // Find all replace buttons that reference the old product ID
+    const upgradeButtons = roomElement.querySelectorAll(`button.replace-product-in-room[data-replace-product-id="${oldProductId}"]`);
+
+    if (upgradeButtons.length > 0) {
+      console.log(`Found ${upgradeButtons.length} upgrade buttons to update`);
+
+      // Update each button's data attribute
+      upgradeButtons.forEach(button => {
+        button.dataset.replaceProductId = newProductId;
+        console.log(`Updated button to use new product ID: ${newProductId}`);
+      });
+    } else {
+      console.log('No upgrade buttons found that need updating');
+    }
+  }
 }
 
 // Export the class

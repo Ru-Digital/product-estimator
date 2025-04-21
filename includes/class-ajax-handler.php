@@ -88,6 +88,12 @@ class AjaxHandler {
             add_action('wp_ajax_delete_customer_details', array($this, 'deleteCustomerDetails'));
             add_action('wp_ajax_nopriv_delete_customer_details', array($this, 'deleteCustomerDetails'));
 
+            add_action('wp_ajax_get_product_upgrades', array($this, 'get_product_upgrades'));
+            add_action('wp_ajax_nopriv_get_product_upgrades', array($this, 'get_product_upgrades'));
+
+            add_action('wp_ajax_get_category_products', array($this, 'get_category_products'));
+            add_action('wp_ajax_nopriv_get_category_products', array($this, 'get_category_products'));
+
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Exception in AjaxHandler constructor: ' . $e->getMessage());
@@ -1867,6 +1873,7 @@ class AjaxHandler {
 
     /**
      * Handle replacing a product in a room with another product
+     * Comprehensive fix for multiple consecutive upgrades
      */
     public function replaceProductInRoom() {
         // Verify nonce
@@ -1885,86 +1892,225 @@ class AjaxHandler {
         $room_id = sanitize_text_field($_POST['room_id']);
         $new_product_id = intval($_POST['product_id']);
         $old_product_id = intval($_POST['replace_product_id']);
+        $replace_type = isset($_POST['replace_type']) ? sanitize_text_field($_POST['replace_type']) : 'main';
 
         try {
             // Debug logging
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('replaceProductInRoom called');
-                error_log("Estimate ID: $estimate_id, Room ID: $room_id");
-                error_log("Replacing product ID: $old_product_id with new product ID: $new_product_id");
+                error_log("PRODUCT REPLACEMENT - START");
+                error_log("Replacing product {$old_product_id} with {$new_product_id} in room {$room_id}");
+                error_log("Replace type: {$replace_type}");
+                error_log("POST data: " . print_r($_POST, true));
             }
 
-            // Get the estimate from session
-            $estimate = $this->session->getEstimate($estimate_id);
-
-            if (!$estimate) {
-                wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
+            // Direct session access for debugging
+            if (!isset($_SESSION['product_estimator']['estimates'][$estimate_id])) {
+                wp_send_json_error(['message' => __('Estimate not found in session', 'product-estimator')]);
                 return;
             }
 
-            // Check if the room exists
-            if (!isset($estimate['rooms'][$room_id])) {
+            if (!isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id])) {
                 wp_send_json_error(['message' => __('Room not found in this estimate', 'product-estimator')]);
                 return;
             }
 
-            // Find the product to replace by its ID
-            $product_index = -1;
-            foreach ($estimate['rooms'][$room_id]['products'] as $index => $product) {
-                if (isset($product['id']) && intval($product['id']) === $old_product_id) {
-                    $product_index = $index;
-                    break;
+            // If replacing an additional product, handle differently
+            if ($replace_type === 'additional_products') {
+                $products_found = false;
+                $parent_id = null;
+                $parent_index = null;
+                $add_index = null;
+
+                // Log all products for debugging
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("All room products: " . print_r($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['products'], true));
                 }
-            }
 
-            if ($product_index === -1) {
-                wp_send_json_error(['message' => __('Product not found in this room', 'product-estimator')]);
+                // Search through all products and their additional products
+                foreach ($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['products'] as $p_index => $product) {
+                    if (!isset($product['additional_products']) || !is_array($product['additional_products'])) {
+                        continue;
+                    }
+
+                    foreach ($product['additional_products'] as $a_index => $add_product) {
+                        // Log each additional product for debugging
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log("Checking additional product index $a_index: " . print_r($add_product, true));
+                        }
+
+                        // Check for a match with the old_product_id
+                        if (isset($add_product['id']) && intval($add_product['id']) === $old_product_id) {
+                            $products_found = true;
+                            $parent_id = $product['id'];
+                            $parent_index = $p_index;
+                            $add_index = $a_index;
+                            break 2;
+                        }
+
+                        // CRITICAL FIX: Also check for a match in the replacement_chain if it exists
+                        if (isset($add_product['replacement_chain']) && in_array($old_product_id, $add_product['replacement_chain'])) {
+                            $products_found = true;
+                            $parent_id = $product['id'];
+                            $parent_index = $p_index;
+                            $add_index = $a_index;
+                            break 2;
+                        }
+                    }
+                }
+
+                if (!$products_found) {
+                    wp_send_json_error([
+                        'message' => __('Additional product not found', 'product-estimator'),
+                        'debug' => [
+                            'old_product_id' => $old_product_id,
+                            'new_product_id' => $new_product_id,
+                            'replace_type' => $replace_type
+                        ]
+                    ]);
+                    return;
+                }
+
+                // Calculate room area
+                $room_width = isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['width']) ?
+                    floatval($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['width']) : 0;
+                $room_length = isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['length']) ?
+                    floatval($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['length']) : 0;
+                $room_area = $room_width * $room_length;
+
+                // Get new product data
+                $product = wc_get_product($new_product_id);
+                if (!$product) {
+                    wp_send_json_error(['message' => __('New product not found', 'product-estimator')]);
+                    return;
+                }
+
+                // Get pricing data
+                $pricing_data = product_estimator_get_product_price($new_product_id, $room_area, false);
+
+                // Get existing product data to maintain replacement chain
+                $existing_product = $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['products'][$parent_index]['additional_products'][$add_index];
+
+                // Initialize or update replacement chain
+                $replacement_chain = isset($existing_product['replacement_chain']) ? $existing_product['replacement_chain'] : [];
+
+                // Add current ID to chain if not already in it
+                if (!in_array($existing_product['id'], $replacement_chain)) {
+                    $replacement_chain[] = $existing_product['id'];
+                }
+
+                // Prepare product data
+                $product_data = [
+                    'id' => $new_product_id,
+                    'name' => $product->get_name(),
+                    'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
+                    'min_price' => $pricing_data['min_price'],
+                    'max_price' => $pricing_data['max_price'],
+                    'pricing_method' => $pricing_data['pricing_method'],
+                    'pricing_source' => $pricing_data['pricing_source'],
+                    'replacement_chain' => $replacement_chain // Store the full chain of replacements
+                ];
+
+                // Calculate price totals
+                if ($pricing_data['pricing_method'] === 'sqm' && $room_area > 0) {
+                    $min_total = $pricing_data['min_price'] * $room_area;
+                    $max_total = $pricing_data['max_price'] * $room_area;
+
+                    $product_data['min_price_total'] = $min_total;
+                    $product_data['max_price_total'] = $max_total;
+                } else {
+                    $product_data['min_price_total'] = $pricing_data['min_price'];
+                    $product_data['max_price_total'] = $pricing_data['max_price'];
+                }
+
+                // Update the additional product in session
+                $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['products'][$parent_index]['additional_products'][$add_index] = $product_data;
+
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Updated additional product at parent index $parent_index, add index $add_index");
+                    error_log("New product data: " . print_r($product_data, true));
+                }
+
+                // Update totals after the replacement
+                $this->updateTotals($estimate_id);
+
+                // Build response
+                $response_data = [
+                    'message' => __('Product replaced successfully', 'product-estimator'),
+                    'estimate_id' => $estimate_id,
+                    'room_id' => $room_id,
+                    'old_product_id' => $old_product_id,
+                    'new_product_id' => $new_product_id,
+                    'replace_type' => $replace_type,
+                    'parent_product_id' => $parent_id,
+                    'replacement_chain' => $replacement_chain // Send chain to client for tracking
+                ];
+
+                wp_send_json_success($response_data);
                 return;
             }
+            else {
+                // For main products, use the existing removeProductFromRoom and addProductToRoom methods
+                $main_product_found = false;
+                $product_index = null;
 
-            // Get the product data for the old product to preserve settings like dimensions
-            $old_product_data = $estimate['rooms'][$room_id]['products'][$product_index];
+                // Find the main product
+                foreach ($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['products'] as $index => $product) {
+                    if (isset($product['id']) && intval($product['id']) === $old_product_id) {
+                        $main_product_found = true;
+                        $product_index = $index;
+                        break;
+                    }
+                }
 
-            // Prepare the new product data
-            $result = $this->prepareAndAddProductToRoom(
-                $new_product_id,
-                $estimate_id,
-                $room_id,
-                isset($old_product_data['room_area']) ? sqrt($old_product_data['room_area']) : null,
-                isset($old_product_data['room_area']) ? sqrt($old_product_data['room_area']) : null
-            );
+                if (!$main_product_found) {
+                    wp_send_json_error([
+                        'message' => __('Product not found in this room', 'product-estimator'),
+                        'debug' => [
+                            'old_product_id' => $old_product_id,
+                            'new_product_id' => $new_product_id
+                        ]
+                    ]);
+                    return;
+                }
 
-            if (!$result['success']) {
-                wp_send_json_error([
-                    'message' => $result['message'],
-                    'debug' => $result['debug'] ?? null
-                ]);
-                return;
+                // Remove the old product
+                $removed = $this->session->removeProductFromRoom($estimate_id, $room_id, $product_index);
+
+                if (!$removed) {
+                    wp_send_json_error(['message' => __('Failed to remove old product from room', 'product-estimator')]);
+                    return;
+                }
+
+                // Add the new product
+                $result = $this->prepareAndAddProductToRoom($new_product_id, $estimate_id, $room_id);
+
+                if (!$result['success']) {
+                    wp_send_json_error([
+                        'message' => $result['message'],
+                        'debug' => $result['debug'] ?? null
+                    ]);
+                    return;
+                }
+
+                // Build response
+                $response_data = [
+                    'message' => __('Product replaced successfully', 'product-estimator'),
+                    'estimate_id' => $estimate_id,
+                    'room_id' => $room_id,
+                    'old_product_id' => $old_product_id,
+                    'new_product_id' => $new_product_id,
+                    'replace_type' => $replace_type
+                ];
+
+                wp_send_json_success($response_data);
             }
-
-            // Get the new product data that was added
-            $new_product_data = $result['product_data'];
-
-            // Remove the old product
-            $removed = $this->session->removeProductFromRoom($estimate_id, $room_id, $product_index);
-
-            if (!$removed) {
-                wp_send_json_error(['message' => __('Failed to remove old product from room', 'product-estimator')]);
-                return;
-            }
-
-            // Update totals after replacing the product
-            $this->updateTotals($estimate_id);
-
-            // Get the updated room to regenerate suggestions
-            $updated_room = $this->session->getRoom($estimate_id, $room_id);
-
-            wp_send_json_success([
-                'message' => __('Product replaced successfully', 'product-estimator'),
-                'product_data' => $new_product_data
-            ]);
 
         } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Exception in replaceProductInRoom: " . $e->getMessage());
+                error_log("Stack trace: " . $e->getTraceAsString());
+            }
+
             wp_send_json_error([
                 'message' => __('An error occurred while processing your request', 'product-estimator'),
                 'error' => $e->getMessage()
@@ -1973,7 +2119,63 @@ class AjaxHandler {
     }
 
 
-// Add these methods to the AjaxHandler class in class-ajax-handler.php
+    /**
+     * Helper method to prepare additional product data for replacement
+     * Enhanced to maintain consistent product ID references for multiple replacements
+     *
+     * @param int $product_id Product ID
+     * @param float $room_area Room area
+     * @param int|null $original_id Original product ID to maintain reference consistency
+     * @return array|false Product data array or false on failure
+     */
+    private function prepareAdditionalProductData($product_id, $room_area, $original_id = null) {
+        try {
+            // Get product data
+            $product = wc_get_product($product_id);
+            if (!$product) {
+                return false;
+            }
+
+            // Get pricing data
+            $pricing_data = product_estimator_get_product_price($product_id, $room_area, false);
+
+            // Prepare product data
+            $product_data = [
+                'id' => $product_id,
+                'name' => $product->get_name(),
+                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
+                'min_price' => $pricing_data['min_price'],
+                'max_price' => $pricing_data['max_price'],
+                'pricing_method' => $pricing_data['pricing_method'],
+                'pricing_source' => $pricing_data['pricing_source']
+            ];
+
+            // If an original ID was provided, store it for reference consistency
+            // This is crucial for maintaining multiple upgrades
+            if ($original_id) {
+                $product_data['original_id'] = $original_id;
+            }
+
+            // Calculate price totals
+            if ($pricing_data['pricing_method'] === 'sqm' && $room_area > 0) {
+                $min_total = $pricing_data['min_price'] * $room_area;
+                $max_total = $pricing_data['max_price'] * $room_area;
+
+                $product_data['min_price_total'] = $min_total;
+                $product_data['max_price_total'] = $max_total;
+            } else {
+                $product_data['min_price_total'] = $pricing_data['min_price'];
+                $product_data['max_price_total'] = $pricing_data['max_price'];
+            }
+
+            return $product_data;
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Error preparing additional product data: ' . $e->getMessage());
+            }
+            return false;
+        }
+    }
 
     /**
      * Update customer details via AJAX
@@ -2104,6 +2306,116 @@ class AjaxHandler {
                 'error' => $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Get available upgrades for a product
+     */
+    public function get_product_upgrades() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get product ID
+        $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+
+        if (!$product_id) {
+            wp_send_json_error([
+                'message' => __('Product ID is required', 'product-estimator')
+            ]);
+            return;
+        }
+
+        // Get product categories to match against upgrade configurations
+        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+
+        if (empty($product_categories) || is_wp_error($product_categories)) {
+            wp_send_json_success(['upgrades' => []]);
+            return;
+        }
+
+        // Get product upgrades settings module
+        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductUpgradesSettingsModule')) {
+            wp_send_json_error([
+                'message' => __('Product Upgrades module not available', 'product-estimator')
+            ]);
+            return;
+        }
+
+        // Initialize the settings module
+        $upgrades_module = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductUpgradesSettingsModule(
+            'product-estimator',
+            PRODUCT_ESTIMATOR_VERSION
+        );
+
+        // Get applicable upgrades for this product
+        $upgrades = $upgrades_module->get_upgrades_for_product($product_id);
+
+        wp_send_json_success([
+            'upgrades' => $upgrades
+        ]);
+    }
+
+    /**
+     * Get products from specified categories
+     */
+    public function get_category_products() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get category IDs
+        $category_ids = isset($_POST['categories']) ? sanitize_text_field($_POST['categories']) : '';
+
+        if (empty($category_ids)) {
+            wp_send_json_error([
+                'message' => __('Category IDs are required', 'product-estimator')
+            ]);
+            return;
+        }
+
+        // Convert comma-separated string to array
+        $categories = explode(',', $category_ids);
+        $categories = array_map('intval', $categories);
+
+        // Query products in these categories
+        $args = [
+            'post_type' => 'product',
+            'post_status' => 'publish',
+            'posts_per_page' => 50, // Limit to 50 products for performance
+            'tax_query' => [
+                [
+                    'taxonomy' => 'product_cat',
+                    'field' => 'term_id',
+                    'terms' => $categories,
+                    'operator' => 'IN'
+                ]
+            ],
+            'fields' => 'ids' // Only get post IDs for efficiency
+        ];
+
+        $product_query = new \WP_Query($args);
+        $products = [];
+
+        if ($product_query->have_posts()) {
+            foreach ($product_query->posts as $product_id) {
+                $product = wc_get_product($product_id);
+
+                if ($product) {
+                    // Only include products with estimator enabled
+                    if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($product_id)) {
+                        $products[] = [
+                            'id' => $product_id,
+                            'name' => $product->get_name(),
+                            'price' => $product->get_price(),
+                            'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
+                        ];
+                    }
+                }
+            }
+        }
+
+        wp_send_json_success([
+            'products' => $products
+        ]);
     }
 }
 

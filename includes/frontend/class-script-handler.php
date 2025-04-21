@@ -113,6 +113,14 @@ class ScriptHandler {
             'all'
         );
 
+        wp_register_style(
+            $this->plugin_name . '-product-upgrades',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-upgrades.css',
+            array(),
+            $this->version,
+            'all'
+        );
+
         // Always load styles on all pages
         wp_enqueue_style($this->plugin_name . '-public');
         wp_enqueue_style($this->plugin_name . '-modal');
@@ -121,6 +129,7 @@ class ScriptHandler {
         wp_enqueue_style($this->plugin_name . '-similar-products');
         wp_enqueue_style($this->plugin_name . '-customer-details');
         wp_enqueue_style($this->plugin_name . '-details-toggle');
+        wp_enqueue_style($this->plugin_name . '-product-upgrades');
 
     }
 

@@ -22,13 +22,13 @@ class Deactivator {
      */
     public static function deactivate() {
         // Clear scheduled hooks
-        self::clear_scheduled_hooks();
+//        self::clear_scheduled_hooks();
 
         // Clear transients
-        self::clear_transients();
+//        self::clear_transients();
 
         // Remove user capabilities
-        self::remove_capabilities();
+//        self::remove_capabilities();
 
         // Log deactivation
         self::log_deactivation();
@@ -68,8 +68,8 @@ class Deactivator {
         // Delete all transients with our prefix
         $wpdb->query(
             $wpdb->prepare(
-                "DELETE FROM {$wpdb->options} 
-                WHERE option_name LIKE %s 
+                "DELETE FROM {$wpdb->options}
+                WHERE option_name LIKE %s
                 OR option_name LIKE %s",
                 $wpdb->esc_like('_transient_product_estimator_') . '%',
                 $wpdb->esc_like('_transient_timeout_product_estimator_') . '%'

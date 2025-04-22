@@ -7,7 +7,9 @@ use RuDigital\ProductEstimator\Includes\AjaxHandler;
 use RuDigital\ProductEstimator\Includes\Frontend\ScriptHandler;
 use RuDigital\ProductEstimator\Includes\Frontend\Shortcodes;
 use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
+use RuDigital\ProductEstimator\Includes\Loader;
 use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
+use RuDigital\ProductEstimator\Includes\EstimateHandler;
 
 /**
  * Main plugin class
@@ -18,6 +20,15 @@ use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
  * @package    RuDigital\ProductEstimator
  */
 class ProductEstimator {
+    /**
+     * The loader that's responsible for maintaining and registering all hooks that power
+     * the plugin.
+     *
+     * @since    1.0.0
+     * @access   protected
+     * @var      Loader    $loader    Maintains and registers all hooks for the plugin.
+     */
+    protected $loader;
 
     /**
      * Plugin version
@@ -60,6 +71,11 @@ class ProductEstimator {
      * @var NetsuiteIntegration
      */
     private $netsuite_integration;
+
+    /**
+     * @var EstimateHandler Estimate Handler instance
+     */
+    protected $estimate_handler;
 
     /**
      * Initialize the class and set its properties.

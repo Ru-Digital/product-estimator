@@ -183,3 +183,170 @@ input.error {
     }
 
 }
+
+/**
+ * Dashboard Admin CSS
+ *
+ * Additional styles for the main dashboard page
+ */
+
+/* Dashboard Widgets */
+.dashboard-widgets-wrap {
+  overflow: hidden;
+}
+
+.dashboard-widgets-wrap .postbox {
+  min-width: 0;
+}
+
+.dashboard-widgets-wrap .main {
+  padding: 0;
+}
+
+.dashboard-widgets-wrap .main ul {
+  margin: 0;
+  padding: 10px 15px;
+}
+
+.dashboard-widgets-wrap .main ul li {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.dashboard-widgets-wrap .main ul li:last-child {
+  margin-bottom: 0;
+}
+
+/* Recent Estimates Table */
+.dashboard-widgets-wrap .postbox table {
+  margin: 0;
+  width: 100%;
+}
+
+.dashboard-widgets-wrap .postbox table th,
+.dashboard-widgets-wrap .postbox table td {
+  padding: 8px 10px;
+}
+
+.dashboard-widgets-wrap .postbox table thead th {
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+}
+
+.dashboard-widgets-wrap .postbox table tbody tr:nth-child(even) {
+  background: #f9f9f9;
+}
+
+.dashboard-widgets-wrap .postbox table a {
+  text-decoration: none;
+}
+
+.dashboard-widgets-wrap .postbox table a:hover {
+  text-decoration: underline;
+}
+
+/* Quick Links */
+.dashboard-widgets-wrap .postbox ul {
+  margin: 10px 0;
+  padding: 0 15px;
+}
+
+.dashboard-widgets-wrap .postbox ul li {
+  margin-bottom: 10px;
+  padding-left: 20px;
+  position: relative;
+  list-style: none;
+}
+
+.dashboard-widgets-wrap .postbox ul li:before {
+  content: "\f345";
+  font-family: dashicons;
+  position: absolute;
+  left: 0;
+  top: 1px;
+  color: #0073aa;
+}
+
+.dashboard-widgets-wrap .postbox ul li:last-child {
+  margin-bottom: 0;
+}
+
+/* View All Button in Header */
+.dashboard-widgets-wrap .hndle .page-title-action {
+  font-weight: normal;
+  font-size: 13px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+/* Dashboard Overview Styling */
+.product-estimator-admin-wrapper .meta-box-sortables {
+  min-height: 0;
+}
+
+.product-estimator-admin-wrapper .postbox-container {
+  float: none;
+  width: 100%;
+}
+
+@media only screen and (min-width: 800px) {
+  .product-estimator-admin-wrapper .postbox-container {
+    width: 49%;
+    float: left;
+  }
+
+  .product-estimator-admin-wrapper .postbox-container:nth-child(odd) {
+    margin-right: 2%;
+  }
+}
+
+@media only screen and (min-width: 1500px) {
+  .product-estimator-admin-wrapper .postbox-container {
+    width: 32%;
+  }
+
+  .product-estimator-admin-wrapper .postbox-container:nth-child(3n) {
+    margin-right: 0;
+  }
+
+  .product-estimator-admin-wrapper .postbox-container:nth-child(3n+1),
+  .product-estimator-admin-wrapper .postbox-container:nth-child(3n+2) {
+    margin-right: 2%;
+  }
+}
+
+/* Empty States */
+.dashboard-widgets-wrap .postbox .inside p {
+  margin: 10px 15px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Stats Overview */
+.stats-overview {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -5px;
+}
+
+.stats-overview .stat-item {
+  flex: 1 1 200px;
+  margin: 5px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.stats-overview .stat-item .stat-number {
+  font-size: 24px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 5px;
+  color: #2271b1;
+}
+
+.stats-overview .stat-item .stat-label {
+  font-size: 13px;
+  color: #666;
+}

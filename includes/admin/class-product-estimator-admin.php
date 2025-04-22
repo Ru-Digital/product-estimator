@@ -38,6 +38,15 @@ class ProductEstimatorAdmin {
     private $settings_manager;
 
     /**
+     * The customer estimates  instance
+     *
+     * @since    1.1.0
+     * @access   private
+     * @var      CustomerEstimatesAdmin    $customer_estimates    Customer Estimates
+     */
+    private $customer_estimates;
+
+    /**
      * Initialize the class and set its properties.
      *
      * @since    1.0.0
@@ -62,6 +71,13 @@ class ProductEstimatorAdmin {
     private function load_dependencies() {
         // Load Settings Manager
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-settings-manager.php';
+
+        // Load Customer Estimates Admin
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-customer-estimates-admin.php';
+
+        // Load Customer Estimates List Table
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-customer-estimates-list-table.php';
+
     }
 
     /**
@@ -73,6 +89,9 @@ class ProductEstimatorAdmin {
     private function init_components() {
         // Initialize Settings Manager
         $this->settings_manager = new SettingsManager($this->plugin_name, $this->version);
+
+        // Initialize Customer Estimates Admin
+        $this->customer_estimates = new CustomerEstimatesAdmin($this->plugin_name, $this->version);
     }
 
     /**
@@ -167,7 +186,13 @@ class ProductEstimatorAdmin {
             '<a href="' . admin_url('admin.php?page=' . $this->plugin_name . '-settings') . '">' .
             __('Settings', 'product-estimator') . '</a>'
         );
-        return array_merge($settings_link, $links);
+
+        $customer_estimates_link = array(
+            '<a href="' . admin_url('admin.php?page=' . $this->plugin_name . '-estimates') . '">' .
+            __('Customer Estimates', 'product-estimator') . '</a>'
+        );
+
+        return array_merge($settings_link, $customer_estimates_link, $links);
     }
 
     /**

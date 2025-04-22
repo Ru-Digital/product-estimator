@@ -178,10 +178,6 @@ function product_estimator_get_product_price($product_id, $room_area = null, $ap
     if ($product->is_type('variation')) {
         $is_variation = true;
         $parent_product_id = $product->get_parent_id();
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Product ID {$product_id} is a variation of parent ID {$parent_product_id}");
-        }
     }
 
     // Get pricing rule for this product
@@ -189,10 +185,6 @@ function product_estimator_get_product_price($product_id, $room_area = null, $ap
     if ($is_variation && $parent_product_id) {
         // For variations, use parent product categories for pricing rules
         $pricing_rule = product_estimator_get_pricing_rule_for_product_with_parent($product_id, $parent_product_id);
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Using parent-based pricing rule for variation: " . print_r($pricing_rule, true));
-        }
     } else {
         // For regular products, use their own categories
         $pricing_rule = product_estimator_get_pricing_rule_for_product($product_id);
@@ -559,10 +551,6 @@ function product_estimator_calculate_total_price_with_additions_for_display($pro
         if ($productObj->is_type('variation')) {
             // Get the parent product ID for getting categories
             $product_id_for_categories = $productObj->get_parent_id();
-
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Using parent product ID {$product_id_for_categories} for categories of variation {$product['id']}");
-            }
         }
 
 
@@ -653,10 +641,6 @@ function product_estimator_get_pricing_rule_for_product_with_parent($product_id,
     // Get product categories - use parent product categories for variations
     if ($parent_id) {
         $product_categories = wp_get_post_terms($parent_id, 'product_cat', ['fields' => 'ids']);
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Using parent product categories for pricing rules: " . implode(', ', $product_categories));
-        }
     } else {
         $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
     }
@@ -747,12 +731,6 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
         $display_min = max(0, $display_min - $round_to); // Ensure at least one step below min
 
         $display_max = ceil($max_price / $round_to) * $round_to + $round_to; // At least one step above max
-    }
-
-    // Debug output to help diagnose issues
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log("Price graph for $title: min=$min_price, max=$max_price, center=$center_price");
-        error_log("Display range: $display_min - $display_max, is_narrow_range=$is_narrow_range");
     }
 
     $display_range = $display_max - $display_min;

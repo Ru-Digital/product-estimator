@@ -309,11 +309,6 @@ trait EstimateDbHandler {
         // Update the db_id in the session
         $_SESSION['product_estimator']['estimates'][$session_estimate_id]['db_id'] = $db_id;
 
-        // Log for debugging if needed
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Updated db_id for session estimate $session_estimate_id to $db_id");
-        }
-
         return true;
     }
 }

@@ -72,11 +72,6 @@ class SessionHandler {
         // Store session data locally
         $this->session_data = &$_SESSION['product_estimator'];
         $this->session_started = true;
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Product Estimator Session started: ' . session_id());
-            error_log('Session data initialized: ' . print_r($this->session_data, true));
-        }
     }
 
     /**
@@ -110,13 +105,6 @@ class SessionHandler {
 
         // Add the estimate
         $this->session_data['estimates'][$new_id] = $data;
-
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Added new estimate with ID: ' . $new_id);
-            error_log('Current session estimates: ' . print_r($this->session_data['estimates'], true));
-        }
-
         return $new_id;
     }
 
@@ -129,12 +117,6 @@ class SessionHandler {
      */
     public function addRoom($estimate_id, $room_data) {
         $this->startSession();
-
-        // Validate estimate exists
-        if (!isset($this->session_data['estimates'][$estimate_id])) {
-            error_log("Estimate $estimate_id not found");
-            return false;
-        }
 
         // Ensure rooms array exists
         if (!isset($this->session_data['estimates'][$estimate_id]['rooms'])) {
@@ -170,14 +152,6 @@ class SessionHandler {
         // Ensure session is started
         $this->startSession();
 
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('SessionHandler::addProductToRoom called');
-            error_log('Estimate ID: ' . print_r($estimate_id, true) . ' (' . gettype($estimate_id) . ')');
-            error_log('Room ID: ' . print_r($room_id, true) . ' (' . gettype($room_id) . ')');
-            error_log('Product Data: ' . print_r($product_data, true));
-        }
-
         // Important: Cast IDs to strings for consistent array access
         $estimate_id_str = (string)$estimate_id;
         $room_id_str = (string)$room_id;
@@ -209,13 +183,6 @@ class SessionHandler {
 
         // Add product to room
         $this->session_data['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products'][] = $product_data;
-
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Product added successfully');
-            error_log("Room now has " . count($this->session_data['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products']) . " products");
-        }
-
         return true;
     }
 
@@ -247,13 +214,6 @@ class SessionHandler {
      */
     public function hasEstimates() {
         $this->startSession();
-
-        // Debugging information
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Checking for estimates. Session data: ' . print_r($this->session_data, true));
-            error_log('Has estimates: ' . (!empty($this->session_data['estimates']) ? 'true' : 'false'));
-        }
-
         return !empty($this->session_data['estimates']);
     }
 
@@ -270,11 +230,6 @@ class SessionHandler {
         // Cast IDs to strings for consistent array access
         $estimate_id_str = (string)$estimate_id;
         $room_id_str = (string)$room_id;
-
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("getRoom called for estimate: {$estimate_id_str}, room: {$room_id_str}");
-        }
 
         // Check if estimate exists
         if (!isset($this->session_data['estimates'][$estimate_id_str])) {
@@ -327,14 +282,6 @@ class SessionHandler {
         // Ensure session is started
         $this->startSession();
 
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('removeProductFromRoom called');
-            error_log('Estimate ID: ' . print_r($estimate_id, true));
-            error_log('Room ID: ' . print_r($room_id, true));
-            error_log('Product Index: ' . print_r($product_index, true));
-        }
-
         // Validate inputs
         if (!isset($this->session_data['estimates'][$estimate_id])) {
             error_log("Estimate $estimate_id not found");
@@ -353,12 +300,6 @@ class SessionHandler {
 
         // Remove the product from the array
         array_splice($this->session_data['estimates'][$estimate_id]['rooms'][$room_id]['products'], $product_index, 1);
-
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Product removed successfully');
-        }
-
         return true;
     }
 
@@ -373,13 +314,6 @@ class SessionHandler {
     {
         // Ensure session is started
         $this->startSession();
-
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('removeRoom called');
-            error_log('Estimate ID: ' . print_r($estimate_id, true));
-            error_log('Room ID: ' . print_r($room_id, true));
-        }
 
         // Force string conversion for consistency
         $estimate_id = (string)$estimate_id;
@@ -401,18 +335,6 @@ class SessionHandler {
 
         // Remove the room
         unset($rooms[$room_id]);
-
-        // Debug logging of the result
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Room removed successfully');
-            error_log('Remaining rooms: ' . count($rooms));
-            if (count($rooms) > 0) {
-                error_log('Remaining room IDs: ' . implode(', ', array_keys($rooms)));
-            } else {
-                error_log('No rooms left in the estimate');
-            }
-        }
-
         return true;
     }
 
@@ -427,12 +349,6 @@ class SessionHandler {
         // Ensure session is started
         $this->startSession();
 
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('removeEstimate called');
-            error_log('Estimate ID: ' . print_r($estimate_id, true));
-        }
-
         // Validate inputs
         if (!isset($this->session_data['estimates'][$estimate_id])) {
             error_log("Estimate $estimate_id not found");
@@ -441,12 +357,6 @@ class SessionHandler {
 
         // Remove the estimate
         unset($this->session_data['estimates'][$estimate_id]);
-
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Estimate removed successfully');
-        }
-
         return true;
     }
 
@@ -816,11 +726,6 @@ class SessionHandler {
         // If user_details exists, remove it for consistency
         if (isset($this->session_data['user_details'])) {
             unset($this->session_data['user_details']);
-        }
-
-        // Debug logging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Customer details stored in session: ' . print_r($customer_data, true));
         }
 
         return true;

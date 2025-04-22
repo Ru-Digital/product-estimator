@@ -35,10 +35,6 @@ if (isset($estimate_id)) {
     $estimate = $session_handler->getEstimate($estimate_id);
     if ($estimate && isset($estimate['default_markup'])) {
         $default_markup = floatval($estimate['default_markup']);
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Using estimate's markup for product item: $default_markup%");
-        }
     } else {
         // If no markup found in the estimate, fall back to global settings
         $options = get_option('product_estimator_settings');

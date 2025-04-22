@@ -230,11 +230,6 @@ class NotificationSettingsModule extends SettingsModuleBase {
     protected function after_save_actions($form_data) {
         // Clear notification-related caches
         delete_transient('product_estimator_email_templates');
-
-        // Log the saved settings for debugging if WP_DEBUG is enabled
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Notification settings saved: ' . print_r($form_data['product_estimator_settings'], true));
-        }
     }
 
     /**
@@ -373,11 +368,6 @@ class NotificationSettingsModule extends SettingsModuleBase {
 
         parse_str($_POST['form_data'], $form_data);
 
-        // For debugging
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Notification settings form data received: ' . print_r($form_data, true));
-        }
-
         // Process the settings specific to this module
         $result = $this->process_form_data($form_data);
 
@@ -404,11 +394,6 @@ class NotificationSettingsModule extends SettingsModuleBase {
 
             // Save updated settings
             update_option('product_estimator_settings', $updated_settings);
-
-            // For debugging
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Notification settings saved to database: ' . print_r($updated_settings, true));
-            }
         }
 
         // Allow modules to perform additional actions after saving

@@ -104,10 +104,6 @@ class CustomerDetails {
             unset($_SESSION['product_estimator']['user_details']);
         }
 
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Customer details saved to session: ' . print_r($this->details, true));
-        }
-
         return true;
     }
 

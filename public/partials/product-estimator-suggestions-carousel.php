@@ -6,19 +6,8 @@
  * @subpackage Product_Estimator/public/partials
  */
 
-// Add debugging if WP_DEBUG is enabled
-if (defined('WP_DEBUG') && WP_DEBUG) {
-    error_log('Loading product-estimator-suggestions-carousel.php');
-    error_log('Room data: ' . (isset($room) ? print_r($room, true) : 'Not set'));
-    error_log('Room ID: ' . (isset($room_id) ? $room_id : 'Not set'));
-    error_log('Estimate ID: ' . (isset($estimate_id) ? $estimate_id : 'Not set'));
-}
-
 // Skip if no room data is available or room has no products
 if (!isset($room) || empty($room) || !isset($room['products']) || empty($room['products'])) {
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log('Skipping suggestions carousel - no room data or products');
-    }
     return;
 }
 
@@ -36,10 +25,6 @@ $suggestions = [];
 // Check if we have the ProductAdditionsManager class
 if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductAdditionsSettingsModule')) {
     $manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log('ProductAdditionsSettingsModule class found, generating suggestions');
-    }
 
     // Generate suggestions based on products in this room
     foreach ($room['products'] as $product) {
@@ -109,16 +94,8 @@ if (!empty($suggestions)) {
     $suggestions = array_values($suggestions);
 }
 
-// Debug our suggestions count
-if (defined('WP_DEBUG') && WP_DEBUG) {
-    error_log('Generated ' . count($suggestions) . ' suggestions');
-}
-
 // Check if we have any suggestions to display
 if (empty($suggestions)) {
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log('No suggestions to display, returning');
-    }
     return; // Don't display anything if no suggestions
 }
 
@@ -136,10 +113,6 @@ $default_markup = isset($estimate['default_markup']) ? floatval($estimate['defau
 if ($default_markup === 0) {
     $options = get_option('product_estimator_settings');
     $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
-}
-
-if (defined('WP_DEBUG') && WP_DEBUG) {
-    error_log('Rendering suggestions carousel with ' . count($suggestions) . ' items');
 }
 ?>
 

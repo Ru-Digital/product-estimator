@@ -16,9 +16,6 @@ class WoocommerceIntegration {
     public function __construct() {
         static $instance = 0;
         if ($instance > 0) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('WoocommerceIntegration already initialized, preventing duplicate');
-            }
             return;
         }
         $instance++;
@@ -92,12 +89,6 @@ class WoocommerceIntegration {
         $enable_estimator = isset($_POST['_enable_estimator']) ? 'yes' : 'no';
         $price_included = isset($_POST['_price_included']) ? 'yes' : 'no';
 
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Saving _enable_estimator for product $post_id: $enable_estimator");
-            error_log("Saving _price_included for product $post_id: $price_included");
-        }
-
         update_post_meta($post_id, '_enable_estimator', $enable_estimator);
         update_post_meta($post_id, '_price_included', $price_included);
 
@@ -152,15 +143,7 @@ class WoocommerceIntegration {
         // Add filter just before updating meta to prevent synchronization
         add_filter('update_post_metadata', array($this, 'preventParentEstimatorSync'), 10, 5);
         $price_included = isset($_POST['_price_included'][$loop]) ? 'yes' : 'no';
-
-
         $enable_estimator = isset($_POST['_enable_estimator'][$loop]) ? 'yes' : 'no';
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Saving _enable_estimator for variation $variation_id: $enable_estimator");
-            error_log("Saving _price_included for variation $variation_id: $price_included");
-
-        }
 
         // Direct SQL update to bypass WP filters that might cause sync
         global $wpdb;
@@ -220,9 +203,6 @@ class WoocommerceIntegration {
 
             // Check if this is a parent variable product
             if ($product && $product->is_type('variable')) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Preventing _enable_estimator sync to parent product: $object_id");
-                }
                 // Prevent updating parent
                 return false;
             }
@@ -258,9 +238,6 @@ class WoocommerceIntegration {
 
         // Prevent multiple buttons from being displayed
         if ($button_displayed) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Estimator button already displayed, skipping duplicate');
-            }
             return;
         }
 
@@ -294,10 +271,6 @@ class WoocommerceIntegration {
 
         // Mark that the button has been displayed
         $button_displayed = true;
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Estimator button displayed for product ID: ' . $product->get_id());
-        }
     }
 
     /**
@@ -428,17 +401,11 @@ class WoocommerceIntegration {
 
             // Only if it's explicitly 'yes', consider it enabled
             if ($variation_meta === 'yes') {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Variation {$product_id} has estimator explicitly enabled");
-                }
                 return true;
             }
 
             // If variation has explicitly 'no', respect that
             if ($variation_meta === 'no') {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Variation {$product_id} has estimator explicitly disabled");
-                }
                 return false;
             }
 
@@ -446,20 +413,11 @@ class WoocommerceIntegration {
             $parent_id = $product->get_parent_id();
             $parent_enabled = get_post_meta($parent_id, '_enable_estimator', true) === 'yes';
 
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Variation {$product_id} using parent setting: " . ($parent_enabled ? 'enabled' : 'disabled'));
-            }
-
             return $parent_enabled;
         }
 
         // For simple products
         $enabled = get_post_meta($product_id, '_enable_estimator', true) === 'yes';
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Simple product {$product_id} estimator: " . ($enabled ? 'enabled' : 'disabled'));
-        }
-
         return $enabled;
     }
 
@@ -558,17 +516,11 @@ class WoocommerceIntegration {
 
             // Only if it's explicitly 'yes', consider it enabled
             if ($variation_meta === 'yes') {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Variation {$product_id} has price included explicitly enabled");
-                }
                 return true;
             }
 
             // If variation has explicitly 'no', respect that
             if ($variation_meta === 'no') {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Variation {$product_id} has price included explicitly disabled");
-                }
                 return false;
             }
 
@@ -576,19 +528,11 @@ class WoocommerceIntegration {
             $parent_id = $product->get_parent_id();
             $parent_enabled = get_post_meta($parent_id, '_price_included', true) === 'yes';
 
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Variation {$product_id} using parent price included setting: " . ($parent_enabled ? 'enabled' : 'disabled'));
-            }
-
             return $parent_enabled;
         }
 
         // For simple products
         $price_included = get_post_meta($product_id, '_price_included', true) === 'yes';
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Simple product {$product_id} price included: " . ($price_included ? 'yes' : 'no'));
-        }
 
         return $price_included;
     }

@@ -56,19 +56,6 @@ class SessionDebugHelper {
 
         $this->debug_log[] = $state;
 
-        // Log to error log if WP_DEBUG is enabled
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("=== Session Debug ($location) ===");
-            error_log("Session ID: " . session_id());
-            error_log("Session Status: " . $this->getSessionStatusText());
-            error_log("Has estimates: " . ($state['has_estimates'] ? 'Yes' : 'No'));
-            if (isset($_SESSION['product_estimator'])) {
-                error_log("Product Estimator Session Data: " . print_r($_SESSION['product_estimator'], true));
-            } else {
-                error_log("No product_estimator data in session");
-            }
-        }
-
         return $state;
     }
 

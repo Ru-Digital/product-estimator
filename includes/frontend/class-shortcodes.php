@@ -33,16 +33,10 @@ class Shortcodes {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
 
-        // Debug log
-        error_log('Shortcodes class constructed, about to register shortcodes');
-
         // Register shortcodes
         add_shortcode('product_estimator', array($this, 'product_estimator_shortcode'));
         add_shortcode('estimator_button', array($this, 'product_estimator_button_shortcode'));
         add_shortcode('estimator_button_category', array($this, 'product_estimator_button_category_shortcode'));
-
-        // Confirm registration
-        error_log('Shortcodes registered: ' . (shortcode_exists('estimator_button') ? 'true' : 'false'));
 
         // Enqueue scripts when shortcodes are used
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));

@@ -61,12 +61,20 @@ if (!defined('WPINC')) {
                 </label>
             </th>
             <td>
-                    <textarea id="notification_<?php echo esc_attr($type); ?>_content"
-                              name="product_estimator_settings[notification_<?php echo esc_attr($type); ?>_content]"
-                              rows="10"
-                              class="large-text code"><?php echo esc_textarea(isset($options['notification_' . $type . '_content']) ?
-                            $options['notification_' . $type . '_content'] :
-                            $this->get_default_content($type)); ?></textarea>
+                <?php
+                // Use WordPress rich text editor instead of a plain textarea
+                $editor_id = "notification_{$type}_content";
+                $editor_content = isset($options['notification_' . $type . '_content']) ?
+                    $options['notification_' . $type . '_content'] :
+                    $this->get_default_content($type);
+                $editor_settings = array(
+                    'textarea_name' => "product_estimator_settings[notification_{$type}_content]",
+                    'media_buttons' => true,
+                    'textarea_rows' => 10,
+                    'teeny'         => false, // Set to false to get more formatting options
+                );
+                wp_editor($editor_content, $editor_id, $editor_settings);
+                ?>
                 <p class="description">
                     <?php esc_html_e('Content for this email notification. HTML is allowed. Use the template tags from the sidebar.', 'product-estimator'); ?>
                 </p>

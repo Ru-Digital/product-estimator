@@ -35,21 +35,6 @@ function product_estimator_get_settings() {
 }
 
 /**
- * Format currency amount
- *
- * @since 1.0.0
- * @param float $amount
- * @return string
- */
-function product_estimator_format_currency($amount) {
-    $settings = product_estimator_get_settings();
-    $decimals = absint($settings['decimal_points']);
-    $symbol = product_estimator_get_currency_symbol($settings['currency']);
-
-    return $symbol . number_format($amount, $decimals);
-}
-
-/**
  * Get currency symbol
  *
  * @since 1.0.0
@@ -71,41 +56,6 @@ function product_estimator_get_currency_symbol($currency = '') {
 
     return isset($symbols[$currency]) ? $symbols[$currency] : '$';
 }
-
-/**
- * Send notification email
- *
- * @since 1.0.0
- * @param array $data Calculation data
- * @param float $result Calculation result
- * @return bool Whether the email was sent successfully
- */
-function product_estimator_send_notification($data, $result) {
-    $settings = product_estimator_get_settings();
-
-    if (!$settings['enable_notifications']) {
-        return false;
-    }
-
-    $to = $settings['notification_email'];
-    $subject = sprintf(
-        __('New Product Estimate - %s', 'product-estimator'),
-        product_estimator_format_currency($result)
-    );
-
-    $message = sprintf(
-        __("A new product estimate has been calculated:\n\nResult: %s\nUser: %s\nDate: %s\n\nCalculation Details:\n%s", 'product-estimator'),
-        product_estimator_format_currency($result),
-        wp_get_current_user()->display_name,
-        current_time('mysql'),
-        print_r($data, true)
-    );
-
-    $headers = array('Content-Type: text/plain; charset=UTF-8');
-
-    return wp_mail($to, $subject, $message, $headers);
-}
-
 
 /**
  * Check if debug mode is enabled

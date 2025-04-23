@@ -313,6 +313,9 @@ class SettingsManager {
                     $valid[$key] = wp_kses_post($value);
                     break;
 
+                case (strpos($key, '_content') !== false):
+                    $valid[$key] = wp_kses_post($value);
+                    break;
                 // Media/image fields
                 case 'company_logo':
                     // Validate attachment ID
@@ -328,8 +331,11 @@ class SettingsManager {
 
                 // Default case for any other fields
                 default:
-                    $valid[$key] = sanitize_text_field($value);
-            }
+                    if (strpos($key, '_content') !== false) {
+                        $valid[$key] = wp_kses_post($value);
+                    } else {
+                        $valid[$key] = sanitize_text_field($value);
+                    }            }
         }
 
         return $valid;

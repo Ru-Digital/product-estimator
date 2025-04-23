@@ -551,37 +551,85 @@ class EstimateHandler {
      * @param string $pdf_path Path to the PDF file
      * @return bool Success or failure
      */
+    /**
+     * Send email with PDF estimate attachment
+     *
+     * @param array $estimate The estimate data
+     * @param string $email The recipient email
+     * @param string $pdf_path Path to the PDF file
+     * @return bool Success or failure
+     */
     private function send_estimate_email($estimate, $email, $pdf_path) {
-        // Get site info for the email
+        // Get notification settings
+        $options = get_option('product_estimator_settings', array());
+
+        // Get site info for fallbacks
         $site_name = get_bloginfo('name');
-        $site_email = get_option('admin_email');
 
-        // Build email content
-        $subject = sprintf(__('%s: Your Requested Estimate', 'product-estimator'), $site_name);
+        // Use from_name and from_email from general notification settings, with fallbacks
+        $from_name = isset($options['from_name']) && !empty($options['from_name'])
+            ? $options['from_name']
+            : $site_name;
 
-        $customer_name = isset($estimate['customer_details']['name']) ?
-            $estimate['customer_details']['name'] : __('Customer', 'product-estimator');
+        $from_email = isset($options['from_email']) && !empty($options['from_email'])
+            ? $options['from_email']
+            : get_option('admin_email');
 
-        $estimate_name = isset($estimate['name']) ?
-            $estimate['name'] : __('Untitled Estimate', 'product-estimator');
+        // Get notification template for request_copy type
+        $subject_template = isset($options['notification_request_copy_subject']) && !empty($options['notification_request_copy_subject'])
+            ? $options['notification_request_copy_subject']
+            : sprintf(__('%s: Your Requested Estimate', 'product-estimator'), $site_name);
 
-        // Build email body
-        $body = sprintf(
-            __('Hello %s,', 'product-estimator') . "\n\n" .
-            __('Thank you for your interest in our products. As requested, please find attached your estimate "%s".', 'product-estimator') . "\n\n" .
-            __('If you have any questions or would like to discuss this estimate further, please don\'t hesitate to contact us.', 'product-estimator') . "\n\n" .
-            __('Best regards,', 'product-estimator') . "\n" .
-            '%s',
-            $customer_name,
-            $estimate_name,
-            $site_name
+        $content_template = isset($options['notification_request_copy_content']) && !empty($options['notification_request_copy_content'])
+            ? $options['notification_request_copy_content']
+            : sprintf(
+                __("Hello %s,\n\nThank you for your interest in our products. As requested, please find attached your estimate \"%s\".\n\nIf you have any questions or would like to discuss this estimate further, please don't hesitate to contact us.\n\nBest regards,\n%s"),
+                '[customer_name]',
+                '[estimate_name]',
+                $site_name
+            );
+
+        // Get customer details for template tags
+        $customer_name = isset($estimate['customer_details']['name'])
+            ? $estimate['customer_details']['name']
+            : __('Customer', 'product-estimator');
+
+        $estimate_name = isset($estimate['name'])
+            ? $estimate['name']
+            : __('Untitled Estimate', 'product-estimator');
+
+        // Replace template tags
+        $subject = str_replace(
+            ['[site_name]', '[estimate_name]', '[estimate_id]', '[customer_name]'],
+            [$site_name, $estimate_name, $estimate['db_id'] ?? 'New', $customer_name],
+            $subject_template
         );
 
-        // Email headers
-        $headers = [
-            'Content-Type: text/plain; charset=UTF-8',
-            'From: ' . $site_name . ' <' . $site_email . '>'
-        ];
+        $body = str_replace(
+            ['[site_name]', '[site_url]', '[estimate_name]', '[estimate_id]', '[customer_name]', '[customer_email]', '[date]'],
+            [$site_name, home_url(), $estimate_name, $estimate['db_id'] ?? 'New', $customer_name, $email, date_i18n(get_option('date_format'))],
+            $content_template
+        );
+
+        // IMPORTANT FIX: Properly format line breaks for emails - convert \n to <br> for HTML
+        // Check if we're sending HTML or plain text
+//        $is_html = (strpos($body, '<') !== false) || (strpos($body, '</') !== false);
+
+//        if ($is_html) {
+            // If it looks like HTML content, ensure proper line breaks and set Content-Type
+            $body = wpautop($body); // Convert double line breaks to paragraphs
+            $headers = [
+                'Content-Type: text/html; charset=UTF-8',
+                'From: ' . $from_name . ' <' . $from_email . '>'
+            ];
+//        } else {
+//            // For plain text, preserve line breaks
+//            $body = str_replace("\n", "\r\n", $body); // Ensure CRLF line endings
+//            $headers = [
+//                'Content-Type: text/plain; charset=UTF-8',
+//                'From: ' . $from_name . ' <' . $from_email . '>'
+//            ];
+//        }
 
         // Attach PDF file
         $attachments = [$pdf_path];
@@ -593,7 +641,6 @@ class EstimateHandler {
 
         return $sent;
     }
-
     /**
      * Get a fallback PDF generator if the main one is not available
      *

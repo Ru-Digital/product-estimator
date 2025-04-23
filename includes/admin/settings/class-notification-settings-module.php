@@ -58,29 +58,20 @@ class NotificationSettingsModule extends SettingsModuleBase {
                 'description' => __('Enable email notifications for the estimator', 'product-estimator'),
                 'default' => true
             ],
-            'default_designer_email' => [
-                'title' => __('Default Designer Email', 'product-estimator'),
+
+            'from_name' => [
+                'title' => __('From Name', 'product-estimator'),
+                'type' => 'text',
+                'description' => __('Name displayed as the sender for all notifications', 'product-estimator'),
+                'default' => get_bloginfo('name')
+            ],
+
+            'from_email' => [  // Add this new field
+                'title' => __('From Email', 'product-estimator'),
                 'type' => 'email',
-                'description' => __('Fallback email for designer consultation requests', 'product-estimator'),
+                'description' => __('Email address used as the sender for all notifications', 'product-estimator'),
                 'default' => get_option('admin_email')
             ],
-            'default_store_email' => [
-                'title' => __('Default Store Email', 'product-estimator'),
-                'type' => 'email',
-                'description' => __('Fallback email for store contact requests', 'product-estimator'),
-                'default' => get_option('admin_email')
-            ],
-            'pdf_footer_text' => [
-                'title' => __('PDF Footer Text', 'product-estimator'),
-                'type' => 'textarea',
-                'description' => __('Text to appear in the footer of PDF estimates', 'product-estimator'),
-                'default' => __('Thank you for your interest in our products. This estimate is valid for [validity] days.', 'product-estimator')
-            ],
-            'company_logo' => [
-                'title' => __('Company Logo', 'product-estimator'),
-                'type' => 'image',
-                'description' => __('Logo to use in emails and PDF documents', 'product-estimator')
-            ]
         ];
 
         // Register general notification fields
@@ -263,73 +254,22 @@ class NotificationSettingsModule extends SettingsModuleBase {
 
         // If notifications are enabled, validate email addresses
         if (isset($settings['enable_notifications']) && $settings['enable_notifications']) {
-            // Validate designer email if provided
-            if (!empty($settings['default_designer_email']) && !is_email($settings['default_designer_email'])) {
+            // Validate from email if provided
+            if (!empty($settings['from_email']) && !is_email($settings['from_email'])) {
                 return new \WP_Error(
-                    'invalid_designer_email',
-                    __('Please enter a valid email address for the default designer email', 'product-estimator')
+                    'invalid_from_email',
+                    __('Please enter a valid from email address', 'product-estimator')
                 );
             }
 
-            // Validate store email if provided
-            if (!empty($settings['default_store_email']) && !is_email($settings['default_store_email'])) {
-                return new \WP_Error(
-                    'invalid_store_email',
-                    __('Please enter a valid email address for the default store email', 'product-estimator')
-                );
-            }
         }
-
-        // Handle image upload if needed
-        if (isset($_FILES['company_logo']) && !empty($_FILES['company_logo']['tmp_name'])) {
-            if (!function_exists('wp_handle_upload')) {
-                require_once(ABSPATH . 'wp-admin/includes/file.php');
+        foreach ($settings as $key => $value) {
+            // For HTML content fields like the rich editor
+            if (strpos($key, '_content') !== false) {
+                // Use wp_kses_post which allows safe HTML tags but removes scripts
+                $settings[$key] = wp_kses_post($value);
             }
-
-            $upload_overrides = ['test_form' => false];
-            $uploaded_file = wp_handle_upload($_FILES['company_logo'], $upload_overrides);
-
-            if (isset($uploaded_file['error'])) {
-                return new \WP_Error(
-                    'upload_error',
-                    $uploaded_file['error']
-                );
-            }
-
-            // Save the attachment ID
-            if (isset($uploaded_file['url'])) {
-                $file_name_and_location = $uploaded_file['file'];
-                $file_title_for_media_library = sanitize_file_name($_FILES['company_logo']['name']);
-
-                $attachment = [
-                    'post_mime_type' => $uploaded_file['type'],
-                    'post_title' => $file_title_for_media_library,
-                    'post_content' => '',
-                    'post_status' => 'inherit'
-                ];
-
-                $attachment_id = wp_insert_attachment($attachment, $file_name_and_location);
-
-                if (!is_wp_error($attachment_id)) {
-                    if (!function_exists('wp_generate_attachment_metadata')) {
-                        require_once(ABSPATH . 'wp-admin/includes/image.php');
-                    }
-
-                    $attachment_data = wp_generate_attachment_metadata($attachment_id, $file_name_and_location);
-                    wp_update_attachment_metadata($attachment_id, $attachment_data);
-
-                    // Save the attachment ID to the settings
-                    $settings['company_logo'] = $attachment_id;
-                }
-            }
-        }
-
-        // Make sure settings preserves company_logo value even when no new upload
-        if (!isset($settings['company_logo']) || empty($settings['company_logo'])) {
-            $existing_settings = get_option('product_estimator_settings', []);
-            if (isset($existing_settings['company_logo']) && !empty($existing_settings['company_logo'])) {
-                $settings['company_logo'] = $existing_settings['company_logo'];
-            }
+            // Other fields keep their existing sanitization which happens later
         }
 
         // Update the settings array in the form data for further processing
@@ -440,6 +380,8 @@ class NotificationSettingsModule extends SettingsModuleBase {
             $this->version,
             true
         );
+
+        wp_enqueue_editor();
 
         // Localize script
         wp_localize_script(

@@ -14,6 +14,7 @@
     init: function() {
       this.bindEvents();
       this.setupDependentFields();
+      this.setupVerticalTabs();
     },
 
     /**
@@ -32,6 +33,12 @@
 
       // Listen for tab changes
       $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
+
+      // Form submission - convert to AJAX
+      $('.notification-settings-form').on('submit', this.handleFormSubmit.bind(this));
+
+      // Vertical tabs navigation
+      $('.vertical-tabs-nav a').on('click', this.handleVerticalTabClick.bind(this));
     },
 
     /**
@@ -103,14 +110,76 @@
      */
     toggleNotificationFields: function() {
       const enabled = $('#enable_notifications').is(':checked');
-      const $fields = $('#admin_email_notifications, #user_email_notifications, #default_designer_email, #default_store_email, #pdf_footer_text, #email_subject_template, #company_logo')
-        .closest('tr');
+      const $verticalTabsNav = $('.vertical-tabs-nav');
+      const $notificationForms = $('.notification-type-form');
 
       if (enabled) {
-        $fields.fadeIn(200);
+        $verticalTabsNav.removeClass('disabled');
+        $notificationForms.find('input, textarea').prop('disabled', false);
       } else {
-        $fields.fadeOut(200);
+        $verticalTabsNav.addClass('disabled');
+        $notificationForms.find('input, textarea').prop('disabled', true);
       }
+    },
+
+    /**
+     * Set up vertical tabs
+     */
+    setupVerticalTabs: function() {
+      // Initial state - show the active tab
+      const $activeTabLink = $('.vertical-tabs-nav .tab-item.active a');
+      if ($activeTabLink.length) {
+        const tabId = $activeTabLink.data('tab');
+        this.showVerticalTab(tabId);
+      } else {
+        // Default to general tab
+        this.showVerticalTab('general');
+      }
+
+      // Adjust height of the tab content container to match the nav
+      this.adjustTabContentHeight();
+
+      // Adjust on window resize
+      $(window).on('resize', this.adjustTabContentHeight.bind(this));
+    },
+
+    /**
+     * Adjust tab content height
+     */
+    adjustTabContentHeight: function() {
+      const navHeight = $('.vertical-tabs-nav').outerHeight();
+      $('.vertical-tabs-content').css('min-height', navHeight + 'px');
+    },
+
+    /**
+     * Handle vertical tab click
+     * @param {Event} e Click event
+     */
+    handleVerticalTabClick: function(e) {
+      e.preventDefault();
+
+      const $link = $(e.currentTarget);
+      const tabId = $link.data('tab');
+
+      // Update URL hash
+      window.history.pushState({}, '', `?page=product-estimator-settings&tab=notifications&sub_tab=${tabId}`);
+
+      // Show the selected tab
+      this.showVerticalTab(tabId);
+    },
+
+    /**
+     * Show vertical tab
+     * @param {string} tabId Tab ID to show
+     */
+    showVerticalTab: function(tabId) {
+      // Update active tab in navigation
+      $('.vertical-tabs-nav .tab-item').removeClass('active');
+      $(`.vertical-tabs-nav a[data-tab="${tabId}"]`).parent().addClass('active');
+
+      // Show the tab content
+      $('.vertical-tab-content').removeClass('active');
+      $(`#${tabId}`).addClass('active');
     },
 
     /**
@@ -189,7 +258,72 @@
       // If our tab becomes active, refresh dependent fields
       if (tabId === notificationSettings.tab_id) {
         this.toggleNotificationFields();
+        this.setupVerticalTabs();
       }
+    },
+
+    /**
+     * Handle form submission
+     * @param {Event} e Submit event
+     */
+    handleFormSubmit: function(e) {
+      e.preventDefault();
+
+      const $form = $(e.currentTarget);
+      const formData = $form.serialize();
+      const type = $form.data('type') || 'general';
+
+      // Show loading state
+      const $submitButton = $form.find('.save-settings');
+      const $spinner = $form.find('.spinner');
+
+      $submitButton.prop('disabled', true);
+      $spinner.addClass('is-active');
+
+      // Submit the form via AJAX
+      $.ajax({
+        url: productEstimatorSettings.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'save_notifications_settings',
+          nonce: productEstimatorSettings.nonce,
+          form_data: formData,
+          notification_type: type
+        },
+        success: function(response) {
+          if (response.success) {
+            // Show success message
+            if (typeof ProductEstimatorSettings !== 'undefined' &&
+              typeof ProductEstimatorSettings.showNotice === 'function') {
+              ProductEstimatorSettings.showNotice(response.data.message || notificationSettings.i18n.saveSuccess, 'success');
+            } else {
+              alert(response.data.message || notificationSettings.i18n.saveSuccess);
+            }
+          } else {
+            // Show error message
+            if (typeof ProductEstimatorSettings !== 'undefined' &&
+              typeof ProductEstimatorSettings.showNotice === 'function') {
+              ProductEstimatorSettings.showNotice(response.data.message || notificationSettings.i18n.saveError, 'error');
+            } else {
+              alert(response.data.message || notificationSettings.i18n.saveError);
+            }
+          }
+        },
+        error: function() {
+          // Show error message
+          if (typeof ProductEstimatorSettings !== 'undefined' &&
+            typeof ProductEstimatorSettings.showNotice === 'function') {
+            ProductEstimatorSettings.showNotice(notificationSettings.i18n.saveError, 'error');
+          } else {
+            alert(notificationSettings.i18n.saveError);
+          }
+        },
+        complete: function() {
+          // Reset form state
+          $submitButton.prop('disabled', false);
+          $spinner.removeClass('is-active');
+        }
+      });
     }
   };
 

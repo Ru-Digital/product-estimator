@@ -4,13 +4,23 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
 /**
  * Notification Settings Module Class
  *
- * Implements the notification settings tab functionality.
+ * Implements the notification settings tab functionality with vertical sub-tabs
+ * for different notification types.
  *
- * @since      1.1.0
+ * @since      1.2.0
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
 class NotificationSettingsModule extends SettingsModuleBase {
+
+    /**
+     * Available notification types
+     *
+     * @since    1.2.0
+     * @access   private
+     * @var      array    $notification_types    Array of notification types
+     */
+    private $notification_types = [];
 
     /**
      * Set the tab and section details.
@@ -23,6 +33,14 @@ class NotificationSettingsModule extends SettingsModuleBase {
         $this->tab_title = __('Notifications', 'product-estimator');
         $this->section_id = 'notification_settings';
         $this->section_title = __('Notification Settings', 'product-estimator');
+
+        // Define available notification types
+        $this->notification_types = [
+            'request_copy' => [
+                'title' => __('Request Copy', 'product-estimator'),
+                'description' => __('Email sent when a customer requests a copy of their estimate', 'product-estimator')
+            ],
+        ];
     }
 
     /**
@@ -32,62 +50,46 @@ class NotificationSettingsModule extends SettingsModuleBase {
      * @access   protected
      */
     protected function register_fields() {
-        $fields = array(
-            'enable_notifications' => array(
+        // Global notification settings
+        $general_fields = [
+            'enable_notifications' => [
                 'title' => __('Enable Email Notifications', 'product-estimator'),
                 'type' => 'checkbox',
-                'description' => __('Enable email notifications for new estimates', 'product-estimator'),
+                'description' => __('Enable email notifications for the estimator', 'product-estimator'),
                 'default' => true
-            ),
-            'admin_email_notifications' => array(
-                'title' => __('Admin Notifications', 'product-estimator'),
-                'type' => 'checkbox',
-                'description' => __('Send notifications to admin when new estimates are created', 'product-estimator'),
-                'default' => true
-            ),
-            'user_email_notifications' => array(
-                'title' => __('User Notifications', 'product-estimator'),
-                'type' => 'checkbox',
-                'description' => __('Send confirmation emails to users when they create estimates', 'product-estimator'),
-                'default' => true
-            ),
-            'default_designer_email' => array(
+            ],
+            'default_designer_email' => [
                 'title' => __('Default Designer Email', 'product-estimator'),
                 'type' => 'email',
                 'description' => __('Fallback email for designer consultation requests', 'product-estimator'),
                 'default' => get_option('admin_email')
-            ),
-            'default_store_email' => array(
+            ],
+            'default_store_email' => [
                 'title' => __('Default Store Email', 'product-estimator'),
                 'type' => 'email',
                 'description' => __('Fallback email for store contact requests', 'product-estimator'),
                 'default' => get_option('admin_email')
-            ),
-            'pdf_footer_text' => array(
+            ],
+            'pdf_footer_text' => [
                 'title' => __('PDF Footer Text', 'product-estimator'),
                 'type' => 'textarea',
                 'description' => __('Text to appear in the footer of PDF estimates', 'product-estimator'),
                 'default' => __('Thank you for your interest in our products. This estimate is valid for [validity] days.', 'product-estimator')
-            ),
-            'email_subject_template' => array(
-                'title' => __('Email Subject Template', 'product-estimator'),
-                'type' => 'text',
-                'description' => __('Template for email subjects. Use [estimate_id] and [estimate_name] as placeholders.', 'product-estimator'),
-                'default' => __('Your Estimate #[estimate_id] - [estimate_name]', 'product-estimator')
-            ),
-            'company_logo' => array(
+            ],
+            'company_logo' => [
                 'title' => __('Company Logo', 'product-estimator'),
                 'type' => 'image',
                 'description' => __('Logo to use in emails and PDF documents', 'product-estimator')
-            )
-        );
+            ]
+        ];
 
-        foreach ($fields as $id => $field) {
-            $args = array(
+        // Register general notification fields
+        foreach ($general_fields as $id => $field) {
+            $args = [
                 'id' => $id,
                 'type' => $field['type'],
                 'description' => $field['description']
-            );
+            ];
 
             // Add additional parameters if they exist
             if (isset($field['default'])) {
@@ -97,11 +99,121 @@ class NotificationSettingsModule extends SettingsModuleBase {
             add_settings_field(
                 $id,
                 $field['title'],
-                array($this, 'render_field_callback'),
+                [$this, 'render_field_callback'],
                 $this->plugin_name . '_' . $this->tab_id,
                 $this->section_id,
                 $args
             );
+        }
+
+        // Register fields for each notification type
+        foreach ($this->notification_types as $type => $type_data) {
+            $fields = $this->get_notification_fields($type);
+
+            foreach ($fields as $id => $field) {
+                $args = [
+                    'id' => $id,
+                    'type' => $field['type'],
+                    'description' => $field['description'],
+                    'notification_type' => $type
+                ];
+
+                // Add additional parameters if they exist
+                if (isset($field['default'])) {
+                    $args['default'] = $field['default'];
+                }
+
+                add_settings_field(
+                    $id,
+                    $field['title'],
+                    [$this, 'render_field_callback'],
+                    $this->plugin_name . '_' . $this->tab_id . '_' . $type,
+                    $this->section_id . '_' . $type,
+                    $args
+                );
+            }
+        }
+    }
+
+    /**
+     * Get fields for a specific notification type
+     *
+     * @since    1.2.0
+     * @access   private
+     * @param    string    $type    Notification type
+     * @return   array     Fields for the notification type
+     */
+    private function get_notification_fields($type) {
+        // Standard fields for all notification types
+        $fields = [
+            'notification_' . $type . '_enabled' => [
+                'title' => __('Enable Notification', 'product-estimator'),
+                'type' => 'checkbox',
+                'description' => __('Enable this notification', 'product-estimator'),
+                'default' => true
+            ],
+            'notification_' . $type . '_subject' => [
+                'title' => __('Email Subject', 'product-estimator'),
+                'type' => 'text',
+                'description' => __('Subject line for this email notification', 'product-estimator'),
+                'default' => $this->get_default_subject($type)
+            ],
+            'notification_' . $type . '_content' => [
+                'title' => __('Email Content', 'product-estimator'),
+                'type' => 'textarea',
+                'description' => __('Content for this email notification. HTML is allowed.', 'product-estimator'),
+                'default' => $this->get_default_content($type)
+            ]
+        ];
+
+        return $fields;
+    }
+
+    /**
+     * Get default subject for a notification type
+     *
+     * @since    1.2.0
+     * @access   private
+     * @param    string    $type    Notification type
+     * @return   string    Default subject
+     */
+    private function get_default_subject($type) {
+        $site_name = get_bloginfo('name');
+
+        switch ($type) {
+            case 'request_copy':
+                return sprintf(__('%s: Your Requested Estimate', 'product-estimator'), $site_name);
+
+            default:
+                return sprintf(__('%s: Notification', 'product-estimator'), $site_name);
+        }
+    }
+
+    /**
+     * Get default content for a notification type
+     *
+     * @since    1.2.0
+     * @access   private
+     * @param    string    $type    Notification type
+     * @return   string    Default content
+     */
+    private function get_default_content($type) {
+        $site_name = get_bloginfo('name');
+
+        switch ($type) {
+            case 'request_copy':
+                return sprintf(
+                    __("Hello [customer_name],\n\nThank you for your interest in our products. As requested, please find attached your estimate.\n\nIf you have any questions or would like to discuss this estimate further, please don't hesitate to contact us.\n\nBest regards,\n%s", 'product-estimator'),
+                    $site_name
+                );
+
+
+            default:
+                return sprintf(
+                    __("Hello,\n\nThis is a notification from %s.\n\nBest regards,\n%s", 'product-estimator'),
+                    $site_name,
+                    $site_name
+                );
         }
     }
 
@@ -136,7 +248,13 @@ class NotificationSettingsModule extends SettingsModuleBase {
         $settings = $form_data['product_estimator_settings'];
 
         // Fix for checkbox fields - ensure they're properly set to 0 when unchecked
-        $checkbox_fields = array('enable_notifications', 'admin_email_notifications', 'user_email_notifications');
+        $checkbox_fields = ['enable_notifications'];
+
+        // Add checkbox fields for each notification type
+        foreach ($this->notification_types as $type => $type_data) {
+            $checkbox_fields[] = 'notification_' . $type . '_enabled';
+        }
+
         foreach ($checkbox_fields as $field) {
             if (!isset($settings[$field])) {
                 $settings[$field] = 0;
@@ -168,7 +286,7 @@ class NotificationSettingsModule extends SettingsModuleBase {
                 require_once(ABSPATH . 'wp-admin/includes/file.php');
             }
 
-            $upload_overrides = array('test_form' => false);
+            $upload_overrides = ['test_form' => false];
             $uploaded_file = wp_handle_upload($_FILES['company_logo'], $upload_overrides);
 
             if (isset($uploaded_file['error'])) {
@@ -183,12 +301,12 @@ class NotificationSettingsModule extends SettingsModuleBase {
                 $file_name_and_location = $uploaded_file['file'];
                 $file_title_for_media_library = sanitize_file_name($_FILES['company_logo']['name']);
 
-                $attachment = array(
+                $attachment = [
                     'post_mime_type' => $uploaded_file['type'],
                     'post_title' => $file_title_for_media_library,
                     'post_content' => '',
                     'post_status' => 'inherit'
-                );
+                ];
 
                 $attachment_id = wp_insert_attachment($attachment, $file_name_and_location);
 
@@ -208,7 +326,7 @@ class NotificationSettingsModule extends SettingsModuleBase {
 
         // Make sure settings preserves company_logo value even when no new upload
         if (!isset($settings['company_logo']) || empty($settings['company_logo'])) {
-            $existing_settings = get_option('product_estimator_settings', array());
+            $existing_settings = get_option('product_estimator_settings', []);
             if (isset($existing_settings['company_logo']) && !empty($existing_settings['company_logo'])) {
                 $settings['company_logo'] = $existing_settings['company_logo'];
             }
@@ -287,10 +405,22 @@ class NotificationSettingsModule extends SettingsModuleBase {
         echo '<li><code>[estimate_id]</code> - ' . esc_html__('Unique estimate identifier', 'product-estimator') . '</li>';
         echo '<li><code>[estimate_name]</code> - ' . esc_html__('Name of the estimate', 'product-estimator') . '</li>';
         echo '<li><code>[customer_name]</code> - ' . esc_html__('Customer\'s name', 'product-estimator') . '</li>';
+        echo '<li><code>[customer_email]</code> - ' . esc_html__('Customer\'s email address', 'product-estimator') . '</li>';
         echo '<li><code>[total]</code> - ' . esc_html__('Estimate total price', 'product-estimator') . '</li>';
         echo '<li><code>[date]</code> - ' . esc_html__('Current date', 'product-estimator') . '</li>';
         echo '</ul>';
         echo '</div>';
+    }
+
+    /**
+     * Render the module content.
+     *
+     * @since    1.2.0
+     * @access   public
+     */
+    public function render_module_content() {
+        // Include the notifications admin display
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/partials/notification-settings-admin-display.php';
     }
 
     /**
@@ -306,7 +436,7 @@ class NotificationSettingsModule extends SettingsModuleBase {
         wp_enqueue_script(
             $this->plugin_name . '-notification-settings',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/modules/notification-settings.js',
-            array('jquery', 'media-upload', $this->plugin_name . '-settings'),
+            ['jquery', 'media-upload', $this->plugin_name . '-settings'],
             $this->version,
             true
         );
@@ -315,14 +445,17 @@ class NotificationSettingsModule extends SettingsModuleBase {
         wp_localize_script(
             $this->plugin_name . '-notification-settings',
             'notificationSettings',
-            array(
+            [
                 'tab_id' => $this->tab_id,
-                'i18n' => array(
+                'notification_types' => array_keys($this->notification_types),
+                'i18n' => [
                     'selectImage' => __('Select Image', 'product-estimator'),
                     'useThisImage' => __('Use this image', 'product-estimator'),
-                    'validationErrorEmail' => __('Please enter a valid email address', 'product-estimator')
-                )
-            )
+                    'validationErrorEmail' => __('Please enter a valid email address', 'product-estimator'),
+                    'saveSuccess' => __('Notification settings saved successfully', 'product-estimator'),
+                    'saveError' => __('Error saving notification settings', 'product-estimator')
+                ]
+            ]
         );
     }
 
@@ -336,75 +469,19 @@ class NotificationSettingsModule extends SettingsModuleBase {
         wp_enqueue_style(
             $this->plugin_name . '-notification-settings',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/notification-settings.css',
-            array($this->plugin_name . '-settings'),
+            [$this->plugin_name . '-settings'],
             $this->version
         );
     }
 
     /**
-     * Handle AJAX save request for this module
+     * Get notification types
      *
-     * @since    1.1.0
+     * @since    1.2.0
      * @access   public
+     * @return   array    Array of notification types
      */
-    public function handle_ajax_save() {
-        // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_settings_nonce')) {
-            wp_send_json_error(array('message' => __('Security check failed', 'product-estimator')));
-            return;
-        }
-
-        // Check permissions
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('You do not have permission to change these settings', 'product-estimator')));
-            return;
-        }
-
-        // Parse form data
-        if (!isset($_POST['form_data'])) {
-            wp_send_json_error(array('message' => __('No form data received', 'product-estimator')));
-            return;
-        }
-
-        parse_str($_POST['form_data'], $form_data);
-
-        // Process the settings specific to this module
-        $result = $this->process_form_data($form_data);
-
-        if (is_wp_error($result)) {
-            wp_send_json_error(array('message' => $result->get_error_message()));
-            return;
-        }
-
-        // Update options
-        if (isset($form_data['product_estimator_settings'])) {
-            // Get existing settings
-            $current_settings = get_option('product_estimator_settings', array());
-
-            // Ensure checkbox fields are properly set
-            $checkbox_fields = array('enable_notifications', 'admin_email_notifications', 'user_email_notifications');
-            foreach ($checkbox_fields as $field) {
-                if (!isset($form_data['product_estimator_settings'][$field])) {
-                    $form_data['product_estimator_settings'][$field] = 0;
-                }
-            }
-
-            // Update only the settings for this module
-            $updated_settings = array_merge($current_settings, $form_data['product_estimator_settings']);
-
-            // Save updated settings
-            update_option('product_estimator_settings', $updated_settings);
-        }
-
-        // Allow modules to perform additional actions after saving
-        $this->after_save_actions($form_data);
-
-        // Send success response
-        wp_send_json_success(array(
-            'message' => sprintf(
-                __('%s settings saved successfully', 'product-estimator'),
-                $this->tab_title
-            )
-        ));
+    public function get_notification_types() {
+        return $this->notification_types;
     }
 }

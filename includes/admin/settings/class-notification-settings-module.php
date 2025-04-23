@@ -157,6 +157,16 @@ class NotificationSettingsModule extends SettingsModuleBase {
             ]
         ];
 
+        // Add specific fields based on notification type
+        if ($type === 'request_copy') {
+            $fields['notification_' . $type . '_include_pdf'] = [
+                'title' => __('Include Estimate PDF', 'product-estimator'),
+                'type' => 'checkbox',
+                'description' => __('Attach a PDF of the estimate to the email', 'product-estimator'),
+                'default' => true
+            ];
+        }
+
         return $fields;
     }
 
@@ -244,6 +254,11 @@ class NotificationSettingsModule extends SettingsModuleBase {
         // Add checkbox fields for each notification type
         foreach ($this->notification_types as $type => $type_data) {
             $checkbox_fields[] = 'notification_' . $type . '_enabled';
+
+            // Also add the include_pdf checkbox for request_copy type
+            if ($type === 'request_copy') {
+                $checkbox_fields[] = 'notification_' . $type . '_include_pdf';
+            }
         }
 
         foreach ($checkbox_fields as $field) {

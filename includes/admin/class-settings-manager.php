@@ -262,6 +262,8 @@ class SettingsManager {
                 case 'enable_notifications':
                 case 'admin_email_notifications':
                 case 'user_email_notifications':
+                case 'notification_request_copy_include_pdf': // Add this checkbox field
+                case 'notification_request_copy_enabled':     // And this one too
                     $valid[$key] = isset($value) && $value ? 1 : 0;
                     break;
 
@@ -289,6 +291,7 @@ class SettingsManager {
                 // Email fields
                 case 'default_designer_email':
                 case 'default_store_email':
+                case 'from_email':  // Add from_email field
                     if (!empty($value) && !is_email($value)) {
                         add_settings_error(
                             'product_estimator_settings',
@@ -335,7 +338,8 @@ class SettingsManager {
                         $valid[$key] = wp_kses_post($value);
                     } else {
                         $valid[$key] = sanitize_text_field($value);
-                    }            }
+                    }
+            }
         }
 
         return $valid;

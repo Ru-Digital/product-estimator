@@ -29,12 +29,31 @@ if (!defined('WPINC')) {
                        id="notification_<?php echo esc_attr($type); ?>_enabled"
                        name="product_estimator_settings[notification_<?php echo esc_attr($type); ?>_enabled]"
                        value="1"
-                    <?php checked(isset($options['notification_' . $type . '_enabled']) ? $options['notification_' . $type . '_enabled'] : true); ?> />
+                    <?php checked(isset($options['notification_' . $type . '_enabled']) ? (bool)$options['notification_' . $type . '_enabled'] : true); ?> />
                 <p class="description">
                     <?php esc_html_e('Enable this notification', 'product-estimator'); ?>
                 </p>
             </td>
         </tr>
+        <?php if ($type === 'request_copy'): ?>
+            <tr>
+                <th scope="row">
+                    <label for="notification_<?php echo esc_attr($type); ?>_include_pdf">
+                        <?php esc_html_e('Include Estimate PDF', 'product-estimator'); ?>
+                    </label>
+                </th>
+                <td>
+                    <input type="checkbox"
+                           id="notification_<?php echo esc_attr($type); ?>_include_pdf"
+                           name="product_estimator_settings[notification_<?php echo esc_attr($type); ?>_include_pdf]"
+                           value="1"
+                        <?php checked(isset($options['notification_' . $type . '_include_pdf']) ? (bool)$options['notification_' . $type . '_include_pdf'] : true); ?> />
+                    <p class="description">
+                        <?php esc_html_e('Attach a PDF of the estimate to the email', 'product-estimator'); ?>
+                    </p>
+                </td>
+            </tr>
+        <?php endif; ?>
         <tr>
             <th scope="row">
                 <label for="notification_<?php echo esc_attr($type); ?>_subject">

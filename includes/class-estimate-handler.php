@@ -486,18 +486,30 @@ class EstimateHandler {
                 return;
             }
 
-            // Generate PDF
-            $pdf_result = $this->generate_pdf($estimate_id);
+            // Check notification settings to see if we need to generate a PDF
+            $options = get_option('product_estimator_settings', array());
+            $include_pdf = isset($options['notification_request_copy_include_pdf'])
+                ? (bool)$options['notification_request_copy_include_pdf']
+                : true; // Default to true for backwards compatibility
 
-            if (!$pdf_result || !isset($pdf_result['pdf_path'])) {
-                wp_send_json_error([
-                    'message' => __('Error generating PDF for email', 'product-estimator')
-                ]);
-                return;
+            $pdf_result = null;
+
+            // Only generate PDF if the setting is enabled
+            if ($include_pdf) {
+                // Generate PDF
+                $pdf_result = $this->generate_pdf($estimate_id);
+
+                if (!$pdf_result || !isset($pdf_result['pdf_path'])) {
+                    wp_send_json_error([
+                        'message' => __('Error generating PDF for email', 'product-estimator')
+                    ]);
+                    return;
+                }
             }
 
-            // PDF successfully generated, now send email
-            $email_sent = $this->send_estimate_email($estimate, $customer_email, $pdf_result['pdf_path']);
+            // Send email with or without PDF attachment
+            $pdf_path = $include_pdf ? $pdf_result['pdf_path'] : '';
+            $email_sent = $this->send_estimate_email($estimate, $customer_email, $pdf_path);
 
             if (!$email_sent) {
                 wp_send_json_error([
@@ -508,7 +520,8 @@ class EstimateHandler {
 
             wp_send_json_success([
                 'message' => __('Estimate has been emailed to', 'product-estimator') . ' ' . $customer_email,
-                'email' => $customer_email // Add email to response for confirmation dialog
+                'email' => $customer_email, // Add email to response for confirmation dialog
+                'pdf_included' => $include_pdf // Indicate whether PDF was included
             ]);
 
         } catch (\Exception $e) {
@@ -551,14 +564,6 @@ class EstimateHandler {
      * @param string $pdf_path Path to the PDF file
      * @return bool Success or failure
      */
-    /**
-     * Send email with PDF estimate attachment
-     *
-     * @param array $estimate The estimate data
-     * @param string $email The recipient email
-     * @param string $pdf_path Path to the PDF file
-     * @return bool Success or failure
-     */
     private function send_estimate_email($estimate, $email, $pdf_path) {
         // Get notification settings
         $options = get_option('product_estimator_settings', array());
@@ -589,6 +594,11 @@ class EstimateHandler {
                 $site_name
             );
 
+        // Check if we should include the PDF attachment
+        $include_pdf = isset($options['notification_request_copy_include_pdf'])
+            ? (bool)$options['notification_request_copy_include_pdf']
+            : true; // Default to true for backwards compatibility
+
         // Get customer details for template tags
         $customer_name = isset($estimate['customer_details']['name'])
             ? $estimate['customer_details']['name']
@@ -611,33 +621,28 @@ class EstimateHandler {
             $content_template
         );
 
-        // IMPORTANT FIX: Properly format line breaks for emails - convert \n to <br> for HTML
-        // Check if we're sending HTML or plain text
-//        $is_html = (strpos($body, '<') !== false) || (strpos($body, '</') !== false);
+        // Properly format line breaks for emails - convert \n to <br> for HTML
+        $body = wpautop($body); // Convert double line breaks to paragraphs
 
-//        if ($is_html) {
-            // If it looks like HTML content, ensure proper line breaks and set Content-Type
-            $body = wpautop($body); // Convert double line breaks to paragraphs
-            $headers = [
-                'Content-Type: text/html; charset=UTF-8',
-                'From: ' . $from_name . ' <' . $from_email . '>'
-            ];
-//        } else {
-//            // For plain text, preserve line breaks
-//            $body = str_replace("\n", "\r\n", $body); // Ensure CRLF line endings
-//            $headers = [
-//                'Content-Type: text/plain; charset=UTF-8',
-//                'From: ' . $from_name . ' <' . $from_email . '>'
-//            ];
-//        }
+        // Set HTML headers
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . $from_name . ' <' . $from_email . '>'
+        ];
 
-        // Attach PDF file
-        $attachments = [$pdf_path];
+        // Attach PDF file only if the setting is enabled and path is provided
+        $attachments = array();
+        if ($include_pdf && !empty($pdf_path) && file_exists($pdf_path)) {
+            $attachments[] = $pdf_path;
+        }
 
         // Send email
         $sent = wp_mail($email, $subject, $body, $headers, $attachments);
 
-        $this->log_debug('Sent estimate email to ' . $email . ': ' . ($sent ? 'Success' : 'Failed'));
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $this->log_debug('Sent estimate email to ' . $email . ': ' . ($sent ? 'Success' : 'Failed'));
+            $this->log_debug('Included PDF attachment: ' . ($include_pdf && !empty($pdf_path) ? 'Yes' : 'No'));
+        }
 
         return $sent;
     }

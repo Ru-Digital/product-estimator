@@ -15,7 +15,8 @@ class PrintEstimate {
       debug: false,
       selectors: {
         printButton: '.print-estimate',
-        requestCallButton: '.request-call-estimate',
+        requestContactButton: '.request-contact-estimate',
+        requestCopyButton: '.request-a-copy',
         scheduleDesignerButton: '.schedule-designer-estimate'
       },
       i18n: window.productEstimatorVars?.i18n || {}
@@ -62,11 +63,18 @@ class PrintEstimate {
         this.handlePrintEstimate(printButton);
       }
 
-      // Request Call button
-      const requestCallButton = e.target.closest(this.config.selectors.requestCallButton);
-      if (requestCallButton && !this.processing) {
+      // Request contact button
+      const requestCopyButton = e.target.closest(this.config.selectors.requestCopyButton);
+      if (requestCopyButton && !this.processing) {
         e.preventDefault();
-        this.handleRequestCall(requestCallButton);
+        this.handleRequestCopy(requestCopyButton);
+      }
+
+      // Request copy button
+      const requestContactButton = e.target.closest(this.config.selectors.requestContactButton);
+      if (requestContactButton && !this.processing) {
+        e.preventDefault();
+        this.handleRequestContact(requestContactButton);
       }
 
       // Schedule Designer button
@@ -368,10 +376,10 @@ class PrintEstimate {
   }
 
   /**
-   * Handle request call button click
+   * Handle request contact button click
    * @param {HTMLElement} button - The clicked button
    */
-  handleRequestCall(button) {
+  handleRequestContact(button) {
     const estimateId = button.dataset.estimateId;
 
     if (!estimateId) {
@@ -379,13 +387,35 @@ class PrintEstimate {
       return;
     }
 
-    this.log(`Request call requested for estimate ID: ${estimateId}`);
+    this.log(`Request contact requested for estimate ID: ${estimateId}`);
 
     // First, ensure the estimate is saved in the database
     this.saveEstimateIfNeeded(estimateId, () => {
       // Now show the request call form/modal
       // This would be implemented based on your specific UI requirements
-      alert('Request call feature will be implemented here');
+      alert('Request contact feature will be implemented here');
+    });
+  }
+
+  /**
+   * Handle request call button click
+   * @param {HTMLElement} button - The clicked button
+   */
+  handleRequestCopy(button) {
+    const estimateId = button.dataset.estimateId;
+
+    if (!estimateId) {
+      this.showError('No estimate ID provided');
+      return;
+    }
+
+    this.log(`Request copy requested for estimate ID: ${estimateId}`);
+
+    // First, ensure the estimate is saved in the database
+    this.saveEstimateIfNeeded(estimateId, () => {
+      // Now show the request call form/modal
+      // This would be implemented based on your specific UI requirements
+      alert('Request copy feature will be implemented here');
     });
   }
 

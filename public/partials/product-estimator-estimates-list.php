@@ -180,20 +180,27 @@ $options = get_option('product_estimator_settings');
                         </a>
                     </li>
                     <li>
-                        <a class="request-call-estimate"
+                        <a class="request-contact-estimate"
                            data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
-                           title="<?php esc_attr_e('Request a call with a store', 'product-estimator'); ?>">
-                            <span class="dashicons dashicons-phone"></span> Request a call with a store
+                           title="<?php esc_attr_e('Request contact from store', 'product-estimator'); ?>">
+                            <span class="dashicons dashicons-businessperson"></span> Request contact from store
                         </a>
                     </li>
                     <li>
-                        <a class="schedule-designer-estimate"
+                        <a class="request-a-copy"
                            data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
-                           title="<?php esc_attr_e('Schedule a free discussion with a designer', 'product-estimator'); ?>">
-                            <span class="dashicons dashicons-businessman"></span> Schedule a free discussion with a
-                            designer
+                           title="<?php esc_attr_e('Request a copy', 'product-estimator'); ?>">
+                            <span class="dashicons dashicons-email"></span> Request a copy
                         </a>
                     </li>
+<!--                    <li>-->
+<!--                        <a class="schedule-designer-estimate"-->
+<!--                           data-estimate-id="--><?php //echo esc_attr($estimate_id); ?><!--"-->
+<!--                           title="--><?php //esc_attr_e('Schedule a free discussion with a designer', 'product-estimator'); ?><!--">-->
+<!--                            <span class="dashicons dashicons-businessman"></span> Schedule a free discussion with a-->
+<!--                            designer-->
+<!--                        </a>-->
+<!--                    </li>-->
                 </ul>
             </div>
     <?php endforeach; ?>

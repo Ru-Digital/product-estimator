@@ -33,6 +33,8 @@ class CustomerEstimatesAdmin {
      */
     private $version;
 
+    private $csv_export_handler;
+
 
     /**
      * Initialize the class and set its properties.
@@ -47,6 +49,8 @@ class CustomerEstimatesAdmin {
 
         // Add the admin menu
         add_action('admin_menu', array($this, 'add_customer_estimates_menu'), 20);
+
+        add_action('init', 'load_plugin_textdomain_properly');
 
         // Register admin scripts and styles
         add_action('admin_enqueue_scripts', array($this, 'enqueue_styles'));

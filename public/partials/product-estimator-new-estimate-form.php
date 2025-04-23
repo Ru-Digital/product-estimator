@@ -10,10 +10,14 @@
 $customer_details_manager = new \RuDigital\ProductEstimator\Includes\CustomerDetails();
 $has_customer_details = $customer_details_manager->hasCompleteDetails();
 $customer_details = $customer_details_manager->getDetails();
+
+// Check if email and phone are set - explicitly set these variables for template use
+$has_email = $customer_details_manager->hasEmail();
+$has_phone = isset($customer_details['phone']) && !empty($customer_details['phone']);
 ?>
 <h2><?php esc_html_e('Create New Estimate', 'product-estimator'); ?></h2>
 
-<form id="new-estimate-form" method="post">
+<form id="new-estimate-form" method="post" data-has-email="<?php echo $has_email ? 'true' : 'false'; ?>">
     <div class="form-group">
         <label for="estimate-name"><?php esc_html_e('Estimate Name', 'product-estimator'); ?></label>
         <input type="text" id="estimate-name" name="estimate_name" placeholder="<?php esc_attr_e('e.g. Home Renovation', 'product-estimator'); ?>" required>
@@ -31,7 +35,7 @@ $customer_details = $customer_details_manager->getDetails();
 
             <div class="form-group">
                 <label for="customer-email"><?php esc_html_e('Email Address', 'product-estimator'); ?></label>
-                <input type="email" id="customer-email" name="customer_email" placeholder="<?php esc_attr_e('Your email address', 'product-estimator'); ?>" required>
+                <input type="email" id="customer-email" name="customer_email" placeholder="<?php esc_attr_e('Your email address', 'product-estimator'); ?>">
             </div>
 
             <div class="form-group">
@@ -61,8 +65,11 @@ $customer_details = $customer_details_manager->getDetails();
 
             <div class="saved-customer-details">
                 <p><strong><?php echo esc_html($customer_details['name']); ?></strong><br>
-                    <?php echo esc_html($customer_details['email']); ?><br>
-                    <?php if (!empty($customer_details['phone'])): ?>
+                    <?php if ($has_email): ?>
+                        <?php echo esc_html($customer_details['email']); ?><br>
+                    <?php endif; ?>
+
+                    <?php if ($has_phone): ?>
                         <?php echo esc_html($customer_details['phone']); ?><br>
                     <?php endif; ?>
                     <?php echo esc_html($customer_details['postcode']); ?></p>
@@ -78,17 +85,22 @@ $customer_details = $customer_details_manager->getDetails();
                            value="<?php echo esc_attr($customer_details['name']); ?>" required>
                 </div>
 
-                <div class="form-group">
-                    <label for="edit-customer-email"><?php esc_html_e('Email Address', 'product-estimator'); ?></label>
-                    <input type="email" id="edit-customer-email" name="edit_customer_email"
-                           value="<?php echo esc_attr($customer_details['email']); ?>" required>
-                </div>
+                <!-- Always include email field in edit form if it exists in customer details -->
+                <?php if ($has_email): ?>
+                    <div class="form-group">
+                        <label for="edit-customer-email"><?php esc_html_e('Email Address', 'product-estimator'); ?></label>
+                        <input type="email" id="edit-customer-email" name="edit_customer_email"
+                               value="<?php echo esc_attr($customer_details['email']); ?>">
+                    </div>
+                <?php endif; ?>
 
-                <div class="form-group">
-                    <label for="edit-customer-phone"><?php esc_html_e('Phone Number', 'product-estimator'); ?></label>
-                    <input type="tel" id="edit-customer-phone" name="edit_customer_phone"
-                           value="<?php echo esc_attr($customer_details['phone'] ?? ''); ?>">
-                </div>
+                <?php if ($has_phone): ?>
+                    <div class="form-group">
+                        <label for="edit-customer-phone"><?php esc_html_e('Phone Number', 'product-estimator'); ?></label>
+                        <input type="tel" id="edit-customer-phone" name="edit_customer_phone"
+                               value="<?php echo esc_attr($customer_details['phone']); ?>">
+                    </div>
+                <?php endif; ?>
 
                 <div class="form-group">
                     <label for="edit-customer-postcode"><?php esc_html_e('Postcode', 'product-estimator'); ?></label>

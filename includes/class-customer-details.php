@@ -66,13 +66,13 @@ class CustomerDetails {
      */
     public function setDetails($details) {
         // Basic validation
-        if (!isset($details['name']) || !isset($details['email']) || !isset($details['postcode'])) {
+        if (!isset($details['name']) || !isset($details['postcode'])) {
             return false;
         }
 
         $this->details = [
             'name' => sanitize_text_field($details['name']),
-            'email' => sanitize_email($details['email']),
+            'email' => isset($details['email']) ? sanitize_email($details['email']) : '',
             'phone' => isset($details['phone']) ? sanitize_text_field($details['phone']) : '',
             'postcode' => sanitize_text_field($details['postcode']),
             'timestamp' => current_time('timestamp')
@@ -115,8 +115,18 @@ class CustomerDetails {
     public function hasCompleteDetails() {
         return !empty($this->details) &&
             isset($this->details['name']) &&
-            isset($this->details['email']) &&
             isset($this->details['postcode']);
+    }
+
+    /**
+     * Check if customer has an email set
+     *
+     * @return bool Whether customer email is set
+     */
+    public function hasEmail() {
+        return !empty($this->details) &&
+            isset($this->details['email']) &&
+            !empty($this->details['email']);
     }
 
     /**
@@ -163,14 +173,13 @@ class CustomerDetails {
             $errors[] = __('Your name is required', 'product-estimator');
         }
 
-        if (empty($form_data['customer_email'])) {
-            $errors[] = __('Your email is required', 'product-estimator');
-        } elseif (!filter_var($form_data['customer_email'], FILTER_VALIDATE_EMAIL)) {
-            $errors[] = __('Please enter a valid email address', 'product-estimator');
-        }
-
         if (empty($form_data['customer_postcode'])) {
             $errors[] = __('Your postcode is required', 'product-estimator');
+        }
+
+        // Validate email if provided
+        if (!empty($form_data['customer_email']) && !is_email($form_data['customer_email'])) {
+            $errors[] = __('Please enter a valid email address', 'product-estimator');
         }
 
         if (!empty($errors)) {
@@ -180,7 +189,7 @@ class CustomerDetails {
         // Return sanitized data
         return [
             'name' => sanitize_text_field($form_data['customer_name']),
-            'email' => sanitize_email($form_data['customer_email']),
+            'email' => !empty($form_data['customer_email']) ? sanitize_email($form_data['customer_email']) : '',
             'phone' => !empty($form_data['customer_phone']) ? sanitize_text_field($form_data['customer_phone']) : '',
             'postcode' => sanitize_text_field($form_data['customer_postcode'])
         ];

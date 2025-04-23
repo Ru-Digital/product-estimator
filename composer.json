@@ -52,7 +52,9 @@
             "includes/class-ajax-handler.php",
             "includes/class-customer-details.php",
             "includes/class-estimate-handler.php",
-            "includes/traits/trait-estimate-db-handler.php"
+            "includes/traits/trait-estimate-db-handler.php",
+            "includes/models/class-estimate-model.php"
+
         ],
         "files": [
             "includes/functions.php"

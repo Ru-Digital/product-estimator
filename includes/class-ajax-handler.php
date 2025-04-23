@@ -108,6 +108,9 @@ class AjaxHandler {
             add_action('wp_ajax_check_estimate_stored', array($this, 'check_estimate_stored'));
             add_action('wp_ajax_nopriv_check_estimate_stored', array($this, 'check_estimate_stored'));
 
+            add_action('wp_ajax_check_customer_email', array($this, 'check_customer_email'));
+            add_action('wp_ajax_nopriv_check_customer_email', array($this, 'check_customer_email'));
+
 
 
         } catch (\Exception $e) {
@@ -2021,24 +2024,31 @@ class AjaxHandler {
             return;
         }
 
+        // Get the details from the request, keeping only fields that were submitted
+        $details = [];
 
-        // Get the details from the request
-        $details = [
-            'name' => isset($details_data['name']) ? sanitize_text_field($details_data['name']) : '',
-            'email' => isset($details_data['email']) ? sanitize_email($details_data['email']) : '',
-            'phone' => isset($details_data['phone']) ? sanitize_text_field($details_data['phone']) : '',
-            'postcode' => isset($details_data['postcode']) ? sanitize_text_field($details_data['postcode']) : ''
-        ];
+        // Always include required fields
+        $details['name'] = isset($details_data['name']) ? sanitize_text_field($details_data['name']) : '';
+        $details['postcode'] = isset($details_data['postcode']) ? sanitize_text_field($details_data['postcode']) : '';
 
+        // Only include email if it was provided in the form
+        if (isset($details_data['email'])) {
+            $details['email'] = sanitize_email($details_data['email']);
+        }
+
+        // Only include phone if it was provided in the form
+        if (isset($details_data['phone'])) {
+            $details['phone'] = sanitize_text_field($details_data['phone']);
+        }
 
         // Validate required fields
-        if (empty($details['name']) || empty($details['email']) || empty($details['postcode'])) {
+        if (empty($details['name']) || empty($details['postcode'])) {
             wp_send_json_error(['message' => __('Please fill in all required fields', 'product-estimator')]);
             return;
         }
 
-        // Validate email format
-        if (!is_email($details['email'])) {
+        // Validate email format if provided
+        if (isset($details['email']) && !empty($details['email']) && !is_email($details['email'])) {
             wp_send_json_error(['message' => __('Please enter a valid email address', 'product-estimator')]);
             return;
         }
@@ -2047,8 +2057,15 @@ class AjaxHandler {
             // Initialize CustomerDetails
             $customer_details = new \RuDigital\ProductEstimator\Includes\CustomerDetails();
 
+            // Get existing details to preserve any fields not in the form
+            $existing_details = $customer_details->getDetails();
+
+            // Merge new details with existing details
+            // This preserves fields that weren't in the form but were in the session
+            $merged_details = array_merge($existing_details, $details);
+
             // Update the details
-            $success = $customer_details->setDetails($details);
+            $success = $customer_details->setDetails($merged_details);
 
             if ($success) {
                 // Get the updated details to confirm they were set correctly
@@ -2094,16 +2111,6 @@ class AjaxHandler {
                     <div class="form-group">
                         <label for="customer-name"><?php esc_html_e('Full Name', 'product-estimator'); ?></label>
                         <input type="text" id="customer-name" name="customer_name" placeholder="<?php esc_attr_e('Your full name', 'product-estimator'); ?>" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="customer-email"><?php esc_html_e('Email Address', 'product-estimator'); ?></label>
-                        <input type="email" id="customer-email" name="customer_email" placeholder="<?php esc_attr_e('Your email address', 'product-estimator'); ?>" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="customer-phone"><?php esc_html_e('Phone Number', 'product-estimator'); ?></label>
-                        <input type="tel" id="customer-phone" name="customer_phone" placeholder="<?php esc_attr_e('Your phone number (optional)', 'product-estimator'); ?>">
                     </div>
 
                     <div class="form-group">
@@ -2241,6 +2248,7 @@ class AjaxHandler {
 
     /**
      * Store current session data in the database with optimized DB queries
+     * Fixed to handle estimate_id = "0" properly
      */
     public function store_single_estimate() {
         // Verify nonce
@@ -2249,11 +2257,17 @@ class AjaxHandler {
         // Get the estimate ID to store
         $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
 
-        if (empty($estimate_id)) {
+        // Special handling for estimate_id validation - allow "0" as valid
+        if (!isset($estimate_id) || $estimate_id === '') {
             wp_send_json_error([
                 'message' => __('Estimate ID is required', 'product-estimator')
             ]);
             return;
+        }
+
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Processing store_single_estimate with estimate_id: ' . $estimate_id);
         }
 
         // Get customer details from request
@@ -2283,6 +2297,12 @@ class AjaxHandler {
             ]);
 
         } catch (\Exception $e) {
+            // Additional logging for debugging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Exception in store_single_estimate: ' . $e->getMessage());
+                error_log('Trace: ' . $e->getTraceAsString());
+            }
+
             wp_send_json_error([
                 'message' => $e->getMessage(),
                 'error' => $e->getTraceAsString()
@@ -2290,6 +2310,48 @@ class AjaxHandler {
         }
     }
 
+    /**
+     * Check if customer has an email set in session
+     * This is used by the PrintEstimate JS module before generating PDFs
+     */
+    public function check_customer_email() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get estimate ID if provided
+        $estimate_id = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : null;
+
+        try {
+            // Ensure session is started
+            $this->session->startSession();
+
+            // Initialize customer details manager
+            $customer_details_manager = new CustomerDetails();
+            $customer_details = $customer_details_manager->getDetails();
+            $has_email = $customer_details_manager->hasEmail();
+
+            // If no email in global details, check the specific estimate
+            if (!$has_email && $estimate_id) {
+                $estimate = $this->session->getEstimate($estimate_id);
+                if ($estimate && isset($estimate['customer_details']['email']) && !empty($estimate['customer_details']['email'])) {
+                    $customer_details = $estimate['customer_details'];
+                    $has_email = true;
+                }
+            }
+
+            wp_send_json_success([
+                'has_email' => $has_email,
+                'customer_details' => $customer_details
+            ]);
+
+        } catch (Exception $e) {
+            error_log('Error checking customer email: ' . $e->getMessage());
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+                'error' => 'session_error'
+            ]);
+        }
+    }
 
     /**
      * Check if an estimate is already stored in the database

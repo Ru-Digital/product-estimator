@@ -54,9 +54,89 @@ class CustomerDetailsManager {
     // Bind events
     this.bindEvents();
 
+    // Add a custom event listener for customer details updates from other sources
+    document.addEventListener('customer_details_updated', this.onCustomerDetailsUpdated.bind(this));
+
     this.initialized = true;
     this.log('CustomerDetailsManager initialized');
     return this;
+  }
+
+  /**
+   * Handle customer details updated event from other sources
+   * @param {CustomEvent} event - The custom event with updated details
+   */
+  onCustomerDetailsUpdated(event) {
+    if (event.detail && event.detail.details) {
+      this.log('Received customer_details_updated event', event.detail);
+      // Update the display with the new details
+      this.updateDisplayedDetails(event.detail.details);
+
+      // Check if email was added and update forms
+      this.checkAndUpdateEmailField(event.detail.details);
+    }
+  }
+
+  /**
+   * Check if email was added and update the form accordingly
+   * @param {Object} details - The updated customer details
+   */
+  checkAndUpdateEmailField(details) {
+    const hasEmail = details && details.email && details.email.trim() !== '';
+    this.log(`Checking for email field updates: hasEmail=${hasEmail}`);
+
+    // If the edit form is already visible, update it
+    const editForm = document.querySelector(this.config.selectors.editForm);
+    if (editForm && hasEmail) {
+      // Check if email field already exists
+      let emailField = editForm.querySelector('#edit-customer-email');
+
+      // If email field doesn't exist but we have an email, add it
+      if (!emailField && hasEmail) {
+        this.log('Adding email field to edit form');
+
+        // Create the email field group
+        const emailGroup = document.createElement('div');
+        emailGroup.className = 'form-group';
+
+        // Create the label
+        const emailLabel = document.createElement('label');
+        emailLabel.setAttribute('for', 'edit-customer-email');
+        emailLabel.textContent = 'Email Address';
+
+        // Create the input
+        emailField = document.createElement('input');
+        emailField.type = 'email';
+        emailField.id = 'edit-customer-email';
+        emailField.name = 'edit_customer_email';
+        emailField.value = details.email;
+
+        // Add elements to the DOM
+        emailGroup.appendChild(emailLabel);
+        emailGroup.appendChild(emailField);
+
+        // Find position to insert (after name field, before phone if exists)
+        const nameField = editForm.querySelector('#edit-customer-name');
+        if (nameField) {
+          const nameGroup = nameField.closest('.form-group');
+          if (nameGroup) {
+            nameGroup.parentNode.insertBefore(emailGroup, nameGroup.nextSibling);
+          } else {
+            // Just append if we can't find the right position
+            editForm.querySelector('h4').after(emailGroup);
+          }
+        }
+      } else if (emailField && hasEmail) {
+        // If field exists, ensure value is up to date
+        emailField.value = details.email;
+      }
+    }
+
+    // Update data-has-email attribute on the main form
+    const newEstimateForm = document.querySelector('#new-estimate-form');
+    if (newEstimateForm) {
+      newEstimateForm.setAttribute('data-has-email', hasEmail ? 'true' : 'false');
+    }
   }
 
   /**
@@ -162,8 +242,6 @@ class CustomerDetailsManager {
    * Handle save button click
    * @param {Event} e - Click event
    */
-  // In CustomerDetailsManager.js, modify the handleSaveClick method:
-
   handleSaveClick(e) {
     e.preventDefault();
     e.stopPropagation();
@@ -175,27 +253,112 @@ class CustomerDetailsManager {
     saveButton.textContent = this.config.i18n.saving || 'Saving...';
     saveButton.disabled = true;
 
-    // Get updated details
+    // Get updated details - collect all available fields
     const updatedDetails = {
       name: document.getElementById('edit-customer-name')?.value || '',
-      email: document.getElementById('edit-customer-email')?.value || '',
-      phone: document.getElementById('edit-customer-phone')?.value || '',
       postcode: document.getElementById('edit-customer-postcode')?.value || ''
     };
 
-    // Use the dataService to make the AJAX request - pass the details object properly
-    this.dataService.request('update_customer_details', {
-      details: JSON.stringify(updatedDetails) // Stringify the details object
-    })
-      .then(data => {
-        // Rest of the function remains the same
+    // Add email and phone if they exist in the form
+    const emailField = document.getElementById('edit-customer-email');
+    if (emailField) {
+      updatedDetails.email = emailField.value || '';
+    }
+
+    const phoneField = document.getElementById('edit-customer-phone');
+    if (phoneField) {
+      updatedDetails.phone = phoneField.value || '';
+    }
+
+    // Use the dataService to make the AJAX request or fall back to direct fetch
+    if (this.dataService && typeof this.dataService.request === 'function') {
+      this.dataService.request('update_customer_details', {
+        details: JSON.stringify(updatedDetails)
       })
-      .catch(error => {
-        // Error handling
+        .then(data => {
+          this.handleSaveSuccess(data, updatedDetails);
+          saveButton.textContent = originalText;
+          saveButton.disabled = false;
+        })
+        .catch(error => {
+          this.handleSaveError(error);
+          saveButton.textContent = originalText;
+          saveButton.disabled = false;
+        });
+    } else {
+      // Fallback to direct fetch if dataService not available
+      fetch(window.productEstimatorVars?.ajax_url || '/wp-admin/admin-ajax.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          action: 'update_customer_details',
+          nonce: window.productEstimatorVars?.nonce || '',
+          details: JSON.stringify(updatedDetails)
+        })
       })
-      .finally(() => {
-        // Reset button state
-      });
+        .then(response => response.json())
+        .then(response => {
+          if (response.success) {
+            this.handleSaveSuccess(response.data, updatedDetails);
+          } else {
+            this.handleSaveError(new Error(response.data?.message || 'Error updating details'));
+          }
+        })
+        .catch(error => {
+          this.handleSaveError(error);
+        })
+        .finally(() => {
+          saveButton.textContent = originalText;
+          saveButton.disabled = false;
+        });
+    }
+  }
+
+  /**
+   * Handle successful save response
+   * @param {Object} data - Response data
+   * @param {Object} updatedDetails - The details that were updated
+   */
+  handleSaveSuccess(data, updatedDetails) {
+    // Update the displayed customer details
+    this.updateDisplayedDetails(data.details || updatedDetails);
+
+    // Check if email was added and update forms
+    this.checkAndUpdateEmailField(data.details || updatedDetails);
+
+    // Show success message
+    this.showMessage('success', data.message || 'Details updated successfully!');
+
+    // Hide edit form, show details view
+    const detailsContainer = document.querySelector(this.config.selectors.detailsContainer);
+    const detailsHeader = document.querySelector(this.config.selectors.detailsHeader);
+    const editForm = document.querySelector(this.config.selectors.editForm);
+
+    if (editForm) editForm.style.display = 'none';
+    if (detailsContainer) detailsContainer.style.display = 'block';
+    if (detailsHeader) detailsHeader.style.display = 'flex';
+
+    // Dispatch event to notify other components of the update
+    const event = new CustomEvent('customer_details_updated', {
+      bubbles: true,
+      detail: {
+        details: data.details || updatedDetails
+      }
+    });
+    document.dispatchEvent(event);
+
+    this.log('Customer details updated successfully', data);
+  }
+
+  /**
+   * Handle save error
+   * @param {Error} error - The error that occurred
+   */
+  handleSaveError(error) {
+    this.showMessage('error', error.message || 'Error updating details. Please try again.');
+    this.log('Error saving customer details:', error);
   }
 
   /**
@@ -235,30 +398,88 @@ class CustomerDetailsManager {
       confirmationContainer.classList.add('loading');
     }
 
-    // Use the dataService to make the AJAX request
-    this.dataService.request('delete_customer_details')
-      .then(data => {
-        // Replace the details container with the new form
-        if (confirmationContainer && data.html) {
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = data.html;
-          confirmationContainer.parentNode.replaceChild(tempDiv.firstElementChild, confirmationContainer);
-        }
-
-        // Show success message
-        this.showMessage('success', data.message || 'Details deleted successfully!');
-
-        this.log('Customer details deleted');
+    // Use the dataService to make the AJAX request if available
+    if (this.dataService && typeof this.dataService.request === 'function') {
+      this.dataService.request('delete_customer_details')
+        .then(data => {
+          this.handleDeleteSuccess(data, confirmationContainer);
+        })
+        .catch(error => {
+          this.handleDeleteError(error, confirmationContainer);
+        });
+    } else {
+      // Fallback to direct fetch
+      fetch(window.productEstimatorVars?.ajax_url || '/wp-admin/admin-ajax.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          action: 'delete_customer_details',
+          nonce: window.productEstimatorVars?.nonce || ''
+        })
       })
-      .catch(error => {
-        this.showMessage('error', error.message || 'Error deleting details!');
-        this.log('Error deleting details:', error);
+        .then(response => response.json())
+        .then(response => {
+          if (response.success) {
+            this.handleDeleteSuccess(response.data, confirmationContainer);
+          } else {
+            this.handleDeleteError(
+              new Error(response.data?.message || 'Error deleting details'),
+              confirmationContainer
+            );
+          }
+        })
+        .catch(error => {
+          this.handleDeleteError(error, confirmationContainer);
+        });
+    }
+  }
 
-        // Remove loading class
-        if (confirmationContainer) {
-          confirmationContainer.classList.remove('loading');
-        }
-      });
+  /**
+   * Handle successful delete response
+   * @param {Object} data - Response data
+   * @param {HTMLElement} confirmationContainer - The container element
+   */
+  handleDeleteSuccess(data, confirmationContainer) {
+    // Replace the details container with the new form
+    if (confirmationContainer && data.html) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = data.html;
+      confirmationContainer.parentNode.replaceChild(tempDiv.firstElementChild, confirmationContainer);
+    }
+
+    // Show success message
+    this.showMessage('success', data.message || 'Details deleted successfully!');
+
+    // Update data-has-email attribute on the main form
+    const newEstimateForm = document.querySelector('#new-estimate-form');
+    if (newEstimateForm) {
+      newEstimateForm.setAttribute('data-has-email', 'false');
+    }
+
+    // Dispatch event to notify other components
+    const event = new CustomEvent('customer_details_deleted', {
+      bubbles: true
+    });
+    document.dispatchEvent(event);
+
+    this.log('Customer details deleted');
+  }
+
+  /**
+   * Handle delete error
+   * @param {Error} error - The error that occurred
+   * @param {HTMLElement} confirmationContainer - The container element
+   */
+  handleDeleteError(error, confirmationContainer) {
+    this.showMessage('error', error.message || 'Error deleting details!');
+    this.log('Error deleting details:', error);
+
+    // Remove loading class
+    if (confirmationContainer) {
+      confirmationContainer.classList.remove('loading');
+    }
   }
 
   /**
@@ -270,9 +491,14 @@ class CustomerDetailsManager {
     if (!detailsContainer) return;
 
     // Build HTML
-    let detailsHtml = `<p><strong>${details.name}</strong><br>
-      ${details.email}<br>`;
+    let detailsHtml = `<p><strong>${details.name}</strong><br>`;
 
+    // Only include email if it exists
+    if (details.email) {
+      detailsHtml += `${details.email}<br>`;
+    }
+
+    // Only include phone if it exists
     if (details.phone) {
       detailsHtml += `${details.phone}<br>`;
     }

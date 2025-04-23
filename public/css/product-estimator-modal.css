@@ -1578,3 +1578,103 @@ body.modal-open {
     display: none;
   }
 }
+
+
+/**
+ * Styles for the email prompt modal
+ * Add these to your plugin's CSS file
+ */
+
+.email-prompt-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999999;
+}
+
+.email-prompt-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.email-prompt-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 5px;
+  padding: 20px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.email-prompt-header {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.email-prompt-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.email-prompt-body {
+  margin-bottom: 20px;
+}
+
+.email-prompt-body .form-group {
+  margin-bottom: 15px;
+}
+
+.email-prompt-body label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.email-prompt-body input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.email-validation-message {
+  color: #d63638;
+  font-size: 14px;
+  margin-top: 5px;
+  min-height: 20px;
+}
+
+.email-prompt-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.email-prompt-footer button {
+  padding: 8px 15px;
+}
+
+.submit-email-btn {
+  background-color: #007cba;
+  color: white;
+  border: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .email-prompt-container {
+    width: 95%;
+    padding: 15px;
+  }
+}

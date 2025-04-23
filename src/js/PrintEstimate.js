@@ -1,7 +1,7 @@
 /**
  * PrintEstimate.js
  *
- * Handles the print estimate functionality for the Product Estimator.
+ * Handles the print estimate and email copy functionality for the Product Estimator.
  */
 
 class PrintEstimate {
@@ -64,17 +64,17 @@ class PrintEstimate {
       }
 
       // Request contact button
-      const requestCopyButton = e.target.closest(this.config.selectors.requestCopyButton);
-      if (requestCopyButton && !this.processing) {
-        e.preventDefault();
-        this.handleRequestCopy(requestCopyButton);
-      }
-
-      // Request copy button
       const requestContactButton = e.target.closest(this.config.selectors.requestContactButton);
       if (requestContactButton && !this.processing) {
         e.preventDefault();
         this.handleRequestContact(requestContactButton);
+      }
+
+      // Request copy button
+      const requestCopyButton = e.target.closest(this.config.selectors.requestCopyButton);
+      if (requestCopyButton && !this.processing) {
+        e.preventDefault();
+        this.handleRequestCopy(requestCopyButton);
       }
 
       // Schedule Designer button
@@ -119,7 +119,7 @@ class PrintEstimate {
           this.processing = false;
 
           // Show prompt to collect email
-          this.showEmailPrompt(estimateId, button);
+          this.showEmailPrompt(estimateId, button, 'print');
         }
       })
       .catch(error => {
@@ -127,6 +127,101 @@ class PrintEstimate {
         this.setButtonLoading(button, false);
         this.processing = false;
         this.showError('Error checking customer details. Please try again.');
+      });
+  }
+
+  /**
+   * Handle request copy button click - enhanced implementation
+   * Follows the same flow as the print estimate but emails instead of displaying
+   * @param {HTMLElement} button - The clicked button
+   */
+  handleRequestCopy(button) {
+    const estimateId = button.dataset.estimateId;
+
+    // Check if estimateId is not null or undefined (allowing "0" as valid)
+    if (estimateId === undefined || estimateId === null) {
+      this.showError('No estimate ID provided');
+      return;
+    }
+
+    this.log(`Request copy requested for estimate ID: ${estimateId} (type: ${typeof estimateId})`);
+
+    // Set processing state
+    this.processing = true;
+    this.setButtonLoading(button, true);
+
+    // First check if customer has an email address via AJAX
+    this.checkCustomerEmail(estimateId)
+      .then(hasEmail => {
+        if (hasEmail) {
+          // Customer has email, proceed with sending the estimate copy
+          this.sendEstimateCopy(estimateId, button);
+        } else {
+          // Reset button state as we'll show a prompt
+          this.setButtonLoading(button, false);
+          this.processing = false;
+
+          // Show prompt to collect email
+          this.showEmailPrompt(estimateId, button, 'copy');
+        }
+      })
+      .catch(error => {
+        this.log('Error checking customer email:', error);
+        this.setButtonLoading(button, false);
+        this.processing = false;
+        this.showError('Error checking customer details. Please try again.');
+      });
+  }
+
+  /**
+   * Send a copy of the estimate via email
+   * @param {string} estimateId - The estimate ID
+   * @param {HTMLElement} button - The button element
+   */
+  sendEstimateCopy(estimateId, button) {
+    fetch(productEstimatorVars.ajax_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        action: 'request_copy_estimate',
+        nonce: productEstimatorVars.nonce,
+        estimate_id: estimateId
+      })
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Network response error: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(response => {
+        if (response.success) {
+          this.log('Estimate copy sent successfully', response.data);
+          this.showSuccess(response.data.message || 'Estimate sent to your email');
+        } else {
+          // Special handling for no_email error code
+          if (response.data && response.data.code === 'no_email') {
+            // This shouldn't happen as we already checked, but just in case
+            this.setButtonLoading(button, false);
+            this.processing = false;
+            this.showEmailPrompt(estimateId, button, 'copy');
+            return;
+          }
+
+          this.log('Error sending estimate copy', response.data);
+          this.showError(response.data.message || 'Error sending estimate. Please try again.');
+        }
+      })
+      .catch(error => {
+        this.log('AJAX error', error);
+        this.showError('Connection error. Please try again.');
+      })
+      .finally(() => {
+        // Reset processing state
+        this.processing = false;
+        this.setButtonLoading(button, false);
       });
   }
 
@@ -181,11 +276,12 @@ class PrintEstimate {
   }
 
   /**
-   * Show a modal prompt to collect customer email
+   * Modified showEmailPrompt to handle both print and copy operations
    * @param {string} estimateId - The estimate ID
    * @param {HTMLElement} button - The button element
+   * @param {string} action - The action type ('print' or 'copy')
    */
-  showEmailPrompt(estimateId, button) {
+  showEmailPrompt(estimateId, button, action = 'print') {
     // Get customer details - use stored details from checkCustomerEmail if available
     const customerDetails = this._customerDetails || {};
 
@@ -197,7 +293,7 @@ class PrintEstimate {
       <h3>${productEstimatorVars.i18n?.enter_email || 'Please Enter Your Email'}</h3>
     </div>
     <div class="email-prompt-body">
-      <p>${productEstimatorVars.i18n?.email_required_message || 'An email address is required to print your estimate.'}</p>
+      <p>${productEstimatorVars.i18n?.email_required_message || 'An email address is required to ' + (action === 'copy' ? 'receive' : 'print') + ' your estimate.'}</p>
       <div class="form-group">
         <label for="customer-email-input">${productEstimatorVars.i18n?.email_address || 'Email Address'}:</label>
         <input type="email" id="customer-email-input" required
@@ -265,8 +361,13 @@ class PrintEstimate {
           // Dispatch an event to notify the rest of the application about the email update
           this.notifyEmailUpdated(updatedDetails);
 
-          // Proceed with PDF generation
-          this.generatePdf(estimateId, button);
+          // Proceed with the appropriate action
+          if (action === 'copy') {
+            this.sendEstimateCopy(estimateId, button);
+          } else {
+            // Default to PDF generation
+            this.generatePdf(estimateId, button);
+          }
         })
         .catch(error => {
           this.log('Error updating customer email:', error);
@@ -394,28 +495,6 @@ class PrintEstimate {
       // Now show the request call form/modal
       // This would be implemented based on your specific UI requirements
       alert('Request contact feature will be implemented here');
-    });
-  }
-
-  /**
-   * Handle request call button click
-   * @param {HTMLElement} button - The clicked button
-   */
-  handleRequestCopy(button) {
-    const estimateId = button.dataset.estimateId;
-
-    if (!estimateId) {
-      this.showError('No estimate ID provided');
-      return;
-    }
-
-    this.log(`Request copy requested for estimate ID: ${estimateId}`);
-
-    // First, ensure the estimate is saved in the database
-    this.saveEstimateIfNeeded(estimateId, () => {
-      // Now show the request call form/modal
-      // This would be implemented based on your specific UI requirements
-      alert('Request copy feature will be implemented here');
     });
   }
 

@@ -2418,143 +2418,18 @@ class AjaxHandler {
     }
 
     /**
-     * Handle request copy functionality
-     * Sends an email with the PDF estimate attached
+     * Forward request_copy_estimate AJAX request to EstimateHandler
      */
     public function request_copy_estimate() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        // Get the estimate ID
-        $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
-
-        if (!isset($estimate_id) || $estimate_id === '') {
+        // Check if EstimateHandler is available
+        if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\EstimateHandler')) {
+            $handler = new \RuDigital\ProductEstimator\Includes\EstimateHandler();
+            $handler->request_copy_estimate();
+        } else {
             wp_send_json_error([
-                'message' => __('Estimate ID is required', 'product-estimator')
-            ]);
-            return;
-        }
-
-        try {
-            // Get the estimate
-            $estimate = $this->session->getEstimate($estimate_id);
-            if (!$estimate) {
-                wp_send_json_error([
-                    'message' => __('Estimate not found', 'product-estimator')
-                ]);
-                return;
-            }
-
-            // Check if customer email exists
-            $customer_email = '';
-
-            // First check in estimate's customer details
-            if (isset($estimate['customer_details']['email']) && !empty($estimate['customer_details']['email'])) {
-                $customer_email = sanitize_email($estimate['customer_details']['email']);
-            } else {
-                // If not in estimate, check session's customer details
-                $customer_details = $this->session->getCustomerDetails();
-                if (isset($customer_details['email']) && !empty($customer_details['email'])) {
-                    $customer_email = sanitize_email($customer_details['email']);
-                }
-            }
-
-            // If no email found, return error (the frontend will handle prompting for email)
-            if (empty($customer_email)) {
-                wp_send_json_error([
-                    'message' => __('No customer email found', 'product-estimator'),
-                    'code' => 'no_email'
-                ]);
-                return;
-            }
-
-            // Generate PDF
-            if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\EstimateHandler')) {
-                $handler = new \RuDigital\ProductEstimator\Includes\EstimateHandler();
-                $pdf_result = $handler->generate_pdf($estimate_id);
-
-                if (!$pdf_result || !isset($pdf_result['pdf_path'])) {
-                    wp_send_json_error([
-                        'message' => __('Error generating PDF for email', 'product-estimator')
-                    ]);
-                    return;
-                }
-
-                // PDF successfully generated, now send email
-                $this->send_estimate_email($estimate, $customer_email, $pdf_result['pdf_path']);
-
-                wp_send_json_success([
-                    'message' => __('Estimate has been emailed to', 'product-estimator') . ' ' . $customer_email
-                ]);
-            } else {
-                wp_send_json_error([
-                    'message' => __('PDF generation functionality is unavailable', 'product-estimator')
-                ]);
-            }
-        } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Error in request_copy_estimate: ' . $e->getMessage());
-            }
-
-            wp_send_json_error([
-                'message' => __('An error occurred while processing your request', 'product-estimator'),
-                'error' => $e->getMessage()
+                'message' => __('Request Copy functionality is unavailable', 'product-estimator')
             ]);
         }
     }
-
-    /**
-     * Send email with PDF estimate attachment
-     *
-     * @param array $estimate The estimate data
-     * @param string $email The recipient email
-     * @param string $pdf_path Path to the PDF file
-     * @return bool Success or failure
-     */
-    private function send_estimate_email($estimate, $email, $pdf_path) {
-        // Get site info for the email
-        $site_name = get_bloginfo('name');
-        $site_email = get_option('admin_email');
-
-        // Build email content
-        $subject = sprintf(__('%s: Your Requested Estimate', 'product-estimator'), $site_name);
-
-        $customer_name = isset($estimate['customer_details']['name']) ?
-            $estimate['customer_details']['name'] : __('Customer', 'product-estimator');
-
-        $estimate_name = isset($estimate['name']) ?
-            $estimate['name'] : __('Untitled Estimate', 'product-estimator');
-
-        // Build email body
-        $body = sprintf(
-            __('Hello %s,', 'product-estimator') . "\n\n" .
-            __('Thank you for your interest in our products. As requested, please find attached your estimate "%s".', 'product-estimator') . "\n\n" .
-            __('If you have any questions or would like to discuss this estimate further, please don\'t hesitate to contact us.', 'product-estimator') . "\n\n" .
-            __('Best regards,', 'product-estimator') . "\n" .
-            '%s',
-            $customer_name,
-            $estimate_name,
-            $site_name
-        );
-
-        // Email headers
-        $headers = [
-            'Content-Type: text/plain; charset=UTF-8',
-            'From: ' . $site_name . ' <' . $site_email . '>'
-        ];
-
-        // Attach PDF file
-        $attachments = [$pdf_path];
-
-        // Send email
-        $sent = wp_mail($email, $subject, $body, $headers, $attachments);
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Sent estimate email to ' . $email . ': ' . ($sent ? 'Success' : 'Failed'));
-        }
-
-        return $sent;
-    }
-
 }
 

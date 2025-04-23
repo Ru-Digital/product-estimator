@@ -5,7 +5,6 @@ use RuDigital\ProductEstimator\Includes\Models\EstimateModel;
 use RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator;
 use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
 
-
 /**
  * Estimate Handler
  *
@@ -17,6 +16,7 @@ use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
  */
 class EstimateHandler {
     use EstimateDbHandler;
+
     /**
      * @var SessionHandler Session handler instance
      */
@@ -43,8 +43,14 @@ class EstimateHandler {
         add_action('wp_ajax_print_estimate', array($this, 'handle_print_estimate'));
         add_action('wp_ajax_nopriv_print_estimate', array($this, 'handle_print_estimate'));
 
+        add_action('wp_ajax_request_copy_estimate', array($this, 'request_copy_estimate'));
+        add_action('wp_ajax_nopriv_request_copy_estimate', array($this, 'request_copy_estimate'));
+
         // Register event handlers for estimate buttons
         add_action('wp_footer', array($this, 'register_estimate_buttons_handlers'));
+
+        // Add PDF cleanup hooks
+        $this->schedule_pdf_cleanup();
     }
 
     /**
@@ -135,172 +141,27 @@ class EstimateHandler {
         $session_estimate_id = sanitize_text_field($_POST['estimate_id']);
 
         try {
-            // Get the estimate from session
-            $estimate = $this->session->getEstimate($session_estimate_id);
+            // Generate PDF for the estimate
+            $result = $this->generate_pdf($session_estimate_id);
 
-            if (!$estimate) {
-                wp_send_json_error([
-                    'message' => __('Estimate not found in session', 'product-estimator')
-                ]);
-                return;
-            }
-
-            $db_id = $this->getEstimateDbId($estimate);
-
-
-            // Check if this estimate is already saved in the database
-            if (!$db_id) {
-                // Verify it still exists in the database
-                // Need to store it first
-                global $wpdb;
-                $table_name = $wpdb->prefix . 'product_estimator_estimates';
-
-                // Store customer details
-                $customer_name = isset($estimate['customer_details']['name']) ?
-                    sanitize_text_field($estimate['customer_details']['name']) : '';
-                $customer_email = isset($estimate['customer_details']['email']) ?
-                    sanitize_email($estimate['customer_details']['email']) : '';
-                $customer_phone = isset($estimate['customer_details']['phone']) ?
-                    sanitize_text_field($estimate['customer_details']['phone']) : '';
-                $customer_postcode = isset($estimate['customer_details']['postcode']) ?
-                    sanitize_text_field($estimate['customer_details']['postcode']) : '';
-
-                $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
-
-                // Insert into database
-                $result = $wpdb->insert(
-                    $table_name,
-                    [
-                        'name' => $customer_name,
-                        'email' => $customer_email,
-                        'phone_number' => $customer_phone,
-                        'postcode' => $customer_postcode,
-                        'total_min' => isset($estimate['min_total']) ? floatval($estimate['min_total']) : 0,
-                        'total_max' => isset($estimate['max_total']) ? floatval($estimate['max_total']) : 0,
-                        'status' => 'saved',
-                        'notes' => '',
-                        'markup' => $default_markup,
-                        'estimate_data' => json_encode($estimate)
-                    ],
-                    [
-                        '%s', // name
-                        '%s', // email
-                        '%s', // phone_number
-                        '%s', // postcode
-                        '%f', // total_min
-                        '%f', // total_max
-                        '%s', // status
-                        '%s', // notes
-                        '%f', // markup
-                        '%s'  // estimate_data
-                    ]
-                );
-
-                if ($wpdb->last_error) {
-                    throw new \Exception($wpdb->last_error);
-                }
-
-                $db_id = $wpdb->insert_id;
-
-                // Store the db_id in the session estimate data
-                $this->setEstimateDbId($session_estimate_id, $db_id);
-                } else {
-                    // Update the existing record
-                    global $wpdb;
-                    $table_name = $wpdb->prefix . 'product_estimator_estimates';
-
-                    $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
-
-                    // Update the existing record with the latest data
-                    $wpdb->update(
-                        $table_name,
-                        [
-                            'name' => isset($estimate['customer_details']['name']) ?
-                                sanitize_text_field($estimate['customer_details']['name']) : '',
-                            'email' => isset($estimate['customer_details']['email']) ?
-                                sanitize_email($estimate['customer_details']['email']) : '',
-                            'phone_number' => isset($estimate['customer_details']['phone']) ?
-                                sanitize_text_field($estimate['customer_details']['phone']) : '',
-                            'postcode' => isset($estimate['customer_details']['postcode']) ?
-                                sanitize_text_field($estimate['customer_details']['postcode']) : '',
-                            'total_min' => isset($estimate['min_total']) ? floatval($estimate['min_total']) : 0,
-                            'total_max' => isset($estimate['max_total']) ? floatval($estimate['max_total']) : 0,
-                            'markup' => $default_markup,
-                            'estimate_data' => json_encode($estimate),
-                            'updated_at' => current_time('mysql')
-                        ],
-                        ['id' => $db_id],
-                        [
-                            '%s', // name
-                            '%s', // email
-                            '%s', // phone_number
-                            '%s', // postcode
-                            '%f', // total_min
-                            '%f', // total_max
-                            '%f', // markup
-                            '%s', // estimate_data
-                            '%s'  // updated_at
-                        ],
-                        ['%d'] // id
-                    );
-                }
-
-
-            // Update session with the DB ID reference
-            $estimate['db_id'] = $db_id;
-            $_SESSION['product_estimator']['estimates'][$session_estimate_id]['db_id'] = $db_id;
-
-            // Generate PDF using the stored estimate
-            $pdf_generator = $this->get_pdf_generator();
-            $pdf_content = $pdf_generator->generate_pdf($estimate);
-
-            if (!$pdf_content) {
+            if (!$result) {
                 wp_send_json_error([
                     'message' => __('Error generating PDF', 'product-estimator')
                 ]);
                 return;
             }
 
-            // Create a temporary file
-            $upload_dir = wp_upload_dir();
-            $pdf_dir = $upload_dir['basedir'] . '/product-estimator-pdfs';
-
-            // Create directory if it doesn't exist
-            if (!file_exists($pdf_dir)) {
-                wp_mkdir_p($pdf_dir);
-
-                // Create an index.php file to prevent directory listing
-                file_put_contents($pdf_dir . '/index.php', '<?php // Silence is golden');
-
-                // Create an .htaccess file for additional security
-                file_put_contents($pdf_dir . '/.htaccess', 'Options -Indexes');
-            }
-
-            // Generate a unique filename
-            $filename = 'estimate-' . $db_id . '-' . uniqid() . '.pdf';
-            $pdf_path = $pdf_dir . '/' . $filename;
-
-            // Write the PDF content to the file
-            file_put_contents($pdf_path, $pdf_content);
-
-            // Get the URL for the PDF
-            $pdf_url = $upload_dir['baseurl'] . '/product-estimator-pdfs/' . $filename;
-
-            // Return success with the PDF URL
+            // Return success response with PDF URL and other details
             wp_send_json_success([
                 'message' => __('PDF generated successfully', 'product-estimator'),
-                'pdf_url' => $pdf_url,
-                'db_id' => $db_id,
+                'pdf_url' => $result['pdf_url'],
+                'db_id' => $result['db_id'],
                 'session_id' => $session_estimate_id,
-                'updated' => isset($estimate['db_id']) // Indicate if this was an update
+                'updated' => $result['updated']
             ]);
 
         } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Error in handle_print_estimate: ' . $e->getMessage());
-                error_log('Stack trace: ' . $e->getTraceAsString());
-            }
-
+            $this->log_error('Error in handle_print_estimate', $e);
             wp_send_json_error([
                 'message' => __('An error occurred while processing your request', 'product-estimator'),
                 'error' => $e->getMessage()
@@ -309,10 +170,263 @@ class EstimateHandler {
     }
 
     /**
+     * Generate a PDF for an estimate
+     *
+     * @param string $session_estimate_id The session estimate ID
+     * @return array|false Result array with PDF details, or false on failure
+     */
+    public function generate_pdf($session_estimate_id) {
+        try {
+            // Get the estimate from session
+            $estimate = $this->session->getEstimate($session_estimate_id);
+
+            if (!$estimate) {
+                throw new \Exception(__('Estimate not found in session', 'product-estimator'));
+            }
+
+            // Store or update the estimate in the database
+            $db_id = $this->ensure_estimate_stored($estimate, $session_estimate_id);
+
+            if (!$db_id) {
+                throw new \Exception(__('Failed to store estimate in database', 'product-estimator'));
+            }
+
+            // Update session with the DB ID reference
+            $estimate['db_id'] = $db_id;
+            $_SESSION['product_estimator']['estimates'][$session_estimate_id]['db_id'] = $db_id;
+
+            // Generate PDF
+            $pdf_generator = $this->get_pdf_generator();
+            $pdf_content = $pdf_generator->generate_pdf($estimate);
+
+            if (!$pdf_content) {
+                throw new \Exception(__('Error generating PDF content', 'product-estimator'));
+            }
+
+            // Create PDF file
+            $pdf_file_data = $this->create_pdf_file($pdf_content, $db_id);
+
+            if (!$pdf_file_data) {
+                throw new \Exception(__('Error creating PDF file', 'product-estimator'));
+            }
+
+            // Return complete result
+            return [
+                'pdf_path' => $pdf_file_data['path'],
+                'pdf_url' => $pdf_file_data['url'],
+                'db_id' => $db_id,
+                'updated' => isset($estimate['db_id']),
+                'estimate_data' => $estimate
+            ];
+
+        } catch (\Exception $e) {
+            $this->log_error('Error in generate_pdf', $e);
+            return false;
+        }
+    }
+
+    /**
+     * Ensure estimate is stored in the database (create or update)
+     *
+     * @param array $estimate The estimate data
+     * @param string $session_estimate_id The session estimate ID
+     * @return int|false The database ID or false on failure
+     */
+    private function ensure_estimate_stored($estimate, $session_estimate_id) {
+        // Check if already stored
+        $db_id = $this->getEstimateDbId($estimate);
+
+        if ($db_id) {
+            // Update the existing record
+            $this->update_estimate_in_db($db_id, $estimate);
+            return $db_id;
+        } else {
+            // Store as new record
+            $db_id = $this->store_estimate_in_db($estimate);
+
+            if ($db_id) {
+                // Store the db_id in the session estimate data
+                $this->setEstimateDbId($session_estimate_id, $db_id);
+                return $db_id;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Store a new estimate in the database
+     *
+     * @param array $estimate The estimate data
+     * @return int|false The new database ID or false on failure
+     */
+    private function store_estimate_in_db($estimate) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'product_estimator_estimates';
+
+        // Extract customer details
+        $customer_name = isset($estimate['customer_details']['name']) ?
+            sanitize_text_field($estimate['customer_details']['name']) : '';
+        $customer_email = isset($estimate['customer_details']['email']) ?
+            sanitize_email($estimate['customer_details']['email']) : '';
+        $customer_phone = isset($estimate['customer_details']['phone']) ?
+            sanitize_text_field($estimate['customer_details']['phone']) : '';
+        $customer_postcode = isset($estimate['customer_details']['postcode']) ?
+            sanitize_text_field($estimate['customer_details']['postcode']) : '';
+
+        $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
+
+        // Insert into database
+        $result = $wpdb->insert(
+            $table_name,
+            [
+                'name' => $customer_name,
+                'email' => $customer_email,
+                'phone_number' => $customer_phone,
+                'postcode' => $customer_postcode,
+                'total_min' => isset($estimate['min_total']) ? floatval($estimate['min_total']) : 0,
+                'total_max' => isset($estimate['max_total']) ? floatval($estimate['max_total']) : 0,
+                'status' => 'saved',
+                'notes' => '',
+                'markup' => $default_markup,
+                'estimate_data' => json_encode($estimate),
+                'created_at' => current_time('mysql')
+            ],
+            [
+                '%s', // name
+                '%s', // email
+                '%s', // phone_number
+                '%s', // postcode
+                '%f', // total_min
+                '%f', // total_max
+                '%s', // status
+                '%s', // notes
+                '%f', // markup
+                '%s', // estimate_data
+                '%s'  // created_at
+            ]
+        );
+
+        if ($wpdb->last_error) {
+            $this->log_error('Database error in store_estimate_in_db: ' . $wpdb->last_error);
+            return false;
+        }
+
+        return $wpdb->insert_id;
+    }
+
+    /**
+     * Update an existing estimate in the database
+     *
+     * @param int $db_id The database ID
+     * @param array $estimate The estimate data
+     * @return bool Success or failure
+     */
+    private function update_estimate_in_db($db_id, $estimate) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'product_estimator_estimates';
+
+        $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
+
+        // Update the existing record with the latest data
+        $result = $wpdb->update(
+            $table_name,
+            [
+                'name' => isset($estimate['customer_details']['name']) ?
+                    sanitize_text_field($estimate['customer_details']['name']) : '',
+                'email' => isset($estimate['customer_details']['email']) ?
+                    sanitize_email($estimate['customer_details']['email']) : '',
+                'phone_number' => isset($estimate['customer_details']['phone']) ?
+                    sanitize_text_field($estimate['customer_details']['phone']) : '',
+                'postcode' => isset($estimate['customer_details']['postcode']) ?
+                    sanitize_text_field($estimate['customer_details']['postcode']) : '',
+                'total_min' => isset($estimate['min_total']) ? floatval($estimate['min_total']) : 0,
+                'total_max' => isset($estimate['max_total']) ? floatval($estimate['max_total']) : 0,
+                'markup' => $default_markup,
+                'estimate_data' => json_encode($estimate),
+                'updated_at' => current_time('mysql')
+            ],
+            ['id' => $db_id],
+            [
+                '%s', // name
+                '%s', // email
+                '%s', // phone_number
+                '%s', // postcode
+                '%f', // total_min
+                '%f', // total_max
+                '%f', // markup
+                '%s', // estimate_data
+                '%s'  // updated_at
+            ],
+            ['%d'] // id
+        );
+
+        return $result !== false;
+    }
+
+    /**
+     * Create a PDF file in the uploads directory
+     *
+     * @param string $pdf_content The PDF content
+     * @param int $db_id The estimate database ID
+     * @return array|false Array with file path and URL, or false on failure
+     */
+    private function create_pdf_file($pdf_content, $db_id) {
+        // Create a temporary file
+        $upload_dir = wp_upload_dir();
+        $pdf_dir = $upload_dir['basedir'] . '/product-estimator-pdfs';
+
+        // Ensure PDF directory exists
+        $this->ensure_pdf_directory($pdf_dir);
+
+        // Generate a unique filename
+        $filename = 'estimate-' . $db_id . '-' . uniqid() . '.pdf';
+        $pdf_path = $pdf_dir . '/' . $filename;
+
+        // Write the PDF content to the file
+        $result = file_put_contents($pdf_path, $pdf_content);
+
+        if ($result === false) {
+            return false;
+        }
+
+        // Get the URL for the PDF
+        $pdf_url = $upload_dir['baseurl'] . '/product-estimator-pdfs/' . $filename;
+
+        return [
+            'path' => $pdf_path,
+            'url' => $pdf_url
+        ];
+    }
+
+    /**
+     * Ensure the PDF directory exists and has proper security files
+     *
+     * @param string $pdf_dir Path to the PDF directory
+     * @return bool Success or failure
+     */
+    private function ensure_pdf_directory($pdf_dir) {
+        // Create directory if it doesn't exist
+        if (!file_exists($pdf_dir)) {
+            if (!wp_mkdir_p($pdf_dir)) {
+                return false;
+            }
+
+            // Create an index.php file to prevent directory listing
+            file_put_contents($pdf_dir . '/index.php', '<?php // Silence is golden');
+
+            // Create an .htaccess file for additional security
+            file_put_contents($pdf_dir . '/.htaccess', 'Options -Indexes');
+        }
+
+        return true;
+    }
+
+    /**
      * Get PDF generator instance
      * This helper method handles the case where the PDFGenerator class might not be available
      *
-     * @return PDFGenerator|null
+     * @return PDFGenerator|object PDF generator instance
      */
     private function get_pdf_generator() {
         // Check if PDFGenerator class exists
@@ -321,6 +435,7 @@ class EstimateHandler {
             $pdf_generator_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/utilities/class-pdf-generator.php';
             if (file_exists($pdf_generator_path)) {
                 require_once $pdf_generator_path;
+                return new PDFGenerator();
             } else {
                 // Create a simple fallback generator
                 return $this->get_fallback_pdf_generator();
@@ -329,6 +444,154 @@ class EstimateHandler {
 
         // Return a new instance
         return new PDFGenerator();
+    }
+
+    /**
+     * Handle request copy functionality
+     * Sends an email with the PDF estimate attached
+     */
+    public function request_copy_estimate() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get the estimate ID
+        $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
+
+        if (!isset($estimate_id) || $estimate_id === '') {
+            wp_send_json_error([
+                'message' => __('Estimate ID is required', 'product-estimator')
+            ]);
+            return;
+        }
+
+        try {
+            // Get the estimate
+            $estimate = $this->session->getEstimate($estimate_id);
+            if (!$estimate) {
+                wp_send_json_error([
+                    'message' => __('Estimate not found', 'product-estimator')
+                ]);
+                return;
+            }
+
+            // Check if customer has a valid email address
+            $customer_email = $this->get_customer_email($estimate);
+
+            // If no email found, return error (the frontend will handle prompting for email)
+            if (empty($customer_email)) {
+                wp_send_json_error([
+                    'message' => __('No customer email found', 'product-estimator'),
+                    'code' => 'no_email'
+                ]);
+                return;
+            }
+
+            // Generate PDF
+            $pdf_result = $this->generate_pdf($estimate_id);
+
+            if (!$pdf_result || !isset($pdf_result['pdf_path'])) {
+                wp_send_json_error([
+                    'message' => __('Error generating PDF for email', 'product-estimator')
+                ]);
+                return;
+            }
+
+            // PDF successfully generated, now send email
+            $email_sent = $this->send_estimate_email($estimate, $customer_email, $pdf_result['pdf_path']);
+
+            if (!$email_sent) {
+                wp_send_json_error([
+                    'message' => __('Error sending email', 'product-estimator')
+                ]);
+                return;
+            }
+
+            wp_send_json_success([
+                'message' => __('Estimate has been emailed to', 'product-estimator') . ' ' . $customer_email,
+                'email' => $customer_email // Add email to response for confirmation dialog
+            ]);
+
+        } catch (\Exception $e) {
+            $this->log_error('Error in request_copy_estimate', $e);
+            wp_send_json_error([
+                'message' => __('An error occurred while processing your request', 'product-estimator'),
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get customer email from estimate or session
+     *
+     * @param array $estimate The estimate data
+     * @return string The customer email or empty string if not found
+     */
+    private function get_customer_email($estimate) {
+        $customer_email = '';
+
+        // First check in estimate's customer details
+        if (isset($estimate['customer_details']['email']) && !empty($estimate['customer_details']['email'])) {
+            $customer_email = sanitize_email($estimate['customer_details']['email']);
+        } else {
+            // If not in estimate, check session's customer details
+            $customer_details = $this->session->getCustomerDetails();
+            if (isset($customer_details['email']) && !empty($customer_details['email'])) {
+                $customer_email = sanitize_email($customer_details['email']);
+            }
+        }
+
+        return $customer_email;
+    }
+
+    /**
+     * Send email with PDF estimate attachment
+     *
+     * @param array $estimate The estimate data
+     * @param string $email The recipient email
+     * @param string $pdf_path Path to the PDF file
+     * @return bool Success or failure
+     */
+    private function send_estimate_email($estimate, $email, $pdf_path) {
+        // Get site info for the email
+        $site_name = get_bloginfo('name');
+        $site_email = get_option('admin_email');
+
+        // Build email content
+        $subject = sprintf(__('%s: Your Requested Estimate', 'product-estimator'), $site_name);
+
+        $customer_name = isset($estimate['customer_details']['name']) ?
+            $estimate['customer_details']['name'] : __('Customer', 'product-estimator');
+
+        $estimate_name = isset($estimate['name']) ?
+            $estimate['name'] : __('Untitled Estimate', 'product-estimator');
+
+        // Build email body
+        $body = sprintf(
+            __('Hello %s,', 'product-estimator') . "\n\n" .
+            __('Thank you for your interest in our products. As requested, please find attached your estimate "%s".', 'product-estimator') . "\n\n" .
+            __('If you have any questions or would like to discuss this estimate further, please don\'t hesitate to contact us.', 'product-estimator') . "\n\n" .
+            __('Best regards,', 'product-estimator') . "\n" .
+            '%s',
+            $customer_name,
+            $estimate_name,
+            $site_name
+        );
+
+        // Email headers
+        $headers = [
+            'Content-Type: text/plain; charset=UTF-8',
+            'From: ' . $site_name . ' <' . $site_email . '>'
+        ];
+
+        // Attach PDF file
+        $attachments = [$pdf_path];
+
+        // Send email
+        $sent = wp_mail($email, $subject, $body, $headers, $attachments);
+
+        $this->log_debug('Sent estimate email to ' . $email . ': ' . ($sent ? 'Success' : 'Failed'));
+
+        return $sent;
     }
 
     /**
@@ -494,6 +757,33 @@ class EstimateHandler {
             if ($now - filemtime($file) > 24 * 60 * 60) {
                 @unlink($file);
             }
+        }
+    }
+
+    /**
+     * Log error message and stack trace
+     *
+     * @param string $message Error message
+     * @param \Exception $exception Exception object
+     */
+    private function log_error($message, \Exception $exception = null) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log($message);
+            if ($exception) {
+                error_log($exception->getMessage());
+                error_log('Stack trace: ' . $exception->getTraceAsString());
+            }
+        }
+    }
+
+    /**
+     * Log debug message if debugging is enabled
+     *
+     * @param string $message Debug message
+     */
+    private function log_debug($message) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log($message);
         }
     }
 }

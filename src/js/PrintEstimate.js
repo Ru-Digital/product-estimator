@@ -172,7 +172,6 @@ class PrintEstimate {
         this.showError('Error checking customer details. Please try again.');
       });
   }
-
   /**
    * Send a copy of the estimate via email
    * @param {string} estimateId - The estimate ID
@@ -199,7 +198,17 @@ class PrintEstimate {
       .then(response => {
         if (response.success) {
           this.log('Estimate copy sent successfully', response.data);
-          this.showSuccess(response.data.message || 'Estimate sent to your email');
+
+          // Extract the email address from the response if available
+          let emailAddress = '';
+          if (response.data && response.data.email) {
+            emailAddress = response.data.email;
+          } else if (this._customerDetails && this._customerDetails.email) {
+            emailAddress = this._customerDetails.email;
+          }
+
+          // Show confirmation dialog instead of alert
+          this.showEmailSentConfirmation(emailAddress);
         } else {
           // Special handling for no_email error code
           if (response.data && response.data.code === 'no_email') {
@@ -224,7 +233,6 @@ class PrintEstimate {
         this.setButtonLoading(button, false);
       });
   }
-
   /**
    * Check if customer has an email address via AJAX
    * This uses an AJAX call to check the server-side session data
@@ -752,6 +760,30 @@ class PrintEstimate {
           reject(error);
         });
     });
+  }
+
+  /**
+   * Add this method to the PrintEstimate class in PrintEstimate.js
+   * This shows a confirmation dialog after email is sent
+   */
+  showEmailSentConfirmation(email) {
+    // Use the confirmation dialog if available
+    if (window.productEstimator && window.productEstimator.dialog) {
+      window.productEstimator.dialog.show({
+        title: this.config.i18n.email_sent_title || 'Estimate Sent',
+        message: (this.config.i18n.email_sent_message || 'Your estimate has been sent to {email}').replace('{email}', email),
+        type: 'success', // Using success type for styling
+        confirmText: this.config.i18n.ok || 'OK',
+        cancelText: '', // No cancel button for confirmation
+        onConfirm: () => {
+          // Nothing needed here, just dismiss the dialog
+          this.log('Email sent confirmation acknowledged');
+        }
+      });
+    } else {
+      // Fallback to alert
+      alert('Your estimate has been sent to ' + email);
+    }
   }
 
   /**

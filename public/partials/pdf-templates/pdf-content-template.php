@@ -3,9 +3,10 @@
  * PDF Content Template for Template-Based Estimate PDFs
  *
  * Streamlined, modern layout with product images and cleaner presentation
- * Using inline styles for reliable PDF rendering
+ * Using inline styles for reliable PDF rendering with direct image processing
  *
  * @var array $estimate The estimate data
+ * @var object $pdf The PDF object
  *
  * @package    Product_Estimator
  * @subpackage Product_Estimator/public/partials/pdf-templates
@@ -112,7 +113,6 @@ $text_lighter = '#888888';
                 // Now display all products in the same format
                 foreach ($all_products as $product_item):
                     $product = $product_item['product_data'];
-                error_log(print_r($product, true));
                     $is_addition = $product_item['is_addition'];
                     $parent_name = $product_item['parent_name'];
 
@@ -142,24 +142,13 @@ $text_lighter = '#888888';
                         <table width="100%" border="0" cellspacing="0" cellpadding="10">
                             <tr>
                                 <?php if (!empty($product['image'])): ?>
-
                                     <td width="70" style="vertical-align: top;">
+                                        <!-- Image placeholder that will be processed by the PDF generator -->
                                         <?php
-                                        // Proper image handling for TCPDF
-                                        $image_url = $product['image'];
-
-                                        // Check if image is a full URL or a relative path
-                                        if (filter_var($image_url, FILTER_VALIDATE_URL)) {
-                                            // For external URLs, handle with TCPDF's Image method via HTML
-                                            $image_path = $image_url;
-                                        } else {
-                                            // For relative URLs, convert to full server path
-                                            $image_path = ABSPATH . str_replace(site_url('/'), '', $image_url);
-                                        }
-
-                                        // Use HTML format that TCPDF can process
+                                        // Instead of using <img> tag, use a placeholder that will be replaced
+                                        // with a direct image insertion by the PDF generator
+                                        echo '[[IMAGE:' . esc_url($product['image']) . ':70:70]]';
                                         ?>
-                                        <img style="width: 70px; height: 70px; border: 1px solid #eeeeee; background: #fff;" src="<?php echo esc_url($image_path); ?>" alt="<?php echo esc_attr($product['name']); ?>">
                                     </td>
                                 <?php endif; ?>
 

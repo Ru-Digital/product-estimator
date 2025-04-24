@@ -43,14 +43,20 @@ $estimate_id = str_pad($this->estimate_data['db_id'], 6, '0', STR_PAD_LEFT);
                 </tr>
 
 
+
                 <!-- Customer details if available -->
                 <?php if (!empty($customer_details)): ?>
-
+<!--                    <tr>-->
+<!--                        <td colspan="2" style="padding-top: 0;">-->
+<!--                            Date: --><?php //echo date_i18n(get_option('date_format')); ?>
+<!--                        </td>-->
+<!--                    </tr>-->
                     <tr>
                         <td colspan="2" style="padding-top: 0;">
                             <?php echo esc_html($customer_details['name'] ?? ''); ?>
                         </td>
                     </tr>
+
                     <?php if (!empty($customer_details['email'])): ?>
                         <tr>
                             <td colspan="2" style="padding-top: 0; font-size: 9px;">
@@ -72,6 +78,8 @@ $estimate_id = str_pad($this->estimate_data['db_id'], 6, '0', STR_PAD_LEFT);
                             </td>
                         </tr>
                     <?php endif; ?>
+
+
                 <?php endif; ?>
             </table>
         </td>

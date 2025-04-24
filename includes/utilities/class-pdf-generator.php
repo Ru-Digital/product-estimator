@@ -380,8 +380,12 @@ class PDFGenerator {
     }
 
     /**
-     * Render a product using native TCPDF methods with notes inside the card
-     * Fixed to ensure consistent note alignment
+     * Render a product using native TCPDF methods with proper page break handling
+     *
+     * @param object $pdf TCPDF object
+     * @param array $product_item Product item data
+     * @param float $default_markup Default markup percentage
+     * @param float $room_area Room area in square meters
      */
     private function render_product_native($pdf, $product_item, $default_markup, $room_area) {
         $product = $product_item['product_data'];
@@ -408,11 +412,6 @@ class PDFGenerator {
             $has_image = !empty($image_path);
         }
 
-        // Position tracking
-        $startX = $pdf->GetX();
-        $startY = $pdf->GetY();
-        $image_offset = $has_image ? $image_width + 5 : 0;
-
         // No indentation for any products
         $indent = 0;
 
@@ -434,15 +433,23 @@ class PDFGenerator {
             }
         }
 
-        // Card styling - same for all products
-        $bg_color = [255, 255, 255]; // White background for all products
-
         // Card height - dynamic calculation with less padding
         $base_height = 35; // Reduced base height for product name and price
         $card_height = $base_height + ($has_notes ? $notes_height : 0); // No extra padding for notes
 
-        // Store original position to adjust final position later
-        $original_y = $pdf->GetY();
+        // Check if there's enough space for the card on the current page
+        // If not, add a new page before starting to draw
+        if ($pdf->GetY() + $card_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
+            $pdf->AddPage();
+        }
+
+        // Position tracking - get AFTER potential page break
+        $startX = $pdf->GetX();
+        $startY = $pdf->GetY();
+        $image_offset = $has_image ? $image_width + 5 : 0;
+
+        // Card styling - same for all products
+        $bg_color = [255, 255, 255]; // White background for all products
 
         // Draw card background with subtle border for all products
         $pdf->SetFillColor($bg_color[0], $bg_color[1], $bg_color[2]);
@@ -477,8 +484,6 @@ class PDFGenerator {
         if (isset($product['min_price_total']) && isset($product['max_price_total'])) {
             $price_text = $this->format_price_for_pdf($product['min_price_total'], $product['max_price_total'], $default_markup);
             $pdf->Cell(($contentWidth * 0.3) - 5, 10, $price_text, 0, 1, 'R');
-
-            // Remove "Per m²" text entirely - no longer displaying pricing method indicator
         } else {
             $pdf->Cell(($contentWidth * 0.3) - 5, 10, '', 0, 1, 'R');
         }
@@ -510,6 +515,14 @@ class PDFGenerator {
                 // Position at current Y
                 $current_note_y = $pdf->GetY();
 
+                // Check for page break before adding note
+                $note_height = $pdf->getStringHeight($note_width, $note_text);
+                if ($current_note_y + $note_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
+                    $pdf->AddPage();
+                    $current_note_y = $pdf->GetY();
+                    $pdf->SetX($notesX);
+                }
+
                 // FIXED: Use Cell for shorter notes to reduce vertical space
                 if (strlen($note_text) < 60 && strpos($note_text, "\n") === false) {
                     $pdf->SetX($notesX);
@@ -539,7 +552,6 @@ class PDFGenerator {
             }
         }
 
-        // FIXED: Reduce spacing between products - use actual content height instead of estimated
         // Get the current Y position after all content has been rendered
         $currentY = $pdf->GetY();
 
@@ -549,7 +561,13 @@ class PDFGenerator {
         // Use the greater of actual content height or calculated card height
         // but with minimal added spacing (2pt instead of 5pt)
         $next_y = $startY + max($actual_content_height, $card_height) + 2;
-        $pdf->SetY($next_y);
+
+        // Check if we need to move to a new page
+        if ($next_y > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
+            $pdf->AddPage();
+        } else {
+            $pdf->SetY($next_y);
+        }
     }
 
     /**

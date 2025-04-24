@@ -18,7 +18,7 @@
 #general .form-table td {
   padding-top: 15px;
   padding-bottom: 15px;
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 /* Number Input Fields */
@@ -156,6 +156,22 @@
   margin: 5px 0;
 }
 
+/* Rich Text Editor fields */
+.wp-editor-wrap {
+  max-width: 800px;
+  margin-bottom: 15px;
+}
+
+.html-active .wp-editor-area {
+  border: 1px solid #ddd;
+}
+
+/* Make sure RTE fields have proper spacing */
+#pdf_footer_text_wrapper,
+#pdf_footer_contact_details_content_wrapper {
+  margin-bottom: 15px;
+}
+
 /* Existing PDF Settings styles */
 .file-preview-wrapper {
   margin-bottom: 10px;
@@ -164,6 +180,12 @@
 /* Textarea field for footer text */
 #pdf_footer_text {
   width: 100%;
-  max-width: 500px;
-  height: 100px;
+  max-width: 800px;
+  min-height: 100px;
+}
+
+#pdf_footer_contact_details_content {
+  width: 100%;
+  max-width: 800px;
+  min-height: 100px;
 }

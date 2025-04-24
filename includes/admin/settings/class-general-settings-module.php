@@ -118,8 +118,13 @@ class GeneralSettingsModule extends SettingsModuleBase {
             ),
             'pdf_footer_text' => array(
                 'title' => __('Footer Text', 'product-estimator'),
-                'type' => 'textarea',
+                'type' => 'html',
                 'description' => __('Text to display in the footer of PDF estimates', 'product-estimator')
+            ),
+            'pdf_footer_contact_details_content' => array(
+                'title' => __('Footer Contact Details', 'product-estimator'),
+                'type' => 'html',
+                'description' => __('Contact details to display in the footer of PDF estimates', 'product-estimator')
             ),
         );
 
@@ -178,8 +183,41 @@ class GeneralSettingsModule extends SettingsModuleBase {
             $this->render_file_field($args);
         } elseif ($args['type'] === 'textarea') {
             $this->render_textarea_field($args);
+        } elseif ($args['type'] === 'html') {
+            $this->render_html_field($args);
         } else {
             $this->render_field($args);
+        }
+    }
+
+    /**
+     * Render a rich text editor field.
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $args    Field arguments.
+     */
+    protected function render_html_field($args) {
+        $options = get_option('product_estimator_settings');
+        $id = $args['id'];
+        $value = isset($options[$id]) ? $options[$id] : '';
+
+        if (empty($value) && isset($args['default'])) {
+            $value = $args['default'];
+        }
+
+        // Use WordPress rich text editor
+        $editor_id = $id;
+        $editor_settings = array(
+            'textarea_name' => "product_estimator_settings[{$id}]",
+            'media_buttons' => false,
+            'textarea_rows' => 10,
+            'teeny'         => false, // Set to false to get more formatting options
+        );
+        wp_editor($value, $editor_id, $editor_settings);
+
+        if (isset($args['description'])) {
+            echo '<p class="description">' . esc_html($args['description']) . '</p>';
         }
     }
 
@@ -313,6 +351,18 @@ class GeneralSettingsModule extends SettingsModuleBase {
             );
         }
 
+        // Process HTML fields
+        foreach ($settings as $key => $value) {
+            // For HTML content fields like the rich editor
+            if ($key === 'pdf_footer_text' || $key === 'pdf_footer_contact_details_content') {
+                // Use wp_kses_post which allows safe HTML tags but removes scripts
+                $settings[$key] = wp_kses_post($value);
+            }
+        }
+
+        // Update the settings array in the form data for further processing
+        $form_data['product_estimator_settings'] = $settings;
+
         return true;
     }
 
@@ -386,6 +436,12 @@ class GeneralSettingsModule extends SettingsModuleBase {
             $this->version,
             true
         );
+
+        // Enqueue WordPress media scripts for file uploads
+        wp_enqueue_media();
+
+        // Enqueue the WordPress editor scripts
+        wp_enqueue_editor();
 
         // Add localization for this module's specific needs
         wp_localize_script(

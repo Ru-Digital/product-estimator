@@ -15,6 +15,7 @@
       this.mediaFrame = null;
       this.bindEvents();
       this.setupValidation();
+      this.setupWpEditors();
     },
 
     /**
@@ -25,6 +26,32 @@
       $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
       $('.file-upload-button').on('click', this.handleFileUpload.bind(this));
       $('.file-remove-button').on('click', this.handleFileRemove.bind(this));
+    },
+
+    /**
+     * Set up WordPress Rich Text Editors
+     */
+    setupWpEditors: function() {
+      // Check if we're on the general settings tab
+      if ($('#general').length === 0) {
+        return;
+      }
+
+      // Initialize TinyMCE if not already initialized
+      if (typeof tinyMCE !== 'undefined' &&
+        typeof tinyMCE.editors !== 'undefined' &&
+        tinyMCE.editors.length === 0) {
+
+        // These editors should have already been initialized by wp_editor(),
+        // but we can trigger a refresh if needed
+        if (typeof switchEditors !== 'undefined') {
+          ['pdf_footer_text', 'pdf_footer_contact_details_content'].forEach(function(editorId) {
+            if ($('#' + editorId).length > 0 && typeof tinyMCE.get(editorId) === 'undefined') {
+              switchEditors.go(editorId, 'tmce');
+            }
+          });
+        }
+      }
     },
 
     /**
@@ -181,7 +208,26 @@
     handleTabChanged: function(e, tabId) {
       // If our tab becomes active, refresh any dynamic content
       if (tabId === generalSettingsData.tab_id) {
-        // Nothing specific needed for general tab currently
+        // Make sure editors are refreshed when switching to this tab
+        this.setupWpEditors();
+      }
+    },
+
+    /**
+     * Ensure TinyMCE content is saved to the textarea
+     * This should be called before form submission
+     */
+    saveEditorContent: function() {
+      if (typeof tinyMCE !== 'undefined') {
+        // Save content from all active editors
+        const editors = ['pdf_footer_text', 'pdf_footer_contact_details_content'];
+
+        editors.forEach(function(editorId) {
+          const editor = tinyMCE.get(editorId);
+          if (editor) {
+            editor.save();
+          }
+        });
       }
     },
 
@@ -191,6 +237,9 @@
      */
     validateAllFields: function() {
       let isValid = true;
+
+      // Save editor content before validation
+      this.saveEditorContent();
 
       // Validate markup
       if (!this.validateMarkup({
@@ -213,6 +262,17 @@
   // Initialize when document is ready
   $(document).ready(function() {
     GeneralSettingsModule.init();
+
+    // Patch the form submission to ensure editor content is saved
+    const originalSubmit = $('form.product-estimator-form').submit;
+    $('form.product-estimator-form').submit(function(e) {
+      // Save editor content before submitting
+      if (typeof GeneralSettingsModule !== 'undefined') {
+        GeneralSettingsModule.saveEditorContent();
+      }
+      // Call original handler
+      return originalSubmit.apply(this, arguments);
+    });
 
     // Make the module available globally
     window.GeneralSettingsModule = GeneralSettingsModule;

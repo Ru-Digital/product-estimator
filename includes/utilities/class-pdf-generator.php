@@ -33,7 +33,19 @@ class PDFGenerator {
      * @param array $estimate The estimate data
      * @return string PDF file contents
      */
+
+    /**
+     * Estimate data for headers
+     *
+     * @var array
+     */
+    private $estimate_data = [];
+
     public function generate_pdf($estimate) {
+        // Store estimate data for use in headers
+        $this->estimate_data = $estimate;
+
+
         // Get settings for template and margins
         $options = get_option('product_estimator_settings', []);
         $template_id = isset($options['pdf_template']) ? intval($options['pdf_template']) : 0;
@@ -70,17 +82,23 @@ class PDFGenerator {
         // Create a custom PDF class that extends TCPDF/FPDI to handle custom footer
         $footer_text = $this->footer_text;
         $footer_contact_details = $this->footer_contact_details;
+        $estimate_data = $this->estimate_data;
 
-        return new class($footer_text, $footer_contact_details) extends Fpdi {
+
+        return new class($footer_text, $footer_contact_details, $estimate_data) extends Fpdi {
             protected $footer_text;
             protected $footer_contact_details;
             protected $template_id = null;
             protected $tpl_idx = null;
+            protected $estimate_data;
 
-            public function __construct($footer_text, $footer_contact_details) {
+
+            public function __construct($footer_text, $footer_contact_details, $estimate_data) {
                 parent::__construct();
                 $this->footer_text = $footer_text;
                 $this->footer_contact_details = $footer_contact_details;
+                $this->estimate_data = $estimate_data;
+
             }
 
             // Set template info
@@ -104,6 +122,28 @@ class PDFGenerator {
                 }
             }
 
+
+            // Page header using the header template
+            public function Header() {
+                // Save current position
+                $current_y = $this->GetY();
+
+                // Position at the top margin
+                $this->SetY(10);
+
+                // Buffer to get HTML content from the header template
+                ob_start();
+                include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/pdf-templates/pdf-header-template.php';
+                $header_html = ob_get_clean();
+
+                // Apply the HTML header
+                $this->writeHTML($header_html, true, false, true, false, '');
+
+                // Add line to separate header from content
+                $this->SetY(max($this->GetY(), 42)); // Ensure enough space for header
+                $this->Ln(5);
+            }
+
             // Page footer
             public function Footer() {
                 // Position at 15 mm from bottom
@@ -123,7 +163,7 @@ class PDFGenerator {
                 $html_footer = '';
 
                 ob_start();
-                include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/pdf-templates/pdf-footer.php';
+                include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/pdf-templates/pdf-footer-template.php';
                 $html_footer = ob_get_clean();
 
                 $this->writeHTML($html_footer, true, false, true, false, '');
@@ -159,9 +199,10 @@ class PDFGenerator {
         $pdf->SetSubject('Product Estimate');
 
         // Setup for footer
-        $pdf->setPrintHeader(false);
+        $pdf->setPrintHeader(true);
         $pdf->setPrintFooter(true);
         $pdf->setFooterMargin(10);
+        $pdf->setHeaderMargin(10);
 
         // Set margins
         $pdf->SetMargins(15, $margin_top, 15);

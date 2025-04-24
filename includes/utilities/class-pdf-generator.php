@@ -1,10 +1,12 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes\Utilities;
 
+use setasign\Fpdi\Tcpdf\Fpdi;
+
 /**
- * PDF Generator
+ * PDF Generator with FPDI
  *
- * Handles PDF generation for estimates
+ * Handles PDF generation for estimates using FPDI to incorporate templates
  *
  * @since      1.0.0
  * @package    Product_Estimator
@@ -18,64 +20,48 @@ class PDFGenerator {
      * @return string PDF file contents
      */
     public function generate_pdf($estimate) {
-        // Check if DOMPDF library is available through Composer
-        if (!class_exists('\Dompdf\Dompdf')) {
-            // Log error and fallback to a simpler solution
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('DOMPDF library not available. Using basic PDF generation.');
+        // Get settings for template and margins
+        $options = get_option('product_estimator_settings', []);
+        $template_id = isset($options['pdf_template']) ? intval($options['pdf_template']) : 0;
+        $margin_top = isset($options['pdf_margin_top']) ? intval($options['pdf_margin_top']) : 15;
+        $margin_bottom = isset($options['pdf_margin_bottom']) ? intval($options['pdf_margin_bottom']) : 15;
+
+        error_log("margin-top: ". $margin_top);
+
+        // Check if FPDI is available (it extends TCPDF)
+        if (class_exists('\\setasign\\Fpdi\\Tcpdf\\Fpdi') && $template_id > 0) {
+            // Get the template PDF file path
+            $template_path = get_attached_file($template_id);
+
+            if ($template_path && file_exists($template_path)) {
+                try {
+                    // Use template-based PDF generation
+                    return $this->generate_template_based_pdf($estimate, $template_path, $margin_top, $margin_bottom);
+                } catch (\Exception $e) {
+                    // Log error and continue with regular PDF generation
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Error generating template PDF: ' . $e->getMessage());
+                    }
+                }
             }
-
-            return $this->generate_basic_pdf($estimate);
         }
-
-        // Initialize DOMPDF
-        $dompdf = new \Dompdf\Dompdf([
-            'enable_remote' => true,
-            'isRemoteEnabled' => true,
-            'defaultFont' => 'sans'
-        ]);
-
-        // Start output buffering to capture HTML
-        ob_start();
-
-        // Include the PDF template
-        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/pdf-templates/estimate-pdf-template.php';
-
-        // Get HTML
-        $html = ob_get_clean();
-
-        // Load HTML into DOMPDF
-        $dompdf->loadHtml($html);
-
-        // Set paper size and orientation
-        $dompdf->setPaper('A4', 'portrait');
-
-        // Render the PDF
-        $dompdf->render();
-
-        // Return the generated PDF
-        return $dompdf->output();
     }
 
     /**
-     * Fallback method to generate a basic PDF if DOMPDF is not available
+     * Generate a PDF using an uploaded template PDF as the base
      *
      * @param array $estimate The estimate data
+     * @param string $template_path Path to the template PDF
+     * @param int $margin_top Top margin in mm
+     * @param int $margin_bottom Bottom margin in mm
      * @return string PDF file contents
      */
-    private function generate_basic_pdf($estimate) {
-        // Check if TCPDF is available through Composer
-        if (!class_exists('\TCPDF')) {
-            // Fatal error - no PDF library available
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('No PDF library available. Cannot generate PDF.');
-            }
+    private function generate_template_based_pdf($estimate, $template_path, $margin_top = 15, $margin_bottom = 15) {
+        // Create FPDI instance
+        $pdf = new Fpdi();
 
-            return false;
-        }
-
-        // Initialize TCPDF
-        $pdf = new \TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+        // Disable auto page break initially (we'll handle it manually)
+        $pdf->SetAutoPageBreak(false);
 
         // Set document information
         $pdf->SetCreator('Product Estimator');
@@ -83,88 +69,32 @@ class PDFGenerator {
         $pdf->SetTitle($estimate['name'] . ' - Estimate');
         $pdf->SetSubject('Product Estimate');
 
-        // Set margins
-        $pdf->SetMargins(15, 15, 15);
-        $pdf->SetHeaderMargin(5);
-        $pdf->SetFooterMargin(10);
+        // Import the template - get page count
+        $pageCount = $pdf->setSourceFile($template_path);
 
-        // Set auto page breaks
-        $pdf->SetAutoPageBreak(TRUE, 15);
+        // Import first page as template
+        $tplIdx = $pdf->importPage(1);
 
-        // Add a page
+        // Add a page and use the template
         $pdf->AddPage();
+        $pdf->useTemplate($tplIdx, 0, 0, $pdf->getPageWidth(), $pdf->getPageHeight());
 
-        // Set font
-        $pdf->SetFont('helvetica', '', 10);
+        // Reset margins for content
+        $pdf->SetMargins(15, $margin_top, 15);
+        $pdf->SetAutoPageBreak(true, $margin_bottom);
 
-        // Start building the content
-        $html = '<h1>Estimate: ' . esc_html($estimate['name']) . '</h1>';
+        // Move to position after the margin
+        $pdf->SetY($margin_top);
 
-        // Add customer details if available
-        if (isset($estimate['customer_details'])) {
-            $html .= '<h2>Customer Details</h2>';
-            $html .= '<p>';
-            $html .= '<strong>Name:</strong> ' . esc_html($estimate['customer_details']['name']) . '<br>';
-            $html .= '<strong>Email:</strong> ' . esc_html($estimate['customer_details']['email']) . '<br>';
+        // Generate the dynamic content HTML
+        ob_start();
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/pdf-templates/pdf-content-template.php';
+        $html = ob_get_clean();
 
-            if (!empty($estimate['customer_details']['phone'])) {
-                $html .= '<strong>Phone:</strong> ' . esc_html($estimate['customer_details']['phone']) . '<br>';
-            }
-
-            $html .= '<strong>Postcode:</strong> ' . esc_html($estimate['customer_details']['postcode']);
-            $html .= '</p>';
-        }
-
-        // Add rooms and products
-        if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
-            $html .= '<h2>Rooms</h2>';
-
-            foreach ($estimate['rooms'] as $room_id => $room) {
-                $html .= '<h3>' . esc_html($room['name']) . ' (' . esc_html($room['width']) . 'm x ' . esc_html($room['length']) . 'm)</h3>';
-
-                if (isset($room['products']) && is_array($room['products'])) {
-                    $html .= '<table border="1" cellpadding="5">';
-                    $html .= '<tr><th>Product</th><th>Price</th></tr>';
-
-                    foreach ($room['products'] as $product) {
-                        // Skip notes
-                        if (isset($product['type']) && $product['type'] === 'note') {
-                            continue;
-                        }
-
-                        $html .= '<tr>';
-                        $html .= '<td>' . esc_html($product['name']) . '</td>';
-
-                        // Display price range
-                        if ($product['min_price_total'] === $product['max_price_total']) {
-                            $html .= '<td>$' . number_format($product['min_price_total'], 2) . '</td>';
-                        } else {
-                            $html .= '<td>$' . number_format($product['min_price_total'], 2) . ' - $' . number_format($product['max_price_total'], 2) . '</td>';
-                        }
-
-                        $html .= '</tr>';
-                    }
-
-                    $html .= '</table>';
-                }
-            }
-        }
-
-        // Add total
-        if (isset($estimate['min_total']) && isset($estimate['max_total'])) {
-            $html .= '<h2>Total</h2>';
-
-            if ($estimate['min_total'] === $estimate['max_total']) {
-                $html .= '<p><strong>Total:</strong> $' . number_format($estimate['min_total'], 2) . '</p>';
-            } else {
-                $html .= '<p><strong>Total:</strong> $' . number_format($estimate['min_total'], 2) . ' - $' . number_format($estimate['max_total'], 2) . '</p>';
-            }
-        }
-
-        // Write the HTML to the PDF
+        // Write the HTML content on top of the template
         $pdf->writeHTML($html, true, false, true, false, '');
 
         // Return the generated PDF
-        return $pdf->Output('estimate.pdf', 'S');
+        return $pdf->Output('', 'S');
     }
 }

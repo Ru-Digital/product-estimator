@@ -170,7 +170,7 @@ class EstimateHandler {
     }
 
     /**
-     * Generate a PDF for an estimate
+     * Generate a PDF for an estimate with template support
      *
      * @param string $session_estimate_id The session estimate ID
      * @return array|false Result array with PDF details, or false on failure
@@ -195,7 +195,7 @@ class EstimateHandler {
             $estimate['db_id'] = $db_id;
             $_SESSION['product_estimator']['estimates'][$session_estimate_id]['db_id'] = $db_id;
 
-            // Generate PDF
+            // Generate PDF using our enhanced generator that supports templates
             $pdf_generator = $this->get_pdf_generator();
             $pdf_content = $pdf_generator->generate_pdf($estimate);
 
@@ -423,7 +423,7 @@ class EstimateHandler {
     }
 
     /**
-     * Get PDF generator instance
+     * Get PDF generator instance with improved template handling
      * This helper method handles the case where the PDFGenerator class might not be available
      *
      * @return PDFGenerator|object PDF generator instance
@@ -435,7 +435,7 @@ class EstimateHandler {
             $pdf_generator_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/utilities/class-pdf-generator.php';
             if (file_exists($pdf_generator_path)) {
                 require_once $pdf_generator_path;
-                return new PDFGenerator();
+                return new \RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator();
             } else {
                 // Create a simple fallback generator
                 return $this->get_fallback_pdf_generator();
@@ -443,7 +443,7 @@ class EstimateHandler {
         }
 
         // Return a new instance
-        return new PDFGenerator();
+        return new \RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator();
     }
 
     /**
@@ -646,8 +646,11 @@ class EstimateHandler {
 
         return $sent;
     }
+
+
     /**
      * Get a fallback PDF generator if the main one is not available
+     * This version is updated to respect template and margin settings
      *
      * @return object Simple object with generate_pdf method
      */
@@ -667,23 +670,80 @@ class EstimateHandler {
             }
 
             private function generate_with_tcpdf($estimate) {
+                // Get settings for template and margins
+                $options = get_option('product_estimator_settings', []);
+                $template_id = isset($options['pdf_template']) ? intval($options['pdf_template']) : 0;
+                $margin_top = isset($options['pdf_margin_top']) ? intval($options['pdf_margin_top']) : 15;
+                $margin_bottom = isset($options['pdf_margin_bottom']) ? intval($options['pdf_margin_bottom']) : 15;
+
                 $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
                 $pdf->SetCreator('Product Estimator');
                 $pdf->SetAuthor('Product Estimator');
                 $pdf->SetTitle('Estimate #' . ($estimate['db_id'] ?? 'New'));
-                $pdf->SetMargins(15, 15, 15);
+
+                // Set margins using the configured values
+                $pdf->SetMargins(15, $margin_top, 15);
+                $pdf->SetAutoPageBreak(true, $margin_bottom);
+
+                // Check if we should use a template
+                if ($template_id > 0) {
+                    $template_path = get_attached_file($template_id);
+                    if ($template_path && file_exists($template_path)) {
+                        try {
+                            // Add a page and import template as background
+                            $pdf->AddPage();
+                            $pdf->setSourceFile($template_path);
+                            $tplIdx = $pdf->importPage(1);
+                            $pdf->useTemplate($tplIdx, 0, 0, $pdf->getPageWidth(), $pdf->getPageHeight());
+
+                            // Generate content HTML
+                            ob_start();
+                            include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/pdf-templates/pdf-content-template.php';
+                            $html = ob_get_clean();
+
+                            // Write HTML on top of template
+                            $pdf->writeHTML($html, true, false, true, false, '');
+
+                            return $pdf->Output('', 'S');
+                        } catch (\Exception $e) {
+                            // On error, fall back to standard method
+                            if (defined('WP_DEBUG') && WP_DEBUG) {
+                                error_log('Template error: ' . $e->getMessage());
+                            }
+                        }
+                    }
+                }
+
+                // If we reached here, use standard method
+                $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+                $pdf->SetCreator('Product Estimator');
+                $pdf->SetAuthor('Product Estimator');
+                $pdf->SetTitle('Estimate #' . ($estimate['db_id'] ?? 'New'));
+                $pdf->SetMargins(15, $margin_top, 15);
                 $pdf->AddPage();
 
                 // Add content
-                $html = $this->get_estimate_html($estimate);
+                ob_start();
+                include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/pdf-templates/estimate-pdf-template.php';
+                $html = ob_get_clean();
                 $pdf->writeHTML($html, true, false, true, false, '');
 
                 return $pdf->Output('', 'S');
             }
 
             private function generate_with_dompdf($estimate) {
-                $dompdf = new \Dompdf\Dompdf();
-                $html = $this->get_estimate_html($estimate);
+                // Get margin settings
+                $options = get_option('product_estimator_settings', []);
+                $margin_top = isset($options['pdf_margin_top']) ? intval($options['pdf_margin_top']) : 15;
+                $margin_bottom = isset($options['pdf_margin_bottom']) ? intval($options['pdf_margin_bottom']) : 15;
+
+                $dompdf = new \Dompdf\Dompdf(['isRemoteEnabled' => true]);
+
+                // Standard method since DOMPDF can't easily use PDF templates
+                ob_start();
+                include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/pdf-templates/estimate-pdf-template.php';
+                $html = ob_get_clean();
+
                 $dompdf->loadHtml($html);
                 $dompdf->setPaper('A4', 'portrait');
                 $dompdf->render();
@@ -692,11 +752,9 @@ class EstimateHandler {
             }
 
             private function generate_simple_pdf($estimate) {
-                // Very basic PDF using PHP's built-in PDF functionality
+                // Very basic PDF as last resort
                 $html = $this->get_estimate_html($estimate);
-
-                // Return empty string as fallback
-                return '';
+                return ''; // Return empty string as fallback
             }
 
             private function get_estimate_html($estimate) {

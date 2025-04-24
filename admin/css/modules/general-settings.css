@@ -117,3 +117,53 @@
     margin-top: 10px;
   }
 }
+
+
+/* PDF Settings styles */
+.file-preview-wrapper {
+  margin-bottom: 10px;
+}
+
+.file-preview {
+  background: #f8f8f8;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  display: inline-block;
+  margin: 0;
+}
+
+.file-preview a {
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.file-upload-button {
+  margin-right: 5px !important;
+}
+
+.file-remove-button.hidden {
+  display: none !important;
+}
+
+.required {
+  color: #d63638;
+}
+
+.file-required-notice {
+  color: #d63638;
+  font-style: italic;
+  margin: 5px 0;
+}
+
+/* Existing PDF Settings styles */
+.file-preview-wrapper {
+  margin-bottom: 10px;
+}
+
+/* Textarea field for footer text */
+#pdf_footer_text {
+  width: 100%;
+  max-width: 500px;
+  height: 100px;
+}

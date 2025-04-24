@@ -12,6 +12,7 @@
      * Initialize the module
      */
     init: function() {
+      this.mediaFrame = null;
       this.bindEvents();
       this.setupValidation();
     },
@@ -22,6 +23,76 @@
     bindEvents: function() {
       // Listen for tab changes
       $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
+      $('.file-upload-button').on('click', this.handleFileUpload.bind(this));
+      $('.file-remove-button').on('click', this.handleFileRemove.bind(this));
+    },
+
+    /**
+     * Handle file upload button click
+     * @param {Event} e Click event
+     */
+    handleFileUpload: function(e) {
+      e.preventDefault();
+
+      const button = $(e.currentTarget);
+      const fieldId = button.data('field-id');
+      const acceptType = button.data('accept') || '';
+
+      // If the media frame already exists, reopen it
+      if (this.mediaFrame) {
+        this.mediaFrame.open();
+        return;
+      }
+
+      // Create a new media frame
+      this.mediaFrame = wp.media({
+        title: 'Select or Upload PDF Template',
+        button: {
+          text: 'Use this file'
+        },
+        multiple: false,
+        library: {
+          type: acceptType ? [acceptType.split('/')[0]] : null // 'application/pdf' -> 'application'
+        }
+      });
+
+      // When a file is selected, run a callback
+      this.mediaFrame.on('select', function() {
+        const attachment = this.mediaFrame.state().get('selection').first().toJSON();
+
+        // Set the attachment ID in the hidden input
+        $(`#${fieldId}`).val(attachment.id).trigger('change');
+
+        // Update the file preview
+        const $previewWrapper = button.siblings('.file-preview-wrapper');
+        $previewWrapper.html(`<p class="file-preview"><a href="${attachment.url}" target="_blank">${attachment.filename}</a></p>`);
+
+        // Show the remove button
+        button.siblings('.file-remove-button').removeClass('hidden');
+      }.bind(this));
+
+      // Open the modal
+      this.mediaFrame.open();
+    },
+
+    /**
+     * Handle file remove button click
+     * @param {Event} e Click event
+     */
+    handleFileRemove: function(e) {
+      e.preventDefault();
+
+      const button = $(e.currentTarget);
+      const fieldId = button.data('field-id');
+
+      // Clear the attachment ID
+      $(`#${fieldId}`).val('').trigger('change');
+
+      // Clear the preview
+      button.siblings('.file-preview-wrapper').empty();
+
+      // Hide the remove button
+      button.addClass('hidden');
     },
 
     /**

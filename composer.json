@@ -13,8 +13,8 @@
     "require": {
         "php": ">=8.3",
         "composer/installers": "^2.0",
-        "dompdf/dompdf": "^2.0",
         "tecnickcom/tcpdf": "^6.6",
+        "setasign/fpdi": "^2.3",
         "vlucas/phpdotenv": "^5.5",
         "php-curl-class/php-curl-class": "^9.0",
         "monolog/monolog": "^2.0"

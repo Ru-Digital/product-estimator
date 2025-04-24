@@ -41,16 +41,9 @@ class GeneralSettingsModule extends SettingsModuleBase {
                 'min' => 0,
                 'max' => 100
             ),
-            'estimate_expiry_days' => array(
-                'title' => __('Estimate Validity (Days)', 'product-estimator'),
-                'type' => 'number',
-                'description' => __('Number of days an estimate remains valid', 'product-estimator'),
-                'default' => 30,
-                'min' => 1,
-                'max' => 365
-            ),
         );
 
+        // Add fields
         foreach ($fields as $id => $field) {
             $args = array(
                 'id' => $id,
@@ -81,6 +74,96 @@ class GeneralSettingsModule extends SettingsModuleBase {
                 $args
             );
         }
+
+        // Add PDF Settings section
+        add_settings_section(
+            'pdf_settings',
+            __('PDF Settings', 'product-estimator'),
+            array($this, 'render_pdf_section_description'),
+            $this->plugin_name . '_' . $this->tab_id
+        );
+
+        // PDF Settings fields
+        $pdf_fields = array(
+            'pdf_template' => array(
+                'title' => __('PDF Template', 'product-estimator'),
+                'type' => 'file',
+                'description' => __('Upload a PDF template file (optional)', 'product-estimator'),
+                'accept' => 'application/pdf',
+                'required' => true
+            ),
+            'pdf_margin_top' => array(
+                'title' => __('Margin Top (mm)', 'product-estimator'),
+                'type' => 'number',
+                'description' => __('Top margin for PDF in millimeters', 'product-estimator'),
+                'default' => 15,
+                'min' => 0,
+                'max' => 200
+            ),
+            'pdf_margin_bottom' => array(
+                'title' => __('Margin Bottom (mm)', 'product-estimator'),
+                'type' => 'number',
+                'description' => __('Bottom margin for PDF in millimeters', 'product-estimator'),
+                'default' => 15,
+                'min' => 0,
+                'max' => 200
+            ),
+            'estimate_expiry_days' => array(
+                'title' => __('Estimate Validity (Days)', 'product-estimator'),
+                'type' => 'number',
+                'description' => __('Number of days an estimate remains valid', 'product-estimator'),
+                'default' => 30,
+                'min' => 1,
+                'max' => 365
+            ),
+            'pdf_footer_text' => array(
+                'title' => __('Footer Text', 'product-estimator'),
+                'type' => 'textarea',
+                'description' => __('Text to display in the footer of PDF estimates', 'product-estimator')
+            ),
+        );
+
+        // Add PDF fields
+        foreach ($pdf_fields as $id => $field) {
+            $args = array(
+                'id' => $id,
+                'type' => $field['type'],
+                'description' => $field['description']
+            );
+
+            // Add additional parameters if they exist
+            if (isset($field['default'])) {
+                $args['default'] = $field['default'];
+            }
+            if (isset($field['min'])) {
+                $args['min'] = $field['min'];
+            }
+            if (isset($field['max'])) {
+                $args['max'] = $field['max'];
+            }
+            if (isset($field['accept'])) {
+                $args['accept'] = $field['accept'];
+            }
+
+            add_settings_field(
+                $id,
+                $field['title'],
+                array($this, 'render_field_callback'),
+                $this->plugin_name . '_' . $this->tab_id,
+                'pdf_settings',
+                $args
+            );
+        }
+    }
+
+    /**
+     * Render PDF settings section description.
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function render_pdf_section_description() {
+        echo '<p>' . esc_html__('Configure settings for PDF estimate generation.', 'product-estimator') . '</p>';
     }
 
     /**
@@ -91,10 +174,76 @@ class GeneralSettingsModule extends SettingsModuleBase {
      * @param    array    $args    Field arguments.
      */
     public function render_field_callback($args) {
-        if ($args['type'] === 'select' && isset($args['options'])) {
-            $this->render_select_field($args);
+        if ($args['type'] === 'file') {
+            $this->render_file_field($args);
+        } elseif ($args['type'] === 'textarea') {
+            $this->render_textarea_field($args);
         } else {
             $this->render_field($args);
+        }
+    }
+
+    /**
+     * Render a file upload field.
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $args    Field arguments.
+     */
+    protected function render_file_field($args) {
+        $options = get_option('product_estimator_settings');
+        $id = $args['id'];
+        $file_id = isset($options[$id]) ? $options[$id] : '';
+        $file_url = '';
+        $is_required = isset($args['required']) && $args['required'];
+
+        if ($file_id) {
+            $file_url = wp_get_attachment_url($file_id);
+        }
+
+        // Hidden input to store the attachment ID
+        echo '<input type="hidden" id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']" value="' . esc_attr($file_id) . '"' . ($is_required ? ' required' : '') . ' />';
+
+        // File preview
+        echo '<div class="file-preview-wrapper">';
+        if ($file_url) {
+            echo '<p class="file-preview"><a href="' . esc_url($file_url) . '" target="_blank">' . esc_html(basename($file_url)) . '</a></p>';
+        } else if ($is_required) {
+            echo '<p class="file-required-notice">' . esc_html__('A PDF template is required', 'product-estimator') . '</p>';
+        }
+        echo '</div>';
+
+        // Upload button
+        echo '<input type="button" class="button file-upload-button" value="' . esc_attr__('Upload PDF', 'product-estimator') . '" data-field-id="' . esc_attr($id) . '" data-accept="' . esc_attr($args['accept']) . '" />';
+
+        // Remove button (only shown if a file is set)
+        echo ' <input type="button" class="button file-remove-button' . ($file_id ? '' : ' hidden') . '" value="' . esc_attr__('Remove PDF', 'product-estimator') . '" data-field-id="' . esc_attr($id) . '" />';
+
+        if (isset($args['description'])) {
+            echo '<p class="description">' . esc_html($args['description']) . ($is_required ? ' <span class="required">*</span>' : '') . '</p>';
+        }
+    }
+
+    /**
+     * Render a textarea field.
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $args    Field arguments.
+     */
+    protected function render_textarea_field($args) {
+        $options = get_option('product_estimator_settings');
+        $id = $args['id'];
+        $value = isset($options[$id]) ? $options[$id] : '';
+
+        if (empty($value) && isset($args['default'])) {
+            $value = $args['default'];
+        }
+
+        echo '<textarea id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']" rows="5" cols="50">' . esc_textarea($value) . '</textarea>';
+
+        if (isset($args['description'])) {
+            echo '<p class="description">' . esc_html($args['description']) . '</p>';
         }
     }
 
@@ -133,6 +282,35 @@ class GeneralSettingsModule extends SettingsModuleBase {
                     __('Estimate validity must be between 1 and 365 days', 'product-estimator')
                 );
             }
+        }
+
+        // Validate PDF margin fields
+        if (isset($settings['pdf_margin_top'])) {
+            $margin = intval($settings['pdf_margin_top']);
+            if ($margin < 0 || $margin > 200) {
+                return new \WP_Error(
+                    'invalid_margin_top',
+                    __('Top margin must be between 0 and 200mm', 'product-estimator')
+                );
+            }
+        }
+
+        if (isset($settings['pdf_margin_bottom'])) {
+            $margin = intval($settings['pdf_margin_bottom']);
+            if ($margin < 0 || $margin > 200) {
+                return new \WP_Error(
+                    'invalid_margin_bottom',
+                    __('Bottom margin must be between 0 and 200mm', 'product-estimator')
+                );
+            }
+        }
+
+        // Validate the PDF template field (required)
+        if (empty($settings['pdf_template'])) {
+            return new \WP_Error(
+                'missing_pdf_template',
+                __('A PDF template file is required', 'product-estimator')
+            );
         }
 
         return true;

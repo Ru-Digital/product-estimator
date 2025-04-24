@@ -4,13 +4,12 @@ namespace RuDigital\ProductEstimator\Includes\Utilities;
 use setasign\Fpdi\Tcpdf\Fpdi;
 
 /**
- * PDF Generator with FPDI
+ * Enhanced PDF Generator with Native TCPDF Methods
  *
- * Handles PDF generation for estimates using FPDI to incorporate templates
- * With enhanced image handling to ensure images display properly
- * Image placement is to the left of product title for better layout
+ * Handles PDF generation for estimates using native TCPDF/FPDI methods
+ * for improved performance and reliability
  *
- * @since      1.0.0
+ * @since      1.1.0
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/utilities
  */
@@ -49,6 +48,18 @@ class PDFGenerator {
      * @var bool
      */
     private $debug = false;
+
+    /**
+     * Font constants
+     */
+    const FONT_FAMILY = 'helvetica';
+    const COLOR_BRAND = [0, 131, 63]; // RGB: #00833F
+    const COLOR_TEXT = [51, 51, 51];  // RGB: #333333
+    const COLOR_LIGHT_TEXT = [102, 102, 102]; // RGB: #666666
+    const COLOR_LIGHTER_TEXT = [136, 136, 136]; // RGB: #888888
+    const COLOR_BORDER = [238, 238, 238]; // RGB: #eeeeee
+    const COLOR_BG_LIGHT = [249, 249, 249]; // RGB: #f9f9f9
+    const COLOR_BG_HEADER = [245, 245, 245]; // RGB: #f5f5f5
 
     /**
      * Constructor
@@ -127,8 +138,8 @@ class PDFGenerator {
             $pdf->AddPage();
         }
 
-        // Generate content and directly process product images
-        $this->render_content($pdf, $estimate);
+        // Generate content using native TCPDF methods
+        $this->render_content_native($pdf, $estimate);
 
         // Return the generated PDF
         return $pdf->Output('', 'S');
@@ -165,7 +176,7 @@ class PDFGenerator {
             }
 
             /**
-             * Page header
+             * Page header - Using HTML for flexibility
              */
             public function Header() {
                 // Position at the top margin
@@ -185,7 +196,7 @@ class PDFGenerator {
             }
 
             /**
-             * Page footer
+             * Page footer - Using HTML for flexibility
              */
             public function Footer() {
                 // Position at 15 mm from bottom
@@ -213,137 +224,120 @@ class PDFGenerator {
     }
 
     /**
-     * Render the PDF content with direct image processing
+     * Render the PDF content using native TCPDF methods
      *
      * @param object $pdf PDF object
      * @param array $estimate Estimate data
      */
-    private function render_content($pdf, $estimate) {
+    private function render_content_native($pdf, $estimate) {
         // Get settings
         $options = get_option('product_estimator_settings', []);
         $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
 
-        // Define color variables for consistency
-        $brand_green = '#00833F';
-        $border_light = '#eeeeee';
-        $bg_light = '#f9f9f9';
-        $text_dark = '#333333';
-        $text_light = '#666666';
-        $text_lighter = '#888888';
-
         // Summary Section
-        $summary_html = '<div style="margin-bottom: 25px;">
-            <h2 style="font-size: 16pt; color: #333333; margin-top: 20px; margin-bottom: 10px; font-weight: 600; padding-bottom: 5px; border-bottom: 1px solid #eeeeee;">Estimate Summary</h2>
-            <table width="100%" border="0" cellspacing="0" cellpadding="5">
-                <tr>
-                    <td style="font-weight: bold; font-size: 14pt; text-align: left;">' . esc_html($estimate['name']) . '</td>
-                    <td style="font-weight: bold; color: ' . $brand_green . '; text-align: right;">';
-
-        if (isset($estimate['min_total']) && isset($estimate['max_total'])) {
-            if ($estimate['min_total'] === $estimate['max_total']) {
-                $summary_html .= display_price_with_markup($estimate['min_total'], $default_markup, "up");
-            } else {
-                $summary_html .= display_price_with_markup($estimate['min_total'], $default_markup, "down") . ' - ' .
-                    display_price_with_markup($estimate['max_total'], $default_markup, "up");
-            }
-        }
-
-        $summary_html .= '</td>
-                </tr>
-            </table>
-        </div>';
-
-        $pdf->writeHTML($summary_html, true, false, true, false, '');
-
-        // Rooms Header
-        $rooms_header = '<h2 style="font-size: 16pt; color: #333333; margin-top: 20px; margin-bottom: 10px; font-weight: 600; padding-bottom: 5px; border-bottom: 1px solid #eeeeee;">Room Details</h2>';
-        $pdf->writeHTML($rooms_header, true, false, true, false, '');
+//        $this->render_summary_section($pdf, $estimate, $default_markup);
 
         // Process each room
         if (isset($estimate['rooms']) && is_array($estimate['rooms']) && !empty($estimate['rooms'])) {
             foreach ($estimate['rooms'] as $room_id => $room) {
-                $this->render_room($pdf, $room, $default_markup, $brand_green, $border_light, $bg_light);
+                $this->render_room_native($pdf, $room, $default_markup);
             }
         } else {
-            $no_rooms_html = '<div style="font-style: italic; color: #888888; text-align: center; padding: 20px; border: 1px dashed #dddddd; margin: 15px 0;">No rooms or products found in this estimate.</div>';
-            $pdf->writeHTML($no_rooms_html, true, false, true, false, '');
+            // No rooms message
+            $pdf->SetFont(self::FONT_FAMILY, 'I', 10);
+            $pdf->SetTextColor(136, 136, 136);
+            $pdf->Cell(0, 20, 'No rooms or products found in this estimate.', 1, 1, 'C', true);
         }
 
         // Total Estimate Section
-        if (isset($estimate['min_total']) && isset($estimate['max_total'])) {
-            $total_html = '<hr style="border: none; border-top: 2px solid ' . $brand_green . '; margin: 30px 0 15px 0;">
-            <table width="100%" border="0" cellspacing="0" cellpadding="5">
-                <tr>
-                    <td style="font-size: 14pt; font-weight: bold;">TOTAL ESTIMATE</td>
-                    <td style="font-size: 16pt; font-weight: bold; color: ' . $brand_green . '; text-align: right;">';
-
-            if ($estimate['min_total'] === $estimate['max_total']) {
-                $total_html .= display_price_with_markup($estimate['min_total'], $default_markup, "up");
-            } else {
-                $total_html .= display_price_with_markup($estimate['min_total'], $default_markup, "down") . ' - ' .
-                    display_price_with_markup($estimate['max_total'], $default_markup, "up");
-            }
-
-            $total_html .= '</td>
-                </tr>
-            </table>';
-
-            $pdf->writeHTML($total_html, true, false, true, false, '');
-        }
+        $this->render_total_section($pdf, $estimate, $default_markup);
     }
 
     /**
-     * Render a room with its products
-     *
-     * @param object $pdf PDF object
-     * @param array $room Room data
-     * @param float $default_markup Default markup percentage
-     * @param string $brand_green Green color code
-     * @param string $border_light Border light color
-     * @param string $bg_light Background light color
+     * Render a room with its products using native TCPDF methods
      */
-    private function render_room($pdf, $room, $default_markup, $brand_green, $border_light, $bg_light) {
+    private function render_room_native($pdf, $room, $default_markup) {
         // Calculate room area
         $room_width = isset($room['width']) ? floatval($room['width']) : 0;
         $room_length = isset($room['length']) ? floatval($room['length']) : 0;
         $room_area = $room_width * $room_length;
 
-        // Room header
-        $room_header = '<div style="margin-bottom: 25px; page-break-inside: avoid;">
-            <table width="100%" border="0" cellspacing="0" cellpadding="5">
-                <tr>
-                    <td style="font-weight: bold; font-size: 14pt; color: ' . $brand_green . '; text-align: left;">
-                        ' . esc_html($room['name']) . '
-                        <span style="background: #f5f5f5; padding: 3px 8px; border-radius: 4px; font-size: 10pt; color: #666666; display: inline-block; margin-left: 8px;">
-                            ' . esc_html($room['width']) . '×' . esc_html($room['length']) . 'm
-                            (' . number_format($room_area, 2) . 'm²)
-                        </span>
-                    </td>
-                    <td style="font-weight: bold; text-align: right; font-size: 12pt;">';
+        // Get page dimensions
+        $pageWidth = $pdf->getPageWidth();
+        $marginLeft = $pdf->getMargins()['left'];
+        $marginRight = $pdf->getMargins()['right'];
+        $contentWidth = $pageWidth - $marginLeft - $marginRight;
 
-        if (isset($room['min_total']) && isset($room['max_total'])) {
-            if ($room['min_total'] === $room['max_total']) {
-                $room_header .= display_price_with_markup($room['min_total'], $default_markup, "up");
-            } else {
-                $room_header .= display_price_with_markup($room['min_total'], $default_markup, "down") . ' - ' .
-                    display_price_with_markup($room['max_total'], $default_markup, "up");
-            }
+        // Remember starting position
+        $startX = $pdf->GetX();
+        $startY = $pdf->GetY();
+
+        // Set up for room name - using bold, brand color
+        $pdf->SetFont(self::FONT_FAMILY, 'B', 14);
+        $pdf->SetTextColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
+
+        // Get width of room name text
+        $room_name = $room['name'];
+        $room_name_width = $pdf->GetStringWidth($room_name);
+
+        // Write room name
+        $pdf->Write(10, $room_name);
+
+        // Position for dimensions - immediately after room name
+        $pdf->SetX($startX + $room_name_width + 2); // Small spacing after name
+
+        // Set up for dimensions - using regular weight, gray
+        $pdf->SetFont(self::FONT_FAMILY, '', 10);
+        $pdf->SetTextColor(102, 102, 102);
+
+        // Create dimensions text
+        $dimensions_text = sprintf("%d×%dm (%dm²)", $room['width'], $room['length'], $room_area);
+
+        // Write dimensions
+        $pdf->Write(10, $dimensions_text);
+
+        // Get combined width of room name + dimensions
+        $combined_width = $room_name_width + $pdf->GetStringWidth($dimensions_text) + 2;
+
+        // Make sure we don't overlap with price area
+        $max_allowed_width = $contentWidth * 0.7;
+        if ($combined_width > $max_allowed_width) {
+            // If combined text is too long, we'll need to truncate
+            $pdf->SetXY($startX, $startY);
+            $pdf->SetFont(self::FONT_FAMILY, 'B', 14);
+            $pdf->SetTextColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
+            $pdf->Cell($max_allowed_width, 10, $room_name, 0, 0, 'L', false, '', 1); // With text truncation
+
+            // We'll skip dimensions in this case to avoid overlap
         }
 
-        $room_header .= '</td>
-                </tr>
-            </table>';
+        // Position for price - right side
+        $pdf->SetXY($startX + $contentWidth - ($contentWidth * 0.3), $startY);
 
-        $pdf->writeHTML($room_header, true, false, true, false, '');
+        // Room total price
+        $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
+        $pdf->SetTextColor(51, 51, 51);
+
+        if (isset($room['min_total']) && isset($room['max_total'])) {
+            $price_text = $this->format_price_for_pdf($room['min_total'], $room['max_total'], $default_markup);
+            $pdf->Cell($contentWidth * 0.3, 10, $price_text, 0, 0, 'R');
+        } else {
+            $pdf->Cell($contentWidth * 0.3, 10, '', 0, 0, 'R');
+        }
+
+        // Move to next line and add some spacing
+        $pdf->Ln(12);
 
         // Process products
         if (isset($room['products']) && is_array($room['products'])) {
             // Create a consolidated array of products
             $all_products = [];
+            $notes = [];
 
             foreach ($room['products'] as $product) {
-                // Skip notes - process separately
+                // Separate notes from products
                 if (isset($product['type']) && $product['type'] === 'note') {
+                    $notes[] = $product;
                     continue;
                 }
 
@@ -368,147 +362,313 @@ class PDFGenerator {
 
             // Process each product
             foreach ($all_products as $product_item) {
-                $this->render_product($pdf, $product_item, $default_markup, $brand_green, $border_light, $bg_light);
+                $this->render_product_native($pdf, $product_item, $default_markup, $room_area);
             }
 
             // Process standalone notes
-            foreach ($room['products'] as $product) {
-                if (isset($product['type']) && $product['type'] === 'note') {
-                    $note_html = '<div style="margin: 8px 0; padding: 8px 10px; background-color: #f8f8f8; border-left: 3px solid ' . $brand_green . '; font-size: 10pt;">
-                        <table border="0" cellspacing="0" cellpadding="2">
-                            <tr>
-                                <td width="15" style="vertical-align: top; color: ' . $brand_green . ';">•</td>
-                                <td style="vertical-align: top;">' . esc_html($product['note_text']) . '</td>
-                            </tr>
-                        </table>
-                    </div>';
-
-                    $pdf->writeHTML($note_html, true, false, true, false, '');
-                }
+            foreach ($notes as $note) {
+                $this->render_note_native($pdf, $note);
             }
         } else {
-            $no_products_html = '<div style="font-style: italic; color: #888888; text-align: center; padding: 20px; border: 1px dashed #dddddd; margin: 15px 0;">No products in this room.</div>';
-            $pdf->writeHTML($no_products_html, true, false, true, false, '');
+            // No products message
+            $pdf->SetFont(self::FONT_FAMILY, 'I', 10);
+            $pdf->SetTextColor(136, 136, 136);
+            $pdf->Cell(0, 15, 'No products in this room.', 1, 1, 'C', false);
         }
 
-        $pdf->writeHTML('</div>', true, false, true, false, '');
+        $pdf->Ln(5);
     }
 
     /**
-     * Render a product item with image to the left of title and content
-     *
-     * @param object $pdf PDF object
-     * @param array $product_item Product item data
-     * @param float $default_markup Default markup percentage
-     * @param string $brand_green Green color code
-     * @param string $border_light Border light color
-     * @param string $bg_light Background light color
+     * Render a product using native TCPDF methods with notes inside the card
+     * Fixed to ensure consistent note alignment
      */
-    private function render_product($pdf, $product_item, $default_markup, $brand_green, $border_light, $bg_light) {
+    private function render_product_native($pdf, $product_item, $default_markup, $room_area) {
         $product = $product_item['product_data'];
         $is_addition = $product_item['is_addition'];
         $parent_name = $product_item['parent_name'];
 
+        // Get page dimensions
+        $pageWidth = $pdf->getPageWidth();
+        $marginLeft = $pdf->getMargins()['left'];
+        $marginRight = $pdf->getMargins()['right'];
+        $contentWidth = $pageWidth - $marginLeft - $marginRight;
+
         // Get product pricing method
         $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'fixed';
 
-        // Start product container
-        $product_start = '<div style="margin-bottom: 15px; border: 1px solid ' . $border_light . '; overflow: hidden; background: #fff; page-break-inside: avoid;">';
-        $pdf->writeHTML($product_start, true, false, true, false, '');
-
-        // Process image first if available
+        // Process image
         $has_image = false;
-        $image_height = 0;
-        $image_width = 0;
+        $image_path = '';
+        $image_width = 30;
+        $image_height = 30;
 
         if (!empty($product['image'])) {
-            // Get image path and details
             $image_path = $this->get_image_path($product['image']);
+            $has_image = !empty($image_path);
+        }
 
-            if ($image_path) {
-                $has_image = true;
+        // Position tracking
+        $startX = $pdf->GetX();
+        $startY = $pdf->GetY();
+        $image_offset = $has_image ? $image_width + 5 : 0;
 
-                // Get current position
-                $start_x = $pdf->GetX();
-                $start_y = $pdf->GetY();
+        // No indentation for any products
+        $indent = 0;
 
-                // Image dimensions (mm)
-                $image_width = 18;  // ~68px
-                $image_height = 18; // ~68px
+        // Calculate notes height first to determine card size
+        $notes_height = 0;
+        $has_notes = false;
 
-                // Add image at current position + margins
-                $pdf->Image($image_path, $start_x + 5, $start_y + 5, $image_width, $image_height);
-
-                // Reset position
-                $pdf->SetY($start_y);
+        if (!$is_addition && isset($product['additional_notes']) && is_array($product['additional_notes']) && !empty($product['additional_notes'])) {
+            $has_notes = true;
+            foreach ($product['additional_notes'] as $note) {
+                $note_text = isset($note['note_text']) ? $note['note_text'] : '';
+                if (!empty($note_text)) {
+                    // Calculate approximately how much height this note will need
+                    $pdf->SetFont(self::FONT_FAMILY, '', 9);
+                    $note_width = $contentWidth - $image_offset - 15;
+                    $lines = $pdf->getNumLines($note_text, $note_width);
+                    $notes_height += $lines * 4 + 2; // 4pt line height + 2pt spacing
+                }
             }
         }
 
-        // Product header with title and price - adjusted for image
-        $header_html = '<table width="100%" border="0" cellspacing="0" cellpadding="10" style="border-bottom: 1px solid ' . $border_light . '; background: ' . $bg_light . ';">';
+        // Card styling - same for all products
+        $bg_color = [255, 255, 255]; // White background for all products
 
-        // If there's an image, adjust the first cell with padding
+        // Card height - dynamic calculation with less padding
+        $base_height = 35; // Reduced base height for product name and price
+        $card_height = $base_height + ($has_notes ? $notes_height : 0); // No extra padding for notes
+
+        // Store original position to adjust final position later
+        $original_y = $pdf->GetY();
+
+        // Draw card background with subtle border for all products
+        $pdf->SetFillColor($bg_color[0], $bg_color[1], $bg_color[2]);
+        $pdf->SetDrawColor(230, 230, 230); // Light gray border
+        $pdf->RoundedRect($startX, $startY, $contentWidth, $card_height, 2, '1111', 'FD');
+
+        // Add image if available - positioned at the top of the card
         if ($has_image) {
-            $header_html .= '<tr>
-                <td width="' . ($image_width + 10) . 'mm"></td>
-                <td style="font-weight: bold; font-size: 12pt; text-align: left; padding-left: 0;">
-                    ' . esc_html($product['name']) . '
-                </td>';
-        } else {
-            $header_html .= '<tr>
-                <td style="font-weight: bold; font-size: 12pt; text-align: left;">
-                    ' . esc_html($product['name']) . '
-                </td>';
+            $pdf->Image($image_path, $startX + $indent + 5, $startY + 5, $image_width, $image_height);
         }
 
-        // Add price cell
-        $header_html .= '<td style="font-weight: bold; color: ' . $brand_green . '; text-align: right;">';
+        // Set position for product name
+        $beforeTextX = $startX + $indent + $image_offset + 5;
+        $beforeTextY = $startY + 10; // Top position for text
+        $pdf->SetXY($beforeTextX, $beforeTextY);
+
+        // Product name
+        $title_width = $contentWidth - $indent - $image_offset - 5 - ($contentWidth * 0.3);
+        $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
+        $pdf->SetTextColor(51, 51, 51);
+
+        // Make sure we have a product name
+        $product_name = isset($product['name']) ? $product['name'] : 'Unnamed Product';
+        $pdf->Cell($title_width, 10, $product_name, 0, 1);
+
+        // Price information - with green color for emphasis
+        // Position to the right of the product name
+        $pdf->SetXY($startX + $contentWidth - ($contentWidth * 0.3), $beforeTextY);
+        $pdf->SetFont(self::FONT_FAMILY, 'B', 11);
+        $pdf->SetTextColor(0, 133, 63); // Green color for prices
 
         if (isset($product['min_price_total']) && isset($product['max_price_total'])) {
-            if ($product['min_price_total'] === $product['max_price_total']) {
-                $header_html .= display_price_with_markup($product['min_price_total'], $default_markup, "up");
-            } else {
-                $header_html .= display_price_with_markup($product['min_price_total'], $default_markup, "down") . ' - ' .
-                    display_price_with_markup($product['max_price_total'], $default_markup, "up");
-            }
+            $price_text = $this->format_price_for_pdf($product['min_price_total'], $product['max_price_total'], $default_markup);
+            $pdf->Cell(($contentWidth * 0.3) - 5, 10, $price_text, 0, 1, 'R');
+
+            // Remove "Per m²" text entirely - no longer displaying pricing method indicator
+        } else {
+            $pdf->Cell(($contentWidth * 0.3) - 5, 10, '', 0, 1, 'R');
         }
 
-        $header_html .= '</td></tr></table>';
+        // Add product notes if available - INSIDE THE CARD
+        if ($has_notes) {
+            // Set position for notes - below product name and price
+            $notesX = $startX + $indent + $image_offset + 5;
+            $notesY = $beforeTextY + 15; // Position notes below product name
 
-        $pdf->writeHTML($header_html, true, false, true, false, '');
+            // FIXED: Set a consistent starting position for all notes
+            $pdf->SetXY($notesX, $notesY);
+            $pdf->SetFont(self::FONT_FAMILY, '', 9);
+            $pdf->SetTextColor(102, 102, 102); // Gray text for notes
 
-        // Product details content
-        $content_html = '<table width="100%" border="0" cellspacing="0" cellpadding="10"><tr>';
+            // Set a fixed width for notes to ensure proper alignment
+            $note_width = $contentWidth - $image_offset - 15;
 
-        // If there's an image, add cell spacer to align with the image
-        if ($has_image) {
-            $content_html .= '<td width="' . ($image_width + 10) . 'mm"></td>';
-        }
-
-        // Details cell
-        $content_html .= '<td style="vertical-align: top;">';
-
-        if ($pricing_method === 'fixed') {
-            $content_html .= '<div style="font-style: italic; color: #888888; font-size: 9pt; margin-bottom: 8px;">Fixed price product</div>';
-        }
-
-        // Add notes if available
-        if (!$is_addition && isset($product['additional_notes']) && is_array($product['additional_notes']) && !empty($product['additional_notes'])) {
-            $content_html .= '<div style="margin: 8px 0; padding: 8px 10px; background-color: #f8f8f8; border-left: 3px solid ' . $brand_green . '; font-size: 10pt;">';
+            // Track the last note's bottom position
+            $last_note_bottom = $notesY;
 
             foreach ($product['additional_notes'] as $note) {
-                $content_html .= '<table border="0" cellspacing="0" cellpadding="2"><tr>
-                    <td width="15" style="vertical-align: top; color: ' . $brand_green . ';">•</td>
-                    <td style="vertical-align: top;">' . esc_html($note['note_text']) . '</td>
-                </tr></table>';
-            }
+                // Get note text
+                $note_text = isset($note['note_text']) ? $note['note_text'] : '';
+                if (empty($note_text)) {
+                    continue; // Skip empty notes
+                }
 
-            $content_html .= '</div>';
+                // Position at current Y
+                $current_note_y = $pdf->GetY();
+
+                // FIXED: Use Cell for shorter notes to reduce vertical space
+                if (strlen($note_text) < 60 && strpos($note_text, "\n") === false) {
+                    $pdf->SetX($notesX);
+                    $pdf->Cell($note_width, 4, $note_text, 0, 1);
+                } else {
+                    // Use writeHTMLCell for longer or multi-line notes
+                    $pdf->writeHTMLCell(
+                        $note_width,      // width
+                        0,                // height (0 = auto-calculate)
+                        $notesX,          // x position (consistent for all notes)
+                        $current_note_y,  // y position (current Y position)
+                        $note_text,       // content
+                        0,                // border (0 = no border)
+                        1,                // ln (1 = move to next line after cell)
+                        false,            // fill
+                        true,             // reset Y (true = reset)
+                        'L',              // alignment (L = left)
+                        false             // no autopadding - reduce vertical space
+                    );
+                }
+
+                // Track the last note's bottom position
+                $last_note_bottom = $pdf->GetY();
+
+                // Add minimal space between notes
+                $pdf->Ln(1);
+            }
         }
 
-        $content_html .= '</td></tr></table></div>';
+        // FIXED: Reduce spacing between products - use actual content height instead of estimated
+        // Get the current Y position after all content has been rendered
+        $currentY = $pdf->GetY();
 
-        $pdf->writeHTML($content_html, true, false, true, false, '');
+        // Calculate the actual content height
+        $actual_content_height = $currentY - $startY;
+
+        // Use the greater of actual content height or calculated card height
+        // but with minimal added spacing (2pt instead of 5pt)
+        $next_y = $startY + max($actual_content_height, $card_height) + 2;
+        $pdf->SetY($next_y);
+    }
+
+    /**
+     * Render a note using native TCPDF methods - Fixed to ensure consistent alignment
+     */
+    private function render_note_native($pdf, $note) {
+        // Get page dimensions
+        $pageWidth = $pdf->getPageWidth();
+        $marginLeft = $pdf->getMargins()['left'];
+        $marginRight = $pdf->getMargins()['right'];
+        $contentWidth = $pageWidth - $marginLeft - $marginRight;
+
+        // Position tracking
+        $startX = $pdf->GetX();
+        $startY = $pdf->GetY();
+
+        // Create a green bar on left side
+        $pdf->SetFillColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
+        $pdf->Rect($startX, $startY, 3, 5, 'F');
+
+        // FIXED: Use writeHTMLCell for consistent text alignment
+        $pdf->SetXY($startX + 5, $startY);
+        $pdf->SetFont(self::FONT_FAMILY, '', 10);
+        $pdf->SetTextColor(51, 51, 51);
+
+        $note_text = isset($note['note_text']) ? $note['note_text'] : '';
+
+        // Use writeHTMLCell for better line alignment
+        $pdf->writeHTMLCell(
+            $contentWidth - 5,  // width
+            0,                  // height (0 = auto-calculate)
+            $startX + 5,        // x position
+            $startY,            // y position
+            $note_text,         // content
+            0,                  // border (0 = no border)
+            1,                  // ln (1 = move to next line after cell)
+            false,              // fill
+            true,               // reset Y
+            'L',                // alignment (L = left)
+            true                // autopadding
+        );
+
+        $pdf->Ln(2);
+    }
+
+    /**
+     * Render total estimate section
+     */
+    private function render_total_section($pdf, $estimate, $default_markup) {
+        if (!isset($estimate['min_total']) || !isset($estimate['max_total'])) {
+            return;
+        }
+
+        // Green line separator
+        $pdf->SetDrawColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
+        $pdf->SetLineWidth(0.5);
+        $pdf->Line($pdf->GetX(), $pdf->GetY(), $pdf->GetX() + ($pdf->GetPageWidth() - $pdf->getMargins()['left'] - $pdf->getMargins()['right']), $pdf->GetY());
+        $pdf->Ln(5);
+
+        // Total section
+        $pageWidth = $pdf->getPageWidth();
+        $marginLeft = $pdf->getMargins()['left'];
+        $marginRight = $pdf->getMargins()['right'];
+        $contentWidth = $pageWidth - $marginLeft - $marginRight;
+
+        // Total Label
+        $pdf->SetFont(self::FONT_FAMILY, 'B', 14);
+        $pdf->SetTextColor(51, 51, 51);
+        $pdf->Cell($contentWidth * 0.7, 10, 'TOTAL ESTIMATE', 0, 0, 'L');
+
+        // Total Value
+        $pdf->SetFont(self::FONT_FAMILY, 'B', 16);
+        $pdf->SetTextColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
+        $price_text = $this->format_price_for_pdf($estimate['min_total'], $estimate['max_total'], $default_markup);
+        $pdf->Cell($contentWidth * 0.3, 10, $price_text, 0, 1, 'R');
+    }
+
+    /**
+     * Format price for PDF display
+     */
+    private function format_price_for_pdf($min_price, $max_price, $default_markup) {
+        if ($min_price === $max_price) {
+            return $this->format_currency_for_pdf($min_price, $default_markup, "up");
+        } else {
+            return $this->format_currency_for_pdf($min_price, $default_markup, "down") . ' - ' .
+                $this->format_currency_for_pdf($max_price, $default_markup, "up");
+        }
+    }
+
+
+    /**
+     * Format currency for PDF display
+     */
+    private function format_currency_for_pdf($price, $markup, $direction = null) {
+        $final_price = $price;
+
+        // Apply markup if specified
+        if ($direction === 'up') {
+            $final_price = $price * (1 + ($markup / 100));
+        } else if ($direction === 'down') {
+            $final_price = $price * (1 - ($markup / 100));
+        }
+
+        // Round and format
+        $final_price = round($final_price);
+
+        // Use WordPress currency formatting if available
+        if (function_exists('wc_price')) {
+            // Get price as string with HTML, then decode entities properly
+            $formatted = wc_price($final_price);
+            // First strip tags to remove HTML
+            $formatted = strip_tags($formatted);
+            // Then decode HTML entities to get proper symbols
+            $formatted = html_entity_decode($formatted, ENT_QUOTES, 'UTF-8');
+            return $formatted;
+        }
+
+        // Fallback formatting
+        return '$' . number_format($final_price, 0);
     }
 
     /**

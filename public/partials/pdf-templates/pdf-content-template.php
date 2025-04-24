@@ -4,6 +4,7 @@
  *
  * This template provides only the content section that will be placed
  * between the header and footer of the uploaded template PDF.
+ * The footer is now handled by the TCPDF Footer() method.
  *
  * @var array $estimate The estimate data
  *
@@ -63,6 +64,8 @@ $default_markup = isset($estimate['default_markup']) ? floatval($estimate['defau
             text-align: right;
             padding-right: 20px;
         }
+
+
     </style>
 
     <!-- Customer Details Section -->
@@ -153,7 +156,7 @@ $default_markup = isset($estimate['default_markup']) ? floatval($estimate['defau
                                 <td>
                                     <?php
                                     $add_pricing_method = isset($add_product['pricing_method']) ? $add_product['pricing_method'] : $pricing_method;
-//                                    echo esc_html($add_pricing_method === 'sqm' ? 'Per m²' : 'Fixed Price');
+                                    //                                    echo esc_html($add_pricing_method === 'sqm' ? 'Per m²' : 'Fixed Price');
                                     ?>
                                 </td>
                                 <td class="price-range">

@@ -14,6 +14,20 @@ use setasign\Fpdi\Tcpdf\Fpdi;
  */
 class PDFGenerator {
     /**
+     * Footer text content
+     *
+     * @var string
+     */
+    private $footer_text = '';
+
+    /**
+     * Footer contact details content
+     *
+     * @var string
+     */
+    private $footer_contact_details = '';
+
+    /**
      * Generate a PDF from an estimate
      *
      * @param array $estimate The estimate data
@@ -26,7 +40,9 @@ class PDFGenerator {
         $margin_top = isset($options['pdf_margin_top']) ? intval($options['pdf_margin_top']) : 15;
         $margin_bottom = isset($options['pdf_margin_bottom']) ? intval($options['pdf_margin_bottom']) : 15;
 
-        error_log("margin-top: ". $margin_top);
+        // Store footer content in class properties for use in footer callback
+        $this->footer_text = isset($options['pdf_footer_text']) ? $options['pdf_footer_text'] : '';
+        $this->footer_contact_details = isset($options['pdf_footer_contact_details_content']) ? $options['pdf_footer_contact_details_content'] : '';
 
         // Check if FPDI is available (it extends TCPDF)
         if (class_exists('\\setasign\\Fpdi\\Tcpdf\\Fpdi') && $template_id > 0) {
@@ -48,6 +64,82 @@ class PDFGenerator {
     }
 
     /**
+     * Extend TCPDF with a custom footer and page template support
+     */
+    private function createCustomPDF() {
+        // Create a custom PDF class that extends TCPDF/FPDI to handle custom footer
+        $footer_text = $this->footer_text;
+        $footer_contact_details = $this->footer_contact_details;
+
+        return new class($footer_text, $footer_contact_details) extends Fpdi {
+            protected $footer_text;
+            protected $footer_contact_details;
+            protected $template_id = null;
+            protected $tpl_idx = null;
+
+            public function __construct($footer_text, $footer_contact_details) {
+                parent::__construct();
+                $this->footer_text = $footer_text;
+                $this->footer_contact_details = $footer_contact_details;
+            }
+
+            // Set template info
+            public function setTemplateFile($template_path) {
+                $this->setSourceFile($template_path);
+                // Store template info for later use in other pages
+                $this->template_id = $template_path;
+                // Import first page as template - store the index
+                $this->tpl_idx = $this->importPage(1);
+                return $this->tpl_idx;
+            }
+
+            // Override AddPage to apply template to each new page
+            public function AddPage($orientation = '', $format = '', $keepmargins = false, $tocpage = false) {
+                // First add the page
+                parent::AddPage($orientation, $format, $keepmargins, $tocpage);
+
+                // If we have a template, apply it to the new page
+                if ($this->tpl_idx !== null) {
+                    $this->useTemplate($this->tpl_idx, 0, 0, $this->getPageWidth(), $this->getPageHeight());
+                }
+            }
+
+            // Page footer
+            public function Footer() {
+                // Position at 15 mm from bottom
+                $this->SetY(-32);
+
+                // Set font
+                $this->SetFont('helvetica', '', 9);
+
+                // Draw line
+                $this->Ln(1);
+
+                // Footer content with 40% width contact details
+                $this->StartTransform();
+
+                // Left side - Main footer text (60% width)
+                $this->SetX(15);
+                $html_footer = '';
+
+                ob_start();
+                include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/pdf-templates/pdf-footer.php';
+                $html_footer = ob_get_clean();
+
+                $this->writeHTML($html_footer, true, false, true, false, '');
+                $this->StopTransform();
+
+                // Add generation info
+                $this->Ln(2);
+
+                // Page number
+                $this->Ln(4);
+                $this->Cell(0, 0, 'Page ' . $this->getAliasNumPage() . ' of ' . $this->getAliasNbPages(), 0, 0, 'C');
+            }
+        };
+    }
+
+    /**
      * Generate a PDF using an uploaded template PDF as the base
      *
      * @param array $estimate The estimate data
@@ -57,11 +149,8 @@ class PDFGenerator {
      * @return string PDF file contents
      */
     private function generate_template_based_pdf($estimate, $template_path, $margin_top = 15, $margin_bottom = 15) {
-        // Create FPDI instance
-        $pdf = new Fpdi();
-
-        // Disable auto page break initially (we'll handle it manually)
-        $pdf->SetAutoPageBreak(false);
+        // Create FPDI instance with custom footer
+        $pdf = $this->createCustomPDF();
 
         // Set document information
         $pdf->SetCreator('Product Estimator');
@@ -69,19 +158,22 @@ class PDFGenerator {
         $pdf->SetTitle($estimate['name'] . ' - Estimate');
         $pdf->SetSubject('Product Estimate');
 
-        // Import the template - get page count
-        $pageCount = $pdf->setSourceFile($template_path);
+        // Setup for footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(true);
+        $pdf->setFooterMargin(10);
 
-        // Import first page as template
-        $tplIdx = $pdf->importPage(1);
-
-        // Add a page and use the template
-        $pdf->AddPage();
-        $pdf->useTemplate($tplIdx, 0, 0, $pdf->getPageWidth(), $pdf->getPageHeight());
-
-        // Reset margins for content
+        // Set margins
         $pdf->SetMargins(15, $margin_top, 15);
-        $pdf->SetAutoPageBreak(true, $margin_bottom);
+
+        // Enable auto page break
+        $pdf->SetAutoPageBreak(true, $margin_bottom + 25); // Add extra space for footer
+
+        // Set up the template for all pages
+        $pdf->setTemplateFile($template_path);
+
+        // Add a page - the template will be applied automatically in the overridden AddPage method
+        $pdf->AddPage();
 
         // Move to position after the margin
         $pdf->SetY($margin_top);

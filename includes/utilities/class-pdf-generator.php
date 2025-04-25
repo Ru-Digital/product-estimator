@@ -463,7 +463,7 @@ class PDFGenerator {
 
         // Set position for product name
         $beforeTextX = $startX + $indent + $image_offset + 5;
-        $beforeTextY = $startY + 10; // Top position for text
+        $beforeTextY = $startY + 2; // Top position for text
         $pdf->SetXY($beforeTextX, $beforeTextY);
 
         // Product name

@@ -434,8 +434,8 @@ class PDFGenerator {
     }
 
     /**
-     * Render a product using native TCPDF methods with minimal padding
-     * Fixes excessive bottom padding in product cards
+     * Render a product using native TCPDF methods with proper image integration
+     * This version ensures the card box fully includes the image for all products
      *
      * @param object $pdf TCPDF object
      * @param array $product_item Product item data
@@ -470,9 +470,6 @@ class PDFGenerator {
         // No indentation for all products
         $indent = 0;
 
-        // Define minimal padding
-        $padding = 5; // Minimal padding for compact layout
-
         // Calculate notes height first to determine card size
         $notes_height = 0;
         $has_notes = false;
@@ -485,37 +482,24 @@ class PDFGenerator {
                     // Calculate approximately how much height this note will need
                     $pdf->SetFont(self::FONT_FAMILY, '', 9);
                     $image_offset = $has_image ? $image_width + 5 : 0;
-                    $note_width = $contentWidth - $indent - $image_offset - 15;
+                    $note_width = $contentWidth - $indent - $image_offset - 10;
                     $lines = $pdf->getNumLines($note_text, $note_width);
-                    $notes_height += $lines * 4 + 2; // 4pt line height + 2pt spacing
+                    $notes_height += $lines * 4 + 1; // 4pt line height + 1pt spacing
                 }
             }
         }
 
-        // Content height estimation - calculate more accurately based on what we'll actually render
-        $content_height = 0;
+        // Card height - use compact height calculation
+        $base_height = $is_addition ? ($has_image ? max(30, $image_height + 6) : 30) : 35;
+        $card_height = $base_height + ($has_notes ? $notes_height : 0);
 
-        // Estimate title height
-        $content_height += $is_addition ? 10 : 12; // Title height
+        // For products without price or notes, make them more compact
+        $has_valid_price = isset($product['min_price_total']) && isset($product['max_price_total']) &&
+            !($product['min_price_total'] == 0 && $product['max_price_total'] == 0);
 
-        // Add notes height if applicable
-        if ($has_notes) {
-            $content_height += $notes_height + 2; // Notes + a little spacing
-        }
-
-        // Calculate card height dynamically based on content
-        // This is key to fixing the excessive padding
-        $card_height = max(
-            $content_height + ($padding * 2), // Content + padding top/bottom
-            $has_image ? $image_height + ($padding * 2) : 0 // Image height + padding if there's an image
-        );
-
-        // Ensure minimum card height
-        $card_height = max($card_height, 20); // Less minimum height than before
-
-        // For additional products (is_addition), make cards even more compact
-        if ($is_addition) {
-            $card_height = max($content_height + ($padding * 1.5), 20); // Even less padding for additions
+        if ($is_addition && !$has_valid_price && !$has_notes) {
+            // Still make sure there's enough room for the image
+            $card_height = $has_image ? max(25, $image_height + 6) : 25;
         }
 
         // Check if there's enough space for the card on the current page
@@ -526,51 +510,45 @@ class PDFGenerator {
         // Position tracking - get AFTER potential page break
         $startX = $pdf->GetX();
         $startY = $pdf->GetY();
-        $image_offset = $has_image ? $image_width + 5 : 0;
 
-        // Card styling - different for main vs additional products
-        $bg_color = $is_addition ? [248, 248, 248] : [255, 255, 255]; // Lighter bg for additions
+        // Define minimal padding
+        $padding = 3;
 
-        // Draw card background with subtle border
-        $pdf->SetFillColor($bg_color[0], $bg_color[1], $bg_color[2]);
+        // Draw card background with subtle border - IMPORTANT: Draw the card FIRST
+        // to ensure the image is included INSIDE the card
+        $pdf->SetFillColor($is_addition ? 248 : 255, $is_addition ? 248 : 255, $is_addition ? 248 : 255);
         $pdf->SetDrawColor(230, 230, 230); // Light gray border
         $pdf->RoundedRect($startX + $indent, $startY, $contentWidth - $indent, $card_height, 2, '1111', 'FD');
 
-        // Add image if available - positioned at the left side with consistent padding
+        // Add image inside the card - it will appear inside the rounded rectangle
         if ($has_image) {
+            // Position image with minimal padding (top-aligned)
             $image_x = $startX + $indent + $padding;
-            $image_y = $startY + $padding; // Consistent top padding
+            $image_y = $startY + $padding;
 
             $pdf->Image($image_path, $image_x, $image_y, $image_width, $image_height);
         }
 
-        // Set content area starting position with consistent top padding
-        $content_x = $startX + $indent + ($has_image ? $image_offset + $padding : $padding);
-        $content_y = $startY + $padding; // Consistent top padding
+        // Calculate content position - to the right of the image
+        $image_offset = $has_image ? $image_width + $padding : 0;
+        $content_x = $startX + $indent + $image_offset + $padding;
+        $content_y = $startY + $padding;
         $pdf->SetXY($content_x, $content_y);
 
         // Check if the product has a valid price that should be displayed
-        $has_valid_price = true;
-        if (isset($product['min_price_total']) && isset($product['max_price_total'])) {
-            // Consider the price invalid (for display) if both min and max are zero
-            if ($product['min_price_total'] == 0 && $product['max_price_total'] == 0) {
-                $has_valid_price = false;
-            }
-        }
-
-        if ($has_valid_price && isset($product['min_price_total']) && isset($product['max_price_total'])) {
+        if ($has_valid_price) {
             // For both main and additional products, use the price graph
-            // Just adjust settings to make it slightly smaller for additional products
+            // Adjust settings to make it smaller and more compact
             $graph_options = [
                 'show_labels' => false, // No labels for product cards to save space
-                'graph_height' => $is_addition ? 3 : 4, // Smaller graph for additional products
+                'graph_height' => $is_addition ? 2 : 3, // Smaller graph height
                 'round_to' => 100,      // Smaller rounding for better precision
                 'title_max_width_percent' => 0.7, // Increased space for title
                 'hide_zero_price' => true // Hide price if it's zero
             ];
 
             // Ensure graph stays within page boundaries by limiting width
-            $graph_width = $contentWidth - $indent - $image_offset - ($padding * 2); // Account for padding on both sides
+            $graph_width = $contentWidth - $indent - $image_offset - ($padding * 2);
             $graph_options['max_width'] = $graph_width;
 
             $this->render_price_graph_pdf(
@@ -578,38 +556,35 @@ class PDFGenerator {
                 $product['min_price_total'],
                 $product['max_price_total'],
                 $default_markup,
-                $product['name'], // Product name without room area
-                null,             // No dimensions needed for product
+                $product['name'],
+                null,
                 $pricing_method,
                 $graph_options
             );
         } else {
-            // Fallback or zero price case - just show the product name
+            // For products without price (like some underlay products)
             $title_width = $contentWidth - $indent - $image_offset - ($padding * 2);
-            $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
+            $pdf->SetFont(self::FONT_FAMILY, 'B', 11);
             $pdf->SetTextColor(51, 51, 51);
 
             // Make sure we have a product name
             $product_name = isset($product['name']) ? $product['name'] : 'Unnamed Product';
-            $pdf->Cell($title_width, 10, $product_name, 0, 1);
+            $pdf->Cell($title_width, 8, $product_name, 0, 1);
         }
 
-        // Add product notes if available - INSIDE THE CARD
+        // Add product notes if available
         if ($has_notes) {
-            // Set position for notes - below product name and price
-            $notesX = $content_x; // Use the same X position as the content for alignment
-            $notesY = $pdf->GetY() + 2; // Small space between title/price and notes
+            // Set position for notes
+            $notesX = $content_x;
+            $notesY = $pdf->GetY() + 1; // Reduced spacing
 
-            // Set a consistent starting position for all notes
+            // Set position for notes
             $pdf->SetXY($notesX, $notesY);
             $pdf->SetFont(self::FONT_FAMILY, '', 9);
             $pdf->SetTextColor(102, 102, 102); // Gray text for notes
 
             // Set a fixed width for notes to ensure proper alignment
             $note_width = $contentWidth - $indent - $image_offset - ($padding * 2);
-
-            // Track the last note's bottom position
-            $last_note_bottom = $notesY;
 
             foreach ($product['additional_notes'] as $note) {
                 // Get note text
@@ -629,43 +604,34 @@ class PDFGenerator {
                     $pdf->SetX($notesX);
                 }
 
-                // Use Cell for shorter notes to reduce vertical space
+                // Use Cell for shorter notes
                 if (strlen($note_text) < 60 && strpos($note_text, "\n") === false) {
                     $pdf->SetX($notesX);
                     $pdf->Cell($note_width, 4, $note_text, 0, 1);
                 } else {
                     // Use writeHTMLCell for longer or multi-line notes
                     $pdf->writeHTMLCell(
-                        $note_width,      // width
-                        0,                // height (0 = auto-calculate)
-                        $notesX,          // x position (consistent for all notes)
-                        $current_note_y,  // y position (current Y position)
-                        $note_text,       // content
-                        0,                // border (0 = no border)
-                        1,                // ln (1 = move to next line after cell)
-                        false,            // fill
-                        true,             // reset Y (true = reset)
-                        'L',              // alignment (L = left)
-                        false             // no autopadding - reduce vertical space
+                        $note_width,
+                        0,
+                        $notesX,
+                        $current_note_y,
+                        $note_text,
+                        0,
+                        1,
+                        false,
+                        true,
+                        'L',
+                        false
                     );
                 }
 
-                // Track the last note's bottom position
-                $last_note_bottom = $pdf->GetY();
-
-                // Minimal space between notes (reduced from 1 to 0.5)
+                // Minimal space between notes
                 $pdf->Ln(0.5);
             }
         }
 
-        // Calculate the actual content end position
-        $content_end_y = $pdf->GetY();
-
-        // For additional products, we want almost no space after content
-        $space_after = $is_addition ? 2 : 3;
-
-        // Add minimal spacing between products
-        $pdf->Ln($space_after);
+        // Add minimal space after the card
+        $pdf->Ln(4);
     }
 
     /**

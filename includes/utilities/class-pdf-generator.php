@@ -277,63 +277,209 @@ class PDFGenerator {
     }
 
     /**
-     * Render the PDF content using native TCPDF methods
-     * with improved page break handling and section spacing
+     * Render a product card using native TCPDF methods - with dynamic height calculation
+     * and margin between cards
      *
-     * @param object $pdf PDF object
-     * @param array $estimate Estimate data
+     * @param object $pdf TCPDF object
+     * @param array $product Product data
+     * @param float $default_markup Default markup percentage
+     * @param float $room_area Room area in square meters
      */
-    private function render_content_native($pdf, $estimate) {
-        // Get settings
-        $options = get_option('product_estimator_settings', []);
-        $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
+    private function render_product_card($pdf, $product, $default_markup, $room_area) {
+        // Get page dimensions
+        $pageWidth = $pdf->getPageWidth();
+        $marginLeft = $pdf->getMargins()['left'];
+        $marginRight = $pdf->getMargins()['right'];
+        $contentWidth = $pageWidth - $marginLeft - $marginRight;
 
-        // Process each room
-        if (isset($estimate['rooms']) && is_array($estimate['rooms']) && !empty($estimate['rooms'])) {
-            $room_count = 0;
-            foreach ($estimate['rooms'] as $room_id => $room) {
-                // Track which room we're on
-                $room_count++;
+        // Get product pricing method
+        $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'fixed';
 
-                // Check if we need a page break before this room
-                $needed_height = 100; // Approximate height needed for a room heading and at least one product
-                if ($pdf->GetY() + $needed_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
-                    $pdf->AddPage(); // This will now automatically apply the template
-                }
+        // Process image
+        $has_image = false;
+        $image_path = '';
+        $image_width = 15;
+        $image_height = 15;
 
-                $this->render_room_native($pdf, $room, $default_markup);
+        if (!empty($product['image'])) {
+            $image_path = $this->get_image_path($product['image']);
+            $has_image = !empty($image_path);
+        }
 
-                // Add an extra line break after the last room to create more space before the total
-                if ($room_count == count($estimate['rooms'])) {
-                    $pdf->Ln(10);
+        // Define padding - REDUCED
+        $padding = 3; // Reduced from 4 to 3
+
+        // Define margin between cards - NEW
+        $card_margin = 3; // 3mm margin between cards
+
+        // Calculate image offset for content positioning
+        $image_offset = $has_image ? $image_width + $padding : 0;
+
+        // Check for valid price data
+        $has_valid_price = isset($product['min_price_total']) && isset($product['max_price_total']) &&
+            !($product['min_price_total'] == 0 && $product['max_price_total'] == 0);
+
+        // Calculate title space needed
+        $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
+        $price_width = $has_valid_price ? min($contentWidth * 0.25, 70) : 0;
+        $title_width = $contentWidth - $image_offset - ($padding * 2) - $price_width;
+        $product_name = isset($product['name']) ? $product['name'] : 'Unnamed Product';
+        $title_height = $pdf->getStringHeight($title_width, $product_name);
+
+        // Calculate header content height (title or graph)
+        $header_height = $title_height;
+        if ($has_valid_price) {
+            // Add height for price graph if used
+            $graph_height = 2.5; // Graph height in mm
+            $header_height = max($header_height, $graph_height + 2); // Include some spacing
+        }
+
+        // Calculate notes height with proper dimensions
+        $notes_height = 0;
+        $has_notes = false;
+
+        if (isset($product['additional_notes']) && is_array($product['additional_notes']) && !empty($product['additional_notes'])) {
+            $has_notes = true;
+            $note_width = $contentWidth - $image_offset - ($padding * 2);
+
+            foreach ($product['additional_notes'] as $note) {
+                $note_text = isset($note['note_text']) ? $note['note_text'] : '';
+                if (!empty($note_text)) {
+                    // Calculate proper height for this note
+                    $pdf->SetFont(self::FONT_FAMILY, '', 9);
+                    $note_height = $pdf->getStringHeight($note_width, $note_text);
+                    $notes_height += $note_height;
                 }
             }
+
+            if ($has_notes) {
+                $notes_height += 2; // Add a little spacing between notes section and header
+            }
+        }
+
+        // Calculate main content area height - the max of image height or header height
+        $content_height = max($header_height, $has_image ? $image_height : 0);
+
+        // Calculate total card height - dynamic based on content
+        $card_height = $content_height + ($padding * 2) + ($has_notes ? $notes_height : 0);
+
+        // Check if there's enough space for the card on the current page
+        if ($pdf->GetY() + $card_height + $card_margin > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
+            $pdf->AddPage();
+        }
+
+        // Position tracking
+        $startX = $pdf->GetX();
+        $startY = $pdf->GetY();
+
+        // Draw card background with rounded corners and border
+        $pdf->SetFillColor(255, 255, 255); // White background for all cards
+        $pdf->SetDrawColor(230, 230, 230); // Light gray border
+        $pdf->RoundedRect(
+            $startX,
+            $startY,
+            $contentWidth,
+            $card_height,
+            2, // Reduced corner radius from 3 to 2
+            '1111', // All corners rounded
+            'FD' // Fill and draw
+        );
+
+        // Add image if available
+        if ($has_image) {
+            $image_x = $startX + $padding;
+            $image_y = $startY + $padding;
+            $pdf->Image($image_path, $image_x, $image_y, $image_width, $image_height);
+        }
+
+        // Calculate content position
+        $content_x = $startX + $image_offset + $padding;
+        $content_y = $startY + $padding;
+        $pdf->SetXY($content_x, $content_y);
+
+        // Render the product name and price with price graph
+        if ($has_valid_price) {
+            // Use the price graph for displaying product name and price range - REDUCED GRAPH HEIGHT
+            $graph_options = [
+                'show_labels' => false,
+                'graph_height' => 2.5, // Reduced from 3 to 2.5
+                'round_to' => 100,
+                'title_max_width_percent' => 0.7,
+                'hide_zero_price' => true,
+                'max_width' => $contentWidth - $image_offset - ($padding * 2)
+            ];
+
+            $this->render_price_graph_pdf(
+                $pdf,
+                $product['min_price_total'],
+                $product['max_price_total'],
+                $default_markup,
+                $product['name'],
+                null,
+                $pricing_method,
+                $graph_options
+            );
         } else {
-            // No rooms message
-            $pdf->SetFont(self::FONT_FAMILY, 'I', 10);
-            $pdf->SetTextColor(136, 136, 136);
-            $pdf->Cell(0, 20, 'No rooms or products found in this estimate.', 1, 1, 'C', true);
+            // For products without price
+            $title_width = $contentWidth - $image_offset - ($padding * 2);
+            $pdf->SetFont(self::FONT_FAMILY, 'B', 11);
+            $pdf->SetTextColor(51, 51, 51);
+            $pdf->Cell($title_width, 8, $product_name, 0, 1);
         }
 
-        // Total Estimate Section
-        // Check if we need a page break before the total section
-        $needed_height = 50; // Increased height needed for total section with spacing
-        if ($pdf->GetY() + $needed_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
-            $pdf->AddPage(); // This will now automatically apply the template
+        // Add product notes if available with reduced spacing
+        if ($has_notes) {
+            $notesX = $content_x;
+            $notesY = $pdf->GetY() + 0.5; // Reduced from 1 to 0.5
+            $pdf->SetXY($notesX, $notesY);
+            $pdf->SetFont(self::FONT_FAMILY, '', 9);
+            $pdf->SetTextColor(102, 102, 102); // Gray text for notes
+            $note_width = $contentWidth - $image_offset - ($padding * 2);
+
+            foreach ($product['additional_notes'] as $note) {
+                $note_text = isset($note['note_text']) ? $note['note_text'] : '';
+                if (empty($note_text)) {
+                    continue;
+                }
+
+                $current_note_y = $pdf->GetY();
+                $note_height = $pdf->getStringHeight($note_width, $note_text);
+
+                if ($current_note_y + $note_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
+                    $pdf->AddPage();
+                    $current_note_y = $pdf->GetY();
+                    $pdf->SetX($notesX);
+                }
+
+                if (strlen($note_text) < 60 && strpos($note_text, "\n") === false) {
+                    $pdf->SetX($notesX);
+                    $pdf->Cell($note_width, 3.5, $note_text, 0, 1); // Reduced height from 4 to 3.5
+                } else {
+                    $pdf->writeHTMLCell(
+                        $note_width,
+                        0,
+                        $notesX,
+                        $current_note_y,
+                        $note_text,
+                        0,
+                        1,
+                        false,
+                        true,
+                        'L',
+                        false
+                    );
+                }
+                // Removed Ln(0.5) call to reduce spacing between notes
+            }
         }
 
-        // Clear any leftover content that might cause interference
-        $current_x = $pdf->GetX();
-        $current_y = $pdf->GetY();
-        $pdf->SetFillColor(255, 255, 255); // White background
-        $pdf->Rect($current_x, $current_y, $pdf->getPageWidth() - $pdf->getMargins()['left'] - $pdf->getMargins()['right'], 2, 'F');
-
-        // Now render the total section with enough space
-        $this->render_total_section($pdf, $estimate, $default_markup);
+        // Move to the end of the card and add margin between cards - NEW
+        $pdf->SetY($startY + $card_height + $card_margin);
     }
 
     /**
      * Render a room header with correct dimensions formatting
+     * and proper product card separation - with reduced spacing
      *
      * @param object $pdf PDF object
      * @param array $room Room data
@@ -365,7 +511,7 @@ class PDFGenerator {
                 $default_markup,
                 $room['name'],
                 $dimensionsWithArea,
-                null, // Don't pass 'm' as pricing_method here, as we've included it in dimensionsWithArea
+                null, // Don't pass 'm' as pricing_method here
                 [
                     'show_labels' => true,
                     'label_count' => 3,       // Reduced number of labels
@@ -381,44 +527,39 @@ class PDFGenerator {
             $pdf->Cell(0, 10, $room['name'] . ' (' . $room_width . 'm × ' . $room_length . 'm)', 0, 1);
         }
 
-        // Process products
+        // Add a bit of space after room header before products - REDUCED
+        $pdf->Ln(3); // Reduced from 5 to 3
+
+        // Process products - IMPORTANT: NO ROOM BORDER AROUND ALL PRODUCTS
         if (isset($room['products']) && is_array($room['products'])) {
-            // Create a consolidated array of products
-            $all_products = [];
+            // Create separate arrays for main products and notes
+            $main_products = [];
             $notes = [];
 
+            // First collect all products and notes
             foreach ($room['products'] as $product) {
                 // Separate notes from products
                 if (isset($product['type']) && $product['type'] === 'note') {
                     $notes[] = $product;
-                    continue;
+                } else {
+                    $main_products[] = $product;
                 }
+            }
 
-                // Add main product
-                $all_products[] = [
-                    'product_data' => $product,
-                    'is_addition' => false,
-                    'parent_name' => null
-                ];
+            // Render main products first
+            foreach ($main_products as $main_product) {
+                // Render the main product
+                $this->render_product_card($pdf, $main_product, $default_markup, $room_area);
 
-                // Add additional products
-                if (isset($product['additional_products']) && is_array($product['additional_products'])) {
-                    foreach ($product['additional_products'] as $add_product) {
-                        $all_products[] = [
-                            'product_data' => $add_product,
-                            'is_addition' => true,
-                            'parent_name' => $product['name']
-                        ];
+                // Render any additional products for this main product
+                if (isset($main_product['additional_products']) && is_array($main_product['additional_products'])) {
+                    foreach ($main_product['additional_products'] as $add_product) {
+                        $this->render_product_card($pdf, $add_product, $default_markup, $room_area);
                     }
                 }
             }
 
-            // Process each product
-            foreach ($all_products as $product_item) {
-                $this->render_product_native($pdf, $product_item, $default_markup, $room_area);
-            }
-
-            // Process standalone notes
+            // Render all notes last
             foreach ($notes as $note) {
                 $this->render_note_native($pdf, $note);
             }
@@ -426,212 +567,11 @@ class PDFGenerator {
             // No products message
             $pdf->SetFont(self::FONT_FAMILY, 'I', 10);
             $pdf->SetTextColor(136, 136, 136);
-            $pdf->Cell(0, 15, 'No products in this room.', 1, 1, 'C', false);
+            $pdf->Cell(0, 15, 'No products in this room.', 0, 1, 'C'); // Removed border from no products message
         }
 
-        // Add more space between rooms
-        $pdf->Ln(15);
-    }
-
-    /**
-     * Render a product using native TCPDF methods with proper image integration
-     * This version ensures the card box fully includes the image for all products
-     *
-     * @param object $pdf TCPDF object
-     * @param array $product_item Product item data
-     * @param float $default_markup Default markup percentage
-     * @param float $room_area Room area in square meters
-     */
-    private function render_product_native($pdf, $product_item, $default_markup, $room_area) {
-        $product = $product_item['product_data'];
-        $is_addition = $product_item['is_addition'];
-        $parent_name = $product_item['parent_name'];
-
-        // Get page dimensions
-        $pageWidth = $pdf->getPageWidth();
-        $marginLeft = $pdf->getMargins()['left'];
-        $marginRight = $pdf->getMargins()['right'];
-        $contentWidth = $pageWidth - $marginLeft - $marginRight;
-
-        // Get product pricing method
-        $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'fixed';
-
-        // Process image
-        $has_image = false;
-        $image_path = '';
-        $image_width = 30;
-        $image_height = 30;
-
-        if (!empty($product['image'])) {
-            $image_path = $this->get_image_path($product['image']);
-            $has_image = !empty($image_path);
-        }
-
-        // No indentation for all products
-        $indent = 0;
-
-        // Calculate notes height first to determine card size
-        $notes_height = 0;
-        $has_notes = false;
-
-        if (!$is_addition && isset($product['additional_notes']) && is_array($product['additional_notes']) && !empty($product['additional_notes'])) {
-            $has_notes = true;
-            foreach ($product['additional_notes'] as $note) {
-                $note_text = isset($note['note_text']) ? $note['note_text'] : '';
-                if (!empty($note_text)) {
-                    // Calculate approximately how much height this note will need
-                    $pdf->SetFont(self::FONT_FAMILY, '', 9);
-                    $image_offset = $has_image ? $image_width + 5 : 0;
-                    $note_width = $contentWidth - $indent - $image_offset - 10;
-                    $lines = $pdf->getNumLines($note_text, $note_width);
-                    $notes_height += $lines * 4 + 1; // 4pt line height + 1pt spacing
-                }
-            }
-        }
-
-        // Card height - use compact height calculation
-        $base_height = $is_addition ? ($has_image ? max(30, $image_height + 6) : 30) : 35;
-        $card_height = $base_height + ($has_notes ? $notes_height : 0);
-
-        // For products without price or notes, make them more compact
-        $has_valid_price = isset($product['min_price_total']) && isset($product['max_price_total']) &&
-            !($product['min_price_total'] == 0 && $product['max_price_total'] == 0);
-
-        if ($is_addition && !$has_valid_price && !$has_notes) {
-            // Still make sure there's enough room for the image
-            $card_height = $has_image ? max(25, $image_height + 6) : 25;
-        }
-
-        // Check if there's enough space for the card on the current page
-        if ($pdf->GetY() + $card_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
-            $pdf->AddPage();
-        }
-
-        // Position tracking - get AFTER potential page break
-        $startX = $pdf->GetX();
-        $startY = $pdf->GetY();
-
-        // Define minimal padding
-        $padding = 3;
-
-        // Draw card background with subtle border - IMPORTANT: Draw the card FIRST
-        // to ensure the image is included INSIDE the card
-        $pdf->SetFillColor($is_addition ? 248 : 255, $is_addition ? 248 : 255, $is_addition ? 248 : 255);
-        $pdf->SetDrawColor(230, 230, 230); // Light gray border
-        $pdf->RoundedRect($startX + $indent, $startY, $contentWidth - $indent, $card_height, 2, '1111', 'FD');
-
-        // Add image inside the card - it will appear inside the rounded rectangle
-        if ($has_image) {
-            // Position image with minimal padding (top-aligned)
-            $image_x = $startX + $indent + $padding;
-            $image_y = $startY + $padding;
-
-            $pdf->Image($image_path, $image_x, $image_y, $image_width, $image_height);
-        }
-
-        // Calculate content position - to the right of the image
-        $image_offset = $has_image ? $image_width + $padding : 0;
-        $content_x = $startX + $indent + $image_offset + $padding;
-        $content_y = $startY + $padding;
-        $pdf->SetXY($content_x, $content_y);
-
-        // Check if the product has a valid price that should be displayed
-        if ($has_valid_price) {
-            // For both main and additional products, use the price graph
-            // Adjust settings to make it smaller and more compact
-            $graph_options = [
-                'show_labels' => false, // No labels for product cards to save space
-                'graph_height' => $is_addition ? 2 : 3, // Smaller graph height
-                'round_to' => 100,      // Smaller rounding for better precision
-                'title_max_width_percent' => 0.7, // Increased space for title
-                'hide_zero_price' => true // Hide price if it's zero
-            ];
-
-            // Ensure graph stays within page boundaries by limiting width
-            $graph_width = $contentWidth - $indent - $image_offset - ($padding * 2);
-            $graph_options['max_width'] = $graph_width;
-
-            $this->render_price_graph_pdf(
-                $pdf,
-                $product['min_price_total'],
-                $product['max_price_total'],
-                $default_markup,
-                $product['name'],
-                null,
-                $pricing_method,
-                $graph_options
-            );
-        } else {
-            // For products without price (like some underlay products)
-            $title_width = $contentWidth - $indent - $image_offset - ($padding * 2);
-            $pdf->SetFont(self::FONT_FAMILY, 'B', 11);
-            $pdf->SetTextColor(51, 51, 51);
-
-            // Make sure we have a product name
-            $product_name = isset($product['name']) ? $product['name'] : 'Unnamed Product';
-            $pdf->Cell($title_width, 8, $product_name, 0, 1);
-        }
-
-        // Add product notes if available
-        if ($has_notes) {
-            // Set position for notes
-            $notesX = $content_x;
-            $notesY = $pdf->GetY() + 1; // Reduced spacing
-
-            // Set position for notes
-            $pdf->SetXY($notesX, $notesY);
-            $pdf->SetFont(self::FONT_FAMILY, '', 9);
-            $pdf->SetTextColor(102, 102, 102); // Gray text for notes
-
-            // Set a fixed width for notes to ensure proper alignment
-            $note_width = $contentWidth - $indent - $image_offset - ($padding * 2);
-
-            foreach ($product['additional_notes'] as $note) {
-                // Get note text
-                $note_text = isset($note['note_text']) ? $note['note_text'] : '';
-                if (empty($note_text)) {
-                    continue; // Skip empty notes
-                }
-
-                // Position at current Y
-                $current_note_y = $pdf->GetY();
-
-                // Check for page break before adding note
-                $note_height = $pdf->getStringHeight($note_width, $note_text);
-                if ($current_note_y + $note_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
-                    $pdf->AddPage();
-                    $current_note_y = $pdf->GetY();
-                    $pdf->SetX($notesX);
-                }
-
-                // Use Cell for shorter notes
-                if (strlen($note_text) < 60 && strpos($note_text, "\n") === false) {
-                    $pdf->SetX($notesX);
-                    $pdf->Cell($note_width, 4, $note_text, 0, 1);
-                } else {
-                    // Use writeHTMLCell for longer or multi-line notes
-                    $pdf->writeHTMLCell(
-                        $note_width,
-                        0,
-                        $notesX,
-                        $current_note_y,
-                        $note_text,
-                        0,
-                        1,
-                        false,
-                        true,
-                        'L',
-                        false
-                    );
-                }
-
-                // Minimal space between notes
-                $pdf->Ln(0.5);
-            }
-        }
-
-        // Add minimal space after the card
-        $pdf->Ln(4);
+        // Add more space between rooms - REDUCED
+        $pdf->Ln(10); // Reduced from 15 to 10
     }
 
     /**
@@ -686,6 +626,61 @@ class PDFGenerator {
     }
 
     /**
+     * Render content using native TCPDF methods - with improved spacing
+     *
+     * @param object $pdf PDF object
+     * @param array $estimate Estimate data
+     */
+    private function render_content_native($pdf, $estimate) {
+        // Get settings
+        $options = get_option('product_estimator_settings', []);
+        $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
+
+        // Process each room
+        if (isset($estimate['rooms']) && is_array($estimate['rooms']) && !empty($estimate['rooms'])) {
+            $room_count = 0;
+            foreach ($estimate['rooms'] as $room_id => $room) {
+                // Track which room we're on
+                $room_count++;
+
+                // Check if we need a page break before this room
+                $needed_height = 80; // Reduced from 100 to 80 - approximate height needed for a room
+                if ($pdf->GetY() + $needed_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
+                    $pdf->AddPage(); // This will now automatically apply the template
+                }
+
+                $this->render_room_native($pdf, $room, $default_markup);
+
+                // Add an extra line break after the last room to create more space before the total
+                if ($room_count == count($estimate['rooms'])) {
+                    $pdf->Ln(5); // Reduced from 10 to 5
+                }
+            }
+        } else {
+            // No rooms message
+            $pdf->SetFont(self::FONT_FAMILY, 'I', 10);
+            $pdf->SetTextColor(136, 136, 136);
+            $pdf->Cell(0, 20, 'No rooms or products found in this estimate.', 1, 1, 'C');
+        }
+
+        // Total Estimate Section
+        // Check if we need a page break before the total section
+        $needed_height = 40; // Reduced from 50 to 40 - height needed for total section with spacing
+        if ($pdf->GetY() + $needed_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
+            $pdf->AddPage(); // This will now automatically apply the template
+        }
+
+        // Clear any leftover content that might cause interference
+        $current_x = $pdf->GetX();
+        $current_y = $pdf->GetY();
+        $pdf->SetFillColor(255, 255, 255); // White background
+        $pdf->Rect($current_x, $current_y, $pdf->getPageWidth() - $pdf->getMargins()['left'] - $pdf->getMargins()['right'], 2, 'F');
+
+        // Now render the total section with enough space
+        $this->render_total_section($pdf, $estimate, $default_markup);
+    }
+
+    /**
      * Render total estimate section with improved spacing
      *
      * @param object $pdf PDF object
@@ -697,14 +692,14 @@ class PDFGenerator {
             return;
         }
 
-        // Add extra space before the total section
-        $pdf->Ln(15);
+        // Add extra space before the total section - REDUCED
+        $pdf->Ln(10); // Reduced from 15 to 10
 
         // Green line separator
         $pdf->SetDrawColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
         $pdf->SetLineWidth(0.5);
         $pdf->Line($pdf->GetX(), $pdf->GetY(), $pdf->GetX() + ($pdf->GetPageWidth() - $pdf->getMargins()['left'] - $pdf->getMargins()['right']), $pdf->GetY());
-        $pdf->Ln(5);
+        $pdf->Ln(3); // Reduced from 5 to 3
 
         // Use price graph for total section (larger size for emphasis)
         // For the total, use more constrained options to ensure it fits
@@ -726,8 +721,8 @@ class PDFGenerator {
             ]
         );
 
-        // Add space after the total section
-        $pdf->Ln(5);
+        // Add space after the total section - REDUCED
+        $pdf->Ln(3); // Reduced from 5 to 3
     }
 
     /**

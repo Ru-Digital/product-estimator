@@ -278,7 +278,7 @@ class PDFGenerator {
 
     /**
      * Render the PDF content using native TCPDF methods
-     * with improved page break handling
+     * with improved page break handling and section spacing
      *
      * @param object $pdf PDF object
      * @param array $estimate Estimate data
@@ -290,7 +290,11 @@ class PDFGenerator {
 
         // Process each room
         if (isset($estimate['rooms']) && is_array($estimate['rooms']) && !empty($estimate['rooms'])) {
+            $room_count = 0;
             foreach ($estimate['rooms'] as $room_id => $room) {
+                // Track which room we're on
+                $room_count++;
+
                 // Check if we need a page break before this room
                 $needed_height = 100; // Approximate height needed for a room heading and at least one product
                 if ($pdf->GetY() + $needed_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
@@ -298,6 +302,11 @@ class PDFGenerator {
                 }
 
                 $this->render_room_native($pdf, $room, $default_markup);
+
+                // Add an extra line break after the last room to create more space before the total
+                if ($room_count == count($estimate['rooms'])) {
+                    $pdf->Ln(10);
+                }
             }
         } else {
             // No rooms message
@@ -308,16 +317,27 @@ class PDFGenerator {
 
         // Total Estimate Section
         // Check if we need a page break before the total section
-        $needed_height = 30; // Approximate height needed for total section
+        $needed_height = 50; // Increased height needed for total section with spacing
         if ($pdf->GetY() + $needed_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
             $pdf->AddPage(); // This will now automatically apply the template
         }
 
+        // Clear any leftover content that might cause interference
+        $current_x = $pdf->GetX();
+        $current_y = $pdf->GetY();
+        $pdf->SetFillColor(255, 255, 255); // White background
+        $pdf->Rect($current_x, $current_y, $pdf->getPageWidth() - $pdf->getMargins()['left'] - $pdf->getMargins()['right'], 2, 'F');
+
+        // Now render the total section with enough space
         $this->render_total_section($pdf, $estimate, $default_markup);
     }
 
     /**
-     * Render a room with its products using native TCPDF methods
+     * Render a room header with correct dimensions formatting
+     *
+     * @param object $pdf PDF object
+     * @param array $room Room data
+     * @param float $default_markup Default markup percentage
      */
     private function render_room_native($pdf, $room, $default_markup) {
         // Calculate room area
@@ -331,7 +351,12 @@ class PDFGenerator {
 
         // Use price graph for room header instead of title + price text
         if (isset($room['min_total']) && isset($room['max_total'])) {
+            // FORMAT FIX: Create dimensions string correctly
             $dimensions = $room_width . "x" . $room_length;
+            $area = number_format($room_area, 1);
+            // Fixed format - no duplicate text
+            $dimensionsWithArea = $dimensions;
+
             // Use more constrained options for room headers
             $this->render_price_graph_pdf(
                 $pdf,
@@ -339,8 +364,8 @@ class PDFGenerator {
                 $room['max_total'],
                 $default_markup,
                 $room['name'],
-                $dimensions,
-                'm',
+                $dimensionsWithArea,
+                null, // Don't pass 'm' as pricing_method here, as we've included it in dimensionsWithArea
                 [
                     'show_labels' => true,
                     'label_count' => 3,       // Reduced number of labels
@@ -404,11 +429,13 @@ class PDFGenerator {
             $pdf->Cell(0, 15, 'No products in this room.', 1, 1, 'C', false);
         }
 
-        $pdf->Ln(5);
+        // Add more space between rooms
+        $pdf->Ln(15);
     }
 
     /**
-     * Render a product using native TCPDF methods with proper page break handling
+     * Render a product using native TCPDF methods with minimal padding
+     * Fixes excessive bottom padding in product cards
      *
      * @param object $pdf TCPDF object
      * @param array $product_item Product item data
@@ -443,6 +470,9 @@ class PDFGenerator {
         // No indentation for all products
         $indent = 0;
 
+        // Define minimal padding
+        $padding = 5; // Minimal padding for compact layout
+
         // Calculate notes height first to determine card size
         $notes_height = 0;
         $has_notes = false;
@@ -462,12 +492,31 @@ class PDFGenerator {
             }
         }
 
-        // Card height - use a fixed larger height for better padding
-        $base_height = 40; // Increased from 35 to ensure adequate padding
-        $card_height = $base_height + ($has_notes ? $notes_height : 0);
+        // Content height estimation - calculate more accurately based on what we'll actually render
+        $content_height = 0;
 
-        // Ensure minimum card height regardless of content
-        $card_height = max($card_height, 50); // Ensure minimum card height of 50pt
+        // Estimate title height
+        $content_height += $is_addition ? 10 : 12; // Title height
+
+        // Add notes height if applicable
+        if ($has_notes) {
+            $content_height += $notes_height + 2; // Notes + a little spacing
+        }
+
+        // Calculate card height dynamically based on content
+        // This is key to fixing the excessive padding
+        $card_height = max(
+            $content_height + ($padding * 2), // Content + padding top/bottom
+            $has_image ? $image_height + ($padding * 2) : 0 // Image height + padding if there's an image
+        );
+
+        // Ensure minimum card height
+        $card_height = max($card_height, 20); // Less minimum height than before
+
+        // For additional products (is_addition), make cards even more compact
+        if ($is_addition) {
+            $card_height = max($content_height + ($padding * 1.5), 20); // Even less padding for additions
+        }
 
         // Check if there's enough space for the card on the current page
         if ($pdf->GetY() + $card_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
@@ -487,20 +536,18 @@ class PDFGenerator {
         $pdf->SetDrawColor(230, 230, 230); // Light gray border
         $pdf->RoundedRect($startX + $indent, $startY, $contentWidth - $indent, $card_height, 2, '1111', 'FD');
 
-        // Add image if available - positioned at the top of the card
+        // Add image if available - positioned at the left side with consistent padding
         if ($has_image) {
-            // Center the image vertically within the card
-            $image_y = $startY + ($card_height - $image_height) / 2;
-            // Ensure image stays within the card boundaries
-            $image_y = min($image_y, $startY + $card_height - $image_height - 5);
-            $image_y = max($image_y, $startY + 5);
+            $image_x = $startX + $indent + $padding;
+            $image_y = $startY + $padding; // Consistent top padding
 
-            $pdf->Image($image_path, $startX + $indent + 5, $image_y, $image_width, $image_height);
+            $pdf->Image($image_path, $image_x, $image_y, $image_width, $image_height);
         }
 
-        // Set content area starting position with fixed top padding
-        $beforeY = $startY + 3; // Increased padding to 12pt for more visible space
-        $pdf->SetXY($startX + $indent + $image_offset + 5, $beforeY);
+        // Set content area starting position with consistent top padding
+        $content_x = $startX + $indent + ($has_image ? $image_offset + $padding : $padding);
+        $content_y = $startY + $padding; // Consistent top padding
+        $pdf->SetXY($content_x, $content_y);
 
         // Check if the product has a valid price that should be displayed
         $has_valid_price = true;
@@ -523,7 +570,7 @@ class PDFGenerator {
             ];
 
             // Ensure graph stays within page boundaries by limiting width
-            $graph_width = $contentWidth - $indent - $image_offset - 10; // Add additional padding
+            $graph_width = $contentWidth - $indent - $image_offset - ($padding * 2); // Account for padding on both sides
             $graph_options['max_width'] = $graph_width;
 
             $this->render_price_graph_pdf(
@@ -538,7 +585,7 @@ class PDFGenerator {
             );
         } else {
             // Fallback or zero price case - just show the product name
-            $title_width = $contentWidth - $indent - $image_offset - 5 - ($contentWidth * 0.3);
+            $title_width = $contentWidth - $indent - $image_offset - ($padding * 2);
             $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
             $pdf->SetTextColor(51, 51, 51);
 
@@ -550,8 +597,8 @@ class PDFGenerator {
         // Add product notes if available - INSIDE THE CARD
         if ($has_notes) {
             // Set position for notes - below product name and price
-            $notesX = $startX + $indent + $image_offset + 5;
-            $notesY = $pdf->GetY() + 2; // Position notes below product name/graph
+            $notesX = $content_x; // Use the same X position as the content for alignment
+            $notesY = $pdf->GetY() + 2; // Small space between title/price and notes
 
             // Set a consistent starting position for all notes
             $pdf->SetXY($notesX, $notesY);
@@ -559,7 +606,7 @@ class PDFGenerator {
             $pdf->SetTextColor(102, 102, 102); // Gray text for notes
 
             // Set a fixed width for notes to ensure proper alignment
-            $note_width = $contentWidth - $indent - $image_offset - 15;
+            $note_width = $contentWidth - $indent - $image_offset - ($padding * 2);
 
             // Track the last note's bottom position
             $last_note_bottom = $notesY;
@@ -611,20 +658,14 @@ class PDFGenerator {
             }
         }
 
-        // Calculate where the end of the content is
-        $contentEndY = $pdf->GetY();
+        // Calculate the actual content end position
+        $content_end_y = $pdf->GetY();
 
-        // Ensure bottom padding by setting position to account for minimum padding from card bottom
-        $min_bottom_padding = 12; // Match the top padding (12pt)
+        // For additional products, we want almost no space after content
+        $space_after = $is_addition ? 2 : 3;
 
-        // Force Y position to ensure consistent bottom padding
-        $pdf->SetY(max($contentEndY, $startY + $card_height - $min_bottom_padding));
-
-        // Add a small Ln() buffer before actually ending the card
-        $pdf->Ln(8);
-
-        // Space between product cards (increased from 5 to 10)
-        $pdf->Ln(10);
+        // Add minimal spacing between products
+        $pdf->Ln($space_after);
     }
 
     /**
@@ -679,12 +720,19 @@ class PDFGenerator {
     }
 
     /**
-     * Render total estimate section
+     * Render total estimate section with improved spacing
+     *
+     * @param object $pdf PDF object
+     * @param array $estimate Estimate data
+     * @param float $default_markup Default markup percentage
      */
     private function render_total_section($pdf, $estimate, $default_markup) {
         if (!isset($estimate['min_total']) || !isset($estimate['max_total'])) {
             return;
         }
+
+        // Add extra space before the total section
+        $pdf->Ln(15);
 
         // Green line separator
         $pdf->SetDrawColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
@@ -699,7 +747,7 @@ class PDFGenerator {
             $estimate['min_total'],
             $estimate['max_total'],
             $default_markup,
-            'TOTAL ESTIMATE',
+            'ESTIMATE TOTAL',
             null,
             null,
             [
@@ -711,6 +759,9 @@ class PDFGenerator {
                 'title_max_width_percent' => 0.5 // Constrain title width
             ]
         );
+
+        // Add space after the total section
+        $pdf->Ln(5);
     }
 
     /**

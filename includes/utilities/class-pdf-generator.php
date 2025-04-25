@@ -110,32 +110,40 @@ class PDFGenerator {
         // Enable auto page break
         $pdf->SetAutoPageBreak(true, $margin_bottom + 25);
 
-        // If we have a template, try to use it
+        // Store template info in the PDF object if we have a valid template
+        $has_template = false;
+        $template_idx = null;
+
         if ($template_id > 0 && class_exists('\\setasign\\Fpdi\\Tcpdf\\Fpdi')) {
             $template_path = get_attached_file($template_id);
             if ($template_path && file_exists($template_path)) {
                 try {
                     $pdf->setSourceFile($template_path);
                     // Get first page as template
-                    $tplIdx = $pdf->importPage(1);
+                    $template_idx = $pdf->importPage(1);
+                    $has_template = true;
 
-                    // Add new page and use template
-                    $pdf->AddPage();
-                    $pdf->useTemplate($tplIdx, 0, 0, $pdf->getPageWidth(), $pdf->getPageHeight());
+                    // Store template info as property for later use
+                    $pdf->templateData = [
+                        'has_template' => true,
+                        'template_idx' => $template_idx
+                    ];
+
                 } catch (\Exception $e) {
                     if ($this->debug) {
                         error_log('Error using template PDF: ' . $e->getMessage());
                     }
-                    // Add a regular page if template fails
-                    $pdf->AddPage();
+                    $has_template = false;
                 }
-            } else {
-                // No template found, add regular page
-                $pdf->AddPage();
             }
-        } else {
-            // No template, add regular page
-            $pdf->AddPage();
+        }
+
+        // Add the first page
+        $pdf->AddPage();
+
+        // If we have a template, manually apply it to the first page
+        if ($has_template && $template_idx !== null) {
+            $pdf->useTemplate($template_idx, 0, 0, $pdf->getPageWidth(), $pdf->getPageHeight());
         }
 
         // Generate content using native TCPDF methods
@@ -157,12 +165,13 @@ class PDFGenerator {
         $estimate_data = $this->estimate_data;
         $debug = $this->debug;
 
-        // Create custom PDF class
-        return new class($footer_text, $footer_contact_details, $estimate_data, $debug) extends Fpdi {
+        // Create custom PDF class with extended functionality
+        $pdf = new class($footer_text, $footer_contact_details, $estimate_data, $debug) extends Fpdi {
             protected $footer_text;
             protected $footer_contact_details;
             protected $estimate_data;
             protected $debug;
+            public $templateData = null;
 
             /**
              * Constructor
@@ -173,6 +182,48 @@ class PDFGenerator {
                 $this->footer_contact_details = $footer_contact_details;
                 $this->estimate_data = $estimate_data;
                 $this->debug = $debug;
+            }
+
+            /**
+             * Override AddPage to ensure template is applied to each new page
+             *
+             * @param string $orientation Page orientation (P=portrait, L=landscape)
+             * @param mixed $format Page format or array with width and height
+             * @param bool $keepmargins If true, current margins are preserved
+             * @param bool $tocpage If true, the page is a TOC page
+             */
+            public function AddPage($orientation='', $format='', $keepmargins=false, $tocpage=false) {
+                // Call parent method to add the page
+                parent::AddPage($orientation, $format, $keepmargins, $tocpage);
+
+                // Apply template to the newly created page if template data exists
+                if ($this->templateData !== null && $this->templateData['has_template']) {
+                    try {
+                        // Get the current page number
+                        $currentPage = $this->getPage();
+
+                        // Skip page 1 as it's already handled in generate_pdf
+                        if ($currentPage > 1) {
+                            // Apply template using the stored template index
+                            $this->useTemplate(
+                                $this->templateData['template_idx'],
+                                0,                      // x position
+                                0,                      // y position
+                                $this->getPageWidth(),  // width
+                                $this->getPageHeight(), // height
+                                true                    // use original size
+                            );
+                        }
+
+                        if ($this->debug) {
+                            error_log("Applied template to page {$currentPage}");
+                        }
+                    } catch (\Exception $e) {
+                        if ($this->debug) {
+                            error_log('Error applying template to page: ' . $e->getMessage());
+                        }
+                    }
+                }
             }
 
             /**
@@ -221,10 +272,13 @@ class PDFGenerator {
                 $this->Cell(0, 0, 'Page ' . $this->getAliasNumPage() . ' of ' . $this->getAliasNbPages(), 0, 0, 'C');
             }
         };
+
+        return $pdf;
     }
 
     /**
      * Render the PDF content using native TCPDF methods
+     * with improved page break handling
      *
      * @param object $pdf PDF object
      * @param array $estimate Estimate data
@@ -234,12 +288,15 @@ class PDFGenerator {
         $options = get_option('product_estimator_settings', []);
         $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
 
-        // Summary Section
-//        $this->render_summary_section($pdf, $estimate, $default_markup);
-
         // Process each room
         if (isset($estimate['rooms']) && is_array($estimate['rooms']) && !empty($estimate['rooms'])) {
             foreach ($estimate['rooms'] as $room_id => $room) {
+                // Check if we need a page break before this room
+                $needed_height = 100; // Approximate height needed for a room heading and at least one product
+                if ($pdf->GetY() + $needed_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
+                    $pdf->AddPage(); // This will now automatically apply the template
+                }
+
                 $this->render_room_native($pdf, $room, $default_markup);
             }
         } else {
@@ -250,6 +307,12 @@ class PDFGenerator {
         }
 
         // Total Estimate Section
+        // Check if we need a page break before the total section
+        $needed_height = 30; // Approximate height needed for total section
+        if ($pdf->GetY() + $needed_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
+            $pdf->AddPage(); // This will now automatically apply the template
+        }
+
         $this->render_total_section($pdf, $estimate, $default_markup);
     }
 
@@ -262,71 +325,36 @@ class PDFGenerator {
         $room_length = isset($room['length']) ? floatval($room['length']) : 0;
         $room_area = $room_width * $room_length;
 
-        // Get page dimensions
-        $pageWidth = $pdf->getPageWidth();
-        $marginLeft = $pdf->getMargins()['left'];
-        $marginRight = $pdf->getMargins()['right'];
-        $contentWidth = $pageWidth - $marginLeft - $marginRight;
-
         // Remember starting position
         $startX = $pdf->GetX();
         $startY = $pdf->GetY();
 
-        // Set up for room name - using bold, brand color
-        $pdf->SetFont(self::FONT_FAMILY, 'B', 14);
-        $pdf->SetTextColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
-
-        // Get width of room name text
-        $room_name = $room['name'];
-        $room_name_width = $pdf->GetStringWidth($room_name);
-
-        // Write room name
-        $pdf->Write(10, $room_name);
-
-        // Position for dimensions - immediately after room name
-        $pdf->SetX($startX + $room_name_width + 2); // Small spacing after name
-
-        // Set up for dimensions - using regular weight, gray
-        $pdf->SetFont(self::FONT_FAMILY, '', 10);
-        $pdf->SetTextColor(102, 102, 102);
-
-        // Create dimensions text
-        $dimensions_text = sprintf("%d×%dm (%dm²)", $room['width'], $room['length'], $room_area);
-
-        // Write dimensions
-        $pdf->Write(10, $dimensions_text);
-
-        // Get combined width of room name + dimensions
-        $combined_width = $room_name_width + $pdf->GetStringWidth($dimensions_text) + 2;
-
-        // Make sure we don't overlap with price area
-        $max_allowed_width = $contentWidth * 0.7;
-        if ($combined_width > $max_allowed_width) {
-            // If combined text is too long, we'll need to truncate
-            $pdf->SetXY($startX, $startY);
+        // Use price graph for room header instead of title + price text
+        if (isset($room['min_total']) && isset($room['max_total'])) {
+            $dimensions = $room_width . "x" . $room_length;
+            // Use more constrained options for room headers
+            $this->render_price_graph_pdf(
+                $pdf,
+                $room['min_total'],
+                $room['max_total'],
+                $default_markup,
+                $room['name'],
+                $dimensions,
+                'm',
+                [
+                    'show_labels' => true,
+                    'label_count' => 3,       // Reduced number of labels
+                    'round_to' => 500,        // Use smaller rounding
+                    'title_max_width_percent' => 0.5, // Constrain title width
+                    'graph_height' => 5       // Standard height for room headers
+                ]
+            );
+        } else {
+            // Fallback if no price data is available
             $pdf->SetFont(self::FONT_FAMILY, 'B', 14);
             $pdf->SetTextColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
-            $pdf->Cell($max_allowed_width, 10, $room_name, 0, 0, 'L', false, '', 1); // With text truncation
-
-            // We'll skip dimensions in this case to avoid overlap
+            $pdf->Cell(0, 10, $room['name'] . ' (' . $room_width . 'm × ' . $room_length . 'm)', 0, 1);
         }
-
-        // Position for price - right side
-        $pdf->SetXY($startX + $contentWidth - ($contentWidth * 0.3), $startY);
-
-        // Room total price
-        $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
-        $pdf->SetTextColor(51, 51, 51);
-
-        if (isset($room['min_total']) && isset($room['max_total'])) {
-            $price_text = $this->format_price_for_pdf($room['min_total'], $room['max_total'], $default_markup);
-            $pdf->Cell($contentWidth * 0.3, 10, $price_text, 0, 0, 'R');
-        } else {
-            $pdf->Cell($contentWidth * 0.3, 10, '', 0, 0, 'R');
-        }
-
-        // Move to next line and add some spacing
-        $pdf->Ln(12);
 
         // Process products
         if (isset($room['products']) && is_array($room['products'])) {
@@ -412,7 +440,7 @@ class PDFGenerator {
             $has_image = !empty($image_path);
         }
 
-        // No indentation for any products
+        // No indentation for all products
         $indent = 0;
 
         // Calculate notes height first to determine card size
@@ -426,19 +454,22 @@ class PDFGenerator {
                 if (!empty($note_text)) {
                     // Calculate approximately how much height this note will need
                     $pdf->SetFont(self::FONT_FAMILY, '', 9);
-                    $note_width = $contentWidth - $image_offset - 15;
+                    $image_offset = $has_image ? $image_width + 5 : 0;
+                    $note_width = $contentWidth - $indent - $image_offset - 15;
                     $lines = $pdf->getNumLines($note_text, $note_width);
                     $notes_height += $lines * 4 + 2; // 4pt line height + 2pt spacing
                 }
             }
         }
 
-        // Card height - dynamic calculation with less padding
-        $base_height = 35; // Reduced base height for product name and price
-        $card_height = $base_height + ($has_notes ? $notes_height : 0); // No extra padding for notes
+        // Card height - use a fixed larger height for better padding
+        $base_height = 40; // Increased from 35 to ensure adequate padding
+        $card_height = $base_height + ($has_notes ? $notes_height : 0);
+
+        // Ensure minimum card height regardless of content
+        $card_height = max($card_height, 50); // Ensure minimum card height of 50pt
 
         // Check if there's enough space for the card on the current page
-        // If not, add a new page before starting to draw
         if ($pdf->GetY() + $card_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
             $pdf->AddPage();
         }
@@ -448,59 +479,87 @@ class PDFGenerator {
         $startY = $pdf->GetY();
         $image_offset = $has_image ? $image_width + 5 : 0;
 
-        // Card styling - same for all products
-        $bg_color = [255, 255, 255]; // White background for all products
+        // Card styling - different for main vs additional products
+        $bg_color = $is_addition ? [248, 248, 248] : [255, 255, 255]; // Lighter bg for additions
 
-        // Draw card background with subtle border for all products
+        // Draw card background with subtle border
         $pdf->SetFillColor($bg_color[0], $bg_color[1], $bg_color[2]);
         $pdf->SetDrawColor(230, 230, 230); // Light gray border
-        $pdf->RoundedRect($startX, $startY, $contentWidth, $card_height, 2, '1111', 'FD');
+        $pdf->RoundedRect($startX + $indent, $startY, $contentWidth - $indent, $card_height, 2, '1111', 'FD');
 
         // Add image if available - positioned at the top of the card
         if ($has_image) {
-            $pdf->Image($image_path, $startX + $indent + 5, $startY + 5, $image_width, $image_height);
+            // Center the image vertically within the card
+            $image_y = $startY + ($card_height - $image_height) / 2;
+            // Ensure image stays within the card boundaries
+            $image_y = min($image_y, $startY + $card_height - $image_height - 5);
+            $image_y = max($image_y, $startY + 5);
+
+            $pdf->Image($image_path, $startX + $indent + 5, $image_y, $image_width, $image_height);
         }
 
-        // Set position for product name
-        $beforeTextX = $startX + $indent + $image_offset + 5;
-        $beforeTextY = $startY + 2; // Top position for text
-        $pdf->SetXY($beforeTextX, $beforeTextY);
+        // Set content area starting position with fixed top padding
+        $beforeY = $startY + 3; // Increased padding to 12pt for more visible space
+        $pdf->SetXY($startX + $indent + $image_offset + 5, $beforeY);
 
-        // Product name
-        $title_width = $contentWidth - $indent - $image_offset - 5 - ($contentWidth * 0.3);
-        $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
-        $pdf->SetTextColor(51, 51, 51);
-
-        // Make sure we have a product name
-        $product_name = isset($product['name']) ? $product['name'] : 'Unnamed Product';
-        $pdf->Cell($title_width, 10, $product_name, 0, 1);
-
-        // Price information - with green color for emphasis
-        // Position to the right of the product name
-        $pdf->SetXY($startX + $contentWidth - ($contentWidth * 0.3), $beforeTextY);
-        $pdf->SetFont(self::FONT_FAMILY, 'B', 11);
-        $pdf->SetTextColor(0, 133, 63); // Green color for prices
-
+        // Check if the product has a valid price that should be displayed
+        $has_valid_price = true;
         if (isset($product['min_price_total']) && isset($product['max_price_total'])) {
-            $price_text = $this->format_price_for_pdf($product['min_price_total'], $product['max_price_total'], $default_markup);
-            $pdf->Cell(($contentWidth * 0.3) - 5, 10, $price_text, 0, 1, 'R');
+            // Consider the price invalid (for display) if both min and max are zero
+            if ($product['min_price_total'] == 0 && $product['max_price_total'] == 0) {
+                $has_valid_price = false;
+            }
+        }
+
+        if ($has_valid_price && isset($product['min_price_total']) && isset($product['max_price_total'])) {
+            // For both main and additional products, use the price graph
+            // Just adjust settings to make it slightly smaller for additional products
+            $graph_options = [
+                'show_labels' => false, // No labels for product cards to save space
+                'graph_height' => $is_addition ? 3 : 4, // Smaller graph for additional products
+                'round_to' => 100,      // Smaller rounding for better precision
+                'title_max_width_percent' => 0.7, // Increased space for title
+                'hide_zero_price' => true // Hide price if it's zero
+            ];
+
+            // Ensure graph stays within page boundaries by limiting width
+            $graph_width = $contentWidth - $indent - $image_offset - 10; // Add additional padding
+            $graph_options['max_width'] = $graph_width;
+
+            $this->render_price_graph_pdf(
+                $pdf,
+                $product['min_price_total'],
+                $product['max_price_total'],
+                $default_markup,
+                $product['name'], // Product name without room area
+                null,             // No dimensions needed for product
+                $pricing_method,
+                $graph_options
+            );
         } else {
-            $pdf->Cell(($contentWidth * 0.3) - 5, 10, '', 0, 1, 'R');
+            // Fallback or zero price case - just show the product name
+            $title_width = $contentWidth - $indent - $image_offset - 5 - ($contentWidth * 0.3);
+            $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
+            $pdf->SetTextColor(51, 51, 51);
+
+            // Make sure we have a product name
+            $product_name = isset($product['name']) ? $product['name'] : 'Unnamed Product';
+            $pdf->Cell($title_width, 10, $product_name, 0, 1);
         }
 
         // Add product notes if available - INSIDE THE CARD
         if ($has_notes) {
             // Set position for notes - below product name and price
             $notesX = $startX + $indent + $image_offset + 5;
-            $notesY = $beforeTextY + 15; // Position notes below product name
+            $notesY = $pdf->GetY() + 2; // Position notes below product name/graph
 
-            // FIXED: Set a consistent starting position for all notes
+            // Set a consistent starting position for all notes
             $pdf->SetXY($notesX, $notesY);
             $pdf->SetFont(self::FONT_FAMILY, '', 9);
             $pdf->SetTextColor(102, 102, 102); // Gray text for notes
 
             // Set a fixed width for notes to ensure proper alignment
-            $note_width = $contentWidth - $image_offset - 15;
+            $note_width = $contentWidth - $indent - $image_offset - 15;
 
             // Track the last note's bottom position
             $last_note_bottom = $notesY;
@@ -523,7 +582,7 @@ class PDFGenerator {
                     $pdf->SetX($notesX);
                 }
 
-                // FIXED: Use Cell for shorter notes to reduce vertical space
+                // Use Cell for shorter notes to reduce vertical space
                 if (strlen($note_text) < 60 && strpos($note_text, "\n") === false) {
                     $pdf->SetX($notesX);
                     $pdf->Cell($note_width, 4, $note_text, 0, 1);
@@ -547,31 +606,29 @@ class PDFGenerator {
                 // Track the last note's bottom position
                 $last_note_bottom = $pdf->GetY();
 
-                // Add minimal space between notes
-                $pdf->Ln(1);
+                // Minimal space between notes (reduced from 1 to 0.5)
+                $pdf->Ln(0.5);
             }
         }
 
-        // Get the current Y position after all content has been rendered
-        $currentY = $pdf->GetY();
+        // Calculate where the end of the content is
+        $contentEndY = $pdf->GetY();
 
-        // Calculate the actual content height
-        $actual_content_height = $currentY - $startY;
+        // Ensure bottom padding by setting position to account for minimum padding from card bottom
+        $min_bottom_padding = 12; // Match the top padding (12pt)
 
-        // Use the greater of actual content height or calculated card height
-        // but with minimal added spacing (2pt instead of 5pt)
-        $next_y = $startY + max($actual_content_height, $card_height) + 2;
+        // Force Y position to ensure consistent bottom padding
+        $pdf->SetY(max($contentEndY, $startY + $card_height - $min_bottom_padding));
 
-        // Check if we need to move to a new page
-        if ($next_y > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
-            $pdf->AddPage();
-        } else {
-            $pdf->SetY($next_y);
-        }
+        // Add a small Ln() buffer before actually ending the card
+        $pdf->Ln(8);
+
+        // Space between product cards (increased from 5 to 10)
+        $pdf->Ln(10);
     }
 
     /**
-     * Render a note using native TCPDF methods - Fixed to ensure consistent alignment
+     * Render a note using native TCPDF methods with page break handling
      */
     private function render_note_native($pdf, $note) {
         // Get page dimensions
@@ -579,6 +636,15 @@ class PDFGenerator {
         $marginLeft = $pdf->getMargins()['left'];
         $marginRight = $pdf->getMargins()['right'];
         $contentWidth = $pageWidth - $marginLeft - $marginRight;
+
+        // Estimate the note height
+        $note_text = isset($note['note_text']) ? $note['note_text'] : '';
+        $note_height = $pdf->getStringHeight($contentWidth - 5, $note_text) + 2; // Reduced padding
+
+        // Check if we need a page break
+        if ($pdf->GetY() + $note_height > $pdf->getPageHeight() - $pdf->getMargins()['bottom']) {
+            $pdf->AddPage(); // Will automatically apply template to new page
+        }
 
         // Position tracking
         $startX = $pdf->GetX();
@@ -588,12 +654,10 @@ class PDFGenerator {
         $pdf->SetFillColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
         $pdf->Rect($startX, $startY, 3, 5, 'F');
 
-        // FIXED: Use writeHTMLCell for consistent text alignment
+        // Use writeHTMLCell for consistent text alignment
         $pdf->SetXY($startX + 5, $startY);
         $pdf->SetFont(self::FONT_FAMILY, '', 10);
         $pdf->SetTextColor(51, 51, 51);
-
-        $note_text = isset($note['note_text']) ? $note['note_text'] : '';
 
         // Use writeHTMLCell for better line alignment
         $pdf->writeHTMLCell(
@@ -607,10 +671,11 @@ class PDFGenerator {
             false,              // fill
             true,               // reset Y
             'L',                // alignment (L = left)
-            true                // autopadding
+            false               // disable autopadding to reduce extra space
         );
 
-        $pdf->Ln(2);
+        // Only add minimal vertical space (0.5mm instead of 2mm)
+        $pdf->Ln(0.5);
     }
 
     /**
@@ -627,22 +692,25 @@ class PDFGenerator {
         $pdf->Line($pdf->GetX(), $pdf->GetY(), $pdf->GetX() + ($pdf->GetPageWidth() - $pdf->getMargins()['left'] - $pdf->getMargins()['right']), $pdf->GetY());
         $pdf->Ln(5);
 
-        // Total section
-        $pageWidth = $pdf->getPageWidth();
-        $marginLeft = $pdf->getMargins()['left'];
-        $marginRight = $pdf->getMargins()['right'];
-        $contentWidth = $pageWidth - $marginLeft - $marginRight;
-
-        // Total Label
-        $pdf->SetFont(self::FONT_FAMILY, 'B', 14);
-        $pdf->SetTextColor(51, 51, 51);
-        $pdf->Cell($contentWidth * 0.7, 10, 'TOTAL ESTIMATE', 0, 0, 'L');
-
-        // Total Value
-        $pdf->SetFont(self::FONT_FAMILY, 'B', 16);
-        $pdf->SetTextColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
-        $price_text = $this->format_price_for_pdf($estimate['min_total'], $estimate['max_total'], $default_markup);
-        $pdf->Cell($contentWidth * 0.3, 10, $price_text, 0, 1, 'R');
+        // Use price graph for total section (larger size for emphasis)
+        // For the total, use more constrained options to ensure it fits
+        $this->render_price_graph_pdf(
+            $pdf,
+            $estimate['min_total'],
+            $estimate['max_total'],
+            $default_markup,
+            'TOTAL ESTIMATE',
+            null,
+            null,
+            [
+                'show_labels' => true,
+                'label_count' => 3,      // Reduced label count to fit page width
+                'graph_height' => 8,     // Taller graph for emphasis
+                'round_to' => 1000,      // Round to nearest thousand for the total
+                'bar_color' => [0, 133, 63], // Darker green for total
+                'title_max_width_percent' => 0.5 // Constrain title width
+            ]
+        );
     }
 
     /**
@@ -786,5 +854,375 @@ class PDFGenerator {
         }
 
         return false;
+    }
+
+    /**
+     * Render a price range graph in PDF - Fixed version with improved width constraints
+     * and zero price handling
+     *
+     * @param object $pdf TCPDF/FPDI object
+     * @param float $min_price Minimum price
+     * @param float $max_price Maximum price
+     * @param float $default_markup Markup percentage
+     * @param string $title Product/room title
+     * @param string $dimensions Room dimensions (if applicable)
+     * @param string $pricing_method Pricing method (sqm or fixed)
+     * @param array $options Optional display options
+     */
+    private function render_price_graph_pdf($pdf, $min_price, $max_price, $default_markup, $title, $dimensions = null, $pricing_method = null, $options = []) {
+        // Default options
+        $defaults = [
+            'graph_height' => 5,      // Height of the bar in mm
+            'bar_color' => [76, 175, 80],  // Green color (RGB) - #4CAF50
+            'bg_color' => [224, 224, 224], // Light gray background (RGB) - #e0e0e0
+            'label_count' => 5,       // Number of labels to show
+            'round_to' => 1000,       // Round values to nearest thousand
+            'min_bar_width' => 20,    // Minimum width percentage for small ranges (as percentage)
+            'min_display_range' => 0.3, // Minimum display range as fraction of price
+            'title_max_width_percent' => 0.7, // Maximum width for title as percentage of content width
+            'show_labels' => true,    // Whether to show the price labels
+            'max_width' => null,      // Maximum width for the graph (null = use content width)
+            'hide_zero_price' => false // Whether to hide price if it's zero
+        ];
+
+        // Merge user options with defaults
+        $options = array_merge($defaults, $options);
+
+        // Check if price should be hidden (if both min and max are zero and hide_zero_price is true)
+        $hide_price = $options['hide_zero_price'] && $min_price == 0 && $max_price == 0;
+
+        // Get page dimensions
+        $pageWidth = $pdf->getPageWidth();
+        $marginLeft = $pdf->getMargins()['left'];
+        $marginRight = $pdf->getMargins()['right'];
+        $contentWidth = $pageWidth - $marginLeft - $marginRight;
+
+        // Apply max_width constraint if provided
+        if ($options['max_width'] !== null && $options['max_width'] > 0) {
+            $contentWidth = min($contentWidth, $options['max_width']);
+        }
+
+        // Starting position
+        $startX = $pdf->GetX();
+        $startY = $pdf->GetY();
+
+        // Format prices for display
+        $formatted_min = $this->format_currency_for_pdf($min_price, $default_markup, "down");
+        $formatted_max = $this->format_currency_for_pdf($max_price, $default_markup, "up");
+
+        // Calculate available space for different components
+        $price_width = $hide_price ? 0 : min($contentWidth * 0.25, 70); // Zero width if price is hidden
+        $dimensions_width = ($dimensions !== null) ? 35 : 0; // Fixed width for dimensions if present
+
+        // Calculate maximum width for title based on available space
+        $title_max_width = $contentWidth - $price_width - $dimensions_width - 10; // 10pt padding
+
+        // Set title font to bold green
+        $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
+        $pdf->SetTextColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
+
+        // Now print title with dimensions if provided
+        if ($dimensions !== null) {
+            // Calculate room area from dimensions (assuming dimensions is in format "WxH")
+            $dim_parts = explode('x', $dimensions);
+            $room_area = '';
+            if (count($dim_parts) == 2) {
+                $width = floatval(trim($dim_parts[0]));
+                $height = floatval(trim($dim_parts[1]));
+                $area = $width * $height;
+                $room_area = number_format($area, 1);
+            }
+
+            // Print just the title first in bold green
+            $pdf->Cell($pdf->GetStringWidth($title), 8, $title, 0, 0, 'L');
+
+            // Switch to non-bold dark text for dimensions
+            $pdf->SetFont(self::FONT_FAMILY, '', 12);
+            $pdf->SetTextColor(51, 51, 51); // Dark gray for dimensions
+
+            // Add dimensions and area
+            $dimensions_text = ' ' . $dimensions . 'm (' . $room_area . 'm²)';
+            $pdf->Cell($title_max_width - $pdf->GetStringWidth($title), 8, $dimensions_text, 0, 0, 'L');
+        } else {
+            // Just the title if no dimensions
+            $pdf->Cell($title_max_width, 8, $title, 0, 0, 'L');
+        }
+
+        // Price range on the right - only if not hidden
+        if (!$hide_price) {
+            $pdf->SetFont(self::FONT_FAMILY, 'B', 11);
+            $pdf->SetTextColor(0, 133, 63); // Green color for prices
+
+            $price_text = "";
+            if ($min_price === $max_price) {
+                $price_text = $formatted_min;
+            } else {
+                $price_text = $formatted_min . ' - ' . $formatted_max;
+            }
+
+            // Truncate price text if it's too long
+            $price_text_width = $pdf->GetStringWidth($price_text);
+            if ($price_text_width > $price_width) {
+                // Use a smaller font for prices if they're too long
+                $pdf->SetFont(self::FONT_FAMILY, 'B', 9);
+                $price_text_width = $pdf->GetStringWidth($price_text);
+
+                // If still too long, truncate
+                if ($price_text_width > $price_width) {
+                    $price_text = $formatted_min; // Fall back to just showing min price
+                }
+            }
+
+            // Add the price with right alignment and fixed width
+            $pdf->Cell($price_width, 8, $price_text, 0, 0, 'R');
+        }
+
+        // End the line after title (and price if shown)
+        $pdf->Ln();
+
+        // Skip the graph if prices are invalid or if we should hide zero prices
+        if (($min_price <= 0 && $max_price <= 0) || $hide_price) {
+            return;
+        }
+
+        // ----- Price Range Calculation -----
+        // For very close min/max prices, create an artificial range for better visualization
+        $price_range = $max_price - $min_price;
+        $is_narrow_range = $price_range < ($min_price * 0.05); // If range is less than 5% of min price
+
+        // Calculate the center point of our price range
+        $center_price = ($min_price + $max_price) / 2;
+
+        // For narrow ranges, create a symmetric display range around the center point
+        if ($is_narrow_range) {
+            $range_padding = $center_price * $options['min_display_range'];
+            $display_min = max(0, $center_price - $range_padding);
+            $display_max = $center_price + $range_padding;
+        } else {
+            // Calculate rounded range with reasonable padding for normal ranges
+            $round_to = $options['round_to'];
+
+            // Use a smaller rounding factor for products with smaller price ranges
+            if ($price_range < $round_to) {
+                $round_to = max(100, ceil($price_range / 4 / 100) * 100); // Make divisible by 100
+            }
+
+            $display_min = floor($min_price / $round_to) * $round_to;
+            $display_min = max(0, $display_min - $round_to); // Ensure at least one step below min
+
+            $display_max = ceil($max_price / $round_to) * $round_to; // At least one step above max
+        }
+
+        $display_range = $display_max - $display_min;
+
+        // Calculate percentages for the green bar - ensure we have a valid range
+        if ($display_range > 0) {
+            $left_percent = ($min_price - $display_min) / $display_range * 100;
+            $width_percent = ($max_price - $min_price) / $display_range * 100;
+
+            // Ensure small ranges are still clearly visible
+            if ($width_percent < $options['min_bar_width']) {
+                // If bar is too narrow, increase its width
+                $adjustment = ($options['min_bar_width'] - $width_percent) / 2;
+                $left_percent = max(0, $left_percent - $adjustment);
+                $width_percent = $options['min_bar_width'];
+
+                // Make sure the adjusted bar doesn't exceed 100%
+                if ($left_percent + $width_percent > 100) {
+                    $left_percent = 100 - $width_percent;
+                }
+            }
+        } else {
+            $left_percent = 35; // Center the bar more if range calculation fails
+            $width_percent = $options['min_bar_width']; // Use minimum width
+        }
+
+        // Ensure we have reasonable values (fallback for edge cases)
+        $left_percent = max(0, min(80, $left_percent));
+        $width_percent = max($options['min_bar_width'], min(100 - $left_percent, $width_percent));
+
+        // Move down for graph
+        $pdf->SetY($pdf->GetY() + 2);
+        $graph_y = $pdf->GetY();
+
+        // Calculate actual dimensions for the graph - use contentWidth with padding
+        $graph_width = $contentWidth - 10; // Slight padding on sides (5pt on each side)
+        $graph_x = $startX + 5;
+
+        // Draw the background bar
+        $pdf->SetFillColor($options['bg_color'][0], $options['bg_color'][1], $options['bg_color'][2]);
+        $pdf->RoundedRect($graph_x, $graph_y, $graph_width, $options['graph_height'], 2, '1111', 'F');
+
+        // Calculate the green bar position and width
+        $green_x = $graph_x + ($graph_width * $left_percent / 100);
+        $green_width = $graph_width * $width_percent / 100;
+
+        // Draw the green range bar
+        $pdf->SetFillColor($options['bar_color'][0], $options['bar_color'][1], $options['bar_color'][2]);
+        $pdf->RoundedRect($green_x, $graph_y, $green_width, $options['graph_height'], 2, '1111', 'F');
+
+        // Add price labels below the graph if enabled and space allows
+        if ($options['show_labels']) {
+            $pdf->SetY($graph_y + $options['graph_height'] + 2);
+            $label_y = $pdf->GetY();
+
+            $pdf->SetFont(self::FONT_FAMILY, '', 8);
+            $pdf->SetTextColor(102, 102, 102);
+
+            // Reduce number of labels for smaller graph widths
+            $max_label_count = min(floor($graph_width / 30), 5); // Ensure at least 30pt per label
+            $label_count = min($options['label_count'], $max_label_count);
+
+            // For narrow ranges, use friendlier increments
+            if ($is_narrow_range) {
+                if ($label_count > 4) {
+                    $label_count = 4;
+                }
+
+                // Determine a nice round step value based on the price range
+                $range_magnitude = $display_range / ($label_count - 1);
+
+                // Choose step sizes that make sense based on magnitude for narrow ranges
+                if ($range_magnitude >= 2000) {
+                    $step = 1000; // Use $1000 increments for larger ranges
+                } elseif ($range_magnitude >= 1000) {
+                    $step = 500; // Use $500 increments for medium ranges
+                } elseif ($range_magnitude >= 200) {
+                    $step = 200; // Use $200 increments
+                } elseif ($range_magnitude >= 100) {
+                    $step = 100; // Use $100 increments
+                } elseif ($range_magnitude >= 50) {
+                    $step = 50; // Use $50 increments
+                } elseif ($range_magnitude >= 20) {
+                    $step = 20; // Use $20 increments
+                } elseif ($range_magnitude >= 10) {
+                    $step = 10; // Use $10 increments
+                } else {
+                    $step = 5; // Use $5 increments for very small ranges
+                }
+
+                // Adjust display range to start and end on nice round numbers
+                $display_min = floor($min_price / $step) * $step;
+
+                // For cases where we need extra space on the low end
+                if ($display_min > $min_price - ($step * 0.5)) {
+                    $display_min -= $step;
+                }
+
+                // Calculate how many steps we need for a clean display
+                $total_steps = ceil(($max_price - $display_min) / $step) + 1;
+
+                // Make sure we have at least the minimum number of steps for good visualization
+                $total_steps = max($total_steps, $label_count);
+
+                // Calculate the max based on steps
+                $display_max = $display_min + ($step * ($total_steps - 1));
+
+                // Calculate how many labels to actually display (usually equal to label_count)
+                $labels_to_show = min($total_steps, $label_count);
+
+                // Calculate the step between each displayed label
+                $display_step = ($total_steps - 1) / ($labels_to_show - 1);
+
+                // Use a simplified approach for label distribution
+                // Only show first, middle and last labels for very tight spaces
+                if ($labels_to_show <= 3) {
+                    $positions = [0];
+                    if ($labels_to_show >= 2) {
+                        $positions[] = $total_steps - 1;
+                    }
+                    if ($labels_to_show >= 3) {
+                        $positions[] = floor(($total_steps - 1) / 2);
+                    }
+
+                    foreach ($positions as $step_index) {
+                        $current_value = $display_min + ($step_index * $step);
+                        $percent_position = ($step_index / ($total_steps - 1)) * 100;
+                        $percent_position = max(0, min(100, $percent_position));
+
+                        $x_position = $graph_x + ($graph_width * $percent_position / 100);
+                        $formatted_value = '$' . number_format($current_value, 0);
+
+                        // Draw tick mark
+                        $pdf->Line($x_position, $label_y, $x_position, $label_y - 2);
+
+                        // Calculate label width - ensure it doesn't go off page
+                        $label_width = min(40, $graph_width / $labels_to_show);
+                        $label_x = $x_position - ($label_width / 2);
+
+                        // Make sure label stays within bounds
+                        $label_x = max($graph_x - 5, min($label_x, $graph_x + $graph_width - $label_width + 5));
+
+                        $pdf->SetXY($label_x, $label_y);
+                        $pdf->Cell($label_width, 5, $formatted_value, 0, 0, 'C');
+                    }
+                } else {
+                    // For more space, distribute labels evenly
+                    for ($i = 0; $i < $labels_to_show; $i++) {
+                        // Get the label index (evenly distributed across the range)
+                        $step_index = round($i * $display_step);
+
+                        // Calculate the actual value and position
+                        $current_value = $display_min + ($step_index * $step);
+                        $percent_position = ($step_index / ($total_steps - 1)) * 100;
+                        $percent_position = max(0, min(100, $percent_position));
+
+                        $x_position = $graph_x + ($graph_width * $percent_position / 100);
+                        $formatted_value = '$' . number_format($current_value, 0);
+
+                        // Draw tick mark
+                        $pdf->Line($x_position, $label_y, $x_position, $label_y - 2);
+
+                        // Calculate label width based on available space
+                        $label_width = $graph_width / $labels_to_show;
+                        $label_x = $x_position - ($label_width / 2);
+
+                        // Make sure label stays within bounds
+                        $label_x = max($graph_x, min($label_x, $graph_x + $graph_width - $label_width));
+
+                        $pdf->SetXY($label_x, $label_y);
+                        $pdf->Cell($label_width, 5, $formatted_value, 0, 0, 'C');
+                    }
+                }
+            } else {
+                // For normal ranges, use standard evenly spaced labels
+                // Calculate a maximum of 5 price points to show for normal ranges
+                $label_count = min(5, $label_count);
+
+                // Make sure we don't overcrowd small graphs
+                if ($graph_width < 150) {
+                    $label_count = min(3, $label_count);
+                }
+
+                // Generate label positions
+                for ($i = 0; $i < $label_count; $i++) {
+                    $percent_position = ($i / ($label_count - 1)) * 100;
+                    $current_value = $display_min + ($display_range * ($i / ($label_count - 1)));
+                    $x_position = $graph_x + ($graph_width * $percent_position / 100);
+
+                    // Format the price without decimals
+                    $formatted_value = '$' . number_format($current_value, 0);
+
+                    // Draw tick mark
+                    $pdf->Line($x_position, $label_y, $x_position, $label_y - 2);
+
+                    // Draw label - with cell width constraints to prevent overlap
+                    $label_width = min(40, $graph_width / $label_count * 0.9); // Smaller width for smaller graphs
+                    $label_x = $x_position - ($label_width / 2); // Center label at tick mark
+
+                    // Ensure label stays within page margins
+                    $label_x = max($graph_x, min($label_x, $graph_x + $graph_width - $label_width));
+
+                    $pdf->SetXY($label_x, $label_y);
+                    $pdf->Cell($label_width, 5, $formatted_value, 0, 0, 'C');
+                }
+            }
+
+            // Advance Y position past the labels
+            $pdf->SetY($label_y + 6);
+        } else {
+            // If no labels, just add some space after the graph
+            $pdf->SetY($graph_y + $options['graph_height'] + 2);
+        }
     }
 }

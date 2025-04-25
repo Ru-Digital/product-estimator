@@ -21,6 +21,7 @@ class PDFGenerator {
      */
     private $footer_text = '';
 
+
     /**
      * Footer contact details content
      *
@@ -385,11 +386,42 @@ class PDFGenerator {
             'FD' // Fill and draw
         );
 
-        // Add image if available
+        // Add image if available - MODIFIED TO SUPPORT TRANSPARENCY
         if ($has_image) {
             $image_x = $startX + $padding;
             $image_y = $startY + $padding;
-            $pdf->Image($image_path, $image_x, $image_y, $image_width, $image_height);
+
+            // Get file extension to determine image type
+            $file_extension = strtolower(pathinfo($image_path, PATHINFO_EXTENSION));
+
+            // Determine if this is a PNG or WebP image that might have transparency
+            $has_transparency = in_array($file_extension, ['png', 'webp']);
+
+            if ($has_transparency) {
+                // Use the ImagePng method with transparency support
+                $pdf->Image(
+                    $image_path,
+                    $image_x,
+                    $image_y,
+                    $image_width,
+                    $image_height,
+                    '', // Determine type from extension
+                    '', // URL link (none)
+                    '', // Alignment (default)
+                    true, // Reset Y position
+                    300, // DPI
+                    '', // Palette (default)
+                    false, // isDataURL
+                    false, // Inline
+                    0, // Border
+                    false, // Fit to page
+                    false, // CMYK
+                    true  // Preserve alpha channel - THIS IS THE KEY PARAMETER
+                );
+            } else {
+                // Use standard Image method for other formats
+                $pdf->Image($image_path, $image_x, $image_y, $image_width, $image_height);
+            }
         }
 
         // Calculate content position
@@ -722,7 +754,20 @@ class PDFGenerator {
         );
 
         // Add space after the total section - REDUCED
+        $pdf->Ln(5); // Reduced from 5 to 3
+
+        // --- NEW BLOCK: Render centered footer text ---
+        if (!empty($this->footer_text)) {
+            $html = '
+        <div style="font-size:12pt; text-align:center; color:#333; margin-top:10px;">
+            ' . nl2br($this->footer_text) . '
+        </div>
+        ';
+
+            $pdf->writeHTML($html, true, false, true, false, 'C'); // <-- 'C' centers the block
+        }
         $pdf->Ln(3); // Reduced from 5 to 3
+
     }
 
     /**
@@ -770,7 +815,7 @@ class PDFGenerator {
     }
 
     /**
-     * Get local file path for an image URL
+     * Get local file path for an image URL with transparency support
      *
      * @param string $url Image URL
      * @return string|false Local file path or false on failure
@@ -789,19 +834,16 @@ class PDFGenerator {
 
         // If it's a URL, download it
         if (filter_var($url, FILTER_VALIDATE_URL)) {
-            // Log the URL we're trying to process
             if ($this->debug) {
                 error_log("Processing image URL: $url");
             }
 
-            // Create temp file
             $temp_file = wp_tempnam('pe_img_');
 
-            // Try to get the image
             $response = wp_remote_get($url, [
                 'timeout' => 10,
                 'sslverify' => false,
-                'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
             ]);
 
             if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
@@ -810,23 +852,34 @@ class PDFGenerator {
                 if (!empty($image_data)) {
                     file_put_contents($temp_file, $image_data);
 
-                    // Verify it's a valid image
                     if (filesize($temp_file) > 0) {
+                        $file_ext = strtolower(pathinfo($temp_file, PATHINFO_EXTENSION));
+
+                        // Convert WebP with transparency to PNG
+                        if ($file_ext === 'webp' && function_exists('imagecreatefromwebp')) {
+                            $image = imagecreatefromwebp($temp_file);
+                            if ($image) {
+                                imagealphablending($image, false);
+                                imagesavealpha($image, true);
+
+                                $png_file = $temp_file . '.png';
+                                imagepng($image, $png_file);
+                                imagedestroy($image);
+                                unlink($temp_file); // delete original webp
+                                $temp_file = $png_file;
+                            }
+                        }
+
                         $this->image_data[$url] = $temp_file;
                         return $temp_file;
                     }
                 }
             }
 
-            // Download failed, try to resolve as WordPress attachment
-            global $wpdb;
-
-            // Check if this is a WP media URL
+            // Try to resolve as WordPress attachment if from uploads
             $uploads_info = wp_upload_dir();
             if (strpos($url, $uploads_info['baseurl']) === 0) {
-                // Try to find the attachment
                 $file_path = str_replace($uploads_info['baseurl'], $uploads_info['basedir'], $url);
-
                 if (file_exists($file_path)) {
                     $this->image_data[$url] = $file_path;
                     return $file_path;
@@ -834,18 +887,17 @@ class PDFGenerator {
             }
         }
 
-        // Try to handle relative URLs
+        // Handle relative URLs
         if (strpos($url, '/') === 0) {
             $site_path = ABSPATH;
             $file_path = rtrim($site_path, '/') . $url;
-
             if (file_exists($file_path)) {
                 $this->image_data[$url] = $file_path;
                 return $file_path;
             }
         }
 
-        // Try to handle attachment IDs
+        // Attachment ID fallback
         if (is_numeric($url)) {
             $attachment_url = wp_get_attachment_url($url);
             if ($attachment_url) {
@@ -853,14 +905,13 @@ class PDFGenerator {
             }
         }
 
-        // Try to provide a placeholder if available
+        // Placeholder fallback
         $placeholder_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'assets/images/placeholder.jpg';
         if (file_exists($placeholder_path)) {
             $this->image_data[$url] = $placeholder_path;
             return $placeholder_path;
         }
 
-        // Log the failure
         if ($this->debug) {
             error_log("Failed to process image: $url");
         }

@@ -621,6 +621,10 @@ class EstimateHandler {
             $content_template
         );
 
+        $pdf_url = product_estimator_get_pdf_url($estimate['db_id']);
+        $body .= "\n\nView your estimate online: " . $pdf_url;
+
+
         // Properly format line breaks for emails - convert \n to <br> for HTML
         $body = wpautop($body); // Convert double line breaks to paragraphs
 

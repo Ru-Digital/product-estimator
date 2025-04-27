@@ -861,20 +861,25 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
  * @param int $estimate_id The database ID of the estimate
  * @return string The URL for viewing the PDF
  */
-function product_estimator_get_pdf_url($estimate_id)
-{
+function product_estimator_get_pdf_url($estimate_id, $for_customer = true) {
     if (empty($estimate_id)) {
         return '';
     }
 
-    // Convert to integer to ensure it's a valid ID
-    $estimate_id = intval($estimate_id);
-    if ($estimate_id <= 0) {
+    // Admin view (internal use)
+    if (!$for_customer && current_user_can('manage_options')) {
+        return home_url('/product-estimator/pdf/admin/' . $estimate_id);
+    }
+
+    // Customer view (secure token)
+    $pdf_handler = new \RuDigital\ProductEstimator\Includes\PDFRouteHandler();
+    $token = $pdf_handler->generate_secure_pdf_token($estimate_id);
+
+    if (!$token) {
         return '';
     }
 
-    // Return the URL with the estimate ID
-    return home_url('/product-estimator/pdf/' . $estimate_id);
+    return home_url('/product-estimator/pdf/view/' . $token);
 }
 
 /**
@@ -962,13 +967,4 @@ function product_estimator_get_db_id($estimate_id)
 
     return false;
 }
-//
-//// Add directly to functions.php for testing
-//add_action('init', function() {
-//    add_rewrite_rule(
-//        'product-estimator/pdf/([0-9]+)/?$',
-//        'index.php?product_estimator_pdf=1&estimate_id=$matches[1]',
-//        'top'
-//    );
-//    flush_rewrite_rules();
-//}, 20);
+

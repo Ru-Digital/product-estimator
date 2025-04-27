@@ -64,18 +64,19 @@ class PDFRouteHandler {
      * Register custom rewrite rule for PDF endpoint
      */
     public function register_rewrite_rules() {
-        // The rewrite rule that worked in functions.php
+        // Token-based access
         add_rewrite_rule(
-            'product-estimator/pdf/([0-9]+)/?$',
-            'index.php?product_estimator_pdf=1&estimate_id=$matches[1]',
+            'product-estimator/pdf/view/([^/]+)/?$',
+            'index.php?product_estimator_pdf=1&pdf_token=$matches[1]',
             'top'
         );
 
-        // You might need to adjust the flush_rewrite_rules frequency
-        // for performance reasons in production
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            flush_rewrite_rules();
-        }
+        // Admin-only direct ID access
+        add_rewrite_rule(
+            'product-estimator/pdf/admin/([0-9]+)/?$',
+            'index.php?product_estimator_pdf=1&estimate_id=$matches[1]&admin_view=1',
+            'top'
+        );
     }
 
     /**
@@ -87,6 +88,8 @@ class PDFRouteHandler {
     public function register_query_vars($vars) {
         $vars[] = 'product_estimator_pdf';
         $vars[] = 'estimate_id';
+        $vars[] = 'pdf_token';
+        $vars[] = 'admin_view';
         return $vars;
     }
 
@@ -98,18 +101,39 @@ class PDFRouteHandler {
 
         // Check if this is our custom endpoint
         if (!isset($wp_query->query_vars['product_estimator_pdf']) ||
-            $wp_query->query_vars['product_estimator_pdf'] != 1 ||
-            !isset($wp_query->query_vars['estimate_id'])) {
+            $wp_query->query_vars['product_estimator_pdf'] != 1) {
             return;
         }
 
-        // Get the estimate ID from the URL
-        $db_id = intval($wp_query->query_vars['estimate_id']);
+        // Admin direct access route
+        if (isset($wp_query->query_vars['admin_view']) && isset($wp_query->query_vars['estimate_id'])) {
+            // Verify current user is an admin
+            if (!current_user_can('manage_options')) {
+                $this->output_error('Unauthorized access');
+                return;
+            }
 
-        // Generate and output the PDF
-        $this->generate_and_output_pdf($db_id);
+            $db_id = intval($wp_query->query_vars['estimate_id']);
+            $this->generate_and_output_pdf($db_id);
+            exit;
+        }
 
-        // Exit to prevent WordPress from continuing
+        // Token-based access route
+        if (isset($wp_query->query_vars['pdf_token'])) {
+            $token = sanitize_text_field($wp_query->query_vars['pdf_token']);
+            $estimate_id = $this->validate_pdf_token($token);
+
+            if ($estimate_id) {
+                $this->generate_and_output_pdf($estimate_id);
+                exit;
+            } else {
+                $this->output_error('Invalid or expired link');
+                return;
+            }
+        }
+
+        // No valid access method provided
+        $this->output_error('Invalid request');
         exit;
     }
 
@@ -295,5 +319,56 @@ class PDFRouteHandler {
                 'target' => '_blank'
             )
         ));
+    }
+
+    function generate_secure_pdf_token($estimate_id, $expiry = 86400) {
+        // Create a token with: estimate_id + customer_email + timestamp + secret_key
+        $estimate = $this->get_estimate_from_db($estimate_id);
+        if (!$estimate || empty($estimate['customer_details']['email'])) {
+            return false;
+        }
+
+        $customer_email = $estimate['customer_details']['email'];
+        $timestamp = time() + $expiry; // Token valid for 24 hours by default
+        $data = $estimate_id . '|' . $customer_email . '|' . $timestamp;
+        $signature = hash_hmac('sha256', $data, wp_salt('auth'));
+
+        return urlencode(base64_encode($data . '|' . $signature));
+    }
+
+    private function validate_pdf_token($token) {
+        try {
+            $decoded = base64_decode(urldecode($token));
+            if (!$decoded) return false;
+
+            $parts = explode('|', $decoded);
+            if (count($parts) !== 4) return false;
+
+            list($estimate_id, $email, $expiry, $signature) = $parts;
+
+            // Check if token has expired
+            if (time() > intval($expiry)) return false;
+
+            // Verify signature
+            $data = $estimate_id . '|' . $email . '|' . $expiry;
+            $expected_signature = hash_hmac('sha256', $data, wp_salt('auth'));
+
+            if (!hash_equals($expected_signature, $signature)) return false;
+
+            // Verify estimate exists and belongs to this email
+            $estimate = $this->get_estimate_from_db($estimate_id);
+            if (!$estimate ||
+                !isset($estimate['customer_details']['email']) ||
+                $estimate['customer_details']['email'] !== $email) {
+                return false;
+            }
+
+            return $estimate_id;
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Token validation error: ' . $e->getMessage());
+            }
+            return false;
+        }
     }
 }

@@ -141,7 +141,17 @@ class EstimateHandler {
         $session_estimate_id = sanitize_text_field($_POST['estimate_id']);
 
         try {
-            // Generate PDF for the estimate
+            // First, ensure the estimate in the session is stored/updated in the database
+            $db_id = $this->ensure_estimate_stored($session_estimate_id);
+
+            if (!$db_id) {
+                wp_send_json_error([
+                    'message' => __('Failed to store estimate in database', 'product-estimator')
+                ]);
+                return;
+            }
+
+            // Then generate PDF for the estimate
             $result = $this->generate_pdf($session_estimate_id);
 
             if (!$result) {
@@ -155,9 +165,9 @@ class EstimateHandler {
             wp_send_json_success([
                 'message' => __('PDF generated successfully', 'product-estimator'),
                 'pdf_url' => $result['pdf_url'],
-                'db_id' => $result['db_id'],
+                'db_id' => $db_id,
                 'session_id' => $session_estimate_id,
-                'updated' => $result['updated']
+                'updated' => true
             ]);
 
         } catch (\Exception $e) {
@@ -232,12 +242,25 @@ class EstimateHandler {
      * @param string $session_estimate_id The session estimate ID
      * @return int|false The database ID or false on failure
      */
-    private function ensure_estimate_stored($estimate, $session_estimate_id) {
+    /**
+     * Ensure estimate is stored in the database and up to date (create or update)
+     *
+     * @param string $session_estimate_id The session estimate ID
+     * @return int|false The database ID or false on failure
+     */
+    private function ensure_estimate_stored($session_estimate_id) {
+        // Get the estimate from session
+        $estimate = $this->session->getEstimate($session_estimate_id);
+
+        if (!$estimate) {
+            return false;
+        }
+
         // Check if already stored
         $db_id = $this->getEstimateDbId($estimate);
 
         if ($db_id) {
-            // Update the existing record
+            // Update the existing record with the current session data
             $this->update_estimate_in_db($db_id, $estimate);
             return $db_id;
         } else {

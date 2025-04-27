@@ -151,7 +151,28 @@ class PDFRouteHandler {
                 return;
             }
 
-            // Load the estimate from the database
+            // Find if this estimate exists in the session
+            $session_id = $this->findSessionEstimateIdByDbId($db_id);
+
+            // If it exists in session, use the storeOrUpdateEstimate method from the trait
+            // to update the database with the latest session data
+            if ($session_id !== null) {
+                $session_estimate = $this->session->getEstimate($session_id);
+                if ($session_estimate) {
+                    // Use the trait method to update the database
+                    // We need to extract customer details from the session estimate
+                    $customer_details = isset($session_estimate['customer_details']) ?
+                        $session_estimate['customer_details'] : [];
+
+                    // Use notes from the session if available
+                    $notes = isset($session_estimate['notes']) ? $session_estimate['notes'] : '';
+
+                    // Use the trait method to update the estimate
+                    $this->storeOrUpdateEstimate($session_id, $customer_details, $notes);
+                }
+            }
+
+            // Now load the estimate from the database (which should now have the latest data)
             $estimate_data = $this->get_estimate_from_db($db_id);
 
             if (empty($estimate_data)) {

@@ -566,7 +566,7 @@ class PDFGenerator
                 $default_markup,
                 $room['name'],
                 $dimensionsWithArea,
-                null, // pricing_method
+                "sqm", // pricing_method
                 [
                     'show_labels' => true,
                     'label_count' => 6,
@@ -993,26 +993,32 @@ class PDFGenerator
         $startY = $pdf->GetY();
 
         // Title and dimensions
-        $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
+        $pdf->SetFont(self::FONT_FAMILY, 'B', 10);
         $pdf->SetTextColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
         $title_max_width = $contentWidth * $options['title_max_width_percent'];
-        $pdf->Cell($title_max_width, 6, $title, 0, 0, 'L');
+        $title_width = $pdf->GetStringWidth($title) + 2;
+        $pdf->Cell($title_width, 6, $title, 0, 0, 'L');
 
         if ($dimensions) {
+            $dim_parts = explode('x', strtolower(str_replace(' ', '', $dimensions)));
+            $room_area = '';
+            if (count($dim_parts) == 2) {
+                $width = floatval(trim($dim_parts[0]));
+                $height = floatval(trim($dim_parts[1]));
+                $area = $width * $height;
+                $room_area = number_format($area, 1);
+            }
+
             $pdf->SetFont(self::FONT_FAMILY, '', 10);
             $pdf->SetTextColor(self::COLOR_LIGHT_TEXT[0], self::COLOR_LIGHT_TEXT[1], self::COLOR_LIGHT_TEXT[2]);
-            $dim_text = " ($dimensions)";
-            if ($pricing_method === 'sqm') {
-                $dim_text .= 'm²';
-            } elseif ($pricing_method === 'm') {
-                $dim_text .= 'm';
-            }
-            $pdf->Cell(30, 6, $dim_text, 0, 0, 'L');
+            $dim_text = ' ' . $dimensions . 'm (' . $room_area . 'm²)';
+            $dim_width = $pdf->GetStringWidth($dim_text) + 2;
+            $pdf->Cell($dim_width, 6, $dim_text, 0, 0, 'L');
         }
 
-        $pdf->SetFont(self::FONT_FAMILY, 'B', 11);
+        $pdf->SetFont(self::FONT_FAMILY, '', 9);
         $pdf->SetTextColor(self::COLOR_TEXT[0], self::COLOR_TEXT[1], self::COLOR_TEXT[2]);
-        $remaining_width = $graph_width - $title_max_width;
+        $remaining_width = $contentWidth - ($pdf->GetX() - $marginLeft);
         $pdf->Cell($remaining_width, 6, $formatted_price, 0, 1, 'R');
         $pdf->Ln(2);
         $side_padding = 7;
@@ -1033,7 +1039,7 @@ class PDFGenerator
 
         // Draw graph background (grey)
         $pdf->SetFillColor($options['bg_color'][0], $options['bg_color'][1], $options['bg_color'][2]);
-        $pdf->RoundedRect($graph_x, $graph_y, $graph_width, $options['graph_height'], 1.5, '1111', 'F');
+        $pdf->RoundedRect($graph_x, $graph_y, $graph_width, $options['graph_height'], 0.5, '1111', 'F');
 
         // Calculate bar position
         $bar_x = $graph_x + ($graph_width * $left_percent / 100);

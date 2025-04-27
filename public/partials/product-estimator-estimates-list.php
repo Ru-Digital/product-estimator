@@ -43,8 +43,8 @@ $options = get_option('product_estimator_settings');
                         null,
                         null,
                         [
-                            'label_count' => 6, // Adjust number of labels as needed
-                            'round_to' => 1000  // Round to nearest thousand
+                            'label_count' => 6,
+                            'min_bar_width' => 5
                         ]
                     );
                     ?>
@@ -97,6 +97,7 @@ $options = get_option('product_estimator_settings');
 <!--    </span>-->
                                         <?php
                                         $room_dimensions = esc_html($room['width']). "x" . esc_html($room['length']);
+
                                         display_price_graph(
                                             $room['min_total'],
                                             $room['max_total'],
@@ -105,10 +106,12 @@ $options = get_option('product_estimator_settings');
                                             $room_dimensions,
                                             'm',
                                             [
-                                                'label_count' => 6, // Adjust number of labels as needed
-                                                'round_to' => 1000  // Round to nearest thousand
+                                                'label_count' => 6,
+                                                'min_bar_width' => 5
                                             ]
                                         );
+
+
                                         ?>
 
                                         <?php

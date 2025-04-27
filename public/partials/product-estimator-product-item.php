@@ -144,16 +144,19 @@ if (isset($estimate_id)) {
                     <?php endif; ?>
 
                     <?php
+
+
+
                     display_price_graph(
-                        $min_total,
+                        $min_price,
                         $max_total,
                         $default_markup,
                         esc_html($product['name']),
                         $room_area,
                         $pricing_method,
                         [
-                            'label_count' => 6, // Adjust number of labels as needed
-                            'round_to' => 500  // Round to nearest thousand
+                            'label_count' => 6,
+                            'min_bar_width' => 5
                         ]
                     );
                     ?>

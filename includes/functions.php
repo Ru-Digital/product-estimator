@@ -551,20 +551,23 @@ function product_estimator_calculate_total_price_with_additions_for_display($pro
     return $result;
 }
 
-function display_price_with_markup($price, $markup, $direction = null) {
-    $final_price_with_markup = $price;
-//    echo "<br>Markup: " . $markup . "<br>";
+function calculate_price_with_markup($price, $markup, $direction = null) {
+    $final_price = $price;
     switch ($direction) {
         case 'up':
-            $final_price_with_markup = $price * (1 + ($markup / 100));
+            $final_price = $price * (1 + ($markup / 100));
             break;
         case 'down':
-            $final_price_with_markup = $price / (1 + ($markup / 100));
+            $final_price = $price / (1 + ($markup / 100));
             break;
     }
-    return wc_price(round($final_price_with_markup));
+    return round($final_price, 2); // RETURN numeric value
 }
 
+function display_price_with_markup($price, $markup, $direction = null) {
+    $numeric_price = calculate_price_with_markup($price, $markup, $direction);
+    return wc_price($numeric_price);
+}
 /**
  * Get the pricing rule for a product with proper handling for variations
  * This function specifically considers the parent product categories for variations
@@ -628,6 +631,125 @@ function product_estimator_get_pricing_rule_for_product_with_parent($product_id,
     return $default_rule;
 }
 
+
+
+
+/**
+ * PDF Helper Functions
+ *
+ * These functions should be added to the includes/functions.php file
+ */
+function product_estimator_calculate_price_steps($min_price, $max_price, $options = []) {
+    $round_to = isset($options['round_to']) ? floatval($options['round_to']) : null;
+    $label_count = isset($options['label_count']) ? intval($options['label_count']) : 6;
+
+    $min_price = max(0, floatval($min_price));
+    $max_price = max($min_price, floatval($max_price));
+    $raw_range = $max_price - $min_price;
+
+    if ($raw_range <= 0) {
+        $raw_range = 1;
+    }
+
+    // Force smaller roundings for tight ranges
+    if (!$round_to) {
+        if ($raw_range <= 1000) {
+            $round_to = 100;
+        } elseif ($raw_range <= 5000) {
+            $round_to = 500;
+        } elseif ($raw_range <= 10000) {
+            $round_to = 1000;
+        } elseif ($raw_range <= 50000) {
+            $round_to = 2000;
+        } else {
+            $round_to = 5000;
+        }
+    }
+
+    // Force graph to expand to a clean nice set of steps
+    $step_count = max(1, $label_count - 1);
+    $target_step_size = ceil($raw_range / $step_count / 100) * 100;
+
+    // Adjust rounded min and max
+    $rounded_min = floor($min_price / 100) * 100;
+    $rounded_max = ceil($max_price / 100) * 100;
+
+    // Expand outward to nearest "pretty" labels
+    $scale_min = $rounded_min - ($target_step_size * 2);
+    $scale_max = $rounded_max + ($target_step_size * 2);
+
+    if ($scale_min < 0) {
+        $scale_min = 0;
+    }
+
+    $scale_range = $scale_max - $scale_min;
+    if ($scale_range <= 0) {
+        $scale_range = 1;
+    }
+
+    // Steps
+    $nice_step_size = ceil($scale_range / $step_count / 100) * 100;
+
+    // Build nice label steps
+    $step_values = [];
+    for ($i = 0; $i <= $step_count; $i++) {
+        $value = $scale_min + ($i * $nice_step_size);
+        $percent = ($value - $scale_min) / ($scale_max - $scale_min) * 100;
+        $step_values[] = [
+            'value' => round($value),
+            'percent' => $percent,
+            'formatted' => '$' . number_format(round($value), 0)
+        ];
+    }
+
+    return [
+        'display_min' => $scale_min,
+        'display_max' => $scale_max,
+        'display_range' => $scale_range,
+        'step_values' => $step_values
+    ];
+}
+/**
+ * Calculate the position of the price range bar on the graph
+ *
+ * @param float $min_price The minimum price
+ * @param float $max_price The maximum price
+ * @param array $options Optional display options
+ * @return array Bar position data
+ */
+function calculate_price_graph_bar_position($min_price, $max_price, $options = []) {
+    $price_steps = product_estimator_calculate_price_steps($min_price, $max_price, $options);
+
+    $scale_min = floatval($price_steps['display_min']);
+    $scale_max = floatval($price_steps['display_max']);
+    $scale_range = $scale_max - $scale_min;
+
+    if ($scale_range <= 0) {
+        $scale_range = 1;
+    }
+
+    $min_price = floatval($min_price);
+    $max_price = floatval($max_price);
+
+    // Calculate bar position
+    $left_percent = (($min_price - $scale_min) / $scale_range) * 100;
+    $right_percent = (($max_price - $scale_min) / $scale_range) * 100;
+    $width_percent = $right_percent - $left_percent;
+
+    // Ensure values are valid
+    $left_percent = round(max(0, min($left_percent, 100)), 2);
+    $width_percent = round(max(0, min($width_percent, 100 - $left_percent)), 2);
+
+
+    return [
+        'bar_left_percent' => $left_percent,
+        'bar_width_percent' => $width_percent,
+        'label_values' => $price_steps['step_values'],
+        'scale_min' => $scale_min,
+        'scale_max' => $scale_max
+    ];
+}
+
 /**
  * Display a price range graph for product estimator
  *
@@ -647,213 +769,78 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
         'bar_color' => '#4CAF50', // Green color
         'bg_color' => '#e0e0e0',  // Light gray background
         'show_labels' => true,
-        'label_count' => 6,       // Number of labels to show (including start and end)
-        'round_to' => 1000,       // Round values to nearest thousand
-        'min_bar_width' => 50,    // Minimum width percentage for small ranges
-        'min_display_range' => 0.3 // Minimum display range as fraction of price
+        'label_count' => 6,       // Number of labels to show
+        'min_bar_width' => 5,     // Minimum width percentage
+        'round_to' => 1000        // Round labels to nearest value
     ];
 
-    // Merge user options with defaults
     $options = wp_parse_args($options, $defaults);
 
-    // For very close min/max prices, create an artificial range for better visualization
-    $price_range = $max_price - $min_price;
-    $is_narrow_range = $price_range < ($min_price * 0.05); // If range is less than 5% of min price
+    // ✅ First adjust prices numerically (NOT formatted!)
+    $price_min_adjusted = calculate_price_with_markup($min_price, $markup, 'down');
+    $price_max_adjusted = calculate_price_with_markup($max_price, $markup, 'up');
 
-    // Calculate the center point of our price range
-    $center_price = ($min_price + $max_price) / 2;
+    // ✅ Get bar position using adjusted prices
+    $position = calculate_price_graph_bar_position($price_min_adjusted, $price_max_adjusted, $options);
 
-    // For narrow ranges, create a symmetric display range around the center point
-    if ($is_narrow_range) {
-        $range_padding = $center_price * $options['min_display_range'];
-        $display_min = max(0, $center_price - $range_padding);
-        $display_max = $center_price + $range_padding;
-    } else {
-        // Calculate rounded range with reasonable padding for normal ranges
-        $round_to = $options['round_to'];
+    $left_percent = $position['bar_left_percent'];
+    $width_percent = $position['bar_width_percent'];
+    $step_values = $position['label_values'];
 
-        // Use a smaller rounding factor for products with smaller price ranges
-        if ($price_range < $round_to) {
-            $round_to = max(100, ceil($price_range / 4 / 100) * 100); // Make divisible by 100
-        }
+    // ✅ Format for display
+    $formatted_min = wc_price($price_min_adjusted);
+    $formatted_max = wc_price($price_max_adjusted);
 
-        $display_min = floor($min_price / $round_to) * $round_to;
-        $display_min = max(0, $display_min - $round_to); // Ensure at least one step below min
+    // Small range class if width is tiny
+    $small_range_class = ($width_percent <= 8) ? ' small-range' : '';
 
-        $display_max = ceil($max_price / $round_to) * $round_to + $round_to; // At least one step above max
-    }
 
-    $display_range = $display_max - $display_min;
-
-    // Calculate percentages for the green bar - ensure we have a valid range
-    if ($display_range > 0) {
-        $left_percent = ($min_price - $display_min) / $display_range * 100;
-        $width_percent = ($max_price - $min_price) / $display_range * 100;
-
-        // Ensure small ranges are still clearly visible
-        if ($width_percent < $options['min_bar_width']) {
-            // If bar is too narrow, increase its width
-            $adjustment = ($options['min_bar_width'] - $width_percent) / 2;
-            $left_percent = max(0, $left_percent - $adjustment);
-            $width_percent = $options['min_bar_width'];
-
-            // Make sure the adjusted bar doesn't exceed 100%
-            if ($left_percent + $width_percent > 100) {
-                $left_percent = 100 - $width_percent;
-            }
-        }
-    } else {
-        $left_percent = 35; // Center the bar more if range calculation fails
-        $width_percent = $options['min_bar_width']; // Use minimum width
-    }
-
-    // Ensure we have reasonable values (fallback for edge cases)
-    $left_percent = max(0, min(80, $left_percent));
-    $width_percent = max($options['min_bar_width'], min(100 - $left_percent, $width_percent));
-
-    // Format prices for display using the display_price_with_markup function
-    $formatted_min = display_price_with_markup($min_price, $markup, "down");
-    $formatted_max = display_price_with_markup($max_price, $markup, "up");
-
-    // Output CSS only once
-    static $css_output = false;
-    if (!$css_output) {
-        // CSS is removed as requested - it's in the product-estimator-modal.css file
-        $css_output = true;
-    }
-
-    // Output HTML
+    // ✅ Output graph HTML
     ?>
     <div class="price-graph-container">
         <div class="price-range-title">
             <span class="price-title">
-                <?php echo $title; ?>
-
+                <?php echo esc_html($title); ?>
                 <?php if ($pricing_method == "sqm"): ?>
-                        <span class="price-dimensions"><?php echo $dimensions; ?>&#13217</span>
-                <?php elseif($pricing_method == "m"): ?>
-                    <span class="price-dimensions"><?php echo $dimensions; ?>m</span>
-<!--                --><?php //else: ?>
-<!--                    <span class="price-dimensions">--><?php //echo $dimensions; ?><!--</span>-->
+                    <span class="price-dimensions"><?php echo esc_html($dimensions); ?>&#13217;</span>
+                <?php elseif ($pricing_method == "m"): ?>
+                    <span class="price-dimensions"><?php echo esc_html($dimensions); ?>m</span>
                 <?php endif; ?>
             </span>
-            <?php if($min_price > 0 && $max_price > 0): ?>
-            <span class="room-price"><?php echo $formatted_min; ?> - <?php echo $formatted_max; ?></span>
+            <?php if ($min_price > 0 && $max_price > 0): ?>
+                <span class="room-price"><?php echo $formatted_min; ?> - <?php echo $formatted_max; ?></span>
             <?php endif; ?>
         </div>
 
-    <?php if($min_price > 0 && $max_price > 0): ?>
-        <div class="price-graph-bar <?php echo $is_narrow_range ? 'narrow-range' : ''; ?>" style="height: <?php echo esc_attr($options['height']); ?>; background-color: <?php echo esc_attr($options['bg_color']); ?>; position: relative;">
-            <div class="price-graph-range" style="position: absolute; left: <?php echo esc_attr($left_percent); ?>%; width: <?php echo esc_attr($width_percent); ?>%; top: 0; bottom: 0; background-color: <?php echo esc_attr($options['bar_color']); ?>;"></div>
-        </div>
-    <?php endif; ?>
-    <?php if($min_price > 0 && $max_price > 0): ?>
-
-        <?php if ($options['show_labels']): ?>
-            <div class="price-graph-labels">
-                <?php
-                $label_count = $options['label_count'];
-
-                // For narrow ranges, use friendlier increments
-                if ($is_narrow_range) {
-                    if ($label_count > 4) {
-                        $label_count = 4;
-                    }
-
-                    // Determine a nice round step value based on the price range
-                    $range_magnitude = $display_range / ($label_count - 1);
-
-                    // Choose step sizes that make sense based on magnitude for narrow ranges
-                    if ($range_magnitude >= 2000) {
-                        $step = 1000; // Use $1000 increments for larger ranges
-                    } elseif ($range_magnitude >= 1000) {
-                        $step = 500; // Use $500 increments for medium ranges
-                    } elseif ($range_magnitude >= 200) {
-                        $step = 200; // Use $200 increments
-                    } elseif ($range_magnitude >= 100) {
-                        $step = 100; // Use $100 increments
-                    } elseif ($range_magnitude >= 50) {
-                        $step = 50; // Use $50 increments
-                    } elseif ($range_magnitude >= 20) {
-                        $step = 20; // Use $20 increments
-                    } elseif ($range_magnitude >= 10) {
-                        $step = 10; // Use $10 increments
-                    } else {
-                        $step = 5; // Use $5 increments for very small ranges
-                    }
-
-                    // Adjust display range to start and end on nice round numbers
-                    $display_min = floor($min_price / $step) * $step;
-
-                    // For cases where we need extra space on the low end
-                    if ($display_min > $min_price - ($step * 0.5)) {
-                        $display_min -= $step;
-                    }
-
-                    // Calculate how many steps we need for a clean display
-                    $total_steps = ceil(($max_price - $display_min) / $step) + 1;
-
-                    // Make sure we have at least the minimum number of steps for good visualization
-                    $total_steps = max($total_steps, $label_count);
-
-                    // Calculate the max based on steps
-                    $display_max = $display_min + ($step * ($total_steps - 1));
-
-                    // Calculate how many labels to actually display (usually equal to label_count)
-                    $labels_to_show = min($total_steps, $label_count);
-
-                    // Calculate the step between each displayed label
-                    $display_step = ($total_steps - 1) / ($labels_to_show - 1);
-
-                    for ($i = 0; $i < $labels_to_show; $i++) {
-                        // Get the label index (evenly distributed across the range)
-                        $step_index = round($i * $display_step);
-
-                        // Calculate the actual value and position
-                        $current_value = $display_min + ($step_index * $step);
-                        $percent_position = ($step_index / ($total_steps - 1)) * 100;
-
-                        // Format the price without decimals
-                        $formatted_value = '$' . number_format($current_value, 0);
-                        ?>
-                        <div class="price-label" style="left: <?php echo esc_attr($percent_position); ?>%;">
-                            <div class="price-tick"></div>
-                            <div class="price-value"><?php echo $formatted_value; ?></div>
-                        </div>
-                        <?php
-                    }
-                } else {
-                    // For normal ranges, use standard evenly spaced labels
-                    $step = $display_range / ($label_count - 1);
-
-                    for ($i = 0; $i < $label_count; $i++) {
-                        $current_value = $display_min + ($i * $step);
-                        $percent_position = ($i / ($label_count - 1)) * 100;
-
-                        // Format the price without decimals
-                        $formatted_value = '$' . number_format($current_value, 0);
-                        ?>
-                        <div class="price-label" style="left: <?php echo esc_attr($percent_position); ?>%;">
-                            <div class="price-tick"></div>
-                            <div class="price-value"><?php echo $formatted_value; ?></div>
-                        </div>
-                        <?php
-                    }
-                }
-                ?>
+        <?php if ($min_price > 0 && $max_price > 0): ?>
+            <div class="price-graph-bar" style="position: relative; height: <?php echo esc_attr($options['height']); ?>; background-color: <?php echo esc_attr($options['bg_color']); ?>;">
+                <div class="price-graph-range<?php echo $small_range_class; ?>" style="
+                    position: absolute;
+                    left: <?php echo esc_attr($left_percent); ?>%;
+                    width: <?php echo esc_attr($width_percent); ?>%;
+                    top: 0;
+                    bottom: 0;
+                    height: 100%;
+                    background-color: <?php echo esc_attr($options['bar_color']); ?>;
+                    margin: 0;">
+                </div>
             </div>
         <?php endif; ?>
-    <?php endif; ?>
+
+        <?php if ($min_price > 0 && $max_price > 0 && $options['show_labels']): ?>
+            <div class="price-graph-labels">
+                <?php foreach ($step_values as $step): ?>
+                    <div class="price-label" style="left: <?php echo esc_attr($step['percent']); ?>%;">
+                        <div class="price-tick"></div>
+                        <div class="price-value"><?php echo esc_html($step['formatted']); ?></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </div>
     <?php
 }
 
-
-/**
- * PDF Helper Functions
- *
- * These functions should be added to the includes/functions.php file
- */
 
 /**
  * Get the URL for viewing a PDF of an estimate
@@ -968,3 +955,12 @@ function product_estimator_get_db_id($estimate_id)
     return false;
 }
 
+function product_estimator_debug_log($message, $data = null) {
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        if ($data !== null) {
+            error_log($message . ': ' . print_r($data, true));
+        } else {
+            error_log($message);
+        }
+    }
+}

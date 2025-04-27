@@ -450,6 +450,9 @@ class PDFGenerator
                 'max_width' => $contentWidth - $image_offset - ($padding * 2)
             ];
 
+            $graph_x = $startX + $image_offset + $padding;
+            $graph_width = $contentWidth - $image_offset - ($padding * 2);
+            $available_width = $contentWidth - $image_offset - ($padding * 2);
             $this->render_price_graph_pdf(
                 $pdf,
                 $product['min_price_total'],
@@ -458,8 +461,18 @@ class PDFGenerator
                 $product['name'],
                 null,
                 $pricing_method,
-                $graph_options
+                [
+                    'show_labels' => true,
+                    'label_count' => 6,
+                    'round_to' => 500,
+                    'min_bar_width' => 5,
+                    'graph_height' => 3,
+                    'max_width' => $graph_width, // optional still
+                ],
+                $graph_x,   // NEW
+                $available_width  // NEW
             );
+
         } else {
             // For products without price
             $title_width = $contentWidth - $image_offset - ($padding * 2);
@@ -553,13 +566,14 @@ class PDFGenerator
                 $default_markup,
                 $room['name'],
                 $dimensionsWithArea,
-                null, // Don't pass 'm' as pricing_method here
+                null, // pricing_method
                 [
                     'show_labels' => true,
-                    'label_count' => 3,       // Reduced number of labels
-                    'round_to' => 500,        // Use smaller rounding
-                    'title_max_width_percent' => 0.5, // Constrain title width
-                    'graph_height' => 3       // Standard height for room headers
+                    'label_count' => 6,
+                    'round_to' => 500,
+                    'min_bar_width' => 5, // Added for consistency
+                    'title_max_width_percent' => 0.5,
+                    'graph_height' => 3
                 ]
             );
         } else {
@@ -758,11 +772,12 @@ class PDFGenerator
             null,
             [
                 'show_labels' => true,
-                'label_count' => 3,      // Reduced label count to fit page width
-                'graph_height' => 8,     // Taller graph for emphasis
-                'round_to' => 1000,      // Round to nearest thousand for the total
-                'bar_color' => [0, 133, 63], // Darker green for total
-                'title_max_width_percent' => 0.5 // Constrain title width
+                'label_count' => 6,
+                'graph_height' => 8,
+                'round_to' => 1000,
+                'min_bar_width' => 5, // Added for consistency
+                'bar_color' => [0, 133, 63],
+                'title_max_width_percent' => 0.5
             ]
         );
 
@@ -936,425 +951,158 @@ class PDFGenerator
     }
 
     /**
-     * Render a price range graph in PDF with gradient edges
-     *
-     * @param object $pdf TCPDF/FPDI object
-     * @param float $min_price Minimum price
-     * @param float $max_price Maximum price
-     * @param float $default_markup Markup percentage
-     * @param string $title Product/room title
-     * @param string $dimensions Room dimensions (if applicable)
-     * @param string $pricing_method Pricing method (sqm or fixed)
-     * @param array $options Optional display options
+     * PDF version of the price graph renderer
+     * - To be placed in your class-pdf-generator.php file
      */
-    private function render_price_graph_pdf($pdf, $min_price, $max_price, $default_markup, $title, $dimensions = null, $pricing_method = null, $options = []) {
-        // Default options
+    private function render_price_graph_pdf($pdf, $min_price, $max_price, $default_markup, $title, $dimensions = null, $pricing_method = null, $options = [], $graph_x = null, $graph_width = null) {
         $defaults = [
-            'graph_height' => 5,      // Height of the bar in mm
-            'bar_color' => [76, 175, 80],  // Green color (RGB) - #4CAF50
-            'bg_color' => [224, 224, 224], // Light gray background (RGB) - #e0e0e0
-            'label_count' => 5,       // Number of labels to show
-            'round_to' => 1000,       // Round values to nearest thousand
-            'min_bar_width' => 20,    // Minimum width percentage for small ranges (as percentage)
-            'min_display_range' => 0.3, // Minimum display range as fraction of price
-            'title_max_width_percent' => 0.7, // Maximum width for title as percentage of content width
-            'show_labels' => true,    // Whether to show the price labels
-            'max_width' => null,      // Maximum width for the graph (null = use content width)
-            'hide_zero_price' => false, // Whether to hide price if it's zero
-            'gradient_width' => 6     // Width of gradient effect in mm (new parameter)
+            'graph_height' => 5,
+            'bar_color' => [76, 175, 80],   // #4CAF50
+            'bg_color' => [224, 224, 224],  // #E0E0E0
+            'label_count' => 6,
+            'round_to' => 1000,
+            'min_bar_width' => 5,
+            'title_max_width_percent' => 0.7,
+            'show_labels' => true,
+            'max_width' => null,
+            'hide_zero_price' => false
         ];
-
-        // Merge user options with defaults
         $options = array_merge($defaults, $options);
 
-        // Check if price should be hidden (if both min and max are zero and hide_zero_price is true)
-        $hide_price = $options['hide_zero_price'] && $min_price == 0 && $max_price == 0;
+        if (($min_price <= 0 && $max_price <= 0) || $options['hide_zero_price']) {
+            return;
+        }
 
-        // Get page dimensions
+        // Adjust min/max for markup first
+        $price_min_adjusted = calculate_price_with_markup($min_price, $default_markup, 'down');
+        $price_max_adjusted = calculate_price_with_markup($max_price, $default_markup, 'up');
+
+        $position = calculate_price_graph_bar_position($price_min_adjusted, $price_max_adjusted, $options);
+        $left_percent = $position['bar_left_percent'];
+        $width_percent = $position['bar_width_percent'];
+        $step_values = $position['label_values'];
+
+        $formatted_price = $this->format_price_for_pdf($min_price, $max_price, $default_markup);
+
         $pageWidth = $pdf->getPageWidth();
         $marginLeft = $pdf->getMargins()['left'];
         $marginRight = $pdf->getMargins()['right'];
         $contentWidth = $pageWidth - $marginLeft - $marginRight;
 
-        // Apply max_width constraint if provided
-        if ($options['max_width'] !== null && $options['max_width'] > 0) {
-            $contentWidth = min($contentWidth, $options['max_width']);
-        }
-
-        // Starting position
         $startX = $pdf->GetX();
         $startY = $pdf->GetY();
 
-        // Format prices for display
-        $formatted_min = $this->format_currency_for_pdf($min_price, $default_markup, "down");
-        $formatted_max = $this->format_currency_for_pdf($max_price, $default_markup, "up");
-
-        // Calculate available space for different components
-        $price_width = $hide_price ? 0 : min($contentWidth * 0.25, 70); // Zero width if price is hidden
-        $dimensions_width = ($dimensions !== null) ? 35 : 0; // Fixed width for dimensions if present
-
-        // Calculate maximum width for title based on available space
-        $title_max_width = $contentWidth - $price_width - $dimensions_width - 10; // 10pt padding
-
-        // Set title font to bold green
+        // Title and dimensions
         $pdf->SetFont(self::FONT_FAMILY, 'B', 12);
         $pdf->SetTextColor(self::COLOR_BRAND[0], self::COLOR_BRAND[1], self::COLOR_BRAND[2]);
+        $title_max_width = $contentWidth * $options['title_max_width_percent'];
+        $pdf->Cell($title_max_width, 6, $title, 0, 0, 'L');
 
-        // Now print title with dimensions if provided
-        if ($dimensions !== null) {
-            // Calculate room area from dimensions (assuming dimensions is in format "WxH")
-            $dim_parts = explode('x', $dimensions);
-            $room_area = '';
-            if (count($dim_parts) == 2) {
-                $width = floatval(trim($dim_parts[0]));
-                $height = floatval(trim($dim_parts[1]));
-                $area = $width * $height;
-                $room_area = number_format($area, 1);
+        if ($dimensions) {
+            $pdf->SetFont(self::FONT_FAMILY, '', 10);
+            $pdf->SetTextColor(self::COLOR_LIGHT_TEXT[0], self::COLOR_LIGHT_TEXT[1], self::COLOR_LIGHT_TEXT[2]);
+            $dim_text = " ($dimensions)";
+            if ($pricing_method === 'sqm') {
+                $dim_text .= 'm²';
+            } elseif ($pricing_method === 'm') {
+                $dim_text .= 'm';
             }
-
-            // Print just the title first in bold green
-            $pdf->Cell($pdf->GetStringWidth($title), 8, $title, 0, 0, 'L');
-
-            // Switch to non-bold dark text for dimensions
-            $pdf->SetFont(self::FONT_FAMILY, '', 12);
-            $pdf->SetTextColor(51, 51, 51); // Dark gray for dimensions
-
-            // Add dimensions and area
-            $dimensions_text = ' ' . $dimensions . 'm (' . $room_area . 'm²)';
-            $pdf->Cell($title_max_width - $pdf->GetStringWidth($title), 8, $dimensions_text, 0, 0, 'L');
-        } else {
-            // Just the title if no dimensions
-            $pdf->Cell($title_max_width, 8, $title, 0, 0, 'L');
+            $pdf->Cell(30, 6, $dim_text, 0, 0, 'L');
         }
 
-        // Price range on the right - only if not hidden
-        if (!$hide_price) {
-            $pdf->SetFont(self::FONT_FAMILY, 'B', 11);
-            $pdf->SetTextColor(0, 133, 63); // Green color for prices
+        $pdf->SetFont(self::FONT_FAMILY, 'B', 11);
+        $pdf->SetTextColor(self::COLOR_TEXT[0], self::COLOR_TEXT[1], self::COLOR_TEXT[2]);
+        $remaining_width = $graph_width - $title_max_width;
+        $pdf->Cell($remaining_width, 6, $formatted_price, 0, 1, 'R');
+        $pdf->Ln(2);
+        $side_padding = 7;
 
-            $price_text = "";
-            if ($min_price === $max_price) {
-                $price_text = $formatted_min;
-            } else {
-                $price_text = $formatted_min . ' - ' . $formatted_max;
-            }
 
-            // Truncate price text if it's too long
-            $price_text_width = $pdf->GetStringWidth($price_text);
-            if ($price_text_width > $price_width) {
-                // Use a smaller font for prices if they're too long
-                $pdf->SetFont(self::FONT_FAMILY, 'B', 9);
-                $price_text_width = $pdf->GetStringWidth($price_text);
-
-                // If still too long, truncate
-                if ($price_text_width > $price_width) {
-                    $price_text = $formatted_min; // Fall back to just showing min price
-                }
-            }
-
-            // Add the price with right alignment and fixed width
-            $pdf->Cell($price_width, 8, $price_text, 0, 0, 'R');
-        }
-
-        // End the line after title (and price if shown)
-        $pdf->Ln();
-
-        // Skip the graph if prices are invalid or if we should hide zero prices
-        if (($min_price <= 0 && $max_price <= 0) || $hide_price) {
-            return;
-        }
-
-        // ----- Price Range Calculation -----
-        // For very close min/max prices, create an artificial range for better visualization
-        $price_range = $max_price - $min_price;
-        $is_narrow_range = $price_range < ($min_price * 0.05); // If range is less than 5% of min price
-
-        // Calculate the center point of our price range
-        $center_price = ($min_price + $max_price) / 2;
-
-        // For narrow ranges, create a symmetric display range around the center point
-        if ($is_narrow_range) {
-            $range_padding = $center_price * $options['min_display_range'];
-            $display_min = max(0, $center_price - $range_padding);
-            $display_max = $center_price + $range_padding;
-        } else {
-            // Calculate rounded range with reasonable padding for normal ranges
-            $round_to = $options['round_to'];
-
-            // Use a smaller rounding factor for products with smaller price ranges
-            if ($price_range < $round_to) {
-                $round_to = max(100, ceil($price_range / 4 / 100) * 100); // Make divisible by 100
-            }
-
-            $display_min = floor($min_price / $round_to) * $round_to;
-            $display_min = max(0, $display_min - $round_to); // Ensure at least one step below min
-
-            $display_max = ceil($max_price / $round_to) * $round_to; // At least one step above max
-        }
-
-        $display_range = $display_max - $display_min;
-
-        // Calculate percentages for the green bar - ensure we have a valid range
-        if ($display_range > 0) {
-            $left_percent = ($min_price - $display_min) / $display_range * 100;
-            $width_percent = ($max_price - $min_price) / $display_range * 100;
-
-            // Ensure small ranges are still clearly visible
-            if ($width_percent < $options['min_bar_width']) {
-                // If bar is too narrow, increase its width
-                $adjustment = ($options['min_bar_width'] - $width_percent) / 2;
-                $left_percent = max(0, $left_percent - $adjustment);
-                $width_percent = $options['min_bar_width'];
-
-                // Make sure the adjusted bar doesn't exceed 100%
-                if ($left_percent + $width_percent > 100) {
-                    $left_percent = 100 - $width_percent;
-                }
-            }
-        } else {
-            $left_percent = 35; // Center the bar more if range calculation fails
-            $width_percent = $options['min_bar_width']; // Use minimum width
-        }
-
-        // Ensure we have reasonable values (fallback for edge cases)
-        $left_percent = max(0, min(80, $left_percent));
-        $width_percent = max($options['min_bar_width'], min(100 - $left_percent, $width_percent));
-
-        // Move down for graph
-        $pdf->SetY($pdf->GetY() + 2);
+        // Graph positions
         $graph_y = $pdf->GetY();
+//        $graph_x = $marginLeft + $side_padding;
+//        $graph_width = $contentWidth - ($side_padding * 2);
 
-        // Calculate actual dimensions for the graph - use contentWidth with padding
-        $graph_width = $contentWidth - 10; // Slight padding on sides (5pt on each side)
-        $graph_x = $startX + 5;
+        if ($graph_x === null) {
+            $graph_x = $marginLeft; // align to start of page margin
+        }
+        if ($graph_width === null) {
+            $graph_width = $contentWidth;
+        }
 
-        // Draw the background bar
+
+        // Draw graph background (grey)
         $pdf->SetFillColor($options['bg_color'][0], $options['bg_color'][1], $options['bg_color'][2]);
-        $pdf->RoundedRect($graph_x, $graph_y, $graph_width, $options['graph_height'], 2, '1111', 'F');
+        $pdf->RoundedRect($graph_x, $graph_y, $graph_width, $options['graph_height'], 1.5, '1111', 'F');
 
-        // Calculate the green bar position and width
-        $green_x = $graph_x + ($graph_width * $left_percent / 100);
-        $green_width = $graph_width * $width_percent / 100;
-
-        // Calculate gradient width in mm (limited to not exceed half the bar width)
-        $gradient_width_mm = min($options['gradient_width'], $green_width / 4);
-
-        // Create gradient effect
-        if ($green_width > 0) {
-            // Draw main green bar without rounded corners
-            $pdf->SetFillColor($options['bar_color'][0], $options['bar_color'][1], $options['bar_color'][2]);
-            $pdf->Rect($green_x, $graph_y, $green_width, $options['graph_height'], 'F');
-
-            // Create left gradient effect
-            $gradient_steps = 20; // Number of gradient steps
-            for ($i = 0; $i < $gradient_steps; $i++) {
-                $step_width = $gradient_width_mm / $gradient_steps;
-                $step_x = $green_x + ($i * $step_width);
-
-                // Calculate gradient color (transition from background to green)
-                $alpha = $i / $gradient_steps;
-                $r = $options['bg_color'][0] + ($options['bar_color'][0] - $options['bg_color'][0]) * $alpha;
-                $g = $options['bg_color'][1] + ($options['bar_color'][1] - $options['bg_color'][1]) * $alpha;
-                $b = $options['bg_color'][2] + ($options['bar_color'][2] - $options['bg_color'][2]) * $alpha;
-
-                $pdf->SetFillColor($r, $g, $b);
-                // Important fix: Use exact same y-position and height as the main bar
-                $pdf->Rect($step_x, $graph_y, $step_width, $options['graph_height'], 'F');
-            }
-
-            // Create right gradient effect
-            for ($i = 0; $i < $gradient_steps; $i++) {
-                $step_width = $gradient_width_mm / $gradient_steps;
-                $step_x = ($green_x + $green_width) - $gradient_width_mm + ($i * $step_width);
-
-                // Calculate gradient color (transition from green to background)
-                $alpha = 1 - ($i / $gradient_steps);
-                $r = $options['bg_color'][0] + ($options['bar_color'][0] - $options['bg_color'][0]) * $alpha;
-                $g = $options['bg_color'][1] + ($options['bar_color'][1] - $options['bg_color'][1]) * $alpha;
-                $b = $options['bg_color'][2] + ($options['bar_color'][2] - $options['bg_color'][2]) * $alpha;
-
-                $pdf->SetFillColor($r, $g, $b);
-                // Important fix: Use exact same y-position and height as the main bar
-                $pdf->Rect($step_x, $graph_y, $step_width, $options['graph_height'], 'F');
-            }
+        // Calculate bar position
+        $bar_x = $graph_x + ($graph_width * $left_percent / 100);
+        $bar_width = $graph_width * $width_percent / 100;
+        if ($bar_width < 2) {
+            $bar_width = 2;
         }
 
-        // Add price labels below the graph if enabled
+        // Draw green bar (solid)
+        $pdf->SetFillColor($options['bar_color'][0], $options['bar_color'][1], $options['bar_color'][2]);
+        $pdf->Rect($bar_x, $graph_y, $bar_width, $options['graph_height'], 'F');
+
+        // ✅ Improved Fuzzy Edges using Color Blending (No Alpha)
+        $fuzzy_steps = 20;
+        $fuzzy_width = 3; // Total width in mm to apply gradient
+
+// Left gradient fade
+        for ($i = 0; $i < $fuzzy_steps; $i++) {
+            $step_width = $fuzzy_width / $fuzzy_steps;
+            $step_x = $bar_x + ($i * $step_width);
+
+            $blend = ($i + 1) / $fuzzy_steps; // from 0 -> 1
+            $r = $options['bg_color'][0] + ($options['bar_color'][0] - $options['bg_color'][0]) * $blend;
+            $g = $options['bg_color'][1] + ($options['bar_color'][1] - $options['bg_color'][1]) * $blend;
+            $b = $options['bg_color'][2] + ($options['bar_color'][2] - $options['bg_color'][2]) * $blend;
+
+            $pdf->SetFillColor($r, $g, $b);
+            $pdf->Rect($step_x, $graph_y, $step_width, $options['graph_height'], 'F');
+        }
+
+// Right gradient fade
+        for ($i = 0; $i < $fuzzy_steps; $i++) {
+            $step_width = $fuzzy_width / $fuzzy_steps;
+            $step_x = ($bar_x + $bar_width - $fuzzy_width) + ($i * $step_width);
+
+            $blend = 1 - ($i / $fuzzy_steps); // from 1 -> 0
+            $r = $options['bg_color'][0] + ($options['bar_color'][0] - $options['bg_color'][0]) * $blend;
+            $g = $options['bg_color'][1] + ($options['bar_color'][1] - $options['bg_color'][1]) * $blend;
+            $b = $options['bg_color'][2] + ($options['bar_color'][2] - $options['bg_color'][2]) * $blend;
+
+            $pdf->SetFillColor($r, $g, $b);
+            $pdf->Rect($step_x, $graph_y, $step_width, $options['graph_height'], 'F');
+        }
+        // Labels and ticks
         if ($options['show_labels']) {
-            // Ensure we move to the position below the graph
-            $pdf->SetY($graph_y + $options['graph_height'] + 2);
-            $label_y = $pdf->GetY();
+            $pdf->SetFont(self::FONT_FAMILY, '', 7);
+            $pdf->SetTextColor(self::COLOR_LIGHTER_TEXT[0], self::COLOR_LIGHTER_TEXT[1], self::COLOR_LIGHTER_TEXT[2]);
 
-            // Set font and color for the labels
-            $pdf->SetFont(self::FONT_FAMILY, '', 8);
-            $pdf->SetTextColor(102, 102, 102);
+            $inset_percent = 0.03; // 3% padding from each side for first/last label
+            $effective_width_percent = 1 - ($inset_percent * 2);
 
-            // Reduce number of labels for smaller graph widths
-            $max_label_count = min(floor($graph_width / 30), 5); // Ensure at least 30pt per label
-            $label_count = min($options['label_count'], $max_label_count);
+            foreach ($step_values as $index => $step) {
+                $effective_steps = max(1, count($step_values) - 1);
+                $tick_percent = $inset_percent + ($effective_width_percent * ($index / $effective_steps));
+                $tick_x = $graph_x + ($graph_width * $tick_percent);
+                $tick_y = $graph_y + $options['graph_height'] + 0.5;
 
-            // For narrow ranges, use friendlier increments
-            if ($is_narrow_range) {
-                if ($label_count > 4) {
-                    $label_count = 4;
-                }
+                $pdf->SetLineWidth(0.1);
+                $pdf->SetDrawColor(150, 150, 150);
+                $pdf->Line($tick_x, $tick_y, $tick_x, $tick_y + 1);
 
-                // Determine a nice round step value based on the price range
-                $range_magnitude = $display_range / ($label_count - 1);
+                $label_width = 14;
+                $label_x = $tick_x - ($label_width / 2); // Default centered
 
-                // Choose step sizes that make sense based on magnitude for narrow ranges
-                if ($range_magnitude >= 2000) {
-                    $step = 1000; // Use $1000 increments for larger ranges
-                } elseif ($range_magnitude >= 1000) {
-                    $step = 500; // Use $500 increments for medium ranges
-                } elseif ($range_magnitude >= 200) {
-                    $step = 200; // Use $200 increments
-                } elseif ($range_magnitude >= 100) {
-                    $step = 100; // Use $100 increments
-                } elseif ($range_magnitude >= 50) {
-                    $step = 50; // Use $50 increments
-                } elseif ($range_magnitude >= 20) {
-                    $step = 20; // Use $20 increments
-                } elseif ($range_magnitude >= 10) {
-                    $step = 10; // Use $10 increments
-                } else {
-                    $step = 5; // Use $5 increments for very small ranges
-                }
-
-                // Adjust display range to start and end on nice round numbers
-                $display_min = floor($min_price / $step) * $step;
-
-                // For cases where we need extra space on the low end
-                if ($display_min > $min_price - ($step * 0.5)) {
-                    $display_min -= $step;
-                }
-
-                // Calculate how many steps we need for a clean display
-                $total_steps = ceil(($max_price - $display_min) / $step) + 1;
-
-                // Make sure we have at least the minimum number of steps for good visualization
-                $total_steps = max($total_steps, $label_count);
-
-                // Calculate the max based on steps
-                $display_max = $display_min + ($step * ($total_steps - 1));
-
-                // Calculate how many labels to actually display (usually equal to label_count)
-                $labels_to_show = min($total_steps, $label_count);
-
-                // Calculate the step between each displayed label
-                $display_step = ($total_steps - 1) / ($labels_to_show - 1);
-
-                // Use a simplified approach for label distribution
-                // Only show first, middle and last labels for very tight spaces
-                if ($labels_to_show <= 3) {
-                    $positions = [0];
-                    if ($labels_to_show >= 2) {
-                        $positions[] = $total_steps - 1;
-                    }
-                    if ($labels_to_show >= 3) {
-                        $positions[] = floor(($total_steps - 1) / 2);
-                        sort($positions); // Make sure positions are in ascending order
-                    }
-
-                    foreach ($positions as $step_index) {
-                        $current_value = $display_min + ($step_index * $step);
-                        $percent_position = ($step_index / ($total_steps - 1)) * 100;
-                        $percent_position = max(0, min(100, $percent_position));
-
-                        $x_position = $graph_x + ($graph_width * $percent_position / 100);
-                        $formatted_value = '$' . number_format($current_value, 0);
-
-                        // Draw tick mark - Ensure tick mark is visible
-                        $pdf->SetDrawColor(150, 150, 150); // Light gray for tick marks
-                        $pdf->SetLineWidth(0.2);
-                        $pdf->Line($x_position, $label_y, $x_position, $label_y - 2);
-
-                        // Calculate label width - ensure it doesn't go off page
-                        $label_width = min(40, $graph_width / $labels_to_show);
-                        $label_x = $x_position - ($label_width / 2);
-
-                        // Make sure label stays within bounds
-                        $label_x = max($graph_x - 5, min($label_x, $graph_x + $graph_width - $label_width + 5));
-
-                        // Explicitly set position and render the label text
-                        $pdf->SetXY($label_x, $label_y);
-                        $pdf->Cell($label_width, 5, $formatted_value, 0, 0, 'C');
-                    }
-                } else {
-                    // For more space, distribute labels evenly
-                    for ($i = 0; $i < $labels_to_show; $i++) {
-                        // Get the label index (evenly distributed across the range)
-                        $step_index = round($i * $display_step);
-
-                        // Calculate the actual value and position
-                        $current_value = $display_min + ($step_index * $step);
-                        $percent_position = ($step_index / ($total_steps - 1)) * 100;
-                        $percent_position = max(0, min(100, $percent_position));
-
-                        $x_position = $graph_x + ($graph_width * $percent_position / 100);
-                        $formatted_value = '$' . number_format($current_value, 0);
-
-                        // Draw tick mark - Ensure tick mark is visible
-                        $pdf->SetDrawColor(150, 150, 150); // Light gray for tick marks
-                        $pdf->SetLineWidth(0.2);
-                        $pdf->Line($x_position, $label_y, $x_position, $label_y - 2);
-
-                        // Calculate label width based on available space
-                        $label_width = $graph_width / $labels_to_show;
-                        $label_x = $x_position - ($label_width / 2);
-
-                        // Make sure label stays within bounds
-                        $label_x = max($graph_x, min($label_x, $graph_x + $graph_width - $label_width));
-
-                        // Explicitly set position and render the label text
-                        $pdf->SetXY($label_x, $label_y);
-                        $pdf->Cell($label_width, 5, $formatted_value, 0, 0, 'C');
-                    }
-                }
-            } else {
-                // For normal ranges, use standard evenly spaced labels
-                // Calculate a maximum of 5 price points to show for normal ranges
-                $label_count = min(5, $label_count);
-
-                // Make sure we don't overcrowd small graphs
-                if ($graph_width < 150) {
-                    $label_count = min(3, $label_count);
-                }
-
-                // Ensure the labels actually get drawn
-                // Generate label positions with explicit rendering
-                for ($i = 0; $i < $label_count; $i++) {
-                    $percent_position = ($i / ($label_count - 1)) * 100;
-                    $current_value = $display_min + ($display_range * ($i / ($label_count - 1)));
-                    $x_position = $graph_x + ($graph_width * $percent_position / 100);
-
-                    // Format the price without decimals
-                    $formatted_value = '$' . number_format($current_value, 0);
-
-                    // Draw tick mark - Make tick marks more visible
-                    $pdf->SetDrawColor(150, 150, 150); // Light gray for tick marks
-                    $pdf->SetLineWidth(0.2);
-                    $pdf->Line($x_position, $label_y, $x_position, $label_y - 2);
-
-                    // Draw label - with cell width constraints to prevent overlap
-                    $label_width = min(40, $graph_width / $label_count * 0.9); // Smaller width for smaller graphs
-                    $label_x = $x_position - ($label_width / 2); // Center label at tick mark
-
-                    // Ensure label stays within page margins
-                    $label_x = max($graph_x, min($label_x, $graph_x + $graph_width - $label_width));
-
-                    // Explicitly set position and draw the label text with clear format
-                    $pdf->SetXY($label_x, $label_y);
-                    $pdf->Cell($label_width, 5, $formatted_value, 0, 0, 'C');
-                }
+                $pdf->SetXY($label_x, $tick_y + 1);
+                $pdf->Cell($label_width, 3, '$' . number_format($step['value'], 0), 0, 0, 'C');
             }
-
-            // Advance Y position past the labels with more space
-            $pdf->SetY($label_y + 8); // Increase from 6 to 8 for better spacing
-        } else {
-            // If no labels, just add some space after the graph
-            $pdf->SetY($graph_y + $options['graph_height'] + 2);
         }
-    }
 
-}
+        // Move below graph
+        $pdf->SetY($graph_y + $options['graph_height'] + ($options['show_labels'] ? 7 : 3));
+    }}

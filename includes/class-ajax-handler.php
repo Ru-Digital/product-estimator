@@ -114,6 +114,9 @@ class AjaxHandler {
             add_action('wp_ajax_request_copy_estimate', array($this, 'request_copy_estimate'));
             add_action('wp_ajax_nopriv_request_copy_estimate', array($this, 'request_copy_estimate'));
 
+            add_action('wp_ajax_get_secure_pdf_url', array($this, 'get_secure_pdf_url'));
+            add_action('wp_ajax_nopriv_get_secure_pdf_url', array($this, 'get_secure_pdf_url'));
+
 
 
         } catch (\Exception $e) {
@@ -2312,7 +2315,6 @@ class AjaxHandler {
             ]);
         }
     }
-
     /**
      * Check if customer has an email set in session
      * This is used by the PrintEstimate JS module before generating PDFs
@@ -2430,6 +2432,42 @@ class AjaxHandler {
                 'message' => __('Request Copy functionality is unavailable', 'product-estimator')
             ]);
         }
+    }
+
+    public function get_secure_pdf_url() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        if (!isset($_POST['estimate_id'])) {
+            wp_send_json_error([
+                'message' => __('Estimate ID is required', 'product-estimator')
+            ]);
+            return;
+        }
+
+        $estimate_id = intval($_POST['estimate_id']);
+
+        // Get the PDF Route Handler
+        $pdf_handler = new \RuDigital\ProductEstimator\Includes\PDFRouteHandler();
+
+        // Generate a secure token
+        $token = $pdf_handler->generate_secure_pdf_token($estimate_id);
+
+        if (!$token) {
+            wp_send_json_error([
+                'message' => __('Failed to generate secure PDF token', 'product-estimator')
+            ]);
+            return;
+        }
+
+        // Build the URL
+        $url = home_url('/product-estimator/pdf/view/' . $token);
+
+        wp_send_json_success([
+            'url' => $url,
+            'token' => $token,
+            'estimate_id' => $estimate_id
+        ]);
     }
 }
 

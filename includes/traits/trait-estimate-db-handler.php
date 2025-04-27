@@ -107,6 +107,8 @@ trait EstimateDbHandler {
      * @param string $notes Additional notes
      * @return int|false The database ID of the stored/updated estimate or false on failure
      */
+    // In trait-estimate-db-handler.php
+
     private function storeOrUpdateEstimate($session_estimate_id, $customer_details = [], $notes = '') {
         // Get the estimate from session
         $estimate = $this->session->getEstimate($session_estimate_id);

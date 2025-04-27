@@ -158,6 +158,7 @@ class ScriptHandler {
             array(
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => $nonce,
+                'is_admin' => current_user_can('manage_options'),
                 'plugin_url' => PRODUCT_ESTIMATOR_PLUGIN_URL,
                 'estimator_url' => home_url('/estimator/'),
                 'debug' => defined('WP_DEBUG') && WP_DEBUG, // Pass debug mode to JS

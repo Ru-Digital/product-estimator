@@ -93,6 +93,9 @@ class PrintEstimate {
    * and direct PDF URL support
    * @param {HTMLElement} button - The button that was clicked
    */
+  // In PrintEstimate.js
+
+// Modify handlePrintEstimate to handle unsaved estimates
   handlePrintEstimate(button) {
     const estimateId = button.dataset.estimateId;
 
@@ -147,6 +150,7 @@ class PrintEstimate {
       });
   }
 
+
   /**
    * Check if estimate is stored in database
    * @param {string} estimateId - The estimate ID from session
@@ -200,14 +204,39 @@ class PrintEstimate {
       return;
     }
 
-    // Construct the URL to the PDF
-    const baseUrl = window.location.protocol + '//' + window.location.host;
-    const pdfUrl = `${baseUrl}/product-estimator/pdf/${dbId}`;
+    if (productEstimatorVars.is_admin) {
+      const baseUrl = window.location.protocol + '//' + window.location.host;
+      const pdfUrl = `${baseUrl}/product-estimator/pdf/admin/${dbId}`;
+      this.log('Opening admin PDF URL:', pdfUrl);
+      window.open(pdfUrl, '_blank');
+      return;
+    }
 
-    this.log('Opening PDF URL:', pdfUrl);
-
-    // Open in new tab
-    window.open(pdfUrl, '_blank');
+    // For regular users, make an AJAX call to get a secure token URL
+    fetch(productEstimatorVars.ajax_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        action: 'get_secure_pdf_url',
+        nonce: productEstimatorVars.nonce,
+        estimate_id: dbId
+      })
+    })
+      .then(response => response.json())
+      .then(response => {
+        if (response.success && response.data.url) {
+          this.log('Opening secure PDF URL:', response.data.url);
+          window.open(response.data.url, '_blank');
+        } else {
+          throw new Error(response.data?.message || 'Failed to get secure PDF URL');
+        }
+      })
+      .catch(error => {
+        this.log('Error getting secure PDF URL:', error);
+        this.showError('Error generating PDF. Please try again.');
+      });
   }
 
   /**
@@ -234,7 +263,6 @@ class PrintEstimate {
         this.processing = false;
       });
   }
-
   /**
    * Handle request copy button click - enhanced implementation
    * Follows the same flow as the print estimate but emails instead of displaying

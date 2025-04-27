@@ -185,6 +185,12 @@ class EstimateHandler {
      * @param string $session_estimate_id The session estimate ID
      * @return array|false Result array with PDF details, or false on failure
      */
+    /**
+     * Generate a PDF for an estimate with template support
+     *
+     * @param string $session_estimate_id The session estimate ID
+     * @return array|false Result array with PDF details, or false on failure
+     */
     public function generate_pdf($session_estimate_id) {
         try {
             // Get the estimate from session
@@ -248,19 +254,19 @@ class EstimateHandler {
      * @param string $session_estimate_id The session estimate ID
      * @return int|false The database ID or false on failure
      */
-    private function ensure_estimate_stored($session_estimate_id) {
-        // Get the estimate from session
-        $estimate = $this->session->getEstimate($session_estimate_id);
-
-        if (!$estimate) {
-            return false;
-        }
-
+    /**
+     * Ensure estimate is stored in the database (create or update)
+     *
+     * @param array $estimate The estimate data
+     * @param string $session_estimate_id The session estimate ID
+     * @return int|false The database ID or false on failure
+     */
+    private function ensure_estimate_stored($estimate, $session_estimate_id) {
         // Check if already stored
         $db_id = $this->getEstimateDbId($estimate);
 
         if ($db_id) {
-            // Update the existing record with the current session data
+            // Update the existing record
             $this->update_estimate_in_db($db_id, $estimate);
             return $db_id;
         } else {
@@ -459,16 +465,17 @@ class EstimateHandler {
             if (file_exists($pdf_generator_path)) {
                 require_once $pdf_generator_path;
                 return new \RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator();
-            } else {
-                // Create a simple fallback generator
-                return $this->get_fallback_pdf_generator();
             }
         }
 
         // Return a new instance
-        return new \RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator();
+//        return new \RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator();
     }
 
+    /**
+     * Handle request copy functionality
+     * Sends an email with the PDF estimate attached
+     */
     /**
      * Handle request copy functionality
      * Sends an email with the PDF estimate attached
@@ -477,9 +484,10 @@ class EstimateHandler {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
-        // Get the estimate ID
+        // Get the estimate ID to store
         $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
 
+        // Special handling for estimate_id validation - allow "0" as valid
         if (!isset($estimate_id) || $estimate_id === '') {
             wp_send_json_error([
                 'message' => __('Estimate ID is required', 'product-estimator')
@@ -488,7 +496,7 @@ class EstimateHandler {
         }
 
         try {
-            // Get the estimate
+            // Get the estimate from session
             $estimate = $this->session->getEstimate($estimate_id);
             if (!$estimate) {
                 wp_send_json_error([

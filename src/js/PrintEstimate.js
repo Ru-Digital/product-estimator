@@ -253,12 +253,12 @@ class PrintEstimate {
         this.processing = false;
       });
   }
+
   /**
    * Handle request copy button click - enhanced implementation
    * Follows the same flow as the print estimate but emails instead of displaying
    * @param {HTMLElement} button - The clicked button
    */
-  // Modify handleRequestCopy to update the DB before sending the email
   handleRequestCopy(button) {
     const estimateId = button.dataset.estimateId;
 
@@ -274,36 +274,47 @@ class PrintEstimate {
     this.processing = true;
     this.setButtonLoading(button, true);
 
-    // First check if customer has an email address via AJAX
-    this.checkCustomerEmail(estimateId)
-      .then(hasEmail => {
-        if (hasEmail) {
-          // First store the estimate to ensure the database is up to date
-          return this.storeEstimate(estimateId)
-            .then(() => {
-              // Then proceed with sending the estimate copy
-              return this.sendEstimateCopy(estimateId, button);
-            });
+    // First check if the estimate is already stored in the database
+    this.checkEstimateStored(estimateId)
+      .then(result => {
+        if (result.is_stored && result.db_id) {
+          // If already stored in DB, we can send it directly
+          this.log('Estimate is stored in DB, sending directly', result);
+          this.sendEstimateCopy(estimateId, button);
         } else {
-          // Reset button state as we'll show a prompt
-          this.setButtonLoading(button, false);
-          this.processing = false;
+          // Not stored in DB, check if customer has an email before proceeding
+          return this.checkCustomerEmail(estimateId)
+            .then(hasEmail => {
+              if (hasEmail) {
+                // Customer has email, proceed with saving and sending
+                return this.storeEstimate(estimateId)
+                  .then(() => {
+                    this.sendEstimateCopy(estimateId, button);
+                  });
+              } else {
+                // Reset button state as we'll show a prompt
+                this.setButtonLoading(button, false);
+                this.processing = false;
 
-          // Show prompt to collect email
-          this.showEmailPrompt(estimateId, button, 'copy');
-          return Promise.reject(new Error('email_prompt_shown'));
+                // Show prompt to collect email
+                this.showEmailPrompt(estimateId, button, 'copy');
+                return Promise.reject(new Error('email_prompt_shown'));
+              }
+            });
         }
       })
       .catch(error => {
         // Don't show error for email prompt - that's expected flow
         if (error.message !== 'email_prompt_shown') {
-          this.log('Error checking customer email:', error);
+          this.log('Error in request copy process:', error);
           this.setButtonLoading(button, false);
           this.processing = false;
-          this.showError('Error checking customer details. Please try again.');
+          this.showError('Error sending estimate. Please try again.');
         }
       });
   }
+
+
   /**
    * Send a copy of the estimate via email
    * @param {string} estimateId - The estimate ID

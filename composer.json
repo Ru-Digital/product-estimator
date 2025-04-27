@@ -53,8 +53,8 @@
             "includes/class-customer-details.php",
             "includes/class-estimate-handler.php",
             "includes/traits/trait-estimate-db-handler.php",
-            "includes/models/class-estimate-model.php"
-
+            "includes/models/class-estimate-model.php",
+            "includes/class-pdf-route-handler.php"
         ],
         "files": [
             "includes/functions.php"

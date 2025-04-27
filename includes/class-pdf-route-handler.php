@@ -1,0 +1,299 @@
+<?php
+/**
+ * Custom Route Handler for PDF generation
+ *
+ * @package    Product_Estimator
+ * @subpackage Product_Estimator/includes
+ */
+
+namespace RuDigital\ProductEstimator\Includes;
+
+use RuDigital\ProductEstimator\Includes\Models\EstimateModel;
+use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
+
+if (!defined('ABSPATH')) {
+    exit; // Exit if accessed directly
+}
+
+/**
+ * PDF Route Handler Class
+ *
+ * Handles custom route for PDF generation and display
+ */
+class PDFRouteHandler {
+    use EstimateDbHandler;
+
+    /**
+     * @var SessionHandler Session handler instance
+     */
+    private $session;
+
+    /**
+     * @var EstimateModel Estimate model instance
+     */
+    private $estimate_model;
+
+    /**
+     * Initialize the class and set up hooks
+     */
+    public function __construct() {
+        // Initialize session handler
+        $this->session = SessionHandler::getInstance();
+
+        // Initialize estimate model if the class exists
+        if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Models\\EstimateModel')) {
+            $this->estimate_model = new EstimateModel();
+        }
+
+        // Register the custom rewrite rules
+        add_action('init', array($this, 'register_rewrite_rules'));
+
+        // Register the custom query vars
+        add_filter('query_vars', array($this, 'register_query_vars'));
+
+        // Handle the custom endpoint
+        add_action('template_redirect', array($this, 'handle_pdf_endpoint'));
+
+        // Add a link in the admin bar for testing (debug mode only)
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            add_action('admin_bar_menu', array($this, 'add_admin_bar_pdf_link'), 999);
+        }
+    }
+
+    /**
+     * Register custom rewrite rule for PDF endpoint
+     */
+    public function register_rewrite_rules() {
+        // The rewrite rule that worked in functions.php
+        add_rewrite_rule(
+            'product-estimator/pdf/([0-9]+)/?$',
+            'index.php?product_estimator_pdf=1&estimate_id=$matches[1]',
+            'top'
+        );
+
+        // You might need to adjust the flush_rewrite_rules frequency
+        // for performance reasons in production
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            flush_rewrite_rules();
+        }
+    }
+
+    /**
+     * Register query vars for the custom endpoint
+     *
+     * @param array $vars The array of query vars
+     * @return array Modified query vars
+     */
+    public function register_query_vars($vars) {
+        $vars[] = 'product_estimator_pdf';
+        $vars[] = 'estimate_id';
+        return $vars;
+    }
+
+    /**
+     * Handle the custom PDF endpoint
+     */
+    public function handle_pdf_endpoint() {
+        global $wp_query;
+
+        // Check if this is our custom endpoint
+        if (!isset($wp_query->query_vars['product_estimator_pdf']) ||
+            $wp_query->query_vars['product_estimator_pdf'] != 1 ||
+            !isset($wp_query->query_vars['estimate_id'])) {
+            return;
+        }
+
+        // Get the estimate ID from the URL
+        $db_id = intval($wp_query->query_vars['estimate_id']);
+
+        // Generate and output the PDF
+        $this->generate_and_output_pdf($db_id);
+
+        // Exit to prevent WordPress from continuing
+        exit;
+    }
+
+
+    /**
+     * Generate and output the PDF directly to the browser
+     *
+     * @param int $db_id The database ID of the estimate
+     */
+    private function generate_and_output_pdf($db_id) {
+        try {
+            // Validate the estimate ID
+            if ($db_id <= 0) {
+                $this->output_error('Invalid estimate ID');
+                return;
+            }
+
+            // Load the estimate from the database
+            $estimate_data = $this->get_estimate_from_db($db_id);
+
+            if (empty($estimate_data)) {
+                $this->output_error('Estimate not found');
+                return;
+            }
+
+            // Check if PDF generator class exists
+            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Utilities\\PDFGenerator')) {
+                require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/utilities/class-pdf-generator.php';
+            }
+
+            // Initialize the PDF generator
+            $pdf_generator = new \RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator();
+
+            // Generate the PDF
+            $pdf_content = $pdf_generator->generate_pdf($estimate_data);
+
+            if (empty($pdf_content)) {
+                $this->output_error('Failed to generate PDF');
+                return;
+            }
+
+            // Output the PDF directly to the browser
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: inline; filename="estimate-' . $db_id . '.pdf"');
+            header('Cache-Control: private, max-age=0, must-revalidate');
+            header('Pragma: public');
+            echo $pdf_content;
+            exit;
+
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('PDF Route Error: ' . $e->getMessage());
+                error_log('Error Stack Trace: ' . $e->getTraceAsString());
+            }
+            $this->output_error('An error occurred: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get estimate data from the database
+     *
+     * @param int $db_id The database ID
+     * @return array|false The estimate data or false if not found
+     */
+    private function get_estimate_from_db($db_id) {
+        // First try using the EstimateModel
+        if (isset($this->estimate_model) && method_exists($this->estimate_model, 'get_estimate')) {
+            $estimate_row = $this->estimate_model->get_estimate($db_id);
+
+            if ($estimate_row && isset($estimate_row['estimate_data'])) {
+                if (is_array($estimate_row['estimate_data'])) {
+                    // Data already decoded
+                    $estimate_data = $estimate_row['estimate_data'];
+                } else {
+                    // Data needs to be decoded from JSON
+                    $estimate_data = json_decode($estimate_row['estimate_data'], true);
+                }
+
+                if (is_array($estimate_data)) {
+                    // Make sure the db_id is set in the estimate data for proper display
+                    $estimate_data['db_id'] = $db_id;
+                    return $estimate_data;
+                }
+            }
+        }
+
+        // Fall back to using the trait method if available
+        if (method_exists($this, 'getEstimateFromDb')) {
+            return $this->getEstimateFromDb($db_id);
+        }
+
+        // Last resort - query the database directly
+        return $this->fallback_get_estimate($db_id);
+    }
+
+    /**
+     * Fallback method to get estimate directly from database
+     *
+     * @param int $db_id The database ID
+     * @return array|false The estimate data or false on failure
+     */
+    private function fallback_get_estimate($db_id) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'product_estimator_estimates';
+
+        $estimate_row = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_name WHERE id = %d",
+            $db_id
+        ), ARRAY_A);
+
+        if (!$estimate_row || !isset($estimate_row['estimate_data'])) {
+            return false;
+        }
+
+        // Decode JSON data
+        $estimate_data = json_decode($estimate_row['estimate_data'], true);
+
+        if (is_array($estimate_data)) {
+            // Add db_id to the data for proper referencing
+            $estimate_data['db_id'] = $db_id;
+            return $estimate_data;
+        }
+
+        return false;
+    }
+
+    /**
+     * Output error message
+     *
+     * @param string $message Error message
+     */
+    private function output_error($message) {
+        status_header(404);
+
+        // Get WordPress theme-styled error page
+        get_header();
+        ?>
+        <div id="primary" class="content-area">
+            <main id="main" class="site-main" role="main">
+                <section class="error-404 not-found">
+                    <header class="page-header">
+                        <h1 class="page-title"><?php echo esc_html__('PDF Generation Error', 'product-estimator'); ?></h1>
+                    </header>
+                    <div class="page-content">
+                        <p><?php echo esc_html($message); ?></p>
+                        <p><a href="<?php echo esc_url(home_url('/')); ?>"><?php esc_html_e('Return to home page', 'product-estimator'); ?></a></p>
+                    </div>
+                </section>
+            </main>
+        </div>
+        <?php
+        get_footer();
+        exit;
+    }
+
+    /**
+     * Add test link in admin bar for debug purposes
+     * Only shows in debug mode and if user is an admin
+     *
+     * @param WP_Admin_Bar $admin_bar Admin bar object
+     */
+    public function add_admin_bar_pdf_link($admin_bar) {
+        // Only show for admins
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        // Get a random estimate ID from the database
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'product_estimator_estimates';
+        $random_id = $wpdb->get_var("SELECT id FROM {$table_name} ORDER BY id DESC LIMIT 1");
+
+        if (!$random_id) {
+            return; // No estimates in the database
+        }
+
+        $admin_bar->add_menu(array(
+            'id'    => 'product-estimator-pdf-test',
+            'title' => 'Test PDF (ID: ' . $random_id . ')',
+            'href'  => home_url('/product-estimator/pdf/' . $random_id),
+            'meta'  => array(
+                'title' => 'Open PDF in new tab',
+                'target' => '_blank'
+            )
+        ));
+    }
+}

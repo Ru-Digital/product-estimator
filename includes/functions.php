@@ -847,3 +847,128 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
     </div>
     <?php
 }
+
+
+/**
+ * PDF Helper Functions
+ *
+ * These functions should be added to the includes/functions.php file
+ */
+
+/**
+ * Get the URL for viewing a PDF of an estimate
+ *
+ * @param int $estimate_id The database ID of the estimate
+ * @return string The URL for viewing the PDF
+ */
+function product_estimator_get_pdf_url($estimate_id)
+{
+    if (empty($estimate_id)) {
+        return '';
+    }
+
+    // Convert to integer to ensure it's a valid ID
+    $estimate_id = intval($estimate_id);
+    if ($estimate_id <= 0) {
+        return '';
+    }
+
+    // Return the URL with the estimate ID
+    return home_url('/product-estimator/pdf/' . $estimate_id);
+}
+
+/**
+ * Output a button or link to view the PDF of an estimate
+ *
+ * @param int $estimate_id The database ID of the estimate
+ * @param string $text The text for the button (default: 'View PDF')
+ * @param string $type The type of element to output ('button' or 'link', default: 'button')
+ * @param array $attrs Additional attributes for the element
+ * @return string The HTML for the button or link
+ */
+function product_estimator_pdf_button($estimate_id, $text = '', $type = 'button', $attrs = array())
+{
+    if (empty($estimate_id)) {
+        return '';
+    }
+
+    // Default text if not provided
+    if (empty($text)) {
+        $text = __('View PDF', 'product-estimator');
+    }
+
+    // Get the URL
+    $url = product_estimator_get_pdf_url($estimate_id);
+    if (empty($url)) {
+        return '';
+    }
+
+    // Default attributes
+    $default_attrs = array(
+        'class' => 'product-estimator-pdf-' . $type,
+        'target' => '_blank',
+    );
+
+    // Merge with user attributes
+    $attrs = wp_parse_args($attrs, $default_attrs);
+
+    // Build attribute string
+    $attr_string = '';
+    foreach ($attrs as $key => $value) {
+        $attr_string .= ' ' . esc_attr($key) . '="' . esc_attr($value) . '"';
+    }
+
+    // Generate HTML based on type
+    if ($type === 'link') {
+        return '<a href="' . esc_url($url) . '"' . $attr_string . '>' . esc_html($text) . '</a>';
+    } else {
+        return '<button type="button" onclick="window.open(\'' . esc_url($url) . '\', \'_blank\')"' . $attr_string . '>' . esc_html($text) . '</button>';
+    }
+}
+
+/**
+ * Check if an estimate has been stored in the database
+ *
+ * @param mixed $estimate_id The session estimate ID or estimate array
+ * @return int|false The database ID if stored, false otherwise
+ */
+function product_estimator_get_db_id($estimate_id)
+{
+    // If we have the EstimateDbHandler trait directly available in this scope
+    if (function_exists('getEstimateDbId')) {
+        return getEstimateDbId($estimate_id);
+    }
+
+    // Otherwise use the session to check
+    $session = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
+
+    // If we got an ID, get the estimate from session
+    if (is_string($estimate_id) || is_numeric($estimate_id)) {
+        $estimate = $session->getEstimate($estimate_id);
+
+        // If not found in session, return false
+        if (!$estimate) {
+            return false;
+        }
+
+        // Return the db_id if set
+        return isset($estimate['db_id']) ? (int)$estimate['db_id'] : false;
+    }
+
+    // If we got an estimate array directly
+    if (is_array($estimate_id)) {
+        return isset($estimate_id['db_id']) ? (int)$estimate_id['db_id'] : false;
+    }
+
+    return false;
+}
+//
+//// Add directly to functions.php for testing
+//add_action('init', function() {
+//    add_rewrite_rule(
+//        'product-estimator/pdf/([0-9]+)/?$',
+//        'index.php?product_estimator_pdf=1&estimate_id=$matches[1]',
+//        'top'
+//    );
+//    flush_rewrite_rules();
+//}, 20);

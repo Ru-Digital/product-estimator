@@ -173,11 +173,37 @@ $options = get_option('product_estimator_settings');
             <div class="estimate-actions">
                 <ul>
                     <li>
-                        <a class="print-estimate"
-                           data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
-                           title="<?php esc_attr_e('Print Estimate', 'product-estimator'); ?>">
-                            <span class="dashicons dashicons-pdf"></span> Print estimate
-                        </a>
+                        <?php
+                        // Check if the estimate has a database ID
+                        $db_id = isset($estimate['db_id']) ? $estimate['db_id'] : false;
+
+                        // If no DB ID but there's a session ID, try to get the DB ID
+                        if (!$db_id && !empty($estimate_id)) {
+                            $db_id = product_estimator_get_db_id($estimate_id);
+                        }
+
+                        if ($db_id) {
+                            // If we have a DB ID, use direct PDF link
+                            $pdf_url = product_estimator_get_pdf_url($db_id);
+                            ?>
+                            <a class="print-estimate-pdf"
+                               href="<?php echo esc_url($pdf_url); ?>"
+                               target="_blank"
+                               title="<?php esc_attr_e('View Estimate as PDF', 'product-estimator'); ?>">
+                                <span class="dashicons dashicons-pdf"></span> View PDF
+                            </a>
+                            <?php
+                        } else {
+                            // Fall back to the JavaScript-based print function for unsaved estimates
+                            ?>
+                            <a class="print-estimate"
+                               data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
+                               title="<?php esc_attr_e('Print Estimate', 'product-estimator'); ?>">
+                                <span class="dashicons dashicons-pdf"></span> Print estimate
+                            </a>
+                            <?php
+                        }
+                        ?>
                     </li>
                     <li>
                         <a class="request-contact-estimate"

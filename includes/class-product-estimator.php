@@ -91,6 +91,9 @@ class ProductEstimator {
         // Initialize session handler (high priority)
         $this->session = SessionHandler::getInstance();
 
+        // Make sure this code is actually running
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-pdf-route-handler.php';
+        new \RuDigital\ProductEstimator\Includes\PDFRouteHandler();
 
         // Initialize totals for existing session data
         $this->session->initializeAllTotals();
@@ -129,9 +132,15 @@ class ProductEstimator {
      * Initialize plugin components
      */
     public function initialize() {
+        flush_rewrite_rules(true);
+
         // Include the AjaxHandler class file
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-customer-details.php';
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-ajax-handler.php';
+
+        // Include the PDF Route Handler
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-pdf-route-handler.php';
+        new \RuDigital\ProductEstimator\Includes\PDFRouteHandler();
 
         // Initialize AJAX handler
         $this->ajax_handler = new AjaxHandler();

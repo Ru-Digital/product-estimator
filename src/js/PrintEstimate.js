@@ -90,6 +90,7 @@ class PrintEstimate {
 
   /**
    * Enhanced handlePrintEstimate method with proper handling for "0" estimate IDs
+   * and direct PDF URL support
    * @param {HTMLElement} button - The button that was clicked
    */
   handlePrintEstimate(button) {
@@ -107,26 +108,130 @@ class PrintEstimate {
     this.processing = true;
     this.setButtonLoading(button, true);
 
-    // First check if customer has an email address via AJAX
-    this.checkCustomerEmail(estimateId)
-      .then(hasEmail => {
-        if (hasEmail) {
-          // Customer has email, proceed with PDF generation
-          this.generatePdf(estimateId, button);
-        } else {
-          // Reset button state as we'll show a prompt
+    // First check if the estimate is already stored in the database
+    this.checkEstimateStored(estimateId)
+      .then(result => {
+        if (result.is_stored && result.db_id) {
+          // If already stored in DB, we can use the direct PDF URL
+          this.log('Estimate is stored in DB, using direct PDF URL', result);
+          this.openPdfUrl(result.db_id);
           this.setButtonLoading(button, false);
           this.processing = false;
+        } else {
+          // Not stored in DB, check if customer has an email before proceeding
+          return this.checkCustomerEmail(estimateId)
+            .then(hasEmail => {
+              if (hasEmail) {
+                // Customer has email, proceed with saving and generating PDF
+                return this.saveAndGeneratePdf(estimateId, button);
+              } else {
+                // Reset button state as we'll show a prompt
+                this.setButtonLoading(button, false);
+                this.processing = false;
 
-          // Show prompt to collect email
-          this.showEmailPrompt(estimateId, button, 'print');
+                // Show prompt to collect email
+                this.showEmailPrompt(estimateId, button, 'print');
+                return Promise.reject(new Error('email_prompt_shown'));
+              }
+            });
         }
       })
       .catch(error => {
-        this.log('Error checking customer email:', error);
+        // Don't show error for email prompt - that's expected flow
+        if (error.message !== 'email_prompt_shown') {
+          this.log('Error in print estimate process:', error);
+          this.setButtonLoading(button, false);
+          this.processing = false;
+          this.showError('Error generating PDF. Please try again.');
+        }
+      });
+  }
+
+  /**
+   * Check if estimate is stored in database
+   * @param {string} estimateId - The estimate ID from session
+   * @returns {Promise<Object>} Object with is_stored and db_id properties
+   */
+  checkEstimateStored(estimateId) {
+    return new Promise((resolve, reject) => {
+      fetch(productEstimatorVars.ajax_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          action: 'check_estimate_stored',
+          nonce: productEstimatorVars.nonce,
+          estimate_id: estimateId
+        })
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Network response error: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(response => {
+          if (response.success) {
+            this.log('Check estimate stored result:', response.data);
+            resolve({
+              is_stored: response.data.is_stored || false,
+              db_id: response.data.db_id || null,
+              estimate_id: estimateId
+            });
+          } else {
+            resolve({ is_stored: false, db_id: null, estimate_id: estimateId });
+          }
+        })
+        .catch(error => {
+          this.log('Error checking if estimate is stored:', error);
+          resolve({ is_stored: false, db_id: null, estimate_id: estimateId });
+        });
+    });
+  }
+
+  /**
+   * Open PDF URL in new tab using direct route
+   * @param {number|string} dbId - The database ID of the estimate
+   */
+  openPdfUrl(dbId) {
+    if (!dbId) {
+      this.log('Cannot open PDF URL: No database ID provided');
+      return;
+    }
+
+    // Construct the URL to the PDF
+    const baseUrl = window.location.protocol + '//' + window.location.host;
+    const pdfUrl = `${baseUrl}/product-estimator/pdf/${dbId}`;
+
+    this.log('Opening PDF URL:', pdfUrl);
+
+    // Open in new tab
+    window.open(pdfUrl, '_blank');
+  }
+
+  /**
+   * Save estimate to database and then generate PDF
+   * @param {string} estimateId - The estimate ID from session
+   * @param {HTMLElement} button - The button element
+   * @returns {Promise<void>}
+   */
+  saveAndGeneratePdf(estimateId, button) {
+    return this.storeEstimate(estimateId)
+      .then(data => {
+        if (data && data.estimate_id) {
+          // If we have a database ID, use direct URL
+          this.openPdfUrl(data.estimate_id);
+          return Promise.resolve();
+        } else {
+          // Fall back to AJAX PDF generation
+          return this.generatePdf(estimateId, button);
+        }
+      })
+      .finally(() => {
+        // Reset state
         this.setButtonLoading(button, false);
         this.processing = false;
-        this.showError('Error checking customer details. Please try again.');
       });
   }
 
@@ -373,8 +478,10 @@ class PrintEstimate {
           if (action === 'copy') {
             this.sendEstimateCopy(estimateId, button);
           } else {
-            // Default to PDF generation
-            this.generatePdf(estimateId, button);
+            // Save estimate and generate PDF
+            this.setButtonLoading(button, true);
+            this.processing = true;
+            this.saveAndGeneratePdf(estimateId, button);
           }
         })
         .catch(error => {
@@ -441,47 +548,54 @@ class PrintEstimate {
    * Generate PDF for the estimate - simplified version that directly calls print_estimate
    * @param {string} estimateId - The estimate ID
    * @param {HTMLElement} button - The button element
+   * @returns {Promise<void>}
    */
   generatePdf(estimateId, button) {
-    fetch(productEstimatorVars.ajax_url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        action: 'print_estimate',
-        nonce: productEstimatorVars.nonce,
-        estimate_id: estimateId
+    return new Promise((resolve, reject) => {
+      fetch(productEstimatorVars.ajax_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          action: 'print_estimate',
+          nonce: productEstimatorVars.nonce,
+          estimate_id: estimateId
+        })
       })
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`Network response error: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(response => {
-        if (response.success) {
-          this.log('PDF generated successfully', response.data);
-
-          // Open PDF in new window
-          if (response.data.pdf_url) {
-            window.open(response.data.pdf_url, '_blank');
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Network response error: ${response.status}`);
           }
-        } else {
-          this.log('Error generating PDF', response.data);
-          this.showError(response.data.message || 'Error generating PDF. Please try again.');
-        }
-      })
-      .catch(error => {
-        this.log('AJAX error', error);
-        this.showError('Connection error. Please try again.');
-      })
-      .finally(() => {
-        // Reset processing state
-        this.processing = false;
-        this.setButtonLoading(button, false);
-      });
+          return response.json();
+        })
+        .then(response => {
+          if (response.success) {
+            this.log('PDF generated successfully', response.data);
+
+            // Open PDF in new window
+            if (response.data.pdf_url) {
+              window.open(response.data.pdf_url, '_blank');
+            }
+
+            // If the response includes a database ID, update our knowledge
+            if (response.data.db_id) {
+              this.log(`Estimate now stored with DB ID: ${response.data.db_id}`);
+            }
+
+            resolve();
+          } else {
+            this.log('Error generating PDF', response.data);
+            this.showError(response.data.message || 'Error generating PDF. Please try again.');
+            reject(new Error(response.data.message || 'Error generating PDF'));
+          }
+        })
+        .catch(error => {
+          this.log('AJAX error', error);
+          this.showError('Connection error. Please try again.');
+          reject(error);
+        });
+    });
   }
 
   /**
@@ -537,16 +651,27 @@ class PrintEstimate {
     // Set processing state
     this.processing = true;
 
-    // Skip checking and just store the estimate - simplifies the flow
-    this.storeEstimate(estimateId)
-      .then(data => {
-        if (typeof callback === 'function') {
-          callback(data.estimate_id || estimateId);
+    // First check if already stored
+    this.checkEstimateStored(estimateId)
+      .then(result => {
+        if (result.is_stored && result.db_id) {
+          // Already stored, just proceed
+          if (typeof callback === 'function') {
+            callback(result.db_id);
+          }
+        } else {
+          // Need to store it first
+          return this.storeEstimate(estimateId)
+            .then(data => {
+              if (typeof callback === 'function') {
+                callback(data.estimate_id || estimateId);
+              }
+            });
         }
       })
       .catch(error => {
-        this.log('Error storing estimate', error);
-        this.showError('Error storing estimate. Please try again.');
+        this.log('Error checking/storing estimate', error);
+        this.showError('Error preparing estimate. Please try again.');
       })
       .finally(() => {
         // Reset processing state

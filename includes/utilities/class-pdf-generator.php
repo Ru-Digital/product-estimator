@@ -13,7 +13,8 @@ use setasign\Fpdi\Tcpdf\Fpdi;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/utilities
  */
-class PDFGenerator {
+class PDFGenerator
+{
     /**
      * Footer text content
      *
@@ -65,7 +66,8 @@ class PDFGenerator {
     /**
      * Constructor
      */
-    public function __construct() {
+    public function __construct()
+    {
         $this->debug = defined('WP_DEBUG') && WP_DEBUG;
         $this->image_data = [];
     }
@@ -76,7 +78,8 @@ class PDFGenerator {
      * @param array $estimate The estimate data
      * @return string PDF file contents
      */
-    public function generate_pdf($estimate) {
+    public function generate_pdf($estimate)
+    {
         // Store estimate data for use in headers
         $this->estimate_data = $estimate;
 
@@ -159,7 +162,8 @@ class PDFGenerator {
      *
      * @return object PDF object
      */
-    private function create_pdf_object() {
+    private function create_pdf_object()
+    {
         // Get class properties to use in anonymous class
         $footer_text = $this->footer_text;
         $footer_contact_details = $this->footer_contact_details;
@@ -177,7 +181,8 @@ class PDFGenerator {
             /**
              * Constructor
              */
-            public function __construct($footer_text, $footer_contact_details, $estimate_data, $debug) {
+            public function __construct($footer_text, $footer_contact_details, $estimate_data, $debug)
+            {
                 parent::__construct();
                 $this->footer_text = $footer_text;
                 $this->footer_contact_details = $footer_contact_details;
@@ -193,7 +198,8 @@ class PDFGenerator {
              * @param bool $keepmargins If true, current margins are preserved
              * @param bool $tocpage If true, the page is a TOC page
              */
-            public function AddPage($orientation='', $format='', $keepmargins=false, $tocpage=false) {
+            public function AddPage($orientation = '', $format = '', $keepmargins = false, $tocpage = false)
+            {
                 // Call parent method to add the page
                 parent::AddPage($orientation, $format, $keepmargins, $tocpage);
 
@@ -230,7 +236,8 @@ class PDFGenerator {
             /**
              * Page header - Using HTML for flexibility
              */
-            public function Header() {
+            public function Header()
+            {
                 // Position at the top margin
                 $this->SetY(10);
 
@@ -250,7 +257,8 @@ class PDFGenerator {
             /**
              * Page footer - Using HTML for flexibility
              */
-            public function Footer() {
+            public function Footer()
+            {
                 // Position at 15 mm from bottom
                 $this->SetY(-32);
 
@@ -286,7 +294,8 @@ class PDFGenerator {
      * @param float $default_markup Default markup percentage
      * @param float $room_area Room area in square meters
      */
-    private function render_product_card($pdf, $product, $default_markup, $room_area) {
+    private function render_product_card($pdf, $product, $default_markup, $room_area)
+    {
         // Get page dimensions
         $pageWidth = $pdf->getPageWidth();
         $marginLeft = $pdf->getMargins()['left'];
@@ -331,7 +340,7 @@ class PDFGenerator {
         $header_height = $title_height;
         if ($has_valid_price) {
             // Add height for price graph if used
-            $graph_height = 2.5; // Graph height in mm
+            $graph_height = 3; // Graph height in mm
             $header_height = max($header_height, $graph_height + 2); // Include some spacing
         }
 
@@ -433,8 +442,8 @@ class PDFGenerator {
         if ($has_valid_price) {
             // Use the price graph for displaying product name and price range - REDUCED GRAPH HEIGHT
             $graph_options = [
-                'show_labels' => false,
-                'graph_height' => 2.5, // Reduced from 3 to 2.5
+                'show_labels' => true,
+                'graph_height' => 3, // Reduced from 3 to 2.5
                 'round_to' => 100,
                 'title_max_width_percent' => 0.7,
                 'hide_zero_price' => true,
@@ -517,7 +526,8 @@ class PDFGenerator {
      * @param array $room Room data
      * @param float $default_markup Default markup percentage
      */
-    private function render_room_native($pdf, $room, $default_markup) {
+    private function render_room_native($pdf, $room, $default_markup)
+    {
         // Calculate room area
         $room_width = isset($room['width']) ? floatval($room['width']) : 0;
         $room_length = isset($room['length']) ? floatval($room['length']) : 0;
@@ -549,7 +559,7 @@ class PDFGenerator {
                     'label_count' => 3,       // Reduced number of labels
                     'round_to' => 500,        // Use smaller rounding
                     'title_max_width_percent' => 0.5, // Constrain title width
-                    'graph_height' => 5       // Standard height for room headers
+                    'graph_height' => 3       // Standard height for room headers
                 ]
             );
         } else {
@@ -609,7 +619,8 @@ class PDFGenerator {
     /**
      * Render a note using native TCPDF methods with page break handling
      */
-    private function render_note_native($pdf, $note) {
+    private function render_note_native($pdf, $note)
+    {
         // Get page dimensions
         $pageWidth = $pdf->getPageWidth();
         $marginLeft = $pdf->getMargins()['left'];
@@ -663,7 +674,8 @@ class PDFGenerator {
      * @param object $pdf PDF object
      * @param array $estimate Estimate data
      */
-    private function render_content_native($pdf, $estimate) {
+    private function render_content_native($pdf, $estimate)
+    {
         // Get settings
         $options = get_option('product_estimator_settings', []);
         $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
@@ -719,7 +731,8 @@ class PDFGenerator {
      * @param array $estimate Estimate data
      * @param float $default_markup Default markup percentage
      */
-    private function render_total_section($pdf, $estimate, $default_markup) {
+    private function render_total_section($pdf, $estimate, $default_markup)
+    {
         if (!isset($estimate['min_total']) || !isset($estimate['max_total'])) {
             return;
         }
@@ -773,7 +786,8 @@ class PDFGenerator {
     /**
      * Format price for PDF display
      */
-    private function format_price_for_pdf($min_price, $max_price, $default_markup) {
+    private function format_price_for_pdf($min_price, $max_price, $default_markup)
+    {
         if ($min_price === $max_price) {
             return $this->format_currency_for_pdf($min_price, $default_markup, "up");
         } else {
@@ -786,7 +800,8 @@ class PDFGenerator {
     /**
      * Format currency for PDF display
      */
-    private function format_currency_for_pdf($price, $markup, $direction = null) {
+    private function format_currency_for_pdf($price, $markup, $direction = null)
+    {
         $final_price = $price;
 
         // Apply markup if specified
@@ -820,7 +835,8 @@ class PDFGenerator {
      * @param string $url Image URL
      * @return string|false Local file path or false on failure
      */
-    private function get_image_path($url) {
+    private function get_image_path($url)
+    {
         // Check if we already processed this URL
         if (isset($this->image_data[$url])) {
             return $this->image_data[$url];
@@ -920,8 +936,7 @@ class PDFGenerator {
     }
 
     /**
-     * Render a price range graph in PDF - Fixed version with improved width constraints
-     * and zero price handling
+     * Render a price range graph in PDF with gradient edges
      *
      * @param object $pdf TCPDF/FPDI object
      * @param float $min_price Minimum price
@@ -945,7 +960,8 @@ class PDFGenerator {
             'title_max_width_percent' => 0.7, // Maximum width for title as percentage of content width
             'show_labels' => true,    // Whether to show the price labels
             'max_width' => null,      // Maximum width for the graph (null = use content width)
-            'hide_zero_price' => false // Whether to hide price if it's zero
+            'hide_zero_price' => false, // Whether to hide price if it's zero
+            'gradient_width' => 6     // Width of gradient effect in mm (new parameter)
         ];
 
         // Merge user options with defaults
@@ -1120,15 +1136,56 @@ class PDFGenerator {
         $green_x = $graph_x + ($graph_width * $left_percent / 100);
         $green_width = $graph_width * $width_percent / 100;
 
-        // Draw the green range bar
-        $pdf->SetFillColor($options['bar_color'][0], $options['bar_color'][1], $options['bar_color'][2]);
-        $pdf->RoundedRect($green_x, $graph_y, $green_width, $options['graph_height'], 2, '1111', 'F');
+        // Calculate gradient width in mm (limited to not exceed half the bar width)
+        $gradient_width_mm = min($options['gradient_width'], $green_width / 4);
 
-        // Add price labels below the graph if enabled and space allows
+        // Create gradient effect
+        if ($green_width > 0) {
+            // Draw main green bar without rounded corners
+            $pdf->SetFillColor($options['bar_color'][0], $options['bar_color'][1], $options['bar_color'][2]);
+            $pdf->Rect($green_x, $graph_y, $green_width, $options['graph_height'], 'F');
+
+            // Create left gradient effect
+            $gradient_steps = 20; // Number of gradient steps
+            for ($i = 0; $i < $gradient_steps; $i++) {
+                $step_width = $gradient_width_mm / $gradient_steps;
+                $step_x = $green_x + ($i * $step_width);
+
+                // Calculate gradient color (transition from background to green)
+                $alpha = $i / $gradient_steps;
+                $r = $options['bg_color'][0] + ($options['bar_color'][0] - $options['bg_color'][0]) * $alpha;
+                $g = $options['bg_color'][1] + ($options['bar_color'][1] - $options['bg_color'][1]) * $alpha;
+                $b = $options['bg_color'][2] + ($options['bar_color'][2] - $options['bg_color'][2]) * $alpha;
+
+                $pdf->SetFillColor($r, $g, $b);
+                // Important fix: Use exact same y-position and height as the main bar
+                $pdf->Rect($step_x, $graph_y, $step_width, $options['graph_height'], 'F');
+            }
+
+            // Create right gradient effect
+            for ($i = 0; $i < $gradient_steps; $i++) {
+                $step_width = $gradient_width_mm / $gradient_steps;
+                $step_x = ($green_x + $green_width) - $gradient_width_mm + ($i * $step_width);
+
+                // Calculate gradient color (transition from green to background)
+                $alpha = 1 - ($i / $gradient_steps);
+                $r = $options['bg_color'][0] + ($options['bar_color'][0] - $options['bg_color'][0]) * $alpha;
+                $g = $options['bg_color'][1] + ($options['bar_color'][1] - $options['bg_color'][1]) * $alpha;
+                $b = $options['bg_color'][2] + ($options['bar_color'][2] - $options['bg_color'][2]) * $alpha;
+
+                $pdf->SetFillColor($r, $g, $b);
+                // Important fix: Use exact same y-position and height as the main bar
+                $pdf->Rect($step_x, $graph_y, $step_width, $options['graph_height'], 'F');
+            }
+        }
+
+        // Add price labels below the graph if enabled
         if ($options['show_labels']) {
+            // Ensure we move to the position below the graph
             $pdf->SetY($graph_y + $options['graph_height'] + 2);
             $label_y = $pdf->GetY();
 
+            // Set font and color for the labels
             $pdf->SetFont(self::FONT_FAMILY, '', 8);
             $pdf->SetTextColor(102, 102, 102);
 
@@ -1196,6 +1253,7 @@ class PDFGenerator {
                     }
                     if ($labels_to_show >= 3) {
                         $positions[] = floor(($total_steps - 1) / 2);
+                        sort($positions); // Make sure positions are in ascending order
                     }
 
                     foreach ($positions as $step_index) {
@@ -1206,7 +1264,9 @@ class PDFGenerator {
                         $x_position = $graph_x + ($graph_width * $percent_position / 100);
                         $formatted_value = '$' . number_format($current_value, 0);
 
-                        // Draw tick mark
+                        // Draw tick mark - Ensure tick mark is visible
+                        $pdf->SetDrawColor(150, 150, 150); // Light gray for tick marks
+                        $pdf->SetLineWidth(0.2);
                         $pdf->Line($x_position, $label_y, $x_position, $label_y - 2);
 
                         // Calculate label width - ensure it doesn't go off page
@@ -1216,6 +1276,7 @@ class PDFGenerator {
                         // Make sure label stays within bounds
                         $label_x = max($graph_x - 5, min($label_x, $graph_x + $graph_width - $label_width + 5));
 
+                        // Explicitly set position and render the label text
                         $pdf->SetXY($label_x, $label_y);
                         $pdf->Cell($label_width, 5, $formatted_value, 0, 0, 'C');
                     }
@@ -1233,7 +1294,9 @@ class PDFGenerator {
                         $x_position = $graph_x + ($graph_width * $percent_position / 100);
                         $formatted_value = '$' . number_format($current_value, 0);
 
-                        // Draw tick mark
+                        // Draw tick mark - Ensure tick mark is visible
+                        $pdf->SetDrawColor(150, 150, 150); // Light gray for tick marks
+                        $pdf->SetLineWidth(0.2);
                         $pdf->Line($x_position, $label_y, $x_position, $label_y - 2);
 
                         // Calculate label width based on available space
@@ -1243,6 +1306,7 @@ class PDFGenerator {
                         // Make sure label stays within bounds
                         $label_x = max($graph_x, min($label_x, $graph_x + $graph_width - $label_width));
 
+                        // Explicitly set position and render the label text
                         $pdf->SetXY($label_x, $label_y);
                         $pdf->Cell($label_width, 5, $formatted_value, 0, 0, 'C');
                     }
@@ -1257,7 +1321,8 @@ class PDFGenerator {
                     $label_count = min(3, $label_count);
                 }
 
-                // Generate label positions
+                // Ensure the labels actually get drawn
+                // Generate label positions with explicit rendering
                 for ($i = 0; $i < $label_count; $i++) {
                     $percent_position = ($i / ($label_count - 1)) * 100;
                     $current_value = $display_min + ($display_range * ($i / ($label_count - 1)));
@@ -1266,7 +1331,9 @@ class PDFGenerator {
                     // Format the price without decimals
                     $formatted_value = '$' . number_format($current_value, 0);
 
-                    // Draw tick mark
+                    // Draw tick mark - Make tick marks more visible
+                    $pdf->SetDrawColor(150, 150, 150); // Light gray for tick marks
+                    $pdf->SetLineWidth(0.2);
                     $pdf->Line($x_position, $label_y, $x_position, $label_y - 2);
 
                     // Draw label - with cell width constraints to prevent overlap
@@ -1276,16 +1343,18 @@ class PDFGenerator {
                     // Ensure label stays within page margins
                     $label_x = max($graph_x, min($label_x, $graph_x + $graph_width - $label_width));
 
+                    // Explicitly set position and draw the label text with clear format
                     $pdf->SetXY($label_x, $label_y);
                     $pdf->Cell($label_width, 5, $formatted_value, 0, 0, 'C');
                 }
             }
 
-            // Advance Y position past the labels
-            $pdf->SetY($label_y + 6);
+            // Advance Y position past the labels with more space
+            $pdf->SetY($label_y + 8); // Increase from 6 to 8 for better spacing
         } else {
             // If no labels, just add some space after the graph
             $pdf->SetY($graph_y + $options['graph_height'] + 2);
         }
     }
+
 }

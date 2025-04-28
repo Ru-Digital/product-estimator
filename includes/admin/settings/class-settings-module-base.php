@@ -596,6 +596,103 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             printf('<p class="description">%s</p>', esc_html($args['description']));
         }
     }
+
+    /**
+     * Render a file upload field.
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $args    Field arguments.
+     */
+    protected function render_file_field($args) {
+        $options = get_option('product_estimator_settings');
+        $id = $args['id'];
+        $file_id = isset($options[$id]) ? $options[$id] : '';
+        $file_url = '';
+        $is_required = isset($args['required']) && $args['required'];
+
+        if ($file_id) {
+            $file_url = wp_get_attachment_url($file_id);
+        }
+
+        // Hidden input to store the attachment ID
+        echo '<input type="hidden" id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']" value="' . esc_attr($file_id) . '"' . ($is_required ? ' required' : '') . ' />';
+
+        // File preview
+        echo '<div class="file-preview-wrapper">';
+        if ($file_url) {
+            echo '<p class="file-preview"><a href="' . esc_url($file_url) . '" target="_blank">' . esc_html(basename($file_url)) . '</a></p>';
+        } else if ($is_required) {
+            echo '<p class="file-required-notice">' . esc_html__('A PDF template is required', 'product-estimator') . '</p>';
+        }
+        echo '</div>';
+
+        // Upload button
+        echo '<input type="button" class="button file-upload-button" value="' . esc_attr__('Upload PDF', 'product-estimator') . '" data-field-id="' . esc_attr($id) . '" data-accept="' . esc_attr($args['accept']) . '" />';
+
+        // Remove button (only shown if a file is set)
+        echo ' <input type="button" class="button file-remove-button' . ($file_id ? '' : ' hidden') . '" value="' . esc_attr__('Remove PDF', 'product-estimator') . '" data-field-id="' . esc_attr($id) . '" />';
+
+        if (isset($args['description'])) {
+            echo '<p class="description">' . esc_html($args['description']) . ($is_required ? ' <span class="required">*</span>' : '') . '</p>';
+        }
+    }
+
+    /**
+     * Render a textarea field.
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $args    Field arguments.
+     */
+    protected function render_textarea_field($args) {
+        $options = get_option('product_estimator_settings');
+        $id = $args['id'];
+        $value = isset($options[$id]) ? $options[$id] : '';
+
+        if (empty($value) && isset($args['default'])) {
+            $value = $args['default'];
+        }
+
+        echo '<textarea id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']" rows="5" cols="50">' . esc_textarea($value) . '</textarea>';
+
+        if (isset($args['description'])) {
+            echo '<p class="description">' . esc_html($args['description']) . '</p>';
+        }
+    }
+
+    /**
+     * Render a rich text editor field.
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $args    Field arguments.
+     */
+    protected function render_html_field($args) {
+        $options = get_option('product_estimator_settings');
+        $id = $args['id'];
+        $value = isset($options[$id]) ? $options[$id] : '';
+
+        if (empty($value) && isset($args['default'])) {
+            $value = $args['default'];
+        }
+
+        // Use WordPress rich text editor
+        $editor_id = $id;
+        $editor_settings = array(
+            'textarea_name' => "product_estimator_settings[{$id}]",
+            'media_buttons' => false,
+            'textarea_rows' => 10,
+            'teeny'         => false, // Set to false to get more formatting options
+        );
+        wp_editor($value, $editor_id, $editor_settings);
+
+        if (isset($args['description'])) {
+            echo '<p class="description">' . esc_html($args['description']) . '</p>';
+        }
+    }
+
+
     /**
      * Add script data with fallback for when the global script handler is not available
      *

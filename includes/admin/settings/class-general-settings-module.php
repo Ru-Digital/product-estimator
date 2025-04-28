@@ -102,7 +102,22 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @since    1.1.0
      * @access   protected
      */
+    /**
+     * Register the module-specific settings fields.
+     *
+     * @since    1.1.0
+     * @access   protected
+     */
     public function register_fields() {
+        // First, register the Estimator Settings section
+        add_settings_section(
+            $this->section_id,
+            $this->section_title,
+            array($this, 'render_section_description'),
+            $this->plugin_name . '_' . $this->tab_id
+        );
+
+        // Register the general fields
         $fields = array(
             'default_markup' => array(
                 'title' => __('Default Markup (%)', 'product-estimator'),
@@ -152,6 +167,85 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
                 $args
             );
         }
+
+        // Now, add PDF Settings section
+        add_settings_section(
+            'pdf_settings',
+            __('PDF Settings', 'product-estimator'),
+            array($this, 'render_pdf_section_description'),
+            $this->plugin_name . '_' . $this->tab_id
+        );
+
+        // PDF Settings fields
+        $pdf_fields = array(
+            'pdf_template' => array(
+                'title' => __('PDF Template', 'product-estimator'),
+                'type' => 'file',
+                'description' => __('Upload a PDF template file (optional)', 'product-estimator'),
+                'accept' => 'application/pdf',
+                'required' => true
+            ),
+            'pdf_margin_top' => array(
+                'title' => __('Margin Top (mm)', 'product-estimator'),
+                'type' => 'number',
+                'description' => __('Top margin for PDF in millimeters', 'product-estimator'),
+                'default' => 15,
+                'min' => 0,
+                'max' => 200
+            ),
+            'pdf_margin_bottom' => array(
+                'title' => __('Margin Bottom (mm)', 'product-estimator'),
+                'type' => 'number',
+                'description' => __('Bottom margin for PDF in millimeters', 'product-estimator'),
+                'default' => 15,
+                'min' => 0,
+                'max' => 200
+            ),
+            'pdf_footer_text' => array(
+                'title' => __('Footer Text', 'product-estimator'),
+                'type' => 'html',
+                'description' => __('Text to display in the footer of PDF estimates', 'product-estimator')
+            ),
+            'pdf_footer_contact_details_content' => array(
+                'title' => __('Footer Contact Details', 'product-estimator'),
+                'type' => 'html',
+                'description' => __('Contact details to display in the footer of PDF estimates', 'product-estimator')
+            ),
+        );
+
+        foreach ($pdf_fields as $id => $field) {
+            $args = array(
+                'id' => $id,
+                'type' => $field['type'],
+                'description' => $field['description']
+            );
+
+            // Add additional parameters if they exist
+            if (isset($field['default'])) {
+                $args['default'] = $field['default'];
+            }
+            if (isset($field['min'])) {
+                $args['min'] = $field['min'];
+            }
+            if (isset($field['max'])) {
+                $args['max'] = $field['max'];
+            }
+            if (isset($field['accept'])) {
+                $args['accept'] = $field['accept'];
+            }
+            if (isset($field['required'])) {
+                $args['required'] = $field['required'];
+            }
+
+            add_settings_field(
+                $id,
+                $field['title'],
+                array($this, 'render_field_callback'),
+                $this->plugin_name . '_' . $this->tab_id,
+                'pdf_settings',
+                $args
+            );
+        }
     }
 
     /**
@@ -162,8 +256,14 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @param    array    $args    Field arguments.
      */
     public function render_field_callback($args) {
-        if ($args['type'] === 'select' && isset($args['options'])) {
+        if ($args['type'] === 'file') {
+            $this->render_file_field($args);
+        }elseif ($args['type'] === 'select' && isset($args['options'])) {
             $this->render_select_field($args);
+        } elseif ($args['type'] === 'textarea') {
+            $this->render_textarea_field($args);
+        } elseif ($args['type'] === 'html') {
+            $this->render_html_field($args);
         } else {
             $this->render_field($args);
         }
@@ -362,6 +462,17 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
             array($this->plugin_name . '-settings'),
             $this->version
         );
+    }
+
+
+    /**
+     * Render the PDF section description.
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function render_pdf_section_description() {
+        echo '<p>' . esc_html__('Configure settings for PDF estimate exports.', 'product-estimator') . '</p>';
     }
 }
 

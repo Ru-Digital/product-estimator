@@ -11,7 +11,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class NotificationSettingsModule extends SettingsModuleBase {
+class NotificationSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Available notification types
@@ -44,12 +44,55 @@ class NotificationSettingsModule extends SettingsModuleBase {
     }
 
     /**
+     * Register module with the settings manager
+     *
+     * @since    1.2.0
+     * @access   public
+     */
+    public function register() {
+        add_action('product_estimator_register_settings_modules', function($manager) {
+            $manager->register_module($this);
+        });
+    }
+
+    /**
+     * Check if this module handles a specific setting
+     *
+     * @since    1.2.0
+     * @access   public
+     * @param    string    $key    Setting key
+     * @return   bool      Whether this module handles the setting
+     */
+    public function has_setting($key) {
+        // List of settings this module handles
+        $module_settings = [
+            'enable_notifications',
+            'from_name',
+            'from_email',
+        ];
+
+        // Add notification type specific settings
+        foreach ($this->notification_types as $type => $type_data) {
+            $module_settings[] = 'notification_' . $type . '_enabled';
+            $module_settings[] = 'notification_' . $type . '_subject';
+            $module_settings[] = 'notification_' . $type . '_content';
+
+            // Add type-specific settings
+            if ($type === 'request_copy') {
+                $module_settings[] = 'notification_' . $type . '_include_pdf';
+            }
+        }
+
+        return in_array($key, $module_settings);
+    }
+
+    /**
      * Register the module-specific settings fields.
      *
      * @since    1.1.0
      * @access   protected
      */
-    protected function register_fields() {
+    public function register_fields() {
         // Global notification settings
         $general_fields = [
             'enable_notifications' => [
@@ -66,7 +109,7 @@ class NotificationSettingsModule extends SettingsModuleBase {
                 'default' => get_bloginfo('name')
             ],
 
-            'from_email' => [  // Add this new field
+            'from_email' => [
                 'title' => __('From Email', 'product-estimator'),
                 'type' => 'email',
                 'description' => __('Email address used as the sender for all notifications', 'product-estimator'),
@@ -208,7 +251,6 @@ class NotificationSettingsModule extends SettingsModuleBase {
                     $site_name
                 );
 
-
             default:
                 return sprintf(
                     __("Hello,\n\nThis is a notification from %s.\n\nBest regards,\n%s", 'product-estimator'),
@@ -276,8 +318,8 @@ class NotificationSettingsModule extends SettingsModuleBase {
                     __('Please enter a valid from email address', 'product-estimator')
                 );
             }
-
         }
+
         foreach ($settings as $key => $value) {
             // For HTML content fields like the rich editor
             if (strpos($key, '_content') !== false) {
@@ -291,6 +333,65 @@ class NotificationSettingsModule extends SettingsModuleBase {
         $form_data['product_estimator_settings'] = $settings;
 
         return true;
+    }
+
+    /**
+     * Validate module-specific settings
+     *
+     * @since    1.2.0
+     * @access   public
+     * @param    array    $input    The settings to validate
+     * @return   array    The validated settings
+     */
+    public function validate_settings($input) {
+        $valid = [];
+
+        // Validate boolean fields
+        $checkbox_fields = ['enable_notifications'];
+
+        // Add notification type checkbox fields
+        foreach ($this->notification_types as $type => $type_data) {
+            $checkbox_fields[] = 'notification_' . $type . '_enabled';
+            if ($type === 'request_copy') {
+                $checkbox_fields[] = 'notification_' . $type . '_include_pdf';
+            }
+        }
+
+        foreach ($checkbox_fields as $field) {
+            if (isset($input[$field])) {
+                $valid[$field] = !empty($input[$field]) ? 1 : 0;
+            }
+        }
+
+        // Validate text fields
+        if (isset($input['from_name'])) {
+            $valid['from_name'] = sanitize_text_field($input['from_name']);
+        }
+
+        // Validate email fields
+        if (isset($input['from_email'])) {
+            if (!empty($input['from_email']) && !is_email($input['from_email'])) {
+                // If invalid, set to default
+                $valid['from_email'] = get_option('admin_email');
+            } else {
+                $valid['from_email'] = sanitize_email($input['from_email']);
+            }
+        }
+
+        // Validate notification fields for each type
+        foreach ($this->notification_types as $type => $type_data) {
+            // Subject (text)
+            if (isset($input['notification_' . $type . '_subject'])) {
+                $valid['notification_' . $type . '_subject'] = sanitize_text_field($input['notification_' . $type . '_subject']);
+            }
+
+            // Content (rich text)
+            if (isset($input['notification_' . $type . '_content'])) {
+                $valid['notification_' . $type . '_content'] = wp_kses_post($input['notification_' . $type . '_content']);
+            }
+        }
+
+        return $valid;
     }
 
     /**
@@ -442,3 +543,12 @@ class NotificationSettingsModule extends SettingsModuleBase {
         return $this->notification_types;
     }
 }
+
+// Initialize and register the module
+add_action('plugins_loaded', function() {
+    $module = new NotificationSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
+        $manager->register_module($module);
+    });
+});
+

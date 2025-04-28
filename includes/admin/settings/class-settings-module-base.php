@@ -11,7 +11,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-abstract class SettingsModuleBase {
+abstract class SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * The ID of this plugin.
@@ -83,6 +83,18 @@ abstract class SettingsModuleBase {
 
         // Register hooks
         $this->register_hooks();
+
+        // Register this module with the manager
+        add_action('product_estimator_register_settings_modules', [$this, 'register_with_manager']);
+    }
+
+    /**
+     * Register this module with the settings manager
+     *
+     * @param \RuDigital\ProductEstimator\Includes\Admin\SettingsManager $manager The settings manager
+     */
+    public function register_with_manager($manager) {
+        $manager->register_module($this);
     }
 
     /**
@@ -124,7 +136,7 @@ abstract class SettingsModuleBase {
      * @since    1.1.0
      * @access   protected
      */
-    abstract protected function register_fields();
+    public abstract function register_fields();
 
     /**
      * Render the section description.
@@ -214,13 +226,11 @@ abstract class SettingsModuleBase {
             // Get existing settings
             $settings = get_option('product_estimator_settings', array());
 
-            // Merge with new settings
-            $settings = array_merge($settings, $form_data['product_estimator_settings']);
+            // Validate module-specific settings
+            $validated_settings = $this->validate_settings($form_data['product_estimator_settings']);
 
-            // Validate settings through the manager's validation method
-            if (method_exists('RuDigital\ProductEstimator\Includes\Admin\SettingsManager', 'validate_settings')) {
-                $settings = (new \RuDigital\ProductEstimator\Includes\Admin\SettingsManager($this->plugin_name, $this->version))->validate_settings($settings);
-            }
+            // Merge with existing settings
+            $settings = array_merge($settings, $validated_settings);
 
             // Save updated settings
             update_option('product_estimator_settings', $settings);
@@ -236,6 +246,177 @@ abstract class SettingsModuleBase {
                 $this->tab_title
             )
         ));
+    }
+
+    /**
+     * Validate module-specific settings
+     *
+     * @since    1.1.0
+     * @access   public
+     * @param    array    $input    Settings to validate
+     * @return   array    Validated settings
+     */
+    public function validate_settings($input) {
+        // Base implementation - child classes should override for specific validation
+        $valid = array();
+
+        foreach ($input as $key => $value) {
+            // Default sanitization for common field types
+            switch (true) {
+                // Boolean fields
+                case $this->is_checkbox_field($key):
+                    $valid[$key] = isset($value) && $value ? 1 : 0;
+                    break;
+
+                // Email fields
+                case $this->is_email_field($key):
+                    if (!empty($value) && !is_email($value)) {
+                        add_settings_error(
+                            'product_estimator_settings',
+                            'invalid_email',
+                            sprintf(__('"%s" is not a valid email address', 'product-estimator'), $value)
+                        );
+                    } else {
+                        $valid[$key] = sanitize_email($value);
+                    }
+                    break;
+
+                // Number fields
+                case $this->is_number_field($key):
+                    $valid[$key] = $this->validate_number_field($key, $value);
+                    break;
+
+                // HTML content fields
+                case $this->is_html_content_field($key):
+                    $valid[$key] = wp_kses_post($value);
+                    break;
+
+                // Default text fields
+                default:
+                    $valid[$key] = sanitize_text_field($value);
+            }
+        }
+
+        return $valid;
+    }
+
+    /**
+     * Check if a field is a checkbox
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    string    $key    Field key
+     * @return   bool    Whether the field is a checkbox
+     */
+    protected function is_checkbox_field($key) {
+        $checkbox_fields = $this->get_checkbox_fields();
+        return in_array($key, $checkbox_fields);
+    }
+
+    /**
+     * Get all checkbox fields for this module
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    Checkbox field keys
+     */
+    protected function get_checkbox_fields() {
+        // Override in child classes to define checkbox fields
+        return [];
+    }
+
+    /**
+     * Check if a field is an email field
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    string    $key    Field key
+     * @return   bool    Whether the field is an email field
+     */
+    protected function is_email_field($key) {
+        $email_fields = $this->get_email_fields();
+        return in_array($key, $email_fields);
+    }
+
+    /**
+     * Get all email fields for this module
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    Email field keys
+     */
+    protected function get_email_fields() {
+        // Override in child classes to define email fields
+        return [];
+    }
+
+    /**
+     * Check if a field is a number field
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    string    $key    Field key
+     * @return   bool    Whether the field is a number field
+     */
+    protected function is_number_field($key) {
+        $number_fields = $this->get_number_fields();
+        return array_key_exists($key, $number_fields);
+    }
+
+    /**
+     * Get all number fields with their constraints for this module
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    Number field keys with constraints
+     */
+    protected function get_number_fields() {
+        // Override in child classes to define number fields and their constraints
+        // Format: ['field_name' => ['min' => 0, 'max' => 100]]
+        return [];
+    }
+
+    /**
+     * Validate a number field
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    string    $key     Field key
+     * @param    mixed     $value   Field value
+     * @return   int|float Validated number
+     */
+    protected function validate_number_field($key, $value) {
+        $number_fields = $this->get_number_fields();
+
+        if (isset($number_fields[$key])) {
+            $constraints = $number_fields[$key];
+            $number = is_numeric($value) ? $value + 0 : 0; // Convert to int/float
+
+            // Apply min/max constraints
+            if (isset($constraints['min']) && $number < $constraints['min']) {
+                $number = $constraints['min'];
+            }
+            if (isset($constraints['max']) && $number > $constraints['max']) {
+                $number = $constraints['max'];
+            }
+
+            return $number;
+        }
+
+        // Default fallback
+        return intval($value);
+    }
+
+    /**
+     * Check if a field is an HTML content field
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    string    $key    Field key
+     * @return   bool    Whether the field is an HTML content field
+     */
+    protected function is_html_content_field($key) {
+        return strpos($key, '_content') !== false;
     }
 
     /**
@@ -299,6 +480,43 @@ abstract class SettingsModuleBase {
      */
     public function get_tab_title() {
         return $this->tab_title;
+    }
+
+    /**
+     * Check if this module handles a specific setting
+     *
+     * @since    1.1.0
+     * @access   public
+     * @param    string    $key    Setting key
+     * @return   bool    Whether this module handles the setting
+     */
+    public function has_setting($key) {
+        // Override in child classes to define which settings belong to this module
+        // Default implementation returns false
+        return false;
+    }
+
+    /**
+     * Render the module content.
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function render_module_content() {
+        // Default implementation uses standard form
+        ?>
+        <form method="post" action="javascript:void(0);" class="product-estimator-form">
+            <?php
+            settings_fields($this->plugin_name . '_options');
+            do_settings_sections($this->plugin_name . '_' . $this->tab_id);
+            ?>
+            <p class="submit">
+                <button type="submit" class="button button-primary">
+                    <?php esc_html_e('Save Settings', 'product-estimator'); ?>
+                </button>
+            </p>
+        </form>
+        <?php
     }
 
     /**

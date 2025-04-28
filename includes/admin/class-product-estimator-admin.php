@@ -38,7 +38,7 @@ class ProductEstimatorAdmin {
     private $settings_manager;
 
     /**
-     * The customer estimates  instance
+     * The customer estimates instance
      *
      * @since    1.1.0
      * @access   private
@@ -78,6 +78,8 @@ class ProductEstimatorAdmin {
         // Load Customer Estimates List Table
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-customer-estimates-list-table.php';
 
+        // Load CSV Export Handler
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-csv-export-handler.php';
     }
 
     /**
@@ -87,11 +89,14 @@ class ProductEstimatorAdmin {
      * @access   private
      */
     private function init_components() {
-        // Initialize Settings Manager
+        // Initialize Settings Manager - create an instance to trigger all module registrations
         $this->settings_manager = new SettingsManager($this->plugin_name, $this->version);
 
         // Initialize Customer Estimates Admin
         $this->customer_estimates = new CustomerEstimatesAdmin($this->plugin_name, $this->version);
+
+        // Initialize CSV Export Handler
+        new CSVExportHandler();
     }
 
     /**
@@ -108,10 +113,7 @@ class ProductEstimatorAdmin {
         add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
 
         // Add action links to plugins page
-//        add_filter('plugin_action_links_' . PRODUCT_ESTIMATOR_BASENAME, array($this, 'add_action_links'));
-
-        // WooCommerce product integration
-//        $this->init_woocommerce_integration();
+        add_filter('plugin_action_links_' . PRODUCT_ESTIMATOR_BASENAME, array($this, 'add_action_links'));
     }
 
     /**
@@ -119,10 +121,11 @@ class ProductEstimatorAdmin {
      *
      * @since    1.0.0
      */
-    public function enqueue_styles() {
+    public function enqueue_styles($hook) {
+        // Common styles for all admin pages
         wp_enqueue_style(
             $this->plugin_name,
-            plugin_dir_url(dirname(dirname(__FILE__))) . 'admin/css/product-estimator-admin.css',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/product-estimator-admin.css',
             array(),
             $this->version,
             'all'
@@ -134,10 +137,11 @@ class ProductEstimatorAdmin {
      *
      * @since    1.0.0
      */
-    public function enqueue_scripts() {
+    public function enqueue_scripts($hook) {
+        // Common scripts for all admin pages
         wp_enqueue_script(
             $this->plugin_name,
-            plugin_dir_url(dirname(dirname(__FILE__))) . 'admin/js/product-estimator-admin.js',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/product-estimator-admin.js',
             array('jquery'),
             $this->version,
             true
@@ -151,7 +155,9 @@ class ProductEstimatorAdmin {
                 'nonce' => wp_create_nonce('product_estimator_admin_nonce'),
                 'i18n' => array(
                     'save_success' => __('Settings saved successfully!', 'product-estimator'),
-                    'save_error' => __('Error saving settings.', 'product-estimator')
+                    'save_error' => __('Error saving settings.', 'product-estimator'),
+                    'delete_confirm' => __('Are you sure you want to delete this item?', 'product-estimator'),
+                    'loading' => __('Loading...', 'product-estimator')
                 )
             )
         );
@@ -201,14 +207,47 @@ class ProductEstimatorAdmin {
      * @since    1.0.0
      */
     public function display_plugin_admin_page() {
-        // Fix the path to point to the correct location
-        $template_path = plugin_dir_path(dirname(dirname(__FILE__))) .
-            'includes/admin/partials/product-estimator-admin-display.php';
+        // Include the main admin dashboard template
+        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/partials/product-estimator-admin-display.php';
+    }
 
-        if (file_exists($template_path)) {
-            include_once $template_path;
-        } else {
-            wp_die(__('Admin template file not found:', 'product-estimator') . ' ' . $template_path);
-        }
+    /**
+     * Get the settings manager instance
+     *
+     * @since    1.2.0
+     * @return   SettingsManager    The settings manager instance
+     */
+    public function get_settings_manager() {
+        return $this->settings_manager;
+    }
+
+    /**
+     * Get the customer estimates admin instance
+     *
+     * @since    1.2.0
+     * @return   CustomerEstimatesAdmin    The customer estimates admin instance
+     */
+    public function get_customer_estimates() {
+        return $this->customer_estimates;
+    }
+
+    /**
+     * Get plugin name
+     *
+     * @since    1.2.0
+     * @return   string    The plugin name
+     */
+    public function get_plugin_name() {
+        return $this->plugin_name;
+    }
+
+    /**
+     * Get plugin version
+     *
+     * @since    1.2.0
+     * @return   string    The plugin version
+     */
+    public function get_version() {
+        return $this->version;
     }
 }

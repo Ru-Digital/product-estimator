@@ -26,12 +26,46 @@ class NetsuiteSettingsModule extends SettingsModuleBase {
     }
 
     /**
+     * Register module with the settings manager
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function register() {
+        add_action('product_estimator_register_settings_modules', function($manager) {
+            $manager->register_module($this);
+        });
+    }
+
+    /**
+     * Check if this module handles a specific setting
+     *
+     * @since    1.1.0
+     * @access   public
+     * @param    string $key Setting key
+     * @return   bool Whether this module handles the setting
+     */
+    public function has_setting($key) {
+        $module_settings = [
+            'netsuite_enabled',
+            'netsuite_client_id',
+            'netsuite_client_secret',
+            'netsuite_api_url',
+            'netsuite_token_url',
+            'netsuite_request_limit',
+            'netsuite_cache_time'
+        ];
+
+        return in_array($key, $module_settings);
+    }
+
+    /**
      * Register the module-specific settings fields.
      *
      * @since    1.1.0
      * @access   protected
      */
-    protected function register_fields() {
+    public function register_fields() {
         $fields = array(
             'netsuite_enabled' => array(
                 'title' => __('Enable NetSuite Integration', 'product-estimator'),
@@ -115,6 +149,65 @@ class NetsuiteSettingsModule extends SettingsModuleBase {
      */
     public function render_field_callback($args) {
         $this->render_field($args);
+    }
+
+    /**
+     * Validate module-specific settings
+     *
+     * @since    1.1.0
+     * @access   public
+     * @param    array $input The settings to validate
+     * @return   array The validated settings
+     */
+    public function validate_settings($input) {
+        $valid = [];
+
+        // Validate netsuite_enabled
+        if (isset($input['netsuite_enabled'])) {
+            $valid['netsuite_enabled'] = !empty($input['netsuite_enabled']) ? 1 : 0;
+        }
+
+        // Validate client ID
+        if (isset($input['netsuite_client_id'])) {
+            $valid['netsuite_client_id'] = sanitize_text_field($input['netsuite_client_id']);
+        }
+
+        // Validate client secret - preserve if empty to keep existing secret
+        if (isset($input['netsuite_client_secret'])) {
+            if (!empty($input['netsuite_client_secret'])) {
+                $valid['netsuite_client_secret'] = sanitize_text_field($input['netsuite_client_secret']);
+            } else {
+                // Get existing value to preserve
+                $current_settings = get_option('product_estimator_settings', []);
+                if (!empty($current_settings['netsuite_client_secret'])) {
+                    $valid['netsuite_client_secret'] = $current_settings['netsuite_client_secret'];
+                }
+            }
+        }
+
+        // Validate API URL
+        if (isset($input['netsuite_api_url'])) {
+            $valid['netsuite_api_url'] = esc_url_raw($input['netsuite_api_url']);
+        }
+
+        // Validate token URL
+        if (isset($input['netsuite_token_url'])) {
+            $valid['netsuite_token_url'] = esc_url_raw($input['netsuite_token_url']);
+        }
+
+        // Validate request limit
+        if (isset($input['netsuite_request_limit'])) {
+            $limit = intval($input['netsuite_request_limit']);
+            $valid['netsuite_request_limit'] = max(1, min(100, $limit));
+        }
+
+        // Validate cache time
+        if (isset($input['netsuite_cache_time'])) {
+            $time = intval($input['netsuite_cache_time']);
+            $valid['netsuite_cache_time'] = max(0, $time);
+        }
+
+        return $valid;
     }
 
     /**
@@ -364,3 +457,11 @@ class NetsuiteSettingsModule extends SettingsModuleBase {
         }
     }
 }
+
+// Initialize and register the module
+add_action('plugins_loaded', function() {
+    $module = new NetsuiteSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
+        $manager->register_module($module);
+    });
+});

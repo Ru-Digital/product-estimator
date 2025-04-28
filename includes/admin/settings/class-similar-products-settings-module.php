@@ -1,5 +1,4 @@
 <?php
-
 namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
 
 /**
@@ -12,8 +11,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class SimilarProductsSettingsModule extends SettingsModuleBase
-{
+class SimilarProductsSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Option name for storing similar products settings
@@ -31,73 +29,63 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      * @param string $version The version of this plugin.
      * @since    1.0.5
      */
-    public function __construct($plugin_name, $version)
-    {
+    public function __construct($plugin_name, $version) {
         parent::__construct($plugin_name, $version);
 
-        // Register settings
-        add_action('admin_init', array($this, 'register_settings'));
+        // Register this module with the settings manager
+        add_action('product_estimator_register_settings_modules', function($manager) {
+            $manager->register_module($this);
+        });
 
-        // Add AJAX handlers
+        // Add AJAX handlers specific to this module
+        $this->register_ajax_handlers();
+    }
+
+    /**
+     * Set the tab and section details.
+     *
+     * @since    1.1.0
+     * @access   protected
+     */
+    protected function set_tab_details() {
+        $this->tab_id = 'similar-products';
+        $this->tab_title = __('Similar Products', 'product-estimator');
+        $this->section_id = 'similar_products_settings';
+        $this->section_title = __('Similar Products Settings', 'product-estimator');
+    }
+
+    /**
+     * Register AJAX handlers for this module
+     *
+     * @since    1.0.5
+     * @access   private
+     */
+    private function register_ajax_handlers() {
         add_action('wp_ajax_get_category_attributes', array($this, 'ajax_get_category_attributes'));
         add_action('wp_ajax_save_similar_products_rule', array($this, 'ajax_save_similar_products_rule'));
         add_action('wp_ajax_delete_similar_products_rule', array($this, 'ajax_delete_similar_products_rule'));
     }
 
     /**
-     * Set the tab details
+     * Register module hooks.
      *
-     * This is an abstract method required by SettingsModuleBase
-     *
-     * @return  array  Tab details
-     * @since   1.0.5
+     * @since    1.1.0
+     * @access   protected
      */
-    public function set_tab_details()
-    {
-        return array(
-            'id' => 'similar-products',
-            'title' => __('Similar Products', 'product-estimator'),
-            'description' => __('Configure rules for finding similar products based on product attributes.', 'product-estimator'),
-            'priority' => 30 // Set the priority to determine tab order
-        );
+    protected function register_hooks() {
+        parent::register_hooks();
+
+        // Register settings
+        add_action('admin_init', array($this, 'register_settings'));
     }
 
     /**
-     * Get the tab ID
+     * Register the module's settings
      *
-     * Required by SettingsManager
-     *
-     * @return  string  Tab ID
-     * @since   1.0.5
+     * @since    1.0.5
+     * @access   public
      */
-    public function get_tab_id()
-    {
-        return 'similar-products';
-    }
-
-    /**
-     * Get the tab title
-     *
-     * Required for tab display
-     *
-     * @return  string  Tab title
-     * @since   1.0.5
-     */
-    public function get_tab_title()
-    {
-        return __('Similar Products', 'product-estimator');
-    }
-
-    /**
-     * Register settings fields
-     *
-     * This is an abstract method required by SettingsModuleBase
-     * For this module, we don't use traditional settings fields, as we have a custom UI
-     *
-     * @since   1.0.5
-     */
-    public function register_fields()
-    {
+    public function register_settings() {
         // Register the main option
         register_setting(
             'product_estimator_settings',
@@ -108,33 +96,54 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
                 'sanitize_callback' => array($this, 'sanitize_settings')
             )
         );
-
-        // We don't add traditional fields since we use a custom UI
     }
 
     /**
-     * Process form data specific to this module
+     * Register the module-specific settings fields.
      *
      * @since    1.1.0
      * @access   protected
-     * @param    array    $form_data    The form data to process
-     * @return   true|\WP_Error    True on success, WP_Error on failure
      */
-    protected function process_form_data($form_data) {
-        // Implementation for form data processing would go here
-        return true;
+    public function register_fields() {
+        // This module uses a custom UI rather than standard settings fields
     }
 
+    /**
+     * Check if this module handles a specific setting
+     *
+     * @param string $key Setting key
+     * @return bool Whether this module handles the setting
+     * @since    1.1.0
+     * @access   public
+     */
+    public function has_setting($key) {
+        // This module uses a separate option name rather than individual settings
+        return false;
+    }
+
+    /**
+     * Validate module-specific settings
+     *
+     * @param array $input The settings input to validate
+     * @return array The validated settings
+     * @since    1.1.0
+     * @access   public
+     */
+    public function validate_settings($input) {
+        // For this module, settings are stored in a separate option
+        // so we don't need to validate individual settings here
+        return $input;
+    }
 
     /**
      * Sanitize the settings
      *
      * @param array $settings The settings array
-     * @return   array    The sanitized settings
+     * @return array The sanitized settings
      * @since    1.0.5
+     * @access   public
      */
-    public function sanitize_settings($settings)
-    {
+    public function sanitize_settings($settings) {
         // Ensure settings is an array
         if (!is_array($settings)) {
             return array();
@@ -181,15 +190,35 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
     }
 
     /**
-     * Render the settings tab content
+     * Process form data specific to this module
      *
-     * Overrides the method from SettingsModuleBase
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $form_data    The form data to process
+     * @return   true|\WP_Error    True on success, WP_Error on failure
+     */
+    protected function process_form_data($form_data) {
+        // This module uses AJAX for saving settings, not the standard form submission
+        return true;
+    }
+
+    /**
+     * Render the settings section description
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function render_section_description() {
+        echo '<p>' . esc_html__('Configure similar products settings for the estimator.', 'product-estimator') . '</p>';
+    }
+
+    /**
+     * Render the module content
      *
      * @since    1.0.5
+     * @access   public
      */
-    public function render_module_content()
-    {
-
+    public function render_module_content() {
         // Get current settings
         $settings = get_option($this->option_name, array());
 
@@ -207,9 +236,9 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      * Enqueue admin styles and scripts
      *
      * @since    1.0.5
+     * @access   public
      */
-    public function enqueue_scripts()
-    {
+    public function enqueue_scripts() {
         // Enqueue admin styles
         wp_enqueue_style(
             'product-estimator-similar-products-admin',
@@ -249,6 +278,16 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
     }
 
     /**
+     * Enqueue module-specific styles.
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function enqueue_styles() {
+        // Styles are enqueued in enqueue_scripts above
+    }
+
+    /**
      * Render a single rule item
      *
      * @param string $rule_id The rule ID
@@ -256,8 +295,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      * @param array $categories Available product categories
      * @since    1.0.5
      */
-    public function render_rule_item($rule_id, $rule, $categories)
-    {
+    public function render_rule_item($rule_id, $rule, $categories) {
         // Include the partial template with proper variables
         include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/partials/similar-products-rule-item.php';
     }
@@ -268,8 +306,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      *
      * @since    1.0.6
      */
-    public function ajax_get_category_attributes()
-    {
+    public function ajax_get_category_attributes() {
         // Check nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_similar_products_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
@@ -311,8 +348,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      *
      * @since    1.0.6
      */
-    public function ajax_save_similar_products_rule()
-    {
+    public function ajax_save_similar_products_rule() {
         // Check nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_similar_products_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
@@ -387,8 +423,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      *
      * @since    1.0.5
      */
-    public function ajax_delete_similar_products_rule()
-    {
+    public function ajax_delete_similar_products_rule() {
         // Check nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_similar_products_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
@@ -434,11 +469,10 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      * Updated to handle multiple categories
      *
      * @param array $category_ids The category IDs
-     * @return   array    List of available attributes
+     * @return array List of available attributes
      * @since    1.0.6
      */
-    private function get_category_product_attributes($category_ids)
-    {
+    private function get_category_product_attributes($category_ids) {
         // Ensure we have an array of category IDs
         if (!is_array($category_ids)) {
             $category_ids = array($category_ids);
@@ -510,11 +544,10 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      * Updated to support multiple source categories
      *
      * @param int $product_id The source product ID
-     * @return   array    List of similar product IDs
+     * @return array List of similar product IDs
      * @since    1.0.6
      */
-    public function find_similar_products($product_id)
-    {
+    public function find_similar_products($product_id) {
         // Get product
         $product = wc_get_product($product_id);
 
@@ -522,11 +555,8 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
             return array();
         }
 
-
         // Get product categories
         $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
-
-
 
         if (empty($product_categories)) {
             return array();
@@ -542,7 +572,6 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
         // Find matching rules for this product's categories
         $matching_rules = array();
 
-
         foreach ($settings as $rule) {
             // Skip if no source categories
             if (empty($rule['source_categories'])) {
@@ -552,7 +581,6 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
                 }
                 continue;
             }
-
 
             // Check if any of the product's categories match any of the rule's source categories
             $intersect = array_intersect($product_categories, $rule['source_categories']);
@@ -565,8 +593,6 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
             return array();
         }
 
-
-
         // Get products in same categories (from all matching rules)
         $all_rule_categories = array();
         foreach ($matching_rules as $rule) {
@@ -578,8 +604,6 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
             }
         }
         $all_rule_categories = array_unique($all_rule_categories);
-
-
 
         $category_products = $this->get_products_in_categories($all_rule_categories);
 
@@ -642,11 +666,10 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      * Get products in specified categories
      *
      * @param array $category_ids The category IDs
-     * @return   array    List of products indexed by ID
+     * @return array List of products indexed by ID
      * @since    1.0.5
      */
-    private function get_products_in_categories($category_ids)
-    {
+    private function get_products_in_categories($category_ids) {
         // Query products in the categories
         $args = array(
             'post_type' => 'product',
@@ -678,14 +701,13 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
     /**
      * Calculate similarity between two products based on attributes
      *
-     * @param WC_Product $product1 First product
-     * @param WC_Product $product2 Second product
+     * @param \WC_Product $product1 First product
+     * @param \WC_Product $product2 Second product
      * @param array $attributes Attributes to compare
-     * @return   float                         Similarity score (0-1)
+     * @return float Similarity score (0-1)
      * @since    1.0.5
      */
-    private function calculate_product_similarity($product1, $product2, $attributes)
-    {
+    private function calculate_product_similarity($product1, $product2, $attributes) {
         if (empty($attributes)) {
             return 0;
         }
@@ -712,13 +734,12 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
     /**
      * Get attribute values for a product
      *
-     * @param WC_Product $product The product
+     * @param \WC_Product $product The product
      * @param string $attribute_name The attribute name
-     * @return   array                           Array of attribute values
+     * @return array Array of attribute values
      * @since    1.0.5
      */
-    private function get_product_attribute_values($product, $attribute_name)
-    {
+    private function get_product_attribute_values($product, $attribute_name) {
         $values = array();
 
         // Get the attribute
@@ -738,8 +759,8 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
      * Get similar products for display
      *
      * @param int $product_id The source product ID
-     * @param int $limit Maximum number of products to returnd
-     * @return   array                   Array of product data for display
+     * @param int $limit Maximum number of products to return
+     * @return array Array of product data for display
      * @since    1.0.5
      */
     public function get_similar_products_for_display($product_id, $limit = 5) {
@@ -867,85 +888,14 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
     }
 
     /**
-     * Render the section description.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function render_section_description() {
-        echo '<p>' . esc_html__('Configure similar products settings for the estimator.', 'product-estimator') . '</p>';
-    }
-
-    private function get_product_price_by_source($product_id, $source = 'website')
-    {
-        $product = wc_get_product($product_id);
-        $price_data = array(
-            'min_price' => 0,
-            'max_price' => 0
-        );
-
-        if (!$product) {
-            return $price_data;
-        }
-
-        // Get base price from WooCommerce
-        $base_price = product_estimator_round_price(floatval($product->get_price()));
-
-        if ($source === 'website' || !function_exists('wc_get_product')) {
-            // Use WooCommerce price
-            $price_data['min_price'] = $base_price;
-            $price_data['max_price'] = $base_price;
-        } else {
-            // Check if we should get NetSuite pricing
-            try {
-                // Check if NetSuite Integration class exists
-                if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Integration\\NetsuiteIntegration')) {
-                    // Initialize NetSuite Integration
-                    $netsuite_integration = new \RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration();
-
-                    // Get pricing data for this product
-                    $pricing_data = $netsuite_integration->get_product_prices([$product_id]);
-
-                    // Check if we received valid pricing data
-                    if (!empty($pricing_data['prices']) && is_array($pricing_data['prices'])) {
-                        foreach ($pricing_data['prices'] as $price_item) {
-                            if ($price_item['product_id'] == $product_id) {
-                                // Add NetSuite pricing data to product
-                                $price_data['min_price'] = $price_item['min_price'];
-                                $price_data['max_price'] = $price_item['max_price'];
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // If NetSuite data not found, set defaults based on WC price
-                if ($price_data['min_price'] === 0) {
-                    $price_data['min_price'] = $base_price;
-                    $price_data['max_price'] = $base_price;
-                }
-            } catch (\Exception $e) {
-                // If NetSuite API fails, log the error but continue with base price
-                error_log('NetSuite API Error: ' . $e->getMessage());
-
-                // Set default price range from WooCommerce price
-                $price_data['min_price'] = $base_price;
-                $price_data['max_price'] = $base_price;
-            }
-        }
-
-        return $price_data;
-    }
-
-    /**
      * Get rules that apply to specific product categories
      *
      * @param array $product_categories Array of product category IDs
      * @return array Matching rules
      */
     private function get_rules_for_product_categories($product_categories) {
-        $rules = $this->get_rules();
-        $matching_rules = array();
+        $rules = get_option($this->option_name, []);
+        $matching_rules = [];
 
         foreach ($rules as $rule) {
             // Check if any of the product categories match the rule's source categories
@@ -960,57 +910,12 @@ class SimilarProductsSettingsModule extends SettingsModuleBase
 
         return $matching_rules;
     }
-
-
-    /**
-     * Get the appropriate pricing rule for a product
-     *
-     * @param int $product_id The product ID
-     * @return array The pricing rule with 'method' and 'source' keys
-     */
-    private function get_pricing_rule_for_product($product_id) {
-        // Get global settings
-        $settings = get_option('product_estimator_settings');
-
-        // Use defaults from settings if available
-        $default_rule = [
-            'method' => isset($settings['default_pricing_method']) ? $settings['default_pricing_method'] : 'sqm',
-            'source' => isset($settings['default_pricing_source']) ? $settings['default_pricing_source'] : 'website'
-        ];
-
-        // Get product categories
-        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
-
-        if (empty($product_categories) || is_wp_error($product_categories)) {
-            return $default_rule;
-        }
-
-        // Get all pricing rules
-        $pricing_rules = get_option('product_estimator_pricing_rules', []);
-
-        if (empty($pricing_rules)) {
-            return $default_rule;
-        }
-
-        // Check each rule for matching categories
-        foreach ($pricing_rules as $rule) {
-            if (!isset($rule['categories']) || !is_array($rule['categories'])) {
-                continue;
-            }
-
-            // Check if any of this product's categories match the rule's categories
-            $matching_categories = array_intersect($product_categories, $rule['categories']);
-
-            if (!empty($matching_categories)) {
-                // Found a matching rule, return its method and source
-                return [
-                    'method' => isset($rule['pricing_method']) ? $rule['pricing_method'] : $default_rule['method'],
-                    'source' => isset($rule['pricing_source']) ? $rule['pricing_source'] : $default_rule['source']
-                ];
-            }
-        }
-
-        // No matching rule found, return default
-        return $default_rule;
-    }
 }
+
+// Initialize and register the module
+add_action('plugins_loaded', function() {
+    $module = new SimilarProductsSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
+        $manager->register_module($module);
+    });
+});

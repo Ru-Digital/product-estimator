@@ -42,6 +42,7 @@
             "includes/integration/class-woocommerce-integration.php",
             "includes/admin/class-product-estimator-settings.php",
             "includes/admin/class-product-estimator-admin.php",
+            "includes/admin/settings/interface-settings-module.php",
             "includes/class-activator.php",
             "includes/class-product-estimator.php",
             "includes/class-i18n.php",

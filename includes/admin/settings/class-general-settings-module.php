@@ -10,7 +10,20 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class GeneralSettingsModule extends SettingsModuleBase {
+class GeneralSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
+
+    /**
+     * Array of settings keys managed by this module
+     *
+     * @since    1.1.0
+     * @access   private
+     * @var      array    $module_settings    Settings keys managed by this module
+     */
+    private $module_settings = [
+        'default_markup',
+        'estimate_expiry_days',
+        // Add any other settings managed by this module
+    ];
 
     /**
      * Set the tab and section details.
@@ -26,12 +39,70 @@ class GeneralSettingsModule extends SettingsModuleBase {
     }
 
     /**
+     * Check if this module handles a specific setting
+     *
+     * @since    1.1.0
+     * @access   public
+     * @param    string    $key    Setting key
+     * @return   bool    Whether this module handles the setting
+     */
+    public function has_setting($key) {
+        return in_array($key, $this->module_settings);
+    }
+
+    /**
+     * Get all checkbox fields for this module
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    Checkbox field keys
+     */
+    protected function get_checkbox_fields() {
+        return [
+            // Add checkbox fields here
+        ];
+    }
+
+    /**
+     * Get all email fields for this module
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    Email field keys
+     */
+    protected function get_email_fields() {
+        return [
+            // This module doesn't have email fields
+        ];
+    }
+
+    /**
+     * Get all number fields with their constraints for this module
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    Number field keys with constraints
+     */
+    protected function get_number_fields() {
+        return [
+            'default_markup' => [
+                'min' => 0,
+                'max' => 100
+            ],
+            'estimate_expiry_days' => [
+                'min' => 1,
+                'max' => 365
+            ]
+        ];
+    }
+
+    /**
      * Register the module-specific settings fields.
      *
      * @since    1.1.0
      * @access   protected
      */
-    protected function register_fields() {
+    public function register_fields() {
         $fields = array(
             'default_markup' => array(
                 'title' => __('Default Markup (%)', 'product-estimator'),
@@ -41,14 +112,14 @@ class GeneralSettingsModule extends SettingsModuleBase {
                 'min' => 0,
                 'max' => 100
             ),
-//            'estimate_expiry_days' => array(
-//                'title' => __('Estimate Validity (Days)', 'product-estimator'),
-//                'type' => 'number',
-//                'description' => __('Number of days an estimate remains valid', 'product-estimator'),
-//                'default' => 30,
-//                'min' => 1,
-//                'max' => 365
-//            ),
+            'estimate_expiry_days' => array(
+                'title' => __('Estimate Validity (Days)', 'product-estimator'),
+                'type' => 'number',
+                'description' => __('Number of days an estimate remains valid', 'product-estimator'),
+                'default' => 30,
+                'min' => 1,
+                'max' => 365
+            ),
         );
 
         foreach ($fields as $id => $field) {
@@ -99,7 +170,51 @@ class GeneralSettingsModule extends SettingsModuleBase {
     }
 
     /**
-     * Process form data specific to general settings
+     * Validate module-specific settings
+     *
+     * @since    1.1.0
+     * @access   public
+     * @param    array    $input    Settings to validate
+     * @return   array    Validated settings
+     */
+    public function validate_settings($input) {
+        $valid = [];
+
+        // Validate default markup
+        if (isset($input['default_markup'])) {
+            $markup = intval($input['default_markup']);
+            if ($markup < 0 || $markup > 100) {
+                add_settings_error(
+                    'product_estimator_settings',
+                    'invalid_markup',
+                    __('Default markup must be between 0 and 100', 'product-estimator')
+                );
+                $valid['default_markup'] = 10; // Default value
+            } else {
+                $valid['default_markup'] = $markup;
+            }
+        }
+
+        // Validate expiry days
+        if (isset($input['estimate_expiry_days'])) {
+            $days = intval($input['estimate_expiry_days']);
+            if ($days < 1 || $days > 365) {
+                add_settings_error(
+                    'product_estimator_settings',
+                    'invalid_expiry',
+                    __('Estimate validity must be between 1 and 365 days', 'product-estimator')
+                );
+                $valid['estimate_expiry_days'] = 30; // Default value
+            } else {
+                $valid['estimate_expiry_days'] = $days;
+            }
+        }
+
+        return $valid;
+    }
+
+    /**
+     * Process form data specific to this module
      *
      * @since    1.1.0
      * @access   protected
@@ -125,15 +240,15 @@ class GeneralSettingsModule extends SettingsModuleBase {
         }
 
         // Validate the estimate_expiry_days field
-//        if (isset($settings['estimate_expiry_days'])) {
-//            $days = intval($settings['estimate_expiry_days']);
-//            if ($days < 1 || $days > 365) {
-//                return new \WP_Error(
-//                    'invalid_expiry',
-//                    __('Estimate validity must be between 1 and 365 days', 'product-estimator')
-//                );
-//            }
-//        }
+        if (isset($settings['estimate_expiry_days'])) {
+            $days = intval($settings['estimate_expiry_days']);
+            if ($days < 1 || $days > 365) {
+                return new \WP_Error(
+                    'invalid_expiry',
+                    __('Estimate validity must be between 1 and 365 days', 'product-estimator')
+                );
+            }
+        }
 
         return true;
     }
@@ -172,11 +287,9 @@ class GeneralSettingsModule extends SettingsModuleBase {
         }
 
         echo '<select id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']">';
-
         foreach ($args['options'] as $value => $label) {
             echo '<option value="' . esc_attr($value) . '" ' . selected($current_value, $value, false) . '>' . esc_html($label) . '</option>';
         }
-
         echo '</select>';
 
         if (isset($args['description'])) {
@@ -238,3 +351,11 @@ class GeneralSettingsModule extends SettingsModuleBase {
         );
     }
 }
+
+// Initialize and register the module
+add_action('plugins_loaded', function() {
+    $module = new GeneralSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
+        $manager->register_module($module);
+    });
+});

@@ -1,15 +1,16 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes\Admin;
 
-use RuDigital\ProductEstimator\Includes\Admin\Settings\SettingsModuleBase;
+use RuDigital\ProductEstimator\Includes\Admin\Settings\SettingsModuleInterface;
 
 /**
  * The settings manager class.
  *
  * This class is responsible for managing all the settings modules
- * and coordinating the admin settings interface.
+ * and coordinating the admin settings interface. It primarily acts as a
+ * coordinator, delegating the actual implementation to individual modules.
  *
- * @since      1.1.0
+ * @since      1.2.0
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin
  */
@@ -45,7 +46,7 @@ class SettingsManager {
     /**
      * Initialize the class and set its properties.
      *
-     * @since    1.1.0
+     * @since    1.2.0
      * @param    string    $plugin_name    The name of this plugin.
      * @param    string    $version        The version of this plugin.
      */
@@ -53,62 +54,80 @@ class SettingsManager {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
 
+        // Load dependencies for modules
         $this->load_dependencies();
-        $this->register_modules();
+
+        // Let modules register themselves
+        do_action('product_estimator_register_settings_modules', $this);
+
+        // Register common hooks
         $this->register_hooks();
     }
 
     /**
      * Load required dependencies.
      *
-     * @since    1.1.0
+     * @since    1.2.0
      * @access   private
      */
     private function load_dependencies() {
-        // Base settings module
+        // Load the base module and interface
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/interface-settings-module.php';
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-settings-module-base.php';
 
-        // Settings modules
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-general-settings-module.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-netsuite-settings-module.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-notification-settings-module.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-product-additions-settings-module.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-pricing-rules-settings-module.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-similar-products-settings-module.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-product-upgrades-settings-module.php'; // Added new module class
+        $this->initialize_modules();
 
     }
 
-    /**
-     * Register all settings modules.
-     *
-     * @since    1.1.0
-     * @access   private
-     */
-    private function register_modules() {
-        // Create instances of each module
-        $modules = array(
-            new \RuDigital\ProductEstimator\Includes\Admin\Settings\GeneralSettingsModule($this->plugin_name, $this->version),
-            new \RuDigital\ProductEstimator\Includes\Admin\Settings\NetsuiteSettingsModule($this->plugin_name, $this->version),
-            new \RuDigital\ProductEstimator\Includes\Admin\Settings\NotificationSettingsModule($this->plugin_name, $this->version),
-            new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule($this->plugin_name, $this->version),
-            new \RuDigital\ProductEstimator\Includes\Admin\Settings\PricingRulesSettingsModule($this->plugin_name, $this->version),
-            new \RuDigital\ProductEstimator\Includes\Admin\Settings\SimilarProductsSettingsModule($this->plugin_name, $this->version),
-            new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductUpgradesSettingsModule($this->plugin_name, $this->version),
-        );
+    private function initialize_modules() {
+        // Define the module classes to load
+        $module_classes = [
+            'GeneralSettingsModule',
+            'NetsuiteSettingsModule',
+            'NotificationSettingsModule',
+            'ProductAdditionsSettingsModule',
+            'PricingRulesSettingsModule',
+            'SimilarProductsSettingsModule',
+            'ProductUpgradesSettingsModule'
+        ];
 
-        // Store modules by their tab ID for easy access
-        foreach ($modules as $module) {
-            if ($module instanceof SettingsModuleBase) {
-                $this->modules[$module->get_tab_id()] = $module;
+        // Load and initialize each module
+        foreach ($module_classes as $class_name) {
+            $file_name = 'class-' . strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $class_name)) . '.php';
+            $file_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/' . $file_name;
+
+            if (file_exists($file_path)) {
+                require_once $file_path;
+
+                // Create the fully qualified class name
+                $full_class_name = 'RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\' . $class_name;
+
+                if (class_exists($full_class_name)) {
+                    // Instantiate the module
+                    $module = new $full_class_name($this->plugin_name, $this->version);
+
+                    // Register it directly
+                    $this->register_module($module);
+                }
             }
         }
     }
 
     /**
+     * Register a settings module with the manager
+     *
+     * @since    1.2.0
+     * @access   public
+     * @param    SettingsModuleInterface $module The module to register
+     */
+    public function register_module(SettingsModuleInterface $module) {
+        $this->modules[$module->get_tab_id()] = $module;
+    }
+
+    /**
      * Register all of the hooks related to the admin settings functionality.
      *
-     * @since    1.1.0
+     * @since    1.2.0
      * @access   private
      */
     private function register_hooks() {
@@ -125,7 +144,7 @@ class SettingsManager {
     /**
      * Register the main settings group.
      *
-     * @since    1.1.0
+     * @since    1.2.0
      * @access   public
      */
     public function register_main_settings() {
@@ -140,7 +159,7 @@ class SettingsManager {
     /**
      * Add the settings pages to the admin menu.
      *
-     * @since    1.1.0
+     * @since    1.2.0
      * @access   public
      */
     public function add_settings_pages() {
@@ -158,18 +177,101 @@ class SettingsManager {
     /**
      * Display the settings page.
      *
-     * @since    1.1.0
+     * @since    1.2.0
      * @access   public
      */
     public function display_settings_page() {
+        // Get active tab from URL or use first tab as default
+        $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : '';
+
+        // If no tab is specified or the tab doesn't exist, use the first tab
+        if (empty($active_tab) || !isset($this->modules[$active_tab])) {
+            // Get first module as default
+            reset($this->modules);
+            $active_tab = key($this->modules);
+        }
+
+        // Make variables available to the template
+        $modules = $this->modules;
+        $plugin_name = $this->plugin_name;
+
         // Include settings page template
         include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/partials/product-estimator-admin-settings.php';
     }
 
     /**
+     * Validate settings from all modules
+     *
+     * @since    1.2.0
+     * @access   public
+     * @param    array    $input    The settings to validate
+     * @return   array    The validated settings
+     */
+    public function validate_settings($input) {
+        $valid = [];
+
+        // If input is empty, return empty array to prevent clearing existing settings
+        if (empty($input) || !is_array($input)) {
+            return $valid;
+        }
+
+        // Organize settings by module
+        $module_settings = [];
+        $unclaimed_settings = [];
+
+        // First pass: group settings by their respective modules
+        foreach ($input as $key => $value) {
+            $module_found = false;
+
+            // Find which module handles this setting
+            foreach ($this->modules as $module) {
+                if (method_exists($module, 'has_setting') && $module->has_setting($key)) {
+                    $module_settings[$module->get_tab_id()][$key] = $value;
+                    $module_found = true;
+                    break;
+                }
+            }
+
+            // If no module claims this setting, add to unclaimed list
+            if (!$module_found) {
+                $unclaimed_settings[$key] = $value;
+            }
+        }
+
+        // Second pass: validate settings with their respective modules
+        foreach ($module_settings as $tab_id => $settings) {
+            if (isset($this->modules[$tab_id])) {
+                $module_valid = $this->modules[$tab_id]->validate_settings($settings);
+                $valid = array_merge($valid, $module_valid);
+            }
+        }
+
+        // Handle any unclaimed settings with basic sanitization
+        foreach ($unclaimed_settings as $key => $value) {
+            // Apply default sanitization based on value type
+            if (is_bool($value)) {
+                $valid[$key] = (bool) $value;
+            } elseif (is_numeric($value)) {
+                $valid[$key] = floatval($value);
+            } elseif (is_string($value)) {
+                if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                    $valid[$key] = sanitize_email($value);
+                } else {
+                    $valid[$key] = sanitize_text_field($value);
+                }
+            } else {
+                // For arrays or objects, leave as is
+                $valid[$key] = $value;
+            }
+        }
+
+        return $valid;
+    }
+
+    /**
      * Get all registered modules.
      *
-     * @since    1.1.0
+     * @since    1.2.0
      * @access   public
      * @return   array    List of registered settings modules.
      */
@@ -180,10 +282,10 @@ class SettingsManager {
     /**
      * Get a specific module by tab ID.
      *
-     * @since    1.1.0
+     * @since    1.2.0
      * @access   public
      * @param    string    $tab_id    The tab ID to retrieve.
-     * @return   SettingsModuleBase|null    The requested module or null if not found.
+     * @return   SettingsModuleInterface|null    The requested module or null if not found.
      */
     public function get_module($tab_id) {
         return isset($this->modules[$tab_id]) ? $this->modules[$tab_id] : null;
@@ -192,7 +294,7 @@ class SettingsManager {
     /**
      * Enqueue scripts for the settings page.
      *
-     * @since    1.1.0
+     * @since    1.2.0
      * @access   public
      * @param    string    $hook_suffix    The current admin page.
      */
@@ -218,13 +320,12 @@ class SettingsManager {
             array(
                 'ajax_url' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('product_estimator_settings_nonce'),
+                'current_tab' => isset($_GET['tab']) ? sanitize_key($_GET['tab']) : '',
                 'i18n' => array(
                     'unsavedChanges' => __('You have unsaved changes. Are you sure you want to leave this tab?', 'product-estimator'),
                     'saveSuccess' => __('Settings saved successfully.', 'product-estimator'),
                     'saveError' => __('Error saving settings.', 'product-estimator'),
                     'saving' => __('Saving...', 'product-estimator'),
-                    'invalidEmail' => __('Please enter a valid email address', 'product-estimator'),
-                    'numberRange' => __('Value must be between %min% and %max%', 'product-estimator')
                 )
             )
         );
@@ -236,112 +337,15 @@ class SettingsManager {
             array(),
             $this->version
         );
-    }
 
-    /**
-     * Validate settings before saving.
-     *
-     * @since    1.1.0
-     * @access   public
-     * @param    array    $input    The settings input to validate.
-     * @return   array    The validated settings.
-     */
-    public function validate_settings($input) {
-        $valid = array();
-
-        // If input is empty, return empty array to prevent clearing existing settings
-        if (empty($input) || !is_array($input)) {
-            return $valid;
-        }
-
-        foreach ($input as $key => $value) {
-            switch ($key) {
-                // Boolean fields
-                case 'netsuite_enabled':
-                case 'room_dimensions_required':
-                case 'enable_notifications':
-                case 'admin_email_notifications':
-                case 'user_email_notifications':
-                case 'notification_request_copy_include_pdf': // Add this checkbox field
-                case 'notification_request_copy_enabled':     // And this one too
-                    $valid[$key] = isset($value) && $value ? 1 : 0;
-                    break;
-
-                // Text fields that should be sanitized as text
-                case 'netsuite_client_id':
-                case 'netsuite_api_url':
-                case 'netsuite_token_url':
-                case 'email_subject_template':
-                    $valid[$key] = sanitize_text_field($value);
-                    break;
-
-                // Secret/password fields - preserve if empty (for updating forms that don't resend passwords)
-                case 'netsuite_client_secret':
-                    if (!empty($value)) {
-                        $valid[$key] = sanitize_text_field($value);
-                    } else {
-                        // Get existing value
-                        $current_settings = get_option('product_estimator_settings', array());
-                        if (isset($current_settings[$key])) {
-                            $valid[$key] = $current_settings[$key];
-                        }
-                    }
-                    break;
-
-                // Email fields
-                case 'default_designer_email':
-                case 'default_store_email':
-                case 'from_email':  // Add from_email field
-                    if (!empty($value) && !is_email($value)) {
-                        add_settings_error(
-                            'product_estimator_settings',
-                            'invalid_email',
-                            sprintf(__('"%s" is not a valid email address', 'product-estimator'), $value)
-                        );
-                    } else {
-                        $valid[$key] = sanitize_email($value);
-                    }
-                    break;
-
-                // Integer fields
-                case 'default_markup':
-                case 'netsuite_request_limit':
-                case 'netsuite_cache_time':
-                case 'estimate_expiry_days':
-                    $valid[$key] = absint($value);
-                    break;
-
-                // HTML content
-                case 'pdf_footer_text':
-                    $valid[$key] = wp_kses_post($value);
-                    break;
-
-                case (strpos($key, '_content') !== false):
-                    $valid[$key] = wp_kses_post($value);
-                    break;
-                // Media/image fields
-                case 'company_logo':
-                    // Validate attachment ID
-                    if (!empty($value) && is_numeric($value)) {
-                        $attachment = get_post($value);
-                        if ($attachment && 'attachment' === $attachment->post_type) {
-                            $valid[$key] = absint($value);
-                        }
-                    } elseif (empty($value)) {
-                        $valid[$key] = '';
-                    }
-                    break;
-
-                // Default case for any other fields
-                default:
-                    if (strpos($key, '_content') !== false) {
-                        $valid[$key] = wp_kses_post($value);
-                    } else {
-                        $valid[$key] = sanitize_text_field($value);
-                    }
+        // Let each module enqueue its own scripts and styles
+        foreach ($this->modules as $module) {
+            if (method_exists($module, 'enqueue_scripts')) {
+                $module->enqueue_scripts();
+            }
+            if (method_exists($module, 'enqueue_styles')) {
+                $module->enqueue_styles();
             }
         }
-
-        return $valid;
     }
 }

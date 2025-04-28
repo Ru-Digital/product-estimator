@@ -10,7 +10,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class ProductAdditionsSettingsModule extends SettingsModuleBase {
+class ProductAdditionsSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Set the tab and section details.
@@ -26,14 +26,54 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
     }
 
     /**
+     * Register module with the settings manager
+     *
+     * @since    1.2.0
+     * @access   public
+     */
+    public function register() {
+        add_action('product_estimator_register_settings_modules', function($manager) {
+            $manager->register_module($this);
+        });
+    }
+
+    /**
+     * Check if this module handles a specific setting
+     *
+     * @since    1.2.0
+     * @access   public
+     * @param    string $key Setting key
+     * @return   bool Whether this module handles the setting
+     */
+    public function has_setting($key) {
+        // This module doesn't handle standard settings
+        // It uses a separate option for storing product additions
+        return false;
+    }
+
+    /**
      * Register the module-specific settings fields.
      *
      * @since    1.1.0
      * @access   protected
      */
-    protected function register_fields() {
+    public function register_fields() {
         // No traditional fields to register for this tab, as it uses a custom UI
         // But we can still register the section to ensure it's created
+    }
+
+    /**
+     * Validate module-specific settings
+     *
+     * @since    1.2.0
+     * @access   public
+     * @param    array $input The settings to validate
+     * @return   array The validated settings
+     */
+    public function validate_settings($input) {
+        // This module uses custom validation for its AJAX handlers
+        // No standard settings to validate
+        return $input;
     }
 
     /**
@@ -47,7 +87,6 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
     protected function process_form_data($form_data) {
         // For product additions, we handle the data saving through separate AJAX endpoints
         // This method is primarily used for validation
-
         return true;
     }
 
@@ -157,6 +196,9 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
 
     /**
      * AJAX handler for saving a category relation
+     *
+     * @since    1.1.0
+     * @access   public
      */
     public function ajax_save_category_relation() {
         // Check nonce
@@ -310,6 +352,9 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
 
     /**
      * AJAX handler for deleting a category relation
+     *
+     * @since    1.1.0
+     * @access   public
      */
     public function ajax_delete_category_relation() {
         // Check nonce
@@ -354,6 +399,9 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
 
     /**
      * AJAX handler for searching products within a category
+     *
+     * @since    1.1.0
+     * @access   public
      */
     public function ajax_search_category_products() {
         // Check nonce
@@ -421,6 +469,9 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
 
     /**
      * AJAX handler for getting product details by ID
+     *
+     * @since    1.1.0
+     * @access   public
      */
     public function ajax_get_product_details() {
         // Check nonce
@@ -465,8 +516,10 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
     /**
      * Get auto-add products for specific categories
      *
-     * @param int $category_id Category ID
-     * @return array Array of product IDs
+     * @since    1.1.0
+     * @access   public
+     * @param    int $category_id Category ID
+     * @return   array Array of product IDs
      */
     public function get_auto_add_products_for_category($category_id) {
         // Get all relations
@@ -499,8 +552,10 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
     /**
      * Get auto-add notes for specific categories
      *
-     * @param int $category_id Category ID
-     * @return array Array of note texts
+     * @since    1.1.0
+     * @access   public
+     * @param    int $category_id Category ID
+     * @return   array Array of note texts
      */
     public function get_auto_add_notes_for_category($category_id) {
         // Get all relations
@@ -533,8 +588,10 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
     /**
      * Get suggested products for a specific category
      *
-     * @param int $category_id Category ID
-     * @return array Array of product IDs
+     * @since    1.1.0
+     * @access   public
+     * @param    int $category_id Category ID
+     * @return   array Array of product IDs
      */
     public function get_suggested_products_for_category($category_id) {
         // Get all relations
@@ -589,8 +646,10 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
     /**
      * Generate product suggestions based on room contents
      *
-     * @param array $room_products Array of products in the room
-     * @return array Array of suggested products
+     * @since    1.1.0
+     * @access   public
+     * @param    array $room_products Array of products in the room
+     * @return   array Array of suggested products
      */
     public function get_suggestions_for_room($room_products) {
         if (empty($room_products) || !is_array($room_products)) {
@@ -644,3 +703,11 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase {
         return $formatted_suggestions;
     }
 }
+
+// Initialize and register the module
+add_action('plugins_loaded', function() {
+    $module = new ProductAdditionsSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
+        $manager->register_module($module);
+    });
+});

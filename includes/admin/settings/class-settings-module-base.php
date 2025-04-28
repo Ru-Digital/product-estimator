@@ -202,84 +202,105 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @since    1.1.0
      * @access   public
      */
+    /**
+     * Handle AJAX save request for this module
+     *
+     * @since    1.1.0
+     * @access   public
+     */
     public function handle_ajax_save() {
-        // First, verify nonce
+        // Verify nonce and permissions (keep existing code)
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_settings_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed', 'product-estimator')));
-            exit; // Make sure to exit here
+            exit;
         }
 
-        // Check permissions
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => __('You do not have permission to change these settings', 'product-estimator')));
-            exit; // Make sure to exit here
+            exit;
         }
 
-        // Parse form data
+        // Parse form data (keep existing code)
         if (!isset($_POST['form_data'])) {
             wp_send_json_error(array('message' => __('No form data received', 'product-estimator')));
-            exit; // Make sure to exit here
+            exit;
         }
 
         parse_str($_POST['form_data'], $form_data);
-
-        error_log('Received form data: ' . print_r($form_data, true));
-
 
         // Process the settings specific to this module
         $result = $this->process_form_data($form_data);
 
         if (is_wp_error($result)) {
             wp_send_json_error(array('message' => $result->get_error_message()));
-            exit; // Make sure to exit here
+            exit;
         }
 
-        // Update options
-// Improve the settings update logic in handle_ajax_save()
+        // Update settings - THIS IS THE CRITICAL SECTION
         if (isset($form_data['product_estimator_settings'])) {
+            global $wpdb;
+
+            // Get current settings
             $current_settings = get_option('product_estimator_settings', array());
 
-            // Debug logging
-            error_log('Current settings before update: ' . print_r($current_settings, true));
-
-            // Get the validated form data
+            // Validate the new settings
             $validated_settings = $this->validate_settings($form_data['product_estimator_settings']);
 
-            // Debug logging
-            error_log('Validated settings: ' . print_r($validated_settings, true));
+            // Special handling for HTML fields
+            $html_fields = array('pdf_footer_text', 'pdf_footer_contact_details_content');
 
-            // Merge with existing settings - this is crucial for preserving settings
-            $merged_settings = array_merge($current_settings, $validated_settings);
+            foreach ($html_fields as $field) {
+                if (isset($validated_settings[$field])) {
+                    // Store the raw HTML content (bypass WordPress sanitization)
+                    $current_settings[$field] = $validated_settings[$field];
 
-            // Debug logging
-            error_log('Merged settings: ' . print_r($merged_settings, true));
+                    // Log for debugging
+                    error_log("Setting $field to: " . $validated_settings[$field]);
+                }
+            }
 
-            // Update the option
-            $update_result = update_option('product_estimator_settings', $merged_settings);
+            // Merge all other settings
+            foreach ($validated_settings as $key => $value) {
+                if (!in_array($key, $html_fields)) {
+                    $current_settings[$key] = $value;
+                }
+            }
 
-            // Debug logging
-            error_log('Update option result: ' . ($update_result ? 'true' : 'false'));
+            // Serialize the data ourselves
+            $serialized_data = serialize($current_settings);
 
-            if (!$update_result) {
-                error_log('Failed to update settings, checking if settings are already the same');
-                // Check if settings are already the same (WordPress won't update if unchanged)
-                $current_after = get_option('product_estimator_settings', array());
-                $is_same = ($current_after == $merged_settings);
-                error_log('Settings are same as before: ' . ($is_same ? 'true' : 'false'));
+            // Force direct database update to bypass WordPress option filters
+            $option_name = 'product_estimator_settings';
+            $result = $wpdb->update(
+                $wpdb->options,
+                array('option_value' => $serialized_data),
+                array('option_name' => $option_name),
+                array('%s'),
+                array('%s')
+            );
+
+            // Reset cache to ensure we get the updated version next time
+            wp_cache_delete('product_estimator_settings', 'options');
+
+            // Log the result
+            error_log('Direct database update result: ' . ($result !== false ? $result : 'failed'));
+
+            // Check for any database errors
+            if ($wpdb->last_error) {
+                error_log('Database error: ' . $wpdb->last_error);
             }
         }
 
         // Allow modules to perform additional actions after saving
         $this->after_save_actions($form_data);
 
-        // Send success response and exit
+        // Send success response
         wp_send_json_success(array(
             'message' => sprintf(
                 __('%s settings saved successfully', 'product-estimator'),
                 $this->tab_title
             )
         ));
-        // wp_send_json_success already calls exit, but we'll add it for clarity
         exit;
     }
 
@@ -329,11 +350,17 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
                 // HTML content fields
                 case $this->is_html_content_field($key):
-                    $valid[$key] = wp_kses_post($value);  // Allows safe HTML tags
+                    // For HTML fields, especially the footer content
+                    if (in_array($key, ['pdf_footer_text', 'pdf_footer_contact_details_content'])) {
+                        // Preserve HTML exactly as submitted without any filtering
+                        $valid[$key] = $value;
+                    } else {
+                        // For other HTML content fields
+                        $valid[$key] = wp_kses_post($value);
+                    }
                     break;
 
-                // Default text fields
-                default:
+                    default:
                     $valid[$key] = sanitize_text_field($value);
             }
         }
@@ -575,9 +602,33 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    array    $form_data    The form data to process
      * @return   true|\WP_Error    True on success, WP_Error on failure
      */
+    // Modify process_form_data method to preserve HTML
     protected function process_form_data($form_data) {
-        // Default implementation - can be extended by child classes
-        // for module-specific data processing
+        if (!isset($form_data['product_estimator_settings'])) {
+            return new \WP_Error('missing_data', __('No settings data received', 'product-estimator'));
+        }
+
+        $settings = $form_data['product_estimator_settings'];
+
+        // Handle HTML fields specially
+        $html_fields = ['pdf_footer_text', 'pdf_footer_contact_details_content'];
+
+        foreach ($html_fields as $field) {
+            if (isset($settings[$field])) {
+                // Store raw content without WordPress filtering
+                // This is critical - we want to keep the content exactly as submitted
+                $raw_content = $settings[$field];
+
+                // If content seems to be double-escaped, fix it
+                if (strpos($raw_content, '&amp;lt;') !== false) {
+                    $settings[$field] = html_entity_decode($raw_content, ENT_QUOTES | ENT_HTML5);
+                }
+            }
+        }
+
+        // Update the form data
+        $form_data['product_estimator_settings'] = $settings;
+
         return true;
     }
 
@@ -851,55 +902,68 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
     protected function render_html_field($args) {
         $options = get_option('product_estimator_settings');
         $id = $args['id'];
+
+        // Get the raw value
         $value = isset($options[$id]) ? $options[$id] : '';
 
         if (empty($value) && isset($args['default'])) {
             $value = $args['default'];
         }
 
-        // Use WordPress rich text editor with improved settings
+        // Output a hidden field with the raw HTML value for JavaScript to use
+        echo '<input type="hidden" id="' . esc_attr($id) . '_raw" value="' . esc_attr($value) . '" />';
+
+        // Use WordPress rich text editor
         $editor_id = $id;
         $editor_settings = array(
             'textarea_name' => "product_estimator_settings[{$id}]",
-            'media_buttons' => true,  // Allow media uploads
+            'media_buttons' => false,
             'textarea_rows' => 10,
-            'teeny'         => false, // Set to false to get more formatting options
+            'teeny'         => false,
+            'wpautop'       => false,
             'tinymce'       => array(
-                'paste_as_text'  => false,  // Paste as plain text by default
-                'paste_text_sticky' => false,
-                'paste_text_sticky_default' => true,
-                'wpautop'        => true,  // Auto add paragraphs
-                'plugins'        => 'paste,hr,lists,link,charmap',
-                'toolbar1'       => 'formatselect,bold,italic,underline,bullist,numlist,link,unlink,hr,charmap',
-                'toolbar2'       => '',
+                'forced_root_block'  => '',
+                'entity_encoding'    => 'raw',
+                'verify_html'        => false,
             ),
-            'quicktags'     => true,  // Add quicktags
+            'quicktags'     => true,
         );
 
-        // Ensure the wpeditor function is loaded
-        if (!function_exists('wp_editor')) {
-            require_once(ABSPATH . 'wp-admin/includes/editor.php');
-        }
-
-        // Output the editor with a wrapper for styling
+        // Output the editor
         echo '<div class="wp-editor-wrapper">';
         wp_editor($value, $editor_id, $editor_settings);
         echo '</div>';
 
-        // Add field description
+        // Add description
         if (isset($args['description'])) {
-            echo '<p class="description">' . wp_kses_post($args['description']) . '</p>';
+            echo '<p class="description">' . esc_html($args['description']) . '</p>';
         }
 
-        // Add helpful instructions for rich text editor
-        echo '<div class="editor-instructions">';
-        echo '<p>' . esc_html__('You can use basic formatting, links, and tables in this field.', 'product-estimator') . '</p>';
-        if (strpos($id, 'footer') !== false) {
-            echo '<p>' . esc_html__('This content will appear in the footer of generated PDF documents.', 'product-estimator') . '</p>';
-        }
-        echo '</div>';
+        // Add script to ensure proper HTML initialization
+        echo '<script type="text/javascript">
+    jQuery(document).ready(function($) {
+        // Initialize TinyMCE with proper HTML
+        var editorId = "' . $editor_id . '";
+        var checkEditor = setInterval(function() {
+            if (typeof tinyMCE !== "undefined" && tinyMCE.get(editorId)) {
+                clearInterval(checkEditor);
+
+                // Get raw HTML content
+                var rawContent = $("#' . $id . '_raw").val();
+
+                // Set content directly
+                tinyMCE.get(editorId).setContent(rawContent);
+
+                // Prevent automatic cleanup
+                tinyMCE.get(editorId).settings.verify_html = false;
+                tinyMCE.get(editorId).settings.cleanup = false;
+                tinyMCE.get(editorId).settings.entity_encoding = "raw";
+                tinyMCE.get(editorId).settings.forced_root_block = "";
+            }
+        }, 200);
+    });
+    </script>';
     }
-
 
     /**
      * Add script data with fallback for when the global script handler is not available

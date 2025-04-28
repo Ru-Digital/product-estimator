@@ -310,7 +310,6 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @param    array    $input    Settings to validate
      * @return   array    Validated settings
      */
-    // In GeneralSettingsModule::validate_settings()
     public function validate_settings($input) {
         $valid = [];
 
@@ -362,6 +361,14 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @param    array    $form_data    The form data to process
      * @return   true|\WP_Error    True on success, WP_Error on failure
      */
+    /**
+     * Process form data specific to this module
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $form_data    The form data to process
+     * @return   true|\WP_Error    True on success, WP_Error on failure
+     */
     protected function process_form_data($form_data) {
         if (!isset($form_data['product_estimator_settings'])) {
             return new \WP_Error('missing_data', __('No settings data received', 'product-estimator'));
@@ -369,27 +376,25 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
 
         $settings = $form_data['product_estimator_settings'];
 
-        // Validate the default_markup field
-        if (isset($settings['default_markup'])) {
-            $markup = intval($settings['default_markup']);
-            if ($markup < 0 || $markup > 100) {
-                return new \WP_Error(
-                    'invalid_markup',
-                    __('Default markup must be between 0 and 100', 'product-estimator')
-                );
+        // Explicitly handle HTML fields
+        $html_fields = ['pdf_footer_text', 'pdf_footer_contact_details_content'];
+
+        foreach ($html_fields as $field) {
+            if (isset($settings[$field])) {
+                // Ensure HTML entities are properly decoded
+                $settings[$field] = html_entity_decode($settings[$field], ENT_QUOTES);
+
+                // Check for specific issues with the content
+                if (strpos($settings[$field], '&lt;br') !== false ||
+                    strpos($settings[$field], '&amp;') !== false) {
+                    // Fix double-encoded HTML
+                    $settings[$field] = html_entity_decode($settings[$field], ENT_QUOTES);
+                }
             }
         }
 
-        // Validate the estimate_expiry_days field
-        if (isset($settings['estimate_expiry_days'])) {
-            $days = intval($settings['estimate_expiry_days']);
-            if ($days < 1 || $days > 365) {
-                return new \WP_Error(
-                    'invalid_expiry',
-                    __('Estimate validity must be between 1 and 365 days', 'product-estimator')
-                );
-            }
-        }
+        // Update the form data
+        $form_data['product_estimator_settings'] = $settings;
 
         return true;
     }
@@ -401,14 +406,70 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @access   protected
      * @param    array    $form_data    The processed form data
      */
+    /**
+     * Additional actions after saving general settings
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $form_data    The processed form data
+     */
     protected function after_save_actions($form_data) {
-        // Clear any caches related to general settings
-        if (function_exists('wp_cache_delete')) {
-            wp_cache_delete('product_estimator_settings', 'options');
+        // Call parent method if it exists
+        if (method_exists(parent::class, 'after_save_actions')) {
+            parent::after_save_actions($form_data);
         }
 
-        // Update transients if needed
+        // Clear any caches
         delete_transient('product_estimator_general_settings');
+
+        // Verify HTML content is stored correctly
+        $this->verify_html_content_storage();
+    }
+
+    /**
+     * Verify HTML content is stored correctly and fix if needed
+     *
+     * @since    1.1.0
+     * @access   private
+     */
+    private function verify_html_content_storage() {
+        // The fields we need to check
+        $html_fields = ['pdf_footer_text', 'pdf_footer_contact_details_content'];
+
+        // Get current settings
+        $settings = get_option('product_estimator_settings');
+        $updated = false;
+
+        foreach ($html_fields as $field) {
+            if (isset($settings[$field])) {
+                // Check if the field contains escaped HTML that needs fixing
+                $original = $settings[$field];
+                $decoded = html_entity_decode($original, ENT_QUOTES | ENT_HTML5);
+
+                // Look for HTML entities that need decoding
+                if ($decoded !== $original &&
+                    (strpos($original, '&lt;') !== false ||
+                        strpos($original, '&gt;') !== false ||
+                        strpos($original, '&amp;') !== false)) {
+
+                    // Fix the field by using the decoded version
+                    $settings[$field] = $decoded;
+                    $updated = true;
+
+                    // Log for debugging
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("Fixed HTML content in field {$field}");
+                        error_log("Original: " . $original);
+                        error_log("Fixed: " . $decoded);
+                    }
+                }
+            }
+        }
+
+        // Update settings if we fixed something
+        if ($updated) {
+            update_option('product_estimator_settings', $settings);
+        }
     }
 
     /**

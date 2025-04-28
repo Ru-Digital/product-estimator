@@ -54,6 +54,7 @@ class GeneralSettingsModule {
   /**
    * Set up WordPress Rich Text Editors without the table plugin
    */
+// In the setupWpEditors function
   setupWpEditors() {
     const $ = jQuery;
 
@@ -62,62 +63,98 @@ class GeneralSettingsModule {
       return;
     }
 
-    // If TinyMCE is available, adjust its configuration
-    if (typeof tinyMCE !== 'undefined') {
-      console.log('TinyMCE is available, adjusting configuration to remove table plugin');
+    console.log('Setting up rich text editors with HTML preservation');
 
-      // Handle existing editors
-      if (typeof tinyMCEPreInit !== 'undefined' && tinyMCEPreInit.mceInit) {
-        // Loop through all editor configurations
-        Object.keys(tinyMCEPreInit.mceInit).forEach(editorId => {
-          // Skip if the editor is not related to our forms
-          if (editorId !== 'pdf_footer_text' && editorId !== 'pdf_footer_contact_details_content') {
-            return;
-          }
+    // Target editor IDs that need HTML preservation
+    const editorIds = ['pdf_footer_text', 'pdf_footer_contact_details_content'];
 
-          // Remove table plugin from the plugins list
-          if (tinyMCEPreInit.mceInit[editorId].plugins) {
-            tinyMCEPreInit.mceInit[editorId].plugins =
-              tinyMCEPreInit.mceInit[editorId].plugins
-                .replace(/,?table,?/g, ',')  // Remove table plugin
-                .replace(/,,/g, ',')         // Fix double commas
-                .replace(/^,|,$/g, '');      // Trim commas at start/end
-          }
-
-          // Remove table-related buttons from toolbar
-          if (tinyMCEPreInit.mceInit[editorId].toolbar1) {
-            tinyMCEPreInit.mceInit[editorId].toolbar1 =
-              tinyMCEPreInit.mceInit[editorId].toolbar1
-                .replace(/,?table,?/g, '')   // Remove table button
-                .replace(/,,/g, ',')         // Fix double commas
-                .replace(/^,|,$/g, '');      // Trim commas at start/end
-          }
-        });
+    // Function to properly initialize TinyMCE
+    const initEditor = (editorId) => {
+      if (!tinyMCE || !tinyMCE.get(editorId)) {
+        return false;
       }
 
-      // Patch the PluginManager to prevent errors related to the missing table plugin
-      if (tinyMCE.PluginManager && !tinyMCE.PluginManager.get('table')) {
-        // Register a dummy table plugin to prevent errors when the editor tries to use it
-        tinyMCE.PluginManager.add('table', function(editor) {
-          // Empty plugin implementation that does nothing
-          console.log('Using dummy table plugin for editor:', editor.id);
-        });
+      const editor = tinyMCE.get(editorId);
 
-        console.log('Added dummy table plugin to prevent errors');
+      // Configure editor for HTML preservation
+      editor.settings.wpautop = false;
+      editor.settings.forced_root_block = false;
+      editor.settings.valid_elements = '*[*]';
+      editor.settings.entity_encoding = 'raw';
+      editor.settings.verify_html = false;
+
+      // Get raw content from hidden field if available
+      const $rawField = $(`#${editorId}_raw`);
+      if ($rawField.length && $rawField.val()) {
+        editor.setContent($rawField.val());
       }
 
-      // Initialize editors if they exist in the DOM but aren't initialized yet
-      ['pdf_footer_text', 'pdf_footer_contact_details_content'].forEach(editorId => {
-        if ($('#' + editorId).length > 0 && tinyMCE.get(editorId) === null) {
-          if (typeof switchEditors !== 'undefined') {
-            console.log('Initializing editor:', editorId);
-            switchEditors.go(editorId, 'tmce');
+      // Update the editor
+      editor.render();
+
+      console.log(`Editor ${editorId} initialized with HTML preservation`);
+      return true;
+    };
+
+    // Initialize TinyMCE when it's ready
+    const checkTinyMCE = setInterval(() => {
+      if (typeof tinyMCE !== 'undefined' && tinyMCE.editors) {
+        let allInitialized = true;
+
+        editorIds.forEach(id => {
+          if (!initEditor(id)) {
+            allInitialized = false;
+          }
+        });
+
+        if (allInitialized) {
+          clearInterval(checkTinyMCE);
+        }
+      }
+    }, 300);
+
+    // Improve form submission for HTML fields
+    $('#general form').off('submit.htmlPreservation').on('submit.htmlPreservation', function() {
+      // Get HTML editor IDs
+      const htmlFields = ['pdf_footer_text', 'pdf_footer_contact_details_content'];
+
+      // For each HTML field, ensure the content is properly saved
+      htmlFields.forEach(function(id) {
+        if (typeof tinyMCE !== 'undefined' && tinyMCE.get(id)) {
+          // Get content directly from the editor
+          const rawContent = tinyMCE.get(id).getContent({format: 'raw'});
+
+          // Update the textarea
+          const $textarea = $('#' + id);
+          if ($textarea.length) {
+            $textarea.val(rawContent);
+
+            // Log for debugging
+            console.log('Setting ' + id + ' to: ', rawContent);
           }
         }
       });
-    }
-  }
+    });
 
+    $('#general form').on('submit', function(e) {
+      // Make sure TinyMCE content is properly saved
+      const editors = ['pdf_footer_text', 'pdf_footer_contact_details_content'];
+
+      editors.forEach(id => {
+        const editor = tinyMCE.get(id);
+        if (editor) {
+          // Get raw content
+          const content = editor.getContent({format: 'raw'});
+
+          // Update the textarea directly
+          $(`#${id}`).val(content);
+
+          // Debug log
+          console.log(`Updating ${id} with raw content:`, content);
+        }
+      });
+    });
+  }
   /**
    * Handle file upload button click
    * @param {Event} e Click event

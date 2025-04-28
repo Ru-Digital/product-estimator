@@ -5,11 +5,11 @@
  * This file initializes the application and loads required modules.
  */
 
-import EstimatorCore from './EstimatorCore';
-import ConfirmationDialog from './ConfirmationDialog';
-import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
-import ProductDetailsToggle from './ProductDetailsToggle';  // Import the default instance
-import PrintEstimate from './PrintEstimate';
+import EstimatorCore from './frontend/EstimatorCore';
+import ConfirmationDialog from './frontend/ConfirmationDialog';
+import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './frontend/SuggestionsCarousel';
+import ProductDetailsToggle from './frontend/ProductDetailsToggle';  // Import the default instance
+import PrintEstimate from './frontend/PrintEstimate';
 
 
 // Global initialization tracker - defined at the top level

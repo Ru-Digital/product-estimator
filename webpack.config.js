@@ -1,12 +1,26 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/js/index.js',
+  entry: {
+    // Main frontend entry
+    'product-estimator': './src/js/index.js',
+
+    // Admin entry point including all module scripts
+    'admin/product-estimator-admin': './src/js/admin.js'
+  },
   output: {
-    filename: 'product-estimator.bundle.js',
+    filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'public/js'),
   },
   mode: process.env.NODE_ENV || 'development',
+  resolve: {
+    // Add aliases for easier imports
+    alias: {
+      '@utils': path.resolve(__dirname, 'src/js/utils'),
+      '@frontend': path.resolve(__dirname, 'src/js/frontend'),
+      '@admin': path.resolve(__dirname, 'src/js/admin')
+    }
+  },
   module: {
     rules: [
       {
@@ -15,10 +29,18 @@ module.exports = {
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env']
+            presets: ['@babel/preset-env'],
+            plugins: ['@babel/plugin-transform-runtime']
           }
         }
       }
     ]
+  },
+  optimization: {
+    // Extract common dependencies into separate bundles
+    splitChunks: {
+      chunks: 'all',
+      name: 'common'
+    }
   }
 };

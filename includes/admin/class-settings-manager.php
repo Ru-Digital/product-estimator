@@ -44,15 +44,40 @@ class SettingsManager {
     private $modules = array();
 
     /**
+     * Admin script handler instance
+     *
+     * @since    1.2.0
+     * @access   private
+     * @var      AdminScriptHandler    $admin_script_handler    Admin script handler instance
+     */
+    private $admin_script_handler;
+
+    /**
      * Initialize the class and set its properties.
      *
      * @since    1.2.0
-     * @param    string    $plugin_name    The name of this plugin.
-     * @param    string    $version        The version of this plugin.
+     * @param    string             $plugin_name         The name of this plugin.
+     * @param    string             $version             The version of this plugin.
+     * @param    AdminScriptHandler $admin_script_handler The admin script handler instance.
      */
-    public function __construct($plugin_name, $version) {
+    public function __construct($plugin_name, $version, $admin_script_handler) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
+
+        // Fix: Set up the script handler, creating a new instance if not provided
+        if ($admin_script_handler === null) {
+            // Make sure the class is loaded
+            if (!class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\AdminScriptHandler')) {
+                require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-admin-script-handler.php';
+            }
+            $this->admin_script_handler = new AdminScriptHandler($plugin_name, $version);
+        } else {
+            $this->admin_script_handler = $admin_script_handler;
+        }
+
+        // Make the admin_script_handler globally available for modules
+        global $product_estimator_script_handler;
+        $product_estimator_script_handler = $this->admin_script_handler;
 
         // Load dependencies for modules
         $this->load_dependencies();
@@ -76,9 +101,14 @@ class SettingsManager {
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-settings-module-base.php';
 
         $this->initialize_modules();
-
     }
 
+    /**
+     * Initialize all settings modules
+     *
+     * @since    1.2.0
+     * @access   private
+     */
     private function initialize_modules() {
         // Define the module classes to load
         $module_classes = [
@@ -122,6 +152,39 @@ class SettingsManager {
      */
     public function register_module(SettingsModuleInterface $module) {
         $this->modules[$module->get_tab_id()] = $module;
+
+        // Register module script data
+        $this->register_module_script_data($module);
+    }
+
+    /**
+     * Register module-specific script data
+     *
+     * @since    1.2.0
+     * @access   private
+     * @param    SettingsModuleInterface $module The settings module
+     */
+    private function register_module_script_data(SettingsModuleInterface $module) {
+        $tab_id = $module->get_tab_id();
+
+        // Convert tab ID to JS variable name (camelCase convention)
+        $js_var_name = lcfirst(str_replace('-', '', ucwords($tab_id, '-'))) . 'Settings';
+
+        // Prepare module script data
+        $module_data = array(
+            'tab_id' => $tab_id,
+            'nonce' => wp_create_nonce('product_estimator_' . $tab_id . '_nonce'),
+            'ajax_url' => admin_url('admin-ajax.php')
+        );
+
+        // Add module data to script handler
+        $this->admin_script_handler->add_script_data($js_var_name, $module_data);
+
+        wp_localize_script(
+            $this->plugin_name . '-admin',
+            $js_var_name,
+            $module_data
+        );
     }
 
     /**
@@ -136,9 +199,6 @@ class SettingsManager {
 
         // Register main settings
         add_action('admin_init', array($this, 'register_main_settings'));
-
-        // Add script to handle tab switching
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_settings_scripts'));
     }
 
     /**
@@ -289,63 +349,5 @@ class SettingsManager {
      */
     public function get_module($tab_id) {
         return isset($this->modules[$tab_id]) ? $this->modules[$tab_id] : null;
-    }
-
-    /**
-     * Enqueue scripts for the settings page.
-     *
-     * @since    1.2.0
-     * @access   public
-     * @param    string    $hook_suffix    The current admin page.
-     */
-    public function enqueue_settings_scripts($hook_suffix) {
-        // Only load on the plugin's settings page
-        if (strpos($hook_suffix, $this->plugin_name . '-settings') === false) {
-            return;
-        }
-
-        // Enqueue main settings script
-        wp_enqueue_script(
-            $this->plugin_name . '-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/product-estimator-settings.js',
-            array('jquery'),
-            $this->version,
-            true
-        );
-
-        // Localize script
-        wp_localize_script(
-            $this->plugin_name . '-settings',
-            'productEstimatorSettings',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('product_estimator_settings_nonce'),
-                'current_tab' => isset($_GET['tab']) ? sanitize_key($_GET['tab']) : '',
-                'i18n' => array(
-                    'unsavedChanges' => __('You have unsaved changes. Are you sure you want to leave this tab?', 'product-estimator'),
-                    'saveSuccess' => __('Settings saved successfully.', 'product-estimator'),
-                    'saveError' => __('Error saving settings.', 'product-estimator'),
-                    'saving' => __('Saving...', 'product-estimator'),
-                )
-            )
-        );
-
-        // Enqueue main settings style
-        wp_enqueue_style(
-            $this->plugin_name . '-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/product-estimator-settings.css',
-            array(),
-            $this->version
-        );
-
-        // Let each module enqueue its own scripts and styles
-        foreach ($this->modules as $module) {
-            if (method_exists($module, 'enqueue_scripts')) {
-                $module->enqueue_scripts();
-            }
-            if (method_exists($module, 'enqueue_styles')) {
-                $module->enqueue_styles();
-            }
-        }
     }
 }

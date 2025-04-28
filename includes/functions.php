@@ -964,3 +964,78 @@ function product_estimator_debug_log($message, $data = null) {
         }
     }
 }
+
+
+/**
+ * Global helper functions for accessing Product Estimator components
+ *
+ * These functions make it easy to access the main plugin instance and its components
+ * from anywhere in the code, including modules.
+ *
+ * @package    Product_Estimator
+ * @subpackage Product_Estimator/includes
+ */
+
+if (!function_exists('product_estimator')) {
+    /**
+     * Get the main Product Estimator admin instance
+     *
+     * @return   \RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin|null  Admin instance or null
+     * @since    1.2.0
+     */
+    function product_estimator()
+    {
+        global $product_estimator;
+        return isset($product_estimator) ? $product_estimator : null;
+    }
+}
+
+if (!function_exists('product_estimator_admin_script_handler')) {
+    /**
+     * Get the Admin Script Handler instance
+     *
+     * @return   \RuDigital\ProductEstimator\Includes\Admin\AdminScriptHandler|null  Admin script handler or null
+     * @since    1.2.0
+     */
+    function product_estimator_admin_script_handler()
+    {
+        global $product_estimator_admin_script_handler;
+
+        if (!isset($product_estimator_admin_script_handler)) {
+            $admin = product_estimator();
+            if ($admin && method_exists($admin, 'get_admin_script_handler')) {
+                $product_estimator_admin_script_handler = $admin->get_admin_script_handler();
+            }
+        }
+
+        return $product_estimator_admin_script_handler;
+    }
+}
+
+if (!function_exists('product_estimator_settings_manager')) {
+    /**
+     * Get the Settings Manager instance
+     *
+     * @return   \RuDigital\ProductEstimator\Includes\Admin\SettingsManager|null  Settings manager or null
+     * @since    1.2.0
+     */
+    function product_estimator_settings_manager()
+    {
+        $admin = product_estimator();
+        return $admin && method_exists($admin, 'get_settings_manager') ? $admin->get_settings_manager() : null;
+    }
+}
+
+if (!function_exists('product_estimator_customer_estimates')) {
+    /**
+     * Get the Customer Estimates admin instance
+     *
+     * @return   \RuDigital\ProductEstimator\Includes\Admin\CustomerEstimatesAdmin|null  Customer estimates or null
+     * @since    1.2.0
+     */
+    function product_estimator_customer_estimates()
+    {
+        $admin = product_estimator();
+        return $admin && method_exists($admin, 'get_customer_estimates') ? $admin->get_customer_estimates() : null;
+    }
+}

@@ -5,6 +5,9 @@
  * Manages display and selection of product upgrade options in the estimator.
  */
 
+// Import utilities from the consolidated structure
+import { ajax, dom, log } from '@utils';
+
 class ProductUpgrades {
   /**
    * Initialize the ProductUpgrades module
@@ -199,34 +202,14 @@ class ProductUpgrades {
         return;
       }
 
-      // Use WordPress AJAX to fetch upgrade options
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'get_product_upgrades',
-          nonce: productEstimatorVars.nonce,
-          product_id: productId
-        })
+      // Use the ajax utility instead of direct fetch
+      ajax.wpAjax('get_product_upgrades', {
+        product_id: productId
       })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Network response error: ${response.status}`);
-          }
-          return response.json();
-        })
         .then(data => {
-          if (data.success && data.data) {
-            // Cache the upgrade data
-            this.upgradeData[productId] = data.data.upgrades || [];
-            resolve(this.upgradeData[productId]);
-          } else {
-            // No upgrades or error
-            this.upgradeData[productId] = [];
-            resolve([]);
-          }
+          // Cache the upgrade data
+          this.upgradeData[productId] = data.upgrades || [];
+          resolve(this.upgradeData[productId]);
         })
         .catch(error => {
           this.log('Error fetching product upgrades:', error);
@@ -253,8 +236,9 @@ class ProductUpgrades {
     // Create container for upgrades if it doesn't exist
     let upgradeContainer = productElement.querySelector(this.config.selectors.upgradeContainer);
     if (!upgradeContainer) {
-      upgradeContainer = document.createElement('div');
-      upgradeContainer.className = 'product-upgrades';
+      upgradeContainer = dom.createElement('div', {
+        className: 'product-upgrades'
+      });
       includesContainer.appendChild(upgradeContainer);
     }
 
@@ -276,22 +260,23 @@ class ProductUpgrades {
    */
   renderUpgradeOption(container, upgrade) {
     // Create the upgrade option based on display mode
-    const upgradeElement = document.createElement('div');
-    upgradeElement.className = 'product-upgrade-option';
+    const upgradeElement = dom.createElement('div', {
+      className: 'product-upgrade-option'
+    });
 
     // Add title if available
     if (upgrade.title) {
-      const titleElement = document.createElement('h4');
-      titleElement.className = 'upgrade-title';
-      titleElement.textContent = upgrade.title;
+      const titleElement = dom.createElement('h4', {
+        className: 'upgrade-title'
+      }, upgrade.title);
       upgradeElement.appendChild(titleElement);
     }
 
     // Add description if available
     if (upgrade.description) {
-      const descElement = document.createElement('p');
-      descElement.className = 'upgrade-description';
-      descElement.textContent = upgrade.description;
+      const descElement = dom.createElement('p', {
+        className: 'upgrade-description'
+      }, upgrade.description);
       upgradeElement.appendChild(descElement);
     }
 
@@ -324,18 +309,20 @@ class ProductUpgrades {
    * @param {Object} upgrade - Upgrade configuration
    */
   createDropdownUpgrade(container, upgrade) {
-    const selectContainer = document.createElement('div');
-    selectContainer.className = 'product-upgrade-select';
-    selectContainer.dataset.upgradeId = upgrade.id;
+    const selectContainer = dom.createElement('div', {
+      className: 'product-upgrade-select',
+      dataset: { upgradeId: upgrade.id }
+    });
 
-    const select = document.createElement('select');
-    select.className = 'upgrade-select';
-    select.name = `upgrade_${upgrade.id}`;
+    const select = dom.createElement('select', {
+      className: 'upgrade-select',
+      name: `upgrade_${upgrade.id}`
+    });
 
     // Add default "No upgrade" option
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'No upgrade';
+    const defaultOption = dom.createElement('option', {
+      value: ''
+    }, 'No upgrade');
     select.appendChild(defaultOption);
 
     // Add upgrade options
@@ -344,10 +331,10 @@ class ProductUpgrades {
       this.loadCategoryProducts(upgrade.upgrade_categories)
         .then(products => {
           products.forEach(product => {
-            const option = document.createElement('option');
-            option.value = product.id;
-            option.textContent = product.name;
-            option.dataset.price = product.price;
+            const option = dom.createElement('option', {
+              value: product.id,
+              dataset: { price: product.price }
+            }, product.name);
             select.appendChild(option);
           });
         })
@@ -369,23 +356,27 @@ class ProductUpgrades {
    * @param {Object} upgrade - Upgrade configuration
    */
   createRadioUpgrade(container, upgrade) {
-    const radioContainer = document.createElement('div');
-    radioContainer.className = 'product-upgrade-radio';
-    radioContainer.dataset.upgradeId = upgrade.id;
+    const radioContainer = dom.createElement('div', {
+      className: 'product-upgrade-radio',
+      dataset: { upgradeId: upgrade.id }
+    });
 
     // Create a form group for radio buttons
-    const radioGroup = document.createElement('div');
-    radioGroup.className = 'radio-group';
+    const radioGroup = dom.createElement('div', {
+      className: 'radio-group'
+    });
 
     // Add "No upgrade" option
-    const defaultLabel = document.createElement('label');
-    defaultLabel.className = 'radio-label';
+    const defaultLabel = dom.createElement('label', {
+      className: 'radio-label'
+    });
 
-    const defaultRadio = document.createElement('input');
-    defaultRadio.type = 'radio';
-    defaultRadio.name = `upgrade_${upgrade.id}`;
-    defaultRadio.value = '';
-    defaultRadio.checked = true;
+    const defaultRadio = dom.createElement('input', {
+      type: 'radio',
+      name: `upgrade_${upgrade.id}`,
+      value: '',
+      checked: true
+    });
 
     defaultLabel.appendChild(defaultRadio);
     defaultLabel.appendChild(document.createTextNode('No upgrade'));
@@ -396,14 +387,16 @@ class ProductUpgrades {
       this.loadCategoryProducts(upgrade.upgrade_categories)
         .then(products => {
           products.forEach(product => {
-            const label = document.createElement('label');
-            label.className = 'radio-label';
+            const label = dom.createElement('label', {
+              className: 'radio-label'
+            });
 
-            const radio = document.createElement('input');
-            radio.type = 'radio';
-            radio.name = `upgrade_${upgrade.id}`;
-            radio.value = product.id;
-            radio.dataset.price = product.price;
+            const radio = dom.createElement('input', {
+              type: 'radio',
+              name: `upgrade_${upgrade.id}`,
+              value: product.id,
+              dataset: { price: product.price }
+            });
 
             label.appendChild(radio);
             label.appendChild(document.createTextNode(product.name));
@@ -425,22 +418,25 @@ class ProductUpgrades {
    * @param {Object} upgrade - Upgrade configuration
    */
   createTilesUpgrade(container, upgrade) {
-    const tilesContainer = document.createElement('div');
-    tilesContainer.className = 'product-upgrade-tiles';
-    tilesContainer.dataset.upgradeId = upgrade.id;
+    const tilesContainer = dom.createElement('div', {
+      className: 'product-upgrade-tiles',
+      dataset: { upgradeId: upgrade.id }
+    });
 
     // Create tiles wrapper
-    const tilesWrapper = document.createElement('div');
-    tilesWrapper.className = 'tiles-wrapper';
+    const tilesWrapper = dom.createElement('div', {
+      className: 'tiles-wrapper'
+    });
 
     // Add "No upgrade" tile
-    const defaultTile = document.createElement('div');
-    defaultTile.className = 'upgrade-tile selected';
-    defaultTile.dataset.value = '';
+    const defaultTile = dom.createElement('div', {
+      className: 'upgrade-tile selected',
+      dataset: { value: '' }
+    });
 
-    const defaultLabel = document.createElement('span');
-    defaultLabel.className = 'tile-label';
-    defaultLabel.textContent = 'No upgrade';
+    const defaultLabel = dom.createElement('span', {
+      className: 'tile-label'
+    }, 'No upgrade');
 
     defaultTile.appendChild(defaultLabel);
     tilesWrapper.appendChild(defaultTile);
@@ -450,23 +446,27 @@ class ProductUpgrades {
       this.loadCategoryProducts(upgrade.upgrade_categories)
         .then(products => {
           products.forEach(product => {
-            const tile = document.createElement('div');
-            tile.className = 'upgrade-tile';
-            tile.dataset.value = product.id;
-            tile.dataset.price = product.price;
+            const tile = dom.createElement('div', {
+              className: 'upgrade-tile',
+              dataset: {
+                value: product.id,
+                price: product.price
+              }
+            });
 
             // Add product image if available
             if (product.image) {
-              const img = document.createElement('img');
-              img.src = product.image;
-              img.alt = product.name;
-              img.className = 'tile-image';
+              const img = dom.createElement('img', {
+                src: product.image,
+                alt: product.name,
+                className: 'tile-image'
+              });
               tile.appendChild(img);
             }
 
-            const label = document.createElement('span');
-            label.className = 'tile-label';
-            label.textContent = product.name;
+            const label = dom.createElement('span', {
+              className: 'tile-label'
+            }, product.name);
 
             tile.appendChild(label);
             tilesWrapper.appendChild(tile);
@@ -480,10 +480,11 @@ class ProductUpgrades {
     tilesContainer.appendChild(tilesWrapper);
 
     // Add hidden input to store selection
-    const hiddenInput = document.createElement('input');
-    hiddenInput.type = 'hidden';
-    hiddenInput.name = `upgrade_${upgrade.id}`;
-    hiddenInput.value = '';
+    const hiddenInput = dom.createElement('input', {
+      type: 'hidden',
+      name: `upgrade_${upgrade.id}`,
+      value: ''
+    });
     tilesContainer.appendChild(hiddenInput);
 
     container.appendChild(tilesContainer);
@@ -516,29 +517,12 @@ class ProductUpgrades {
    */
   loadCategoryProducts(categoryIds) {
     return new Promise((resolve, reject) => {
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'get_category_products',
-          nonce: productEstimatorVars.nonce,
-          categories: categoryIds.join(',')
-        })
+      // Use the ajax utility to make the request
+      ajax.wpAjax('get_category_products', {
+        categories: categoryIds.join(',')
       })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Network response error: ${response.status}`);
-          }
-          return response.json();
-        })
         .then(data => {
-          if (data.success && data.data) {
-            resolve(data.data.products || []);
-          } else {
-            resolve([]);
-          }
+          resolve(data.products || []);
         })
         .catch(error => {
           this.log('Error fetching category products:', error);
@@ -553,7 +537,7 @@ class ProductUpgrades {
    */
   handleUpgradeSelection(select) {
     const value = select.value;
-    const upgradeContainer = select.closest(this.config.selectors.upgradeSelect);
+    const upgradeContainer = dom.closest(select, this.config.selectors.upgradeSelect);
 
     if (upgradeContainer) {
       this.handleUpgradeChange(upgradeContainer, value);
@@ -567,7 +551,7 @@ class ProductUpgrades {
   handleUpgradeRadioSelection(radio) {
     if (radio.checked) {
       const value = radio.value;
-      const upgradeContainer = radio.closest(this.config.selectors.upgradeRadio);
+      const upgradeContainer = dom.closest(radio, this.config.selectors.upgradeRadio);
 
       if (upgradeContainer) {
         this.handleUpgradeChange(upgradeContainer, value);
@@ -581,7 +565,7 @@ class ProductUpgrades {
    */
   handleUpgradeTileSelection(tile) {
     const value = tile.dataset.value;
-    const upgradeContainer = tile.closest(this.config.selectors.upgradeTiles);
+    const upgradeContainer = dom.closest(tile, this.config.selectors.upgradeTiles);
 
     // Update tile selection visually
     if (upgradeContainer) {
@@ -606,7 +590,7 @@ class ProductUpgrades {
    */
   handleUpgradeChange(container, value) {
     const upgradeId = container.dataset.upgradeId;
-    const productElement = container.closest(this.config.selectors.productItem);
+    const productElement = dom.closest(container, this.config.selectors.productItem);
 
     if (!productElement) {
       this.log('Product element not found for upgrade change');
@@ -661,9 +645,10 @@ class ProductUpgrades {
 
       if (!input && upgradeValue) {
         // Create input if it doesn't exist and we have a value
-        input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = `upgrade_${upgradeId}`;
+        input = dom.createElement('input', {
+          type: 'hidden',
+          name: `upgrade_${upgradeId}`
+        });
         form.appendChild(input);
       }
 
@@ -689,16 +674,14 @@ class ProductUpgrades {
   }
 
   /**
-   * Log debug messages
+   * Log debug messages using the utility function
    * @param {...any} args - Arguments to log
    */
   log(...args) {
     if (this.config.debug) {
-      console.log('[ProductUpgrades]', ...args);
+      log('ProductUpgrades', ...args);
     }
   }
-
-
 }
 
 // Export the class

@@ -489,14 +489,7 @@ class NotificationSettingsModule extends SettingsModuleBase implements SettingsM
         // Enqueue WordPress media scripts
         wp_enqueue_media();
 
-        wp_enqueue_script(
-            $this->plugin_name . '-notification-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/modules/notification-settings.js',
-            ['jquery', 'media-upload', $this->plugin_name . '-settings'],
-            $this->version,
-            true
-        );
-
+        // Enqueue WordPress editor functionality
         wp_enqueue_editor();
 
         // Localize script

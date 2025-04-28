@@ -4,6 +4,7 @@
  * Custom confirmation dialog component for Product Estimator plugin.
  * Replaces browser's built-in confirm() with a styled dialog.
  */
+import { dom, log } from '@utils';
 
 class ConfirmationDialog {
   /**
@@ -37,9 +38,7 @@ class ConfirmationDialog {
 
     this.initialized = true;
 
-    if (productEstimatorVars && productEstimatorVars.debug) {
-      console.log('[ConfirmationDialog] Initialized');
-    }
+    this.log('Initialized');
   }
 
   /**
@@ -47,17 +46,21 @@ class ConfirmationDialog {
    * Replace the relevant sections in your ConfirmationDialog.js file
    */
 
-// In the createDialogElements method, add this code:
+  // In the createDialogElements method, add this code:
   createDialogElements() {
     // Create backdrop with higher z-index
-    this.backdropElement = document.createElement('div');
-    this.backdropElement.className = 'pe-dialog-backdrop';
+    this.backdropElement = dom.createElement('div', {
+      className: 'pe-dialog-backdrop'
+    });
 
     // Create dialog container with higher z-index
-    this.dialog = document.createElement('div');
-    this.dialog.className = 'pe-confirmation-dialog';
-    this.dialog.setAttribute('role', 'dialog');
-    this.dialog.setAttribute('aria-modal', 'true');
+    this.dialog = dom.createElement('div', {
+      className: 'pe-confirmation-dialog',
+      attributes: {
+        'role': 'dialog',
+        'aria-modal': 'true'
+      }
+    });
 
     // Create dialog content
     this.dialog.innerHTML = `
@@ -159,6 +162,10 @@ class ConfirmationDialog {
     });
   }
 
+  /**
+   * Show the dialog with specified options
+   * @param {Object} options Dialog options
+   */
   show(options = {}) {
     // Get text from localized strings if available
     const i18n = window.productEstimatorVars?.i18n || {};
@@ -206,13 +213,11 @@ class ConfirmationDialog {
     // Add active class for animation
     if (this.dialog) this.dialog.classList.add('active');
 
-
     // Focus the cancel button
     setTimeout(() => {
       const cancelBtn = this.dialog.querySelector('.pe-dialog-cancel');
       if (cancelBtn) cancelBtn.focus();
     }, 100);
-
   }
 
   /**
@@ -225,7 +230,6 @@ class ConfirmationDialog {
       this.dialog.style.display = 'none';
     }
   }
-
 
   /**
    * Check if dialog is visible
@@ -240,8 +244,8 @@ class ConfirmationDialog {
    * @param {...any} args - Arguments to log
    */
   log(...args) {
-    if (productEstimatorVars && productEstimatorVars.debug) {
-      console.log('[ConfirmationDialog]', ...args);
+    if (window.productEstimatorVars && window.productEstimatorVars.debug) {
+      log('ConfirmationDialog', ...args);
     }
   }
 }

@@ -2,7 +2,7 @@
 namespace RuDigital\ProductEstimator\Includes\Frontend;
 
 /**
- * Handles all script and style enqueuing for the Product Estimator plugin
+ * Handles script and style enqueuing for the frontend of the Product Estimator plugin
  *
  * @since      1.0.0
  * @package    Product_Estimator
@@ -39,7 +39,7 @@ class ScriptHandler {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
 
-        // Register actions - with higher priority to ensure styles/scripts are registered early
+        // Register frontend actions only
         add_action('wp_enqueue_scripts', array($this, 'enqueue_styles'), 5);
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'), 5);
 
@@ -55,7 +55,6 @@ class ScriptHandler {
     public function enqueue_styles() {
         // Always register and enqueue styles on all pages
         wp_enqueue_style('dashicons');
-
 
         wp_register_style(
             $this->plugin_name . '-public',
@@ -130,7 +129,6 @@ class ScriptHandler {
         wp_enqueue_style($this->plugin_name . '-customer-details');
         wp_enqueue_style($this->plugin_name . '-details-toggle');
         wp_enqueue_style($this->plugin_name . '-product-upgrades');
-
     }
 
     /**
@@ -139,21 +137,33 @@ class ScriptHandler {
      * @since    1.0.0
      */
     public function enqueue_scripts() {
-        // Always register scripts - this doesn't affect performance as they're only loaded when needed
+        // Enqueue main frontend bundle
         wp_register_script(
-            $this->plugin_name . '-modal',
+            $this->plugin_name,
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator.bundle.js',
             array('jquery'),
             $this->version,
             true
         );
 
+        // Enqueue common bundle if it exists
+        if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/js/common.bundle.js')) {
+            wp_register_script(
+                $this->plugin_name . '-common',
+                PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/common.bundle.js',
+                array('jquery'),
+                $this->version,
+                true
+            );
+            wp_enqueue_script($this->plugin_name . '-common');
+        }
+
         // Create a fresh nonce for AJAX requests - ensure this name matches what's used in AjaxHandler.php
         $nonce = wp_create_nonce('product_estimator_nonce');
 
         // Localize the script with your data
         wp_localize_script(
-            $this->plugin_name . '-modal',
+            $this->plugin_name,
             'productEstimatorVars',
             array(
                 'ajax_url' => admin_url('admin-ajax.php'),
@@ -202,8 +212,8 @@ class ScriptHandler {
             )
         );
 
-        // Enqueue the modal script
-        wp_enqueue_script($this->plugin_name . '-modal');
+        // Enqueue the main script
+        wp_enqueue_script($this->plugin_name);
 
         // Set a flag to avoid duplicate enqueuing
         do_action('product_estimator_scripts_enqueued');

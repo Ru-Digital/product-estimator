@@ -4,6 +4,7 @@
  * Centralized service for all AJAX operations in the Product Estimator plugin.
  * Provides a clean API for data operations and handles errors consistently.
  */
+import { ajax, log } from '@utils';
 
 class DataService {
   /**
@@ -13,7 +14,7 @@ class DataService {
   constructor(config = {}) {
     // Check for existing instance
     if (window._dataServiceInstance) {
-      console.log('Using existing DataService instance');
+      log('DataService', 'Using existing DataService instance');
       // Return existing instance to ensure singleton
       return window._dataServiceInstance;
     }
@@ -268,7 +269,7 @@ class DataService {
    */
   addNewEstimate(formData, productId = null) {
     let requestData = {
-      form_data: this.formatFormData(formData)
+      form_data: ajax.formatFormData(formData)
     };
 
     if (productId) {
@@ -298,7 +299,7 @@ class DataService {
     });
 
     let requestData = {
-      form_data: this.formatFormData(formData),
+      form_data: ajax.formatFormData(formData),
       estimate_id: estimateId
     };
 
@@ -445,28 +446,6 @@ class DataService {
   }
 
   /**
-   * Format form data into a string for AJAX requests
-   * @param {FormData|Object|string} formData - The form data to format
-   * @returns {string} Formatted form data
-   */
-  formatFormData(formData) {
-    if (typeof formData === 'string') {
-      return formData;
-    }
-
-    if (formData instanceof FormData) {
-      const params = new URLSearchParams();
-      for (const [key, value] of formData.entries()) {
-        params.append(key, value);
-      }
-      return params.toString();
-    }
-
-    // If it's an object, convert to URLSearchParams
-    return new URLSearchParams(formData).toString();
-  }
-
-  /**
    * Invalidate all caches
    */
   invalidateCache() {
@@ -483,7 +462,7 @@ class DataService {
    */
   log(...args) {
     if (this.config.debug) {
-      console.log('[DataService]', ...args);
+      log('DataService', ...args);
     }
   }
 }

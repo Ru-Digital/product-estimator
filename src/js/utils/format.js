@@ -1,0 +1,138 @@
+/**
+ * Formatting utilities for Product Estimator plugin
+ *
+ * Functions for formatting different types of data.
+ */
+
+/**
+ * Format a price with currency symbol
+ * @param {number} amount - Amount to format
+ * @param {string} currencySymbol - Currency symbol
+ * @param {number} decimals - Number of decimal places
+ * @returns {string} Formatted price
+ */
+export function formatPrice(amount, currencySymbol = '$', decimals = 2) {
+  // Handle undefined or null amount
+  if (amount === undefined || amount === null) {
+    return `${currencySymbol}0.00`;
+  }
+
+  // Convert to number if it's a string
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+
+  // Check if it's a valid number
+  if (isNaN(numAmount)) {
+    return `${currencySymbol}0.00`;
+  }
+
+  return currencySymbol + numAmount.toFixed(decimals);
+}
+
+/**
+ * Debounce function to limit how often a function can be called
+ * @param {Function} func - Function to debounce
+ * @param {number} wait - Milliseconds to wait
+ * @returns {Function} Debounced function
+ */
+export function debounce(func, wait = 300) {
+  let timeout;
+  return function(...args) {
+    const context = this;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(context, args), wait);
+  };
+}
+
+/**
+ * Throttle function execution
+ * @param {Function} func - Function to throttle
+ * @param {number} limit - Milliseconds to limit invocation
+ * @returns {Function} Throttled function
+ */
+export function throttle(func, limit = 300) {
+  let lastCall = 0;
+  return function(...args) {
+    const now = Date.now();
+    if (now - lastCall >= limit) {
+      lastCall = now;
+      return func.apply(this, args);
+    }
+  };
+}
+
+/**
+ * Sanitize HTML to prevent XSS
+ * @param {string} html - HTML string to sanitize
+ * @returns {string} Sanitized HTML
+ */
+export function sanitizeHTML(html) {
+  if (!html) return '';
+
+  // Use a temporary element to sanitize the HTML
+  const temp = document.createElement('div');
+  temp.textContent = html;
+  return temp.innerHTML;
+}
+
+/**
+ * Format a date according to locale preferences
+ * @param {Date|string} date - Date to format or ISO string
+ * @param {Object} options - Intl.DateTimeFormat options
+ * @returns {string} Formatted date
+ */
+export function formatDate(date, options = {}) {
+  // Default options
+  const defaultOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  };
+
+  // Merge options
+  const formatOptions = { ...defaultOptions, ...options };
+
+  // Convert string to Date if needed
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+  // Check if date is valid
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid date';
+  }
+
+  // Format date according to locale
+  return new Intl.DateTimeFormat(navigator.language, formatOptions).format(dateObj);
+}
+
+/**
+ * Truncate text to a specific length with ellipsis
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum length
+ * @param {string} ellipsis - Ellipsis string
+ * @returns {string} Truncated text
+ */
+export function truncateText(text, maxLength = 100, ellipsis = '...') {
+  if (!text) return '';
+
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return text.substring(0, maxLength - ellipsis.length) + ellipsis;
+}
+
+/**
+ * Convert object to URL query string
+ * @param {Object} obj - Object to convert
+ * @returns {string} URL query string (without leading ?)
+ */
+export function objectToQueryString(obj) {
+  return Object.entries(obj)
+    .filter(([_, value]) => value !== undefined && value !== null)
+    .map(([key, value]) => {
+      if (Array.isArray(value)) {
+        return value.map(val => `${encodeURIComponent(key)}=${encodeURIComponent(val)}`).join('&');
+      }
+      return `${encodeURIComponent(key)}=${encodeURIComponent(value)}`;
+    })
+    .join('&');
+}

@@ -77,7 +77,7 @@ class ProductEstimatorSettings {
      */
     private function register_hooks() {
         // Legacy settings registration for backward compatibility
-        add_action('admin_init', array($this, 'register_legacy_settings'));
+//        add_action('admin_init', array($this, 'register_legacy_settings'));
 
         // Add settings link to plugins page
         add_filter('plugin_action_links_' . PRODUCT_ESTIMATOR_BASENAME, array($this, 'add_settings_link'));
@@ -86,80 +86,80 @@ class ProductEstimatorSettings {
         add_action('admin_notices', array($this, 'settings_admin_notices'));
     }
 
-    /**
-     * Register legacy settings for backward compatibility
-     *
-     * This ensures old settings formats are still supported
-     */
-    public function register_legacy_settings() {
-        // Register the main settings option
-        register_setting(
-            $this->plugin_name . '_options',
-            $this->option_name,
-            array($this, 'validate_legacy_settings')
-        );
-    }
+//    /**
+//     * Register legacy settings for backward compatibility
+//     *
+//     * This ensures old settings formats are still supported
+//     */
+//    public function register_legacy_settings() {
+//        // Register the main settings option
+//        register_setting(
+//            $this->plugin_name . '_options',
+//            $this->option_name,
+//            array($this, 'validate_legacy_settings')
+//        );
+//    }
 
-    /**
-     * Validate legacy settings format
-     *
-     * @param array $input Input settings
-     * @return array Validated settings
-     */
-    public function validate_legacy_settings($input) {
-        // Get existing settings
-        $current_settings = get_option($this->option_name, array());
-
-        // Merge with new input
-        $merged_settings = array_merge($current_settings, $input);
-
-        // Apply basic sanitization
-        $valid = array();
-
-        foreach ($merged_settings as $key => $value) {
-            switch ($key) {
-                // Boolean fields
-                case 'netsuite_enabled':
-                case 'room_dimensions_required':
-                case 'enable_notifications':
-                    $valid[$key] = !empty($value) ? 1 : 0;
-                    break;
-
-                // Email fields
-                case 'default_designer_email':
-                case 'default_store_email':
-                case 'from_email':
-                    $valid[$key] = sanitize_email($value);
-                    break;
-
-                // Numeric fields
-                case 'default_markup':
-                case 'estimate_expiry_days':
-                case 'netsuite_request_limit':
-                case 'netsuite_cache_time':
-                    $valid[$key] = intval($value);
-                    break;
-
-                // URL fields
-                case 'netsuite_api_url':
-                case 'netsuite_token_url':
-                    $valid[$key] = esc_url_raw($value);
-                    break;
-
-                // Text areas with allowed HTML
-                case 'pdf_footer_text':
-                    $valid[$key] = wp_kses_post($value);
-                    break;
-
-                // Default sanitization for other fields
-                default:
-                    $valid[$key] = sanitize_text_field($value);
-                    break;
-            }
-        }
-
-        return $valid;
-    }
+//    /**
+//     * Validate legacy settings format
+//     *
+//     * @param array $input Input settings
+//     * @return array Validated settings
+//     */
+//    public function validate_legacy_settings($input) {
+//        // Get existing settings
+//        $current_settings = get_option($this->option_name, array());
+//
+//        // Merge with new input
+//        $merged_settings = array_merge($current_settings, $input);
+//
+//        // Apply basic sanitization
+//        $valid = array();
+//
+//        foreach ($merged_settings as $key => $value) {
+//            switch ($key) {
+//                // Boolean fields
+//                case 'netsuite_enabled':
+//                case 'room_dimensions_required':
+//                case 'enable_notifications':
+//                    $valid[$key] = !empty($value) ? 1 : 0;
+//                    break;
+//
+//                // Email fields
+//                case 'default_designer_email':
+//                case 'default_store_email':
+//                case 'from_email':
+//                    $valid[$key] = sanitize_email($value);
+//                    break;
+//
+//                // Numeric fields
+//                case 'default_markup':
+//                case 'estimate_expiry_days':
+//                case 'netsuite_request_limit':
+//                case 'netsuite_cache_time':
+//                    $valid[$key] = intval($value);
+//                    break;
+//
+//                // URL fields
+//                case 'netsuite_api_url':
+//                case 'netsuite_token_url':
+//                    $valid[$key] = esc_url_raw($value);
+//                    break;
+//
+//                // Text areas with allowed HTML
+//                case 'pdf_footer_text':
+//                    $valid[$key] = wp_kses_post($value);
+//                    break;
+//
+//                // Default sanitization for other fields
+//                default:
+//                    $valid[$key] = sanitize_text_field($value);
+//                    break;
+//            }
+//        }
+//
+//        return $valid;
+//    }
 
     /**
      * Add settings link to plugins page

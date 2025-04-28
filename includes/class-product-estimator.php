@@ -2,6 +2,7 @@
 namespace RuDigital\ProductEstimator;
 
 use RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration;
+use RuDigital\ProductEstimator\Includes\PDFRouteHandler;
 use RuDigital\ProductEstimator\Includes\SessionHandler;
 use RuDigital\ProductEstimator\Includes\AjaxHandler;
 use RuDigital\ProductEstimator\Includes\Frontend\ScriptHandler;
@@ -9,6 +10,7 @@ use RuDigital\ProductEstimator\Includes\Frontend\Shortcodes;
 use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
 use RuDigital\ProductEstimator\Includes\Loader;
 use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
+use RuDigital\ProductEstimator\Includes\Admin\AdminScriptHandler;
 use RuDigital\ProductEstimator\Includes\EstimateHandler;
 
 /**
@@ -59,6 +61,13 @@ class ProductEstimator {
     private $ajax_handler;
 
     /**
+     * Admin script handler
+     *
+     * @var AdminScriptHandler
+     */
+    private $admin_script_handler;
+
+    /**
      * WooCommerce integration
      *
      * @var WoocommerceIntegration
@@ -91,9 +100,19 @@ class ProductEstimator {
         // Initialize session handler (high priority)
         $this->session = SessionHandler::getInstance();
 
+        // Initialize admin script handler early if in admin
+        if (is_admin()) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-admin-script-handler.php';
+            $this->admin_script_handler = new AdminScriptHandler($plugin_name, $plugin_version);
+
+            // Make it globally available
+            global $product_estimator_script_handler;
+            $product_estimator_script_handler = $this->admin_script_handler;
+        }
+
         // Make sure this code is actually running
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-pdf-route-handler.php';
-        new \RuDigital\ProductEstimator\Includes\PDFRouteHandler();
+        new PDFRouteHandler($plugin_name, $plugin_version);
 
         // Initialize totals for existing session data
         $this->session->initializeAllTotals();

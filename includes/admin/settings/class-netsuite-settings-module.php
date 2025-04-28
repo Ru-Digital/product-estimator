@@ -359,13 +359,7 @@ class NetsuiteSettingsModule extends SettingsModuleBase {
      * @access   public
      */
     public function enqueue_scripts() {
-        wp_enqueue_script(
-            $this->plugin_name . '-netsuite-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/modules/netsuite-settings.js',
-            array('jquery', $this->plugin_name . '-settings'),
-            $this->version,
-            true
-        );
+
 
         // Localize script
         wp_localize_script(

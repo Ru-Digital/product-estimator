@@ -3,6 +3,7 @@
  *
  * Handles the print estimate and email copy functionality for the Product Estimator.
  */
+import { ajax, dom, log, validation } from '@utils';
 
 class PrintEstimate {
   /**
@@ -93,9 +94,6 @@ class PrintEstimate {
    * and direct PDF URL support
    * @param {HTMLElement} button - The button that was clicked
    */
-  // In PrintEstimate.js
-
-// Modify handlePrintEstimate to handle unsaved estimates
   handlePrintEstimate(button) {
     const estimateId = button.dataset.estimateId;
 
@@ -139,7 +137,6 @@ class PrintEstimate {
       });
   }
 
-
   /**
    * Check if estimate is stored in database
    * @param {string} estimateId - The estimate ID from session
@@ -147,34 +144,16 @@ class PrintEstimate {
    */
   checkEstimateStored(estimateId) {
     return new Promise((resolve, reject) => {
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'check_estimate_stored',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateId
-        })
+      ajax.wpAjax('check_estimate_stored', {
+        estimate_id: estimateId
       })
         .then(response => {
-          if (!response.ok) {
-            throw new Error(`Network response error: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(response => {
-          if (response.success) {
-            this.log('Check estimate stored result:', response.data);
-            resolve({
-              is_stored: response.data.is_stored || false,
-              db_id: response.data.db_id || null,
-              estimate_id: estimateId
-            });
-          } else {
-            resolve({ is_stored: false, db_id: null, estimate_id: estimateId });
-          }
+          this.log('Check estimate stored result:', response);
+          resolve({
+            is_stored: response.is_stored || false,
+            db_id: response.db_id || null,
+            estimate_id: estimateId
+          });
         })
         .catch(error => {
           this.log('Error checking if estimate is stored:', error);
@@ -202,24 +181,15 @@ class PrintEstimate {
     }
 
     // For regular users, make an AJAX call to get a secure token URL
-    fetch(productEstimatorVars.ajax_url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        action: 'get_secure_pdf_url',
-        nonce: productEstimatorVars.nonce,
-        estimate_id: dbId
-      })
+    ajax.wpAjax('get_secure_pdf_url', {
+      estimate_id: dbId
     })
-      .then(response => response.json())
       .then(response => {
-        if (response.success && response.data.url) {
-          this.log('Opening secure PDF URL:', response.data.url);
-          window.open(response.data.url, '_blank');
+        if (response.url) {
+          this.log('Opening secure PDF URL:', response.url);
+          window.open(response.url, '_blank');
         } else {
-          throw new Error(response.data?.message || 'Failed to get secure PDF URL');
+          throw new Error(response.message || 'Failed to get secure PDF URL');
         }
       })
       .catch(error => {
@@ -314,61 +284,42 @@ class PrintEstimate {
       });
   }
 
-
   /**
    * Send a copy of the estimate via email
    * @param {string} estimateId - The estimate ID
    * @param {HTMLElement} button - The button element
    */
   sendEstimateCopy(estimateId, button) {
-    fetch(productEstimatorVars.ajax_url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        action: 'request_copy_estimate',
-        nonce: productEstimatorVars.nonce,
-        estimate_id: estimateId
-      })
+    ajax.wpAjax('request_copy_estimate', {
+      estimate_id: estimateId
     })
       .then(response => {
-        if (!response.ok) {
-          throw new Error(`Network response error: ${response.status}`);
+        this.log('Estimate copy sent successfully', response);
+
+        // Extract the email address from the response if available
+        let emailAddress = '';
+        if (response && response.email) {
+          emailAddress = response.email;
+        } else if (this._customerDetails && this._customerDetails.email) {
+          emailAddress = this._customerDetails.email;
         }
-        return response.json();
-      })
-      .then(response => {
-        if (response.success) {
-          this.log('Estimate copy sent successfully', response.data);
 
-          // Extract the email address from the response if available
-          let emailAddress = '';
-          if (response.data && response.data.email) {
-            emailAddress = response.data.email;
-          } else if (this._customerDetails && this._customerDetails.email) {
-            emailAddress = this._customerDetails.email;
-          }
-
-          // Show confirmation dialog instead of alert
-          this.showEmailSentConfirmation(emailAddress);
-        } else {
-          // Special handling for no_email error code
-          if (response.data && response.data.code === 'no_email') {
-            // This shouldn't happen as we already checked, but just in case
-            this.setButtonLoading(button, false);
-            this.processing = false;
-            this.showEmailPrompt(estimateId, button, 'copy');
-            return;
-          }
-
-          this.log('Error sending estimate copy', response.data);
-          this.showError(response.data.message || 'Error sending estimate. Please try again.');
-        }
+        // Show confirmation dialog instead of alert
+        this.showEmailSentConfirmation(emailAddress);
       })
       .catch(error => {
         this.log('AJAX error', error);
-        this.showError('Connection error. Please try again.');
+
+        // Special handling for no_email error code
+        if (error.data && error.data.code === 'no_email') {
+          // This shouldn't happen as we already checked, but just in case
+          this.setButtonLoading(button, false);
+          this.processing = false;
+          this.showEmailPrompt(estimateId, button, 'copy');
+          return;
+        }
+
+        this.showError(error.message || 'Connection error. Please try again.');
       })
       .finally(() => {
         // Reset processing state
@@ -376,6 +327,7 @@ class PrintEstimate {
         this.setButtonLoading(button, false);
       });
   }
+
   /**
    * Check if customer has an email address via AJAX
    * This uses an AJAX call to check the server-side session data
@@ -390,34 +342,16 @@ class PrintEstimate {
       this.log(`Checking customer email for estimate: ${estimateIdStr}`);
 
       // Use AJAX to check customer details in session on the server
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'check_customer_email',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateIdStr // Always pass as string
-        })
+      ajax.wpAjax('check_customer_email', {
+        estimate_id: estimateIdStr // Always pass as string
       })
         .then(response => {
-          if (!response.ok) {
-            throw new Error(`Network response error: ${response.status}`);
+          this.log(`Customer email check result: ${response.has_email ? 'Has email' : 'No email'}`);
+          if (response.customer_details) {
+            // Store the customer details for later use
+            this._customerDetails = response.customer_details;
           }
-          return response.json();
-        })
-        .then(response => {
-          if (response.success) {
-            this.log(`Customer email check result: ${response.data.has_email ? 'Has email' : 'No email'}`);
-            if (response.data.customer_details) {
-              // Store the customer details for later use
-              this._customerDetails = response.data.customer_details;
-            }
-            resolve(response.data.has_email);
-          } else {
-            reject(new Error(response.data?.message || 'Error checking customer email'));
-          }
+          resolve(response.has_email);
         })
         .catch(error => {
           this.log('AJAX error in checkCustomerEmail:', error);
@@ -463,10 +397,12 @@ class PrintEstimate {
   </div>
 `;
 
-    // Create container for the modal
-    const promptEl = document.createElement('div');
-    promptEl.className = 'email-prompt-modal';
-    promptEl.innerHTML = modalHtml;
+    // Create container for the modal using our dom utility
+    const promptEl = dom.createElement('div', {
+      className: 'email-prompt-modal',
+      innerHTML: modalHtml
+    });
+
     document.body.appendChild(promptEl);
 
     // Get elements
@@ -477,7 +413,7 @@ class PrintEstimate {
 
     // Handle cancel
     cancelBtn.addEventListener('click', () => {
-      promptEl.remove();
+      dom.removeElement(promptEl, true); // Use utility with animation
     });
 
     // Handle submit
@@ -489,9 +425,8 @@ class PrintEstimate {
         return;
       }
 
-      // Simple email validation
-      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailPattern.test(email)) {
+      // Use validation utility to check email format
+      if (!validation.validateEmail(email)) {
         validationMsg.textContent = productEstimatorVars.i18n?.invalid_email || 'Please enter a valid email address';
         return;
       }
@@ -507,7 +442,7 @@ class PrintEstimate {
         .then((updatedDetails) => {
           this.log('Email update successful');
           // Remove prompt
-          promptEl.remove();
+          dom.removeElement(promptEl, true);
 
           // Dispatch an event to notify the rest of the application about the email update
           this.notifyEmailUpdated(updatedDetails);
@@ -590,47 +525,27 @@ class PrintEstimate {
    */
   generatePdf(estimateId, button) {
     return new Promise((resolve, reject) => {
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'print_estimate',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateId
-        })
+      ajax.wpAjax('print_estimate', {
+        estimate_id: estimateId
       })
         .then(response => {
-          if (!response.ok) {
-            throw new Error(`Network response error: ${response.status}`);
+          this.log('PDF generated successfully', response);
+
+          // Open PDF in new window
+          if (response.pdf_url) {
+            window.open(response.pdf_url, '_blank');
           }
-          return response.json();
-        })
-        .then(response => {
-          if (response.success) {
-            this.log('PDF generated successfully', response.data);
 
-            // Open PDF in new window
-            if (response.data.pdf_url) {
-              window.open(response.data.pdf_url, '_blank');
-            }
-
-            // If the response includes a database ID, update our knowledge
-            if (response.data.db_id) {
-              this.log(`Estimate now stored with DB ID: ${response.data.db_id}`);
-            }
-
-            resolve();
-          } else {
-            this.log('Error generating PDF', response.data);
-            this.showError(response.data.message || 'Error generating PDF. Please try again.');
-            reject(new Error(response.data.message || 'Error generating PDF'));
+          // If the response includes a database ID, update our knowledge
+          if (response.db_id) {
+            this.log(`Estimate now stored with DB ID: ${response.db_id}`);
           }
+
+          resolve();
         })
         .catch(error => {
           this.log('AJAX error', error);
-          this.showError('Connection error. Please try again.');
+          this.showError(error.message || 'Error generating PDF. Please try again.');
           reject(error);
         });
     });
@@ -723,43 +638,16 @@ class PrintEstimate {
    * @returns {Promise} Promise that resolves when estimate is stored
    */
   storeEstimate(estimateId) {
-    return new Promise((resolve, reject) => {
-      // Get customer details from stored details or get from server
-      const customerDetails = this._customerDetails || {};
+    // Get customer details from stored details or get from server
+    const customerDetails = this._customerDetails || {};
 
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'store_single_estimate',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateId,
-          customer_name: customerDetails.name || '',
-          customer_email: customerDetails.email || '',
-          customer_phone: customerDetails.phone || '',
-          customer_postcode: customerDetails.postcode || '',
-          notes: ''
-        })
-      })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Network response error: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(response => {
-          if (response.success) {
-            this.log('Estimate stored successfully', response.data);
-            resolve(response.data);
-          } else {
-            reject(new Error(response.data?.message || 'Error storing estimate'));
-          }
-        })
-        .catch(error => {
-          reject(error);
-        });
+    return ajax.wpAjax('store_single_estimate', {
+      estimate_id: estimateId,
+      customer_name: customerDetails.name || '',
+      customer_email: customerDetails.email || '',
+      customer_phone: customerDetails.phone || '',
+      customer_postcode: customerDetails.postcode || '',
+      notes: ''
     });
   }
 
@@ -852,71 +740,35 @@ class PrintEstimate {
       this.log('Using estimate ID:', estimateId, 'Type:', typeof estimateId);
 
       // First, update the customer details in session
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'update_customer_details',
-          nonce: productEstimatorVars.nonce,
-          details: JSON.stringify(updatedDetails)
-        })
+      ajax.wpAjax('update_customer_details', {
+        details: JSON.stringify(updatedDetails)
       })
         .then(response => {
-          if (!response.ok) {
-            throw new Error(`Network response error: ${response.status}`);
-          }
-          return response.json();
+          this.log('Customer details updated successfully', response);
+
+          // Update stored customer details
+          this._customerDetails = response.details || updatedDetails;
+
+          // Important: Always include estimate_id in the request, even if it's "0"
+          // Convert estimateId to string to ensure consistent handling
+          const estimateIdStr = String(estimateId);
+
+          this.log('Storing estimate with ID:', estimateIdStr);
+
+          // Now update the estimate with the new details
+          return ajax.wpAjax('store_single_estimate', {
+            estimate_id: estimateIdStr, // Use string version
+            customer_name: updatedDetails.name || 'Customer',
+            customer_email: updatedDetails.email,
+            customer_phone: updatedDetails.phone || '',
+            customer_postcode: updatedDetails.postcode || '',
+            notes: ''
+          });
         })
         .then(response => {
-          if (response.success) {
-            this.log('Customer details updated successfully', response.data);
-
-            // Update stored customer details
-            this._customerDetails = response.data.details || updatedDetails;
-
-            // Important: Always include estimate_id in the request, even if it's "0"
-            // Convert estimateId to string to ensure consistent handling
-            const estimateIdStr = String(estimateId);
-
-            this.log('Storing estimate with ID:', estimateIdStr);
-
-            // Now update the estimate with the new details
-            return fetch(productEstimatorVars.ajax_url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-              },
-              body: new URLSearchParams({
-                action: 'store_single_estimate',
-                nonce: productEstimatorVars.nonce,
-                estimate_id: estimateIdStr, // Use string version
-                customer_name: updatedDetails.name || 'Customer',
-                customer_email: updatedDetails.email,
-                customer_phone: updatedDetails.phone || '',
-                customer_postcode: updatedDetails.postcode || '',
-                notes: ''
-              })
-            })
-              .then(response => {
-                if (!response.ok) {
-                  throw new Error(`Network response error: ${response.status}`);
-                }
-                return response.json();
-              })
-              .then(response => {
-                this.log('Estimate stored with updated email response:', response);
-                if (response.success) {
-                  // Return the updated details so they can be used by the caller
-                  resolve(this._customerDetails);
-                } else {
-                  throw new Error(response.data?.message || 'Error storing estimate with updated email');
-                }
-              });
-          } else {
-            throw new Error(response.data?.message || 'Error updating customer details');
-          }
+          this.log('Estimate stored with updated email response:', response);
+          // Return the updated details so they can be used by the caller
+          resolve(this._customerDetails);
         })
         .catch(error => {
           this.log('Error in updateCustomerEmail:', error);
@@ -926,8 +778,8 @@ class PrintEstimate {
   }
 
   /**
-   * Add this method to the PrintEstimate class in PrintEstimate.js
-   * This shows a confirmation dialog after email is sent
+   * Show a confirmation dialog after email is sent
+   * @param {string} email - The email address
    */
   showEmailSentConfirmation(email) {
     // Use the confirmation dialog if available
@@ -950,12 +802,12 @@ class PrintEstimate {
   }
 
   /**
-   * Log debug messages
+   * Log debug messages using the utility function
    * @param {...any} args - Arguments to log
    */
   log(...args) {
     if (this.config.debug) {
-      console.log('[PrintEstimate]', ...args);
+      log('PrintEstimate', ...args);
     }
   }
 }

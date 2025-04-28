@@ -313,27 +313,40 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @since    1.1.0
      * @access   public
      */
-    public function enqueue_scripts() {
-        wp_enqueue_script(
-            $this->plugin_name . '-general-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/modules/general-settings.js',
-            array('jquery', $this->plugin_name . '-settings'),
-            $this->version,
-            true
-        );
+    // Add this to your class-general-settings-module.php file in the enqueue_scripts method
 
-        // Add localization for this module's specific needs
-        wp_localize_script(
-            $this->plugin_name . '-general-settings',
-            'generalSettingsData',
-            array(
+    public function enqueue_scripts() {
+        // Get global script handler
+        global $product_estimator_script_handler;
+
+        if ($product_estimator_script_handler) {
+            // Properly register general settings data
+            $generalSettingsData = array(
                 'tab_id' => $this->tab_id,
+                'nonce' => wp_create_nonce('product_estimator_general_settings_nonce'),
                 'i18n' => array(
                     'validationErrorMarkup' => __('Markup percentage must be between 0 and 100', 'product-estimator'),
-                    'validationErrorExpiry' => __('Validity must be between 1 and 365 days', 'product-estimator')
+                    'validationErrorExpiry' => __('Expiry days must be between 1 and 365', 'product-estimator')
                 )
-            )
-        );
+            );
+
+            // Add data using the script handler
+            $product_estimator_script_handler->add_script_data('generalSettingsData', $generalSettingsData);
+        } else {
+            // Fallback: Add data directly using wp_localize_script
+            wp_localize_script(
+                $this->plugin_name . '-admin',
+                'generalSettingsData',
+                array(
+                    'tab_id' => $this->tab_id,
+                    'nonce' => wp_create_nonce('product_estimator_general_settings_nonce'),
+                    'i18n' => array(
+                        'validationErrorMarkup' => __('Markup percentage must be between 0 and 100', 'product-estimator'),
+                        'validationErrorExpiry' => __('Expiry days must be between 1 and 365', 'product-estimator')
+                    )
+                )
+            );
+        }
     }
 
     /**

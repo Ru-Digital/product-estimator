@@ -233,32 +233,15 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
     }
 
     /**
-     * Enqueue admin styles and scripts
+     * Enqueue module-specific scripts.
      *
-     * @since    1.0.5
+     * @since    1.1.0
      * @access   public
      */
     public function enqueue_scripts() {
-        // Enqueue admin styles
-        wp_enqueue_style(
-            'product-estimator-similar-products-admin',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/similar-products-settings.css',
-            array(),
-            $this->version
-        );
-
-        // Enqueue admin scripts
-        wp_enqueue_script(
-            'product-estimator-similar-products-admin',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/modules/similar-products-settings.js',
-            array('jquery'),
-            $this->version,
-            true
-        );
-
-        // Localize script with translation strings
+        // Localize script with module data
         wp_localize_script(
-            'product-estimator-similar-products-admin',
+            $this->plugin_name . '-admin',
             'similarProductsL10n',
             array(
                 'nonce' => wp_create_nonce('product_estimator_similar_products_nonce'),

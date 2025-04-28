@@ -156,7 +156,8 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @access   public
      */
     public function enqueue_styles() {
-        // Implement in child classes if needed
+        // Base implementation - child classes should override for specific styles
+        // The main admin stylesheet is already enqueued by ScriptHandler
     }
 
     /**
@@ -166,7 +167,16 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @access   public
      */
     public function enqueue_scripts() {
-        // Implement in child classes if needed
+        // Base implementation - no need to enqueue module scripts as they're bundled in admin.bundle.js
+        // Individual modules can still override this method if they need specific scripts
+
+        // If a module needs to add localized data, it can be done here:
+        // Example:
+        // wp_localize_script(
+        //     $this->plugin_name . '-admin', // Target the main admin bundle
+        //     'moduleData_' . $this->tab_id, // Create a unique global variable
+        //     $moduleData
+        // );
     }
 
     /**
@@ -584,6 +594,35 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
         if (isset($args['description'])) {
             printf('<p class="description">%s</p>', esc_html($args['description']));
+        }
+    }
+    /**
+     * Add script data with fallback for when the global script handler is not available
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    string    $context    Script data context (name of the JS global variable)
+     * @param    mixed     $data       Data to add to the script
+     */
+    protected function add_script_data($context, $data) {
+        global $product_estimator_script_handler;
+
+        // Check if script handler is available
+        if (isset($product_estimator_script_handler) && method_exists($product_estimator_script_handler, 'add_script_data')) {
+            // Use the script handler to add data
+            $product_estimator_script_handler->add_script_data($context, $data);
+        } else {
+            // Fallback: Localize script directly if script handler is not available
+            wp_localize_script(
+                $this->plugin_name . '-admin',
+                $context,
+                $data
+            );
+
+            // Log warning in debug mode
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Warning: Script handler not available, falling back to direct script localization for: ' . $context);
+            }
         }
     }
 }

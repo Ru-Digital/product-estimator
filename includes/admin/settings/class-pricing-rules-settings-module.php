@@ -294,21 +294,13 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
      * @access   public
      */
     public function enqueue_scripts() {
-        // Enqueue Select2 for multiple select functionality
+        // Enqueue Select2 for multiple select functionality if needed (external library)
         wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), '4.1.0-rc.0', true);
         wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0-rc.0');
 
-        wp_enqueue_script(
-            $this->plugin_name . '-pricing-rules-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/modules/pricing-rules-settings.js',
-            array('jquery', 'select2', $this->plugin_name . '-settings'),
-            $this->version,
-            true
-        );
-
-        // Localize script with all required parameters
+        // Localize script with module data
         wp_localize_script(
-            $this->plugin_name . '-pricing-rules-settings',
+            $this->plugin_name . '-admin',
             'pricingRulesSettings',
             array(
                 'ajax_url' => admin_url('admin-ajax.php'),

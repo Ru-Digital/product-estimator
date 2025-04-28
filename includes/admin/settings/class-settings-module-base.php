@@ -921,15 +921,20 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         // Get the raw value
         $value = isset($options[$id]) ? $options[$id] : '';
         // Ensure apostrophes and quotes are decoded properly
-        $value = html_entity_decode($value, ENT_QUOTES);
+        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
+
+        if (strpos($value, '&amp;lt;') !== false || strpos($value, '&amp;gt;') !== false) {
+            $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
+        }
 
         if (empty($value) && isset($args['default'])) {
             $value = $args['default'];
         }
 
-        // Output a hidden field with the raw HTML value for JavaScript to use
-        echo '<input type="hidden" id="' . esc_attr($id) . '_raw" value="' . esc_attr($value) . '" />';
+        $encoded_value = esc_attr($value);
 
+
+        // Output a hidden field with the raw HTML value for JavaScript to use
         // Use WordPress rich text editor
         $editor_id = $id;
         $editor_settings = array(
@@ -939,15 +944,28 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             'teeny'         => false,
             'wpautop'       => false,
             'tinymce'       => array(
+                'toolbar1'        => 'bold,italic,underline,bullist,numlist,link,unlink',
+                'toolbar2'        => '',
+                'plugins'         => 'lists,paste,wordpress,wplink',
+
                 'forced_root_block'  => '',
                 'entity_encoding'    => 'raw',
                 'verify_html'        => false,
-            ),
+                'cleanup'            => false,
+                'keep_styles'        => true,
+                ),
             'quicktags'     => true,
         );
 
+        $editor_settings = array(
+            'textarea_name' => "product_estimator_settings[{$id}]",
+            'media_buttons' => false,
+            'textarea_rows' => 10,
+            'teeny'         => false, // Set to false to get more formatting options
+        );
+
         // Output the editor
-        echo '<div class="wp-editor-wrapper">';
+        echo '<div class="wp-editor-wrapper" data-original-content="' . $encoded_value . '">';
         wp_editor($value, $editor_id, $editor_settings);
         echo '</div>';
 
@@ -957,30 +975,6 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         }
 
         // Add script to ensure proper HTML initialization
-        echo '<script type="text/javascript">
-jQuery(document).ready(function($) {
-    // Initialize TinyMCE with proper HTML
-    var editorId = "' . $editor_id . '";
-    var checkEditor = setInterval(function() {
-        if (typeof tinyMCE !== "undefined" && tinyMCE.get(editorId)) {
-            clearInterval(checkEditor);
-
-            // Get raw HTML content and properly escape for JavaScript
-            var rawContent = ' . json_encode($value) . ';
-
-            // Set content directly
-            tinyMCE.get(editorId).setContent(rawContent);
-
-            // Prevent automatic cleanup
-            tinyMCE.get(editorId).settings.verify_html = false;
-            tinyMCE.get(editorId).settings.cleanup = false;
-            tinyMCE.get(editorId).settings.entity_encoding = "raw";
-            tinyMCE.get(editorId).settings.forced_root_block = "";
-
-        }
-    }, 200);
-});
-</script>';
     }
 
     /**

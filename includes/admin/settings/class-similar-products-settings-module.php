@@ -48,7 +48,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
      * @access   protected
      */
     protected function set_tab_details() {
-        $this->tab_id = 'similar-products';
+        $this->tab_id = 'similar_products';
         $this->tab_title = __('Similar Products', 'product-estimator');
         $this->section_id = 'similar_products_settings';
         $this->section_title = __('Similar Products Settings', 'product-estimator');
@@ -242,7 +242,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
         // Localize script with module data
         wp_localize_script(
             $this->plugin_name . '-admin',
-            'similarProductsL10n',
+            'similarProducts',
             array(
                 'nonce' => wp_create_nonce('product_estimator_similar_products_nonce'),
                 'loading_attributes' => __('Loading attributes...', 'product-estimator'),
@@ -267,7 +267,12 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
      * @access   public
      */
     public function enqueue_styles() {
-        // Styles are enqueued in enqueue_scripts above
+        wp_enqueue_style(
+            $this->plugin_name . '-similar-products',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/similar-products-settings.css',
+            array($this->plugin_name . '-settings'),
+            $this->version
+        );
     }
 
     /**
@@ -747,14 +752,14 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
      * @since    1.0.5
      */
     public function get_similar_products_for_display($product_id, $limit = 5) {
-        // Get similar products based on rules or categories
-        $similar_product_ids = $this->get_similar_product_ids($product_id, $limit * 2); // Get extra for filtering
+        // Get similar products based on attributes
+        $similar_product_ids = $this->find_similar_products($product_id);
 
         if (empty($similar_product_ids)) {
-            return [];
+            return array();
         }
 
-        $similar_products = [];
+        $similar_products = array();
         $count = 0;
 
         foreach ($similar_product_ids as $similar_id) {
@@ -763,23 +768,17 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
                 continue;
             }
 
-            // FIXED: Check if estimator is enabled for this product
-            if (!\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($similar_id)) {
-                // Product doesn't have estimator enabled, skip it
-                continue;
-            }
-
             $product = wc_get_product($similar_id);
             if (!$product) {
                 continue;
             }
 
-            $similar_products[] = [
+            $similar_products[] = array(
                 'id' => $similar_id,
                 'name' => $product->get_name(),
                 'price' => $product->get_price(),
                 'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
-            ];
+            );
 
             $count++;
             if ($count >= $limit) {
@@ -787,111 +786,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
             }
         }
 
-        // FIXED: If we don't have enough products, try to look for variable products with enabled variations
-        if (count($similar_products) < $limit) {
-            foreach ($similar_product_ids as $similar_id) {
-                // Skip products we've already added
-                if (in_array($similar_id, array_column($similar_products, 'id')) || $similar_id == $product_id) {
-                    continue;
-                }
-
-                $product = wc_get_product($similar_id);
-                if (!$product || !$product->is_type('variable')) {
-                    continue;
-                }
-
-                // Get available variations
-                $variations = $product->get_available_variations();
-
-                // Check if any variation has estimator enabled
-                foreach ($variations as $variation) {
-                    if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation['variation_id'])) {
-                        // Get variation product
-                        $variation_product = wc_get_product($variation['variation_id']);
-                        if ($variation_product) {
-                            // Create variation name with attributes
-                            $variation_name = $product->get_name() . ' - ' . wc_get_formatted_variation($variation['attributes'], true);
-
-                            $similar_products[] = [
-                                'id' => $variation['variation_id'],
-                                'name' => $variation_name,
-                                'price' => $variation_product->get_price(),
-                                'image' => wp_get_attachment_image_url($variation_product->get_image_id(), 'thumbnail') ?:
-                                    wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
-                            ];
-
-                            $count++;
-                            if ($count >= $limit) {
-                                break 2; // Break both loops once we have enough products
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         return $similar_products;
-    }
-
-    /**
-     * Get similar product IDs based on rules or categories
-     *
-     * @param int $product_id The product ID
-     * @param int $limit Maximum number of similar products to return
-     * @return array Array of product IDs
-     */
-    private function get_similar_product_ids($product_id, $limit = 10) {
-        // Get product categories
-        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
-        if (empty($product_categories) || is_wp_error($product_categories)) {
-            return [];
-        }
-
-        // Query products from the same categories
-        $args = [
-            'post_type' => 'product',
-            'post_status' => 'publish',
-            'posts_per_page' => $limit,
-            'fields' => 'ids',
-            'post__not_in' => [$product_id], // Exclude current product
-            'tax_query' => [
-                [
-                    'taxonomy' => 'product_cat',
-                    'field' => 'term_id',
-                    'terms' => $product_categories,
-                    'operator' => 'IN',
-                ],
-            ],
-        ];
-
-        // Query for similar products
-        $similar_products = get_posts($args);
-
-        return $similar_products;
-    }
-
-    /**
-     * Get rules that apply to specific product categories
-     *
-     * @param array $product_categories Array of product category IDs
-     * @return array Matching rules
-     */
-    private function get_rules_for_product_categories($product_categories) {
-        $rules = get_option($this->option_name, []);
-        $matching_rules = [];
-
-        foreach ($rules as $rule) {
-            // Check if any of the product categories match the rule's source categories
-            if (!empty($rule['source_categories']) && is_array($rule['source_categories'])) {
-                $matching_categories = array_intersect($product_categories, $rule['source_categories']);
-
-                if (!empty($matching_categories)) {
-                    $matching_rules[] = $rule;
-                }
-            }
-        }
-
-        return $matching_rules;
     }
 }
 

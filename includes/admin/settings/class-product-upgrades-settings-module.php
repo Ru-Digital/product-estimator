@@ -169,7 +169,7 @@ class ProductUpgradesSettingsModule extends SettingsModuleBase implements Settin
     public function enqueue_styles() {
         wp_enqueue_style(
             $this->plugin_name . '-product-upgrades',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/product-upgrades.css',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/product-upgrades-settings.css',
             array($this->plugin_name . '-settings'),
             $this->version
         );

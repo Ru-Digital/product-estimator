@@ -5,6 +5,8 @@
  */
 import { showFieldError, clearFieldError, showNotice } from '@utils';
 import { dom, ajax, validation } from '@utils';
+import { setupTinyMCEHTMLPreservation, addTinyMCEDebugButton } from '@utils/tinymce-preserver';
+
 
 class NotificationSettingsModule {
   /**
@@ -57,6 +59,22 @@ class NotificationSettingsModule {
 
     // Vertical tabs navigation
     $('.vertical-tabs-nav a').on('click', this.handleVerticalTabClick.bind(this));
+  }
+
+  setupNotificationEditors() {
+    const $ = jQuery;
+
+    // Check if we're on the notifications tab
+    if ($('#notifications').length === 0) {
+      return;
+    }
+
+    console.log('Setting up rich text editors for notifications');
+
+    setupTinyMCEHTMLPreservation(
+      ['pdf_footer_text', 'pdf_footer_contact_details_content'],
+      '#general'
+    );
   }
 
   /**
@@ -330,6 +348,8 @@ class NotificationSettingsModule {
     if (tabId === notificationSettings.tab_id) {
       this.toggleNotificationFields();
       this.setupVerticalTabs();
+      this.setupNotificationEditors();
+
     }
   }
 

@@ -51,7 +51,7 @@ class ProductEstimatorSettings {
       i18n: {}
     };
 
-    window.similarProductsL10n = window.similarProductsL10n || {
+    window.similarProducts = window.similarProducts || {
       tab_id: 'similar_products',
       i18n: {}
     };

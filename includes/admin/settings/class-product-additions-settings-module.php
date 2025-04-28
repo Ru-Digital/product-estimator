@@ -164,7 +164,7 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase implements Setti
     public function enqueue_styles() {
         wp_enqueue_style(
             $this->plugin_name . '-product-additions',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/product-additions.css',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/product-additions-settings.css',
             array($this->plugin_name . '-settings'),
             $this->version
         );

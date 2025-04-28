@@ -124,6 +124,8 @@ class ProductEstimatorSettings {
     const $form = $(e.target);
     const tabId = $form.closest('.tab-content').attr('id');
     const formData = $form.serialize();
+    console.log('Serialized form data:', formData);
+
 
     // Show loading state
     this.showFormLoading($form);

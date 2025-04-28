@@ -1,18 +1,24 @@
 /**
- * General Settings JavaScript
+ * General Settings Module JavaScript
  *
  * Handles functionality specific to the general settings tab.
+ *
+ * FIXED VERSION: Adds proper method bindings and context preservation
  */
-import { showFieldError, clearFieldError, showNotice, log } from '@utils';
-import { ajax } from '@utils';
-import { dom } from '@utils';
-import { validation } from '@utils';
-
 class GeneralSettingsModule {
   /**
    * Initialize the module
    */
   constructor() {
+    // Bind methods to ensure 'this' context is preserved
+    this.validateMarkup = this.validateMarkup.bind(this);
+    this.validateExpiryDays = this.validateExpiryDays.bind(this);
+    this.showFieldError = this.showFieldError.bind(this);
+    this.clearFieldError = this.clearFieldError.bind(this);
+    this.handleTabChanged = this.handleTabChanged.bind(this);
+    this.saveEditorContent = this.saveEditorContent.bind(this);
+    this.validateAllFields = this.validateAllFields.bind(this);
+
     // Wait for document ready
     jQuery(document).ready(() => this.init());
   }
@@ -26,7 +32,7 @@ class GeneralSettingsModule {
     this.setupValidation();
     this.setupWpEditors();
 
-    log('GeneralSettingsModule', 'Initialized');
+    console.log('GeneralSettingsModule: Initialized');
   }
 
   /**
@@ -36,13 +42,17 @@ class GeneralSettingsModule {
     const $ = jQuery;
 
     // Listen for tab changes
-    $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
+    $(document).on('product_estimator_tab_changed', this.handleTabChanged);
     $('.file-upload-button').on('click', this.handleFileUpload.bind(this));
     $('.file-remove-button').on('click', this.handleFileRemove.bind(this));
   }
 
   /**
-   * Set up WordPress Rich Text Editors
+   * Set up WordPress Rich Text Editors with fallback for missing plugins
+   * This version removes dependence on the table plugin that is missing
+   */
+  /**
+   * Set up WordPress Rich Text Editors without the table plugin
    */
   setupWpEditors() {
     const $ = jQuery;
@@ -52,20 +62,59 @@ class GeneralSettingsModule {
       return;
     }
 
-    // Initialize TinyMCE if not already initialized
-    if (typeof tinyMCE !== 'undefined' &&
-      typeof tinyMCE.editors !== 'undefined' &&
-      tinyMCE.editors.length === 0) {
+    // If TinyMCE is available, adjust its configuration
+    if (typeof tinyMCE !== 'undefined') {
+      console.log('TinyMCE is available, adjusting configuration to remove table plugin');
 
-      // These editors should have already been initialized by wp_editor(),
-      // but we can trigger a refresh if needed
-      if (typeof switchEditors !== 'undefined') {
-        ['pdf_footer_text', 'pdf_footer_contact_details_content'].forEach(function(editorId) {
-          if ($('#' + editorId).length > 0 && typeof tinyMCE.get(editorId) === 'undefined') {
-            switchEditors.go(editorId, 'tmce');
+      // Handle existing editors
+      if (typeof tinyMCEPreInit !== 'undefined' && tinyMCEPreInit.mceInit) {
+        // Loop through all editor configurations
+        Object.keys(tinyMCEPreInit.mceInit).forEach(editorId => {
+          // Skip if the editor is not related to our forms
+          if (editorId !== 'pdf_footer_text' && editorId !== 'pdf_footer_contact_details_content') {
+            return;
+          }
+
+          // Remove table plugin from the plugins list
+          if (tinyMCEPreInit.mceInit[editorId].plugins) {
+            tinyMCEPreInit.mceInit[editorId].plugins =
+              tinyMCEPreInit.mceInit[editorId].plugins
+                .replace(/,?table,?/g, ',')  // Remove table plugin
+                .replace(/,,/g, ',')         // Fix double commas
+                .replace(/^,|,$/g, '');      // Trim commas at start/end
+          }
+
+          // Remove table-related buttons from toolbar
+          if (tinyMCEPreInit.mceInit[editorId].toolbar1) {
+            tinyMCEPreInit.mceInit[editorId].toolbar1 =
+              tinyMCEPreInit.mceInit[editorId].toolbar1
+                .replace(/,?table,?/g, '')   // Remove table button
+                .replace(/,,/g, ',')         // Fix double commas
+                .replace(/^,|,$/g, '');      // Trim commas at start/end
           }
         });
       }
+
+      // Patch the PluginManager to prevent errors related to the missing table plugin
+      if (tinyMCE.PluginManager && !tinyMCE.PluginManager.get('table')) {
+        // Register a dummy table plugin to prevent errors when the editor tries to use it
+        tinyMCE.PluginManager.add('table', function(editor) {
+          // Empty plugin implementation that does nothing
+          console.log('Using dummy table plugin for editor:', editor.id);
+        });
+
+        console.log('Added dummy table plugin to prevent errors');
+      }
+
+      // Initialize editors if they exist in the DOM but aren't initialized yet
+      ['pdf_footer_text', 'pdf_footer_contact_details_content'].forEach(editorId => {
+        if ($('#' + editorId).length > 0 && tinyMCE.get(editorId) === null) {
+          if (typeof switchEditors !== 'undefined') {
+            console.log('Initializing editor:', editorId);
+            switchEditors.go(editorId, 'tmce');
+          }
+        }
+      });
     }
   }
 
@@ -100,7 +149,7 @@ class GeneralSettingsModule {
     });
 
     // When a file is selected, run a callback
-    this.mediaFrame.on('select', function() {
+    this.mediaFrame.on('select', () => {
       const attachment = this.mediaFrame.state().get('selection').first().toJSON();
 
       // Set the attachment ID in the hidden input
@@ -112,7 +161,7 @@ class GeneralSettingsModule {
 
       // Show the remove button
       button.siblings('.file-remove-button').removeClass('hidden');
-    }.bind(this));
+    });
 
     // Open the modal
     this.mediaFrame.open();
@@ -146,10 +195,10 @@ class GeneralSettingsModule {
     const $ = jQuery;
 
     // Validate markup percentage
-    $('#default_markup').on('change input', this.validateMarkup.bind(this));
+    $('#default_markup').on('change input', this.validateMarkup);
 
     // Validate expiry days
-    $('#estimate_expiry_days').on('change input', this.validateExpiryDays.bind(this));
+    $('#estimate_expiry_days').on('change input', this.validateExpiryDays);
   }
 
   /**
@@ -164,12 +213,12 @@ class GeneralSettingsModule {
     const max = parseInt($input.attr('max') || 100);
 
     if (isNaN(value) || value < min || value > max) {
-      // Use the imported utility method instead of a local method
-      showFieldError($input, generalSettingsData.i18n.validationErrorMarkup || `Value must be between ${min} and ${max}`);
+      // Use the showFieldError method with proper binding
+      this.showFieldError($input, generalSettingsData.i18n.validationErrorMarkup || `Value must be between ${min} and ${max}`);
       return false;
     } else {
-      // Use the imported utility method instead of a local method
-      clearFieldError($input);
+      // Use the clearFieldError method with proper binding
+      this.clearFieldError($input);
       return true;
     }
   }
@@ -187,17 +236,17 @@ class GeneralSettingsModule {
 
     if (isNaN(value) || value < min || value > max) {
       // Use the imported utility method
-      showFieldError($input, generalSettingsData.i18n.validationErrorExpiry || `Value must be between ${min} and ${max}`);
+      this.showFieldError($input, generalSettingsData.i18n.validationErrorExpiry || `Value must be between ${min} and ${max}`);
       return false;
     } else {
       // Use the imported utility method
-      clearFieldError($input);
+      this.clearFieldError($input);
       return true;
     }
   }
 
   /**
-   * Show field error message - now uses imported utility
+   * Show field error message
    * @param {jQuery} $field The field element
    * @param {string} message Error message
    */
@@ -206,14 +255,26 @@ class GeneralSettingsModule {
     if (typeof ProductEstimatorSettings !== 'undefined' &&
       typeof ProductEstimatorSettings.showFieldError === 'function') {
       ProductEstimatorSettings.showFieldError($field, message);
-    } else {
+    } else if (typeof validation !== 'undefined' && typeof validation.showFieldError === 'function') {
       // Otherwise use the imported utility function directly
-      showFieldError($field, message);
+      validation.showFieldError($field, message);
+    } else {
+      // Fallback implementation
+      $field.addClass('error');
+
+      // Clear any existing error first
+      this.clearFieldError($field);
+
+      // Create error element
+      const $error = jQuery(`<span class="field-error">${message}</span>`);
+
+      // Add it after the field
+      $field.after($error);
     }
   }
 
   /**
-   * Clear field error message - now uses imported utility
+   * Clear field error message
    * @param {jQuery} $field The field element
    */
   clearFieldError($field) {
@@ -221,9 +282,13 @@ class GeneralSettingsModule {
     if (typeof ProductEstimatorSettings !== 'undefined' &&
       typeof ProductEstimatorSettings.clearFieldError === 'function') {
       ProductEstimatorSettings.clearFieldError($field);
-    } else {
+    } else if (typeof validation !== 'undefined' && typeof validation.clearFieldError === 'function') {
       // Otherwise use the imported utility function directly
-      clearFieldError($field);
+      validation.clearFieldError($field);
+    } else {
+      // Fallback implementation
+      $field.removeClass('error');
+      $field.next('.field-error').remove();
     }
   }
 
@@ -234,10 +299,10 @@ class GeneralSettingsModule {
    */
   handleTabChanged(e, tabId) {
     // If our tab becomes active, refresh any dynamic content
-    if (tabId === generalSettingsData.tab_id) {
+    if (tabId === 'general') {
       // Make sure editors are refreshed when switching to this tab
       this.setupWpEditors();
-      log('GeneralSettingsModule', 'Tab changed to General Settings, refreshing editors');
+      console.log('GeneralSettingsModule: Tab changed to General Settings, refreshing editors');
     }
   }
 
@@ -287,33 +352,39 @@ class GeneralSettingsModule {
   }
 
   /**
-   * Display notice message using utility
-   * @param {string} message The message to display
-   * @param {string} type The message type ('success' or 'error')
+   * Display notice message
+   * @param {string} message The message to show
+   * @param {string} type Notice type ('success' or 'error')
    */
   showNotice(message, type = 'success') {
-    // Use the imported utility function
-    showNotice(message, type);
+    // Use the global utility if available
+    if (typeof ProductEstimatorSettings !== 'undefined' &&
+      typeof ProductEstimatorSettings.showNotice === 'function') {
+      ProductEstimatorSettings.showNotice(message, type);
+    } else if (typeof validation !== 'undefined' &&
+      typeof validation.showNotice === 'function') {
+      // Use the imported utility function
+      validation.showNotice(message, type);
+    } else {
+      // Basic fallback implementation
+      const $ = jQuery;
+      const $notice = $(`<div class="notice notice-${type} is-dismissible"><p>${message}</p></div>`);
+
+      // Find a good place to show the notice
+      $('.wrap h1').after($notice);
+
+      // Auto-dismiss after 5 seconds
+      setTimeout(() => {
+        $notice.fadeOut(500, () => $notice.remove());
+      }, 5000);
+    }
   }
 }
 
 // Initialize when document is ready
 jQuery(document).ready(function() {
-  const module = new GeneralSettingsModule();
-
-  // Patch the form submission to ensure editor content is saved
-  const originalSubmit = jQuery('form.product-estimator-form').submit;
-  jQuery('form.product-estimator-form').submit(function(e) {
-    // Save editor content before submitting
-    if (typeof GeneralSettingsModule !== 'undefined') {
-      module.saveEditorContent();
-    }
-    // Call original handler
-    return originalSubmit.apply(this, arguments);
-  });
-
-  // Make the module available globally
-  window.GeneralSettingsModule = module;
+  // Make module available globally
+  window.GeneralSettingsModule = new GeneralSettingsModule();
 });
 
 export default GeneralSettingsModule;

@@ -310,6 +310,7 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @param    array    $input    Settings to validate
      * @return   array    Validated settings
      */
+    // In GeneralSettingsModule::validate_settings()
     public function validate_settings($input) {
         $valid = [];
 
@@ -340,6 +341,13 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
                 $valid['estimate_expiry_days'] = 30; // Default value
             } else {
                 $valid['estimate_expiry_days'] = $days;
+            }
+        }
+
+        // IMPORTANT: Pass through all other settings that we didn't explicitly validate
+        foreach ($input as $key => $value) {
+            if (!isset($valid[$key])) {
+                $valid[$key] = $value;
             }
         }
 

@@ -223,6 +223,9 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
         parse_str($_POST['form_data'], $form_data);
 
+        error_log('Received form data: ' . print_r($form_data, true));
+
+
         // Process the settings specific to this module
         $result = $this->process_form_data($form_data);
 
@@ -232,18 +235,38 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         }
 
         // Update options
+// Improve the settings update logic in handle_ajax_save()
         if (isset($form_data['product_estimator_settings'])) {
-            // Get existing settings
-            $settings = get_option('product_estimator_settings', array());
+            $current_settings = get_option('product_estimator_settings', array());
 
-            // Validate module-specific settings
+            // Debug logging
+            error_log('Current settings before update: ' . print_r($current_settings, true));
+
+            // Get the validated form data
             $validated_settings = $this->validate_settings($form_data['product_estimator_settings']);
 
-            // Merge with existing settings
-            $settings = array_merge($settings, $validated_settings);
+            // Debug logging
+            error_log('Validated settings: ' . print_r($validated_settings, true));
 
-            // Save updated settings
-            update_option('product_estimator_settings', $settings);
+            // Merge with existing settings - this is crucial for preserving settings
+            $merged_settings = array_merge($current_settings, $validated_settings);
+
+            // Debug logging
+            error_log('Merged settings: ' . print_r($merged_settings, true));
+
+            // Update the option
+            $update_result = update_option('product_estimator_settings', $merged_settings);
+
+            // Debug logging
+            error_log('Update option result: ' . ($update_result ? 'true' : 'false'));
+
+            if (!$update_result) {
+                error_log('Failed to update settings, checking if settings are already the same');
+                // Check if settings are already the same (WordPress won't update if unchanged)
+                $current_after = get_option('product_estimator_settings', array());
+                $is_same = ($current_after == $merged_settings);
+                error_log('Settings are same as before: ' . ($is_same ? 'true' : 'false'));
+            }
         }
 
         // Allow modules to perform additional actions after saving
@@ -306,7 +329,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
                 // HTML content fields
                 case $this->is_html_content_field($key):
-                    $valid[$key] = wp_kses_post($value);
+                    $valid[$key] = wp_kses_post($value);  // Allows safe HTML tags
                     break;
 
                 // Default text fields
@@ -510,7 +533,12 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @return   bool    Whether the field is an HTML content field
      */
     protected function is_html_content_field($key) {
-        return strpos($key, '_content') !== false;
+        $html_fields = [
+            'pdf_footer_text',
+            'pdf_footer_contact_details_content'
+        ];
+
+        return strpos($key, '_content') !== false || in_array($key, $html_fields);
     }
 
     /**
@@ -837,12 +865,12 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             'textarea_rows' => 10,
             'teeny'         => false, // Set to false to get more formatting options
             'tinymce'       => array(
-                'paste_as_text'  => true,  // Paste as plain text by default
-                'paste_text_sticky' => true,
+                'paste_as_text'  => false,  // Paste as plain text by default
+                'paste_text_sticky' => false,
                 'paste_text_sticky_default' => true,
                 'wpautop'        => true,  // Auto add paragraphs
-                'plugins'        => 'paste,lists,link,table',
-                'toolbar1'       => 'formatselect,bold,italic,underline,bullist,numlist,link,unlink,table',
+                'plugins'        => 'paste,hr,lists,link,charmap',
+                'toolbar1'       => 'formatselect,bold,italic,underline,bullist,numlist,link,unlink,hr,charmap',
                 'toolbar2'       => '',
             ),
             'quicktags'     => true,  // Add quicktags

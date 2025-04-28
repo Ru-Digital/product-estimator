@@ -41,14 +41,14 @@ class GeneralSettingsModule extends SettingsModuleBase {
                 'min' => 0,
                 'max' => 100
             ),
-            'estimate_expiry_days' => array(
-                'title' => __('Estimate Validity (Days)', 'product-estimator'),
-                'type' => 'number',
-                'description' => __('Number of days an estimate remains valid', 'product-estimator'),
-                'default' => 30,
-                'min' => 1,
-                'max' => 365
-            ),
+//            'estimate_expiry_days' => array(
+//                'title' => __('Estimate Validity (Days)', 'product-estimator'),
+//                'type' => 'number',
+//                'description' => __('Number of days an estimate remains valid', 'product-estimator'),
+//                'default' => 30,
+//                'min' => 1,
+//                'max' => 365
+//            ),
         );
 
         foreach ($fields as $id => $field) {
@@ -125,15 +125,15 @@ class GeneralSettingsModule extends SettingsModuleBase {
         }
 
         // Validate the estimate_expiry_days field
-        if (isset($settings['estimate_expiry_days'])) {
-            $days = intval($settings['estimate_expiry_days']);
-            if ($days < 1 || $days > 365) {
-                return new \WP_Error(
-                    'invalid_expiry',
-                    __('Estimate validity must be between 1 and 365 days', 'product-estimator')
-                );
-            }
-        }
+//        if (isset($settings['estimate_expiry_days'])) {
+//            $days = intval($settings['estimate_expiry_days']);
+//            if ($days < 1 || $days > 365) {
+//                return new \WP_Error(
+//                    'invalid_expiry',
+//                    __('Estimate validity must be between 1 and 365 days', 'product-estimator')
+//                );
+//            }
+//        }
 
         return true;
     }

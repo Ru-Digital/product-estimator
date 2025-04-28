@@ -772,22 +772,22 @@ class PDFGenerator
             null,
             [
                 'show_labels' => true,
-                'label_count' => 6,
-                'graph_height' => 8,
-                'round_to' => 1000,
-                'min_bar_width' => 5, // Added for consistency
-                'bar_color' => [0, 133, 63],
+//                'label_count' => 6,
+                'graph_height' => 4,
+//                'round_to' => 1000,
+//                'min_bar_width' => 5, // Added for consistency
+//                'bar_color' => [0, 133, 63],
                 'title_max_width_percent' => 0.5
             ]
         );
 
         // Add space after the total section - REDUCED
-        $pdf->Ln(5); // Reduced from 5 to 3
+        $pdf->Ln(8); // Reduced from 5 to 3
 
         // --- NEW BLOCK: Render centered footer text ---
         if (!empty($this->footer_text)) {
             $html = '
-        <div style="font-size:12pt; text-align:center; color:#333; margin-top:10px;">
+        <div style="font-size:9pt; text-align:center; color:#333; margin-top:10px;">
             ' . nl2br($this->footer_text) . '
         </div>
         ';

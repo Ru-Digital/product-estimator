@@ -247,17 +247,30 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             $validated_settings = $this->validate_settings($form_data['product_estimator_settings']);
 
             // Special handling for HTML fields
-            $html_fields = array('pdf_footer_text', 'pdf_footer_contact_details_content');
+            $html_fields = array(
+                'pdf_footer_text',
+                'pdf_footer_contact_details_content',
+                'notification_request_copy_content',  // Add notification email content fields
+                'notification_estimate_approved_content',
+                'notification_estimate_rejected_content'
+            );
 
             foreach ($html_fields as $field) {
                 if (isset($validated_settings[$field])) {
-                    // Store the raw HTML content (bypass WordPress sanitization)
-                    $current_settings[$field] = $validated_settings[$field];
+                    // Make sure we strip any slashes that were added during form submission
+                    $html_content = stripslashes($validated_settings[$field]);
+
+                    // Store the raw HTML content
+                    $current_settings[$field] = $html_content;
 
                     // Log for debugging
-                    error_log("Setting $field to: " . $validated_settings[$field]);
+                    // For debugging
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("Setting $field to: " . $html_content);
+                    }
                 }
             }
+
 
             // Merge all other settings
             foreach ($validated_settings as $key => $value) {
@@ -353,6 +366,8 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
                     // For HTML fields, especially the footer content
                     if (in_array($key, ['pdf_footer_text', 'pdf_footer_contact_details_content'])) {
                         // Preserve HTML exactly as submitted without any filtering
+                         $value = html_entity_decode($value, ENT_QUOTES);
+
                         $valid[$key] = $value;
                     } else {
                         // For other HTML content fields
@@ -905,6 +920,8 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
         // Get the raw value
         $value = isset($options[$id]) ? $options[$id] : '';
+        // Ensure apostrophes and quotes are decoded properly
+        $value = html_entity_decode($value, ENT_QUOTES);
 
         if (empty($value) && isset($args['default'])) {
             $value = $args['default'];
@@ -941,28 +958,29 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
         // Add script to ensure proper HTML initialization
         echo '<script type="text/javascript">
-    jQuery(document).ready(function($) {
-        // Initialize TinyMCE with proper HTML
-        var editorId = "' . $editor_id . '";
-        var checkEditor = setInterval(function() {
-            if (typeof tinyMCE !== "undefined" && tinyMCE.get(editorId)) {
-                clearInterval(checkEditor);
+jQuery(document).ready(function($) {
+    // Initialize TinyMCE with proper HTML
+    var editorId = "' . $editor_id . '";
+    var checkEditor = setInterval(function() {
+        if (typeof tinyMCE !== "undefined" && tinyMCE.get(editorId)) {
+            clearInterval(checkEditor);
 
-                // Get raw HTML content
-                var rawContent = $("#' . $id . '_raw").val();
+            // Get raw HTML content and properly escape for JavaScript
+            var rawContent = ' . json_encode($value) . ';
 
-                // Set content directly
-                tinyMCE.get(editorId).setContent(rawContent);
+            // Set content directly
+            tinyMCE.get(editorId).setContent(rawContent);
 
-                // Prevent automatic cleanup
-                tinyMCE.get(editorId).settings.verify_html = false;
-                tinyMCE.get(editorId).settings.cleanup = false;
-                tinyMCE.get(editorId).settings.entity_encoding = "raw";
-                tinyMCE.get(editorId).settings.forced_root_block = "";
-            }
-        }, 200);
-    });
-    </script>';
+            // Prevent automatic cleanup
+            tinyMCE.get(editorId).settings.verify_html = false;
+            tinyMCE.get(editorId).settings.cleanup = false;
+            tinyMCE.get(editorId).settings.entity_encoding = "raw";
+            tinyMCE.get(editorId).settings.forced_root_block = "";
+
+        }
+    }, 200);
+});
+</script>';
     }
 
     /**

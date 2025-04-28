@@ -274,6 +274,19 @@ class AdminScriptHandler {
      * @param    string    $hook_suffix    The current admin page hook suffix.
      */
     public function localize_scripts($hook_suffix) {
+        // First, ensure ajax_url is set in the main script data
+        if (!isset($this->script_data['main']['ajax_url'])) {
+            $this->script_data['main']['ajax_url'] = admin_url('admin-ajax.php');
+        }
+
+        // Also ensure it's set in the settings data
+        if (!isset($this->script_data['settings']['ajax_url'])) {
+            if (!isset($this->script_data['settings'])) {
+                $this->script_data['settings'] = array();
+            }
+            $this->script_data['settings']['ajax_url'] = admin_url('admin-ajax.php');
+        }
+
         // Localize main script data
         if (isset($this->script_data['main'])) {
             wp_localize_script(
@@ -289,6 +302,13 @@ class AdminScriptHandler {
                 $this->plugin_name . '-admin',
                 'productEstimatorSettings',
                 $this->script_data['settings']
+            );
+
+            // Add this line to define ajaxurl if it doesn't exist
+            wp_add_inline_script(
+                $this->plugin_name . '-admin',
+                'if (typeof ajaxurl === "undefined") { var ajaxurl = "' . admin_url('admin-ajax.php') . '"; }',
+                'before'
             );
         }
 

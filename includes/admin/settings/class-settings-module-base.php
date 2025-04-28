@@ -203,22 +203,22 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @access   public
      */
     public function handle_ajax_save() {
-        // Verify nonce
+        // First, verify nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_settings_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed', 'product-estimator')));
-            return;
+            exit; // Make sure to exit here
         }
 
         // Check permissions
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => __('You do not have permission to change these settings', 'product-estimator')));
-            return;
+            exit; // Make sure to exit here
         }
 
         // Parse form data
         if (!isset($_POST['form_data'])) {
             wp_send_json_error(array('message' => __('No form data received', 'product-estimator')));
-            return;
+            exit; // Make sure to exit here
         }
 
         parse_str($_POST['form_data'], $form_data);
@@ -228,7 +228,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
         if (is_wp_error($result)) {
             wp_send_json_error(array('message' => $result->get_error_message()));
-            return;
+            exit; // Make sure to exit here
         }
 
         // Update options
@@ -249,13 +249,15 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         // Allow modules to perform additional actions after saving
         $this->after_save_actions($form_data);
 
-        // Send success response
+        // Send success response and exit
         wp_send_json_success(array(
             'message' => sprintf(
                 __('%s settings saved successfully', 'product-estimator'),
                 $this->tab_title
             )
         ));
+        // wp_send_json_success already calls exit, but we'll add it for clarity
+        exit;
     }
 
     /**
@@ -294,6 +296,12 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
                 // Number fields
                 case $this->is_number_field($key):
                     $valid[$key] = $this->validate_number_field($key, $value);
+                    break;
+
+                // File upload fields
+                case $this->is_file_field($key):
+                    $args = $this->get_file_fields()[$key] ?? [];
+                    $valid[$key] = $this->validate_file_field($key, $value, $args);
                     break;
 
                 // HTML content fields
@@ -418,6 +426,82 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
     }
 
     /**
+     * Validate file upload fields
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    string    $key      Field key
+     * @param    mixed     $value    Field value (attachment ID)
+     * @param    array     $args     Field arguments
+     * @return   mixed     Validated value or empty string if invalid
+     */
+    protected function validate_file_field($key, $value, $args = []) {
+        // Check if this is a required field
+        $is_required = isset($args['required']) && $args['required'];
+
+        // If no value provided
+        if (empty($value)) {
+            if ($is_required) {
+                add_settings_error(
+                    'product_estimator_settings',
+                    'missing_required_file',
+                    sprintf(__('A file is required for "%s"', 'product-estimator'), $key)
+                );
+                return '';
+            }
+            return '';
+        }
+
+        // Ensure the attachment exists and is the correct type
+        $attachment = get_post($value);
+        if (!$attachment || $attachment->post_type !== 'attachment') {
+            add_settings_error(
+                'product_estimator_settings',
+                'invalid_attachment',
+                sprintf(__('Invalid file attachment for "%s"', 'product-estimator'), $key)
+            );
+            return '';
+        }
+
+        // If accept type is specified, verify the file type matches
+        if (!empty($args['accept'])) {
+            $file_type = get_post_mime_type($attachment);
+            $accept_types = explode(',', str_replace(' ', '', $args['accept']));
+
+            $type_matches = false;
+            foreach ($accept_types as $accept_type) {
+                // Handle application/pdf style types
+                if (strpos($accept_type, '/') !== false) {
+                    if ($file_type === $accept_type) {
+                        $type_matches = true;
+                        break;
+                    }
+                }
+                // Handle .pdf style types
+                else if (substr($accept_type, 0, 1) === '.') {
+                    $extension = strtolower(pathinfo(get_attached_file($value), PATHINFO_EXTENSION));
+                    if ('.' . $extension === strtolower($accept_type)) {
+                        $type_matches = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!$type_matches) {
+                add_settings_error(
+                    'product_estimator_settings',
+                    'invalid_file_type',
+                    sprintf(__('File type does not match accepted type(s) for "%s"', 'product-estimator'), $key)
+                );
+                return '';
+            }
+        }
+
+        // All checks passed, return the attachment ID
+        return $value;
+    }
+
+    /**
      * Check if a field is an HTML content field
      *
      * @since    1.1.0
@@ -427,6 +511,32 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      */
     protected function is_html_content_field($key) {
         return strpos($key, '_content') !== false;
+    }
+
+    /**
+     * Check if a field is a file upload field
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    string    $key    Field key
+     * @return   bool    Whether the field is a file upload field
+     */
+    protected function is_file_field($key) {
+        $file_fields = $this->get_file_fields();
+        return array_key_exists($key, $file_fields);
+    }
+
+    /**
+     * Get all file fields with their constraints for this module
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    File field keys with constraints
+     */
+    protected function get_file_fields() {
+        // Override in child classes to define file fields and their constraints
+        // Format: ['field_name' => ['required' => true, 'accept' => 'application/pdf']]
+        return [];
     }
 
     /**
@@ -597,46 +707,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         }
     }
 
-    /**
-     * Render a file upload field.
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    array    $args    Field arguments.
-     */
-    protected function render_file_field($args) {
-        $options = get_option('product_estimator_settings');
-        $id = $args['id'];
-        $file_id = isset($options[$id]) ? $options[$id] : '';
-        $file_url = '';
-        $is_required = isset($args['required']) && $args['required'];
 
-        if ($file_id) {
-            $file_url = wp_get_attachment_url($file_id);
-        }
-
-        // Hidden input to store the attachment ID
-        echo '<input type="hidden" id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']" value="' . esc_attr($file_id) . '"' . ($is_required ? ' required' : '') . ' />';
-
-        // File preview
-        echo '<div class="file-preview-wrapper">';
-        if ($file_url) {
-            echo '<p class="file-preview"><a href="' . esc_url($file_url) . '" target="_blank">' . esc_html(basename($file_url)) . '</a></p>';
-        } else if ($is_required) {
-            echo '<p class="file-required-notice">' . esc_html__('A PDF template is required', 'product-estimator') . '</p>';
-        }
-        echo '</div>';
-
-        // Upload button
-        echo '<input type="button" class="button file-upload-button" value="' . esc_attr__('Upload PDF', 'product-estimator') . '" data-field-id="' . esc_attr($id) . '" data-accept="' . esc_attr($args['accept']) . '" />';
-
-        // Remove button (only shown if a file is set)
-        echo ' <input type="button" class="button file-remove-button' . ($file_id ? '' : ' hidden') . '" value="' . esc_attr__('Remove PDF', 'product-estimator') . '" data-field-id="' . esc_attr($id) . '" />';
-
-        if (isset($args['description'])) {
-            echo '<p class="description">' . esc_html($args['description']) . ($is_required ? ' <span class="required">*</span>' : '') . '</p>';
-        }
-    }
 
     /**
      * Render a textarea field.
@@ -662,7 +733,88 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
     }
 
     /**
-     * Render a rich text editor field.
+     * Render a file upload field with improved handling.
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $args    Field arguments.
+     */
+    protected function render_file_field($args) {
+        $options = get_option('product_estimator_settings');
+        $id = $args['id'];
+        $file_id = isset($options[$id]) ? $options[$id] : '';
+        $file_url = '';
+        $is_required = isset($args['required']) && $args['required'];
+        $accept = isset($args['accept']) ? $args['accept'] : '';
+
+        if ($file_id) {
+            $file_url = wp_get_attachment_url($file_id);
+            $file_path = get_attached_file($file_id);
+            $file_exists = $file_path && file_exists($file_path);
+        } else {
+            $file_exists = false;
+        }
+
+        // Hidden input to store the attachment ID
+        echo '<input type="hidden" id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']" value="' . esc_attr($file_id) . '"' . ($is_required ? ' required' : '') . ' />';
+
+        // File preview with improved handling
+        echo '<div class="file-preview-wrapper">';
+        if ($file_url && $file_exists) {
+            // Show preview based on file type
+            if (strpos($accept, 'pdf') !== false) {
+                // For PDFs, show filename with download link
+                $filename = basename($file_url);
+                echo '<p class="file-preview pdf-preview">';
+                echo '<span class="dashicons dashicons-pdf"></span> ';
+                echo '<a href="' . esc_url($file_url) . '" target="_blank">' . esc_html($filename) . '</a>';
+                echo '</p>';
+            } else if (strpos($accept, 'image') !== false) {
+                // For images, show thumbnail
+                echo '<div class="image-preview">';
+                echo wp_get_attachment_image($file_id, 'thumbnail');
+                echo '</div>';
+            } else {
+                // For other file types, just show filename
+                $filename = basename($file_url);
+                echo '<p class="file-preview"><a href="' . esc_url($file_url) . '" target="_blank">' . esc_html($filename) . '</a></p>';
+            }
+        } else if ($is_required) {
+            // Show warning if file is required but not provided
+            echo '<p class="file-required-notice">' . esc_html__('A file is required', 'product-estimator') . '</p>';
+        }
+        echo '</div>';
+
+        // Upload button with more descriptive label
+        $button_text = $file_exists
+            ? __('Replace File', 'product-estimator')
+            : __('Upload File', 'product-estimator');
+
+        echo '<input type="button" class="button file-upload-button" value="' . esc_attr($button_text) . '" data-field-id="' . esc_attr($id) . '" data-accept="' . esc_attr($accept) . '" />';
+
+        // Remove button (only shown if a file is set)
+        if ($file_exists) {
+            echo ' <input type="button" class="button file-remove-button" value="' . esc_attr__('Remove File', 'product-estimator') . '" data-field-id="' . esc_attr($id) . '" />';
+        } else {
+            echo ' <input type="button" class="button file-remove-button hidden" value="' . esc_attr__('Remove File', 'product-estimator') . '" data-field-id="' . esc_attr($id) . '" />';
+        }
+
+        // Add more descriptive field information
+        if (isset($args['description'])) {
+            echo '<p class="description">' . esc_html($args['description']) . ($is_required ? ' <span class="required">*</span>' : '') . '</p>';
+        }
+
+        // Add accept format information if specified
+        if (!empty($accept)) {
+            echo '<p class="file-format-info">' . sprintf(
+                    esc_html__('Accepted format: %s', 'product-estimator'),
+                    '<code>' . esc_html($accept) . '</code>'
+                ) . '</p>';
+        }
+    }
+
+    /**
+     * Render a rich text editor field with improved initialization.
      *
      * @since    1.1.0
      * @access   protected
@@ -677,19 +829,47 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             $value = $args['default'];
         }
 
-        // Use WordPress rich text editor
+        // Use WordPress rich text editor with improved settings
         $editor_id = $id;
         $editor_settings = array(
             'textarea_name' => "product_estimator_settings[{$id}]",
-            'media_buttons' => false,
+            'media_buttons' => true,  // Allow media uploads
             'textarea_rows' => 10,
             'teeny'         => false, // Set to false to get more formatting options
+            'tinymce'       => array(
+                'paste_as_text'  => true,  // Paste as plain text by default
+                'paste_text_sticky' => true,
+                'paste_text_sticky_default' => true,
+                'wpautop'        => true,  // Auto add paragraphs
+                'plugins'        => 'paste,lists,link,table',
+                'toolbar1'       => 'formatselect,bold,italic,underline,bullist,numlist,link,unlink,table',
+                'toolbar2'       => '',
+            ),
+            'quicktags'     => true,  // Add quicktags
         );
-        wp_editor($value, $editor_id, $editor_settings);
 
-        if (isset($args['description'])) {
-            echo '<p class="description">' . esc_html($args['description']) . '</p>';
+        // Ensure the wpeditor function is loaded
+        if (!function_exists('wp_editor')) {
+            require_once(ABSPATH . 'wp-admin/includes/editor.php');
         }
+
+        // Output the editor with a wrapper for styling
+        echo '<div class="wp-editor-wrapper">';
+        wp_editor($value, $editor_id, $editor_settings);
+        echo '</div>';
+
+        // Add field description
+        if (isset($args['description'])) {
+            echo '<p class="description">' . wp_kses_post($args['description']) . '</p>';
+        }
+
+        // Add helpful instructions for rich text editor
+        echo '<div class="editor-instructions">';
+        echo '<p>' . esc_html__('You can use basic formatting, links, and tables in this field.', 'product-estimator') . '</p>';
+        if (strpos($id, 'footer') !== false) {
+            echo '<p>' . esc_html__('This content will appear in the footer of generated PDF documents.', 'product-estimator') . '</p>';
+        }
+        echo '</div>';
     }
 
 

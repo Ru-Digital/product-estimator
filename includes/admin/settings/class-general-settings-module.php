@@ -256,17 +256,50 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @param    array    $args    Field arguments.
      */
     public function render_field_callback($args) {
-        if ($args['type'] === 'file') {
-            $this->render_file_field($args);
-        }elseif ($args['type'] === 'select' && isset($args['options'])) {
-            $this->render_select_field($args);
-        } elseif ($args['type'] === 'textarea') {
-            $this->render_textarea_field($args);
-        } elseif ($args['type'] === 'html') {
-            $this->render_html_field($args);
-        } else {
-            $this->render_field($args);
+        // First validate that all required parameters are present
+        if (!isset($args['id']) || !isset($args['type'])) {
+            echo '<p class="error">' . esc_html__('Invalid field configuration', 'product-estimator') . '</p>';
+            return;
         }
+
+        // Handle different field types with specific renderers
+        switch ($args['type']) {
+            case 'file':
+                $this->render_file_field($args);
+                break;
+            case 'select':
+                if (isset($args['options'])) {
+                    $this->render_select_field($args);
+                } else {
+                    echo '<p class="error">' . esc_html__('Select field missing options', 'product-estimator') . '</p>';
+                }
+                break;
+            case 'textarea':
+                $this->render_textarea_field($args);
+                break;
+            case 'html':
+                $this->render_html_field($args);
+                break;
+            default:
+                $this->render_field($args);
+                break;
+        }
+    }
+
+    /**
+     * Get all file fields with their constraints for this module
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    File field keys with constraints
+     */
+    protected function get_file_fields() {
+        return [
+            'pdf_template' => [
+                'required' => true,
+                'accept' => 'application/pdf'
+            ]
+        ];
     }
 
     /**

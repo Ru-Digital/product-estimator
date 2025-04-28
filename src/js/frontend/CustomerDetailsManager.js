@@ -5,9 +5,6 @@
  * Follows the ES6 module architecture used in the project.
  */
 
-// Import utilities from the new structure
-import { ajax, dom, validation } from '@utils';
-
 class CustomerDetailsManager {
   /**
    * Initialize the CustomerDetailsManager
@@ -98,24 +95,21 @@ class CustomerDetailsManager {
       if (!emailField && hasEmail) {
         this.log('Adding email field to edit form');
 
-        // Use the dom.createElement utility to create the field group
-        const emailGroup = dom.createElement('div', {
-          className: 'form-group'
-        });
+        // Create the email field group
+        const emailGroup = document.createElement('div');
+        emailGroup.className = 'form-group';
 
         // Create the label
-        const emailLabel = dom.createElement('label', {
-          for: 'edit-customer-email',
-          textContent: 'Email Address'
-        });
+        const emailLabel = document.createElement('label');
+        emailLabel.setAttribute('for', 'edit-customer-email');
+        emailLabel.textContent = 'Email Address';
 
         // Create the input
-        emailField = dom.createElement('input', {
-          type: 'email',
-          id: 'edit-customer-email',
-          name: 'edit_customer_email',
-          value: details.email
-        });
+        emailField = document.createElement('input');
+        emailField.type = 'email';
+        emailField.id = 'edit-customer-email';
+        emailField.name = 'edit_customer_email';
+        emailField.value = details.email;
 
         // Add elements to the DOM
         emailGroup.appendChild(emailLabel);
@@ -126,7 +120,7 @@ class CustomerDetailsManager {
         if (nameField) {
           const nameGroup = nameField.closest('.form-group');
           if (nameGroup) {
-            dom.insertAfter(emailGroup, nameGroup);
+            nameGroup.parentNode.insertBefore(emailGroup, nameGroup.nextSibling);
           } else {
             // Just append if we can't find the right position
             editForm.querySelector('h4').after(emailGroup);
@@ -292,12 +286,25 @@ class CustomerDetailsManager {
           saveButton.disabled = false;
         });
     } else {
-      // Fallback to direct fetch using ajax.wpAjax utility
-      ajax.wpAjax('update_customer_details', {
-        details: JSON.stringify(updatedDetails)
+      // Fallback to direct fetch if dataService not available
+      fetch(window.productEstimatorVars?.ajax_url || '/wp-admin/admin-ajax.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          action: 'update_customer_details',
+          nonce: window.productEstimatorVars?.nonce || '',
+          details: JSON.stringify(updatedDetails)
+        })
       })
-        .then(data => {
-          this.handleSaveSuccess(data, updatedDetails);
+        .then(response => response.json())
+        .then(response => {
+          if (response.success) {
+            this.handleSaveSuccess(response.data, updatedDetails);
+          } else {
+            this.handleSaveError(new Error(response.data?.message || 'Error updating details'));
+          }
         })
         .catch(error => {
           this.handleSaveError(error);
@@ -401,10 +408,27 @@ class CustomerDetailsManager {
           this.handleDeleteError(error, confirmationContainer);
         });
     } else {
-      // Fallback to direct fetch using ajax.wpAjax utility
-      ajax.wpAjax('delete_customer_details')
-        .then(data => {
-          this.handleDeleteSuccess(data, confirmationContainer);
+      // Fallback to direct fetch
+      fetch(window.productEstimatorVars?.ajax_url || '/wp-admin/admin-ajax.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          action: 'delete_customer_details',
+          nonce: window.productEstimatorVars?.nonce || ''
+        })
+      })
+        .then(response => response.json())
+        .then(response => {
+          if (response.success) {
+            this.handleDeleteSuccess(response.data, confirmationContainer);
+          } else {
+            this.handleDeleteError(
+              new Error(response.data?.message || 'Error deleting details'),
+              confirmationContainer
+            );
+          }
         })
         .catch(error => {
           this.handleDeleteError(error, confirmationContainer);
@@ -420,8 +444,9 @@ class CustomerDetailsManager {
   handleDeleteSuccess(data, confirmationContainer) {
     // Replace the details container with the new form
     if (confirmationContainer && data.html) {
-      const tempDiv = dom.createElementFromHTML(data.html);
-      confirmationContainer.parentNode.replaceChild(tempDiv, confirmationContainer);
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = data.html;
+      confirmationContainer.parentNode.replaceChild(tempDiv.firstElementChild, confirmationContainer);
     }
 
     // Show success message
@@ -492,17 +517,13 @@ class CustomerDetailsManager {
   showMessage(type, message) {
     // Remove any existing messages
     const existingMessages = document.querySelectorAll('.modal-message');
-    existingMessages.forEach(msg => {
-      if (msg.parentNode) {
-        msg.parentNode.removeChild(msg);
-      }
-    });
+    existingMessages.forEach(msg => msg.remove());
 
-    // Create message element using dom.createElement
-    const messageEl = dom.createElement('div', {
-      className: `modal-message ${type === 'error' ? 'modal-error-message' : 'modal-success-message'}`,
-      textContent: message
-    });
+    // Create message element
+    const messageClass = type === 'error' ? 'modal-error-message' : 'modal-success-message';
+    const messageEl = document.createElement('div');
+    messageEl.className = `modal-message ${messageClass}`;
+    messageEl.textContent = message;
 
     // Add to form container
     const formContainer = document.querySelector(this.config.selectors.formContainer);
@@ -511,9 +532,7 @@ class CustomerDetailsManager {
 
       // Auto-remove after 5 seconds
       setTimeout(() => {
-        if (messageEl.parentNode) {
-          messageEl.parentNode.removeChild(messageEl);
-        }
+        messageEl.remove();
       }, 5000);
     }
   }

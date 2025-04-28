@@ -5,8 +5,6 @@
  * Coordinates between modules and manages global state.
  */
 
-// Import utilities from the new utility structure
-import { dom, ajax, log } from '@utils';
 import DataService from './DataService';
 import ModalManager from './ModalManager';
 import VariationHandler from './VariationHandler';
@@ -238,13 +236,12 @@ class EstimatorCore {
   }
 
   /**
-   * Log debug messages using the centralized utility
+   * Log debug messages
    * @param {...any} args - Arguments to log
    */
   log(...args) {
-    // Use the log utility with 'EstimatorCore' component name
     if (this.config.debug) {
-      log('EstimatorCore', ...args);
+      console.log('[EstimatorCore]', ...args);
     }
   }
 }

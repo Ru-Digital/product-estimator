@@ -4,7 +4,6 @@
  * Handles all product variation related functionality
  * for the Product Estimator plugin.
  */
-import { dom, log } from '@utils';
 
 class VariationHandler {
   /**
@@ -122,16 +121,15 @@ class VariationHandler {
       return;
     }
 
-    // Create new button using dom utility
-    const newButton = dom.createElement('button', {
-      type: 'button',
-      className: 'single_add_to_estimator_button button alt open-estimator-modal',
-      dataset: { productId: variationId },
-      textContent: 'Add to Estimate'
-    });
+    // Create new button
+    const newButton = document.createElement('button');
+    newButton.type = 'button';
+    newButton.className = 'single_add_to_estimator_button button alt open-estimator-modal';
+    newButton.dataset.productId = variationId;
+    newButton.textContent = 'Add to Estimate';
 
-    // Insert after add to cart button using dom utility
-    dom.insertAfter(newButton, addToCartButton);
+    // Insert after add to cart button
+    addToCartButton.insertAdjacentElement('afterend', newButton);
 
     this.log('Estimator button created and inserted');
   }
@@ -409,8 +407,8 @@ class VariationHandler {
     this.log(`Updating button visibility: ${show ? 'show' : 'hide'}, variation ID: ${variationId}`);
 
     if (show) {
-      // Show the button using dom.toggleVisibility utility
-      dom.toggleVisibility(button, true);
+      // Show the button
+      button.style.display = '';
 
       // Update product ID if variation ID provided
       if (variationId) {
@@ -418,8 +416,8 @@ class VariationHandler {
         button.dataset.productId = variationId;
       }
     } else {
-      // Hide the button using dom.toggleVisibility utility
-      dom.toggleVisibility(button, false);
+      // Hide the button
+      button.style.display = 'none';
       this.log('Hiding estimator button');
     }
   }
@@ -452,12 +450,12 @@ class VariationHandler {
   }
 
   /**
-   * Log debug messages using the utility function
+   * Log debug messages
    * @param {...any} args - Arguments to log
    */
   log(...args) {
     if (this.config.debug) {
-      log('VariationHandler', ...args);
+      console.log('[VariationHandler]', ...args);
     }
   }
 }

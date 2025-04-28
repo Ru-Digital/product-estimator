@@ -4,9 +4,6 @@
  * Handles the show/hide functionality for both similar products and product notes sections
  */
 
-// Import specific utilities from the new utility structure
-import { dom, log } from '@utils';
-
 class ProductDetailsToggle {
   /**
    * Initialize the toggle functionality
@@ -113,10 +110,9 @@ class ProductDetailsToggle {
       // If no container exists but there is a suggestions section, we need to create one
       if (!suggestionsContainer) {
         this.log('Creating new suggestions container');
-        // Create a container to wrap suggestions using dom utility
-        suggestionsContainer = dom.createElement('div', {
-          className: 'suggestions-container visible' // Initially visible
-        });
+        // Create a container to wrap suggestions
+        suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'suggestions-container visible'; // Initially visible
 
         // Move suggestions into the container (if not already in one)
         if (suggestionsSection.parentNode !== suggestionsContainer) {
@@ -136,16 +132,13 @@ class ProductDetailsToggle {
       let toggleButton = accordionContent.querySelector(this.config.selectors.suggestionsToggleButton);
       if (!toggleButton) {
         this.log('Adding suggestions toggle button to accordion content');
-        toggleButton = dom.createElement('button', {
-          className: 'product-suggestions-toggle expanded', // Initially expanded
-          dataset: {
-            toggleType: 'suggestions'
-          },
-          innerHTML: `
-            ${this.config.i18n.hideSuggestions}
-            <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
-          `
-        });
+        toggleButton = document.createElement('button');
+        toggleButton.className = 'product-suggestions-toggle expanded'; // Initially expanded
+        toggleButton.setAttribute('data-toggle-type', 'suggestions');
+        toggleButton.innerHTML = `
+        ${this.config.i18n.hideSuggestions}
+        <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+      `;
 
         // Insert button before the suggestions container
         accordionContent.insertBefore(toggleButton, suggestionsContainer);
@@ -211,13 +204,13 @@ class ProductDetailsToggle {
     this.prepareIncludesToggle();
     this.prepareSuggestionsToggle();
 
+
     // Then bind events to all toggle buttons
     this.bindEvents();
 
     // Re-initialize carousels after setup
     this.initializeAllCarousels();
   }
-
   /**
    * Prepare the DOM for similar products toggle
    */
@@ -252,10 +245,9 @@ class ProductDetailsToggle {
       // If no container exists but there is a similar products section, we need to create one
       if (!similarProductsContainer) {
         this.log('Creating new similar products container');
-        // Create a container using dom utility
-        similarProductsContainer = dom.createElement('div', {
-          className: 'similar-products-container visible' // Add visible class
-        });
+        // Create a container to wrap similar products
+        similarProductsContainer = document.createElement('div');
+        similarProductsContainer.className = 'similar-products-container visible'; // Add visible class
 
         // Move similar products into the container (if not already in one)
         if (similarProductsSection.parentNode !== similarProductsContainer) {
@@ -275,16 +267,17 @@ class ProductDetailsToggle {
       let toggleButton = productItem.querySelector(this.config.selectors.productToggleButton);
       if (!toggleButton) {
         this.log('Adding similar products toggle button to product item');
-        toggleButton = dom.createElement('button', {
-          className: 'product-details-toggle expanded',
-          dataset: {
-            toggleType: 'similar-products'
-          },
-          innerHTML: `
-            ${this.config.i18n.hideProducts}
-            <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
-          `
-        });
+        toggleButton = document.createElement('button');
+
+        // Mark as expanded by default and use the proper class for the arrow
+        toggleButton.className = 'product-details-toggle expanded';
+        toggleButton.setAttribute('data-toggle-type', 'similar-products');
+
+        // Use the hideProducts text (since it's expanded) and arrow-up icon
+        toggleButton.innerHTML = `
+        ${this.config.i18n.hideProducts}
+        <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+      `;
 
         // Insert button before the similar products container
         productItem.insertBefore(toggleButton, similarProductsContainer);
@@ -342,10 +335,9 @@ class ProductDetailsToggle {
       // If no container exists but there is a notes section, we need to create one
       if (!notesContainer) {
         this.log('Creating new notes container');
-        // Create a container using dom utility
-        notesContainer = dom.createElement('div', {
-          className: 'notes-container visible' // Add visible class
-        });
+        // Create a container to wrap notes
+        notesContainer = document.createElement('div');
+        notesContainer.className = 'notes-container visible'; // Add visible class
 
         // Move notes into the container (if not already in one)
         if (notesSection.parentNode !== notesContainer) {
@@ -365,16 +357,17 @@ class ProductDetailsToggle {
       let toggleButton = productItem.querySelector(this.config.selectors.notesToggleButton);
       if (!toggleButton) {
         this.log('Adding notes toggle button to product item');
-        toggleButton = dom.createElement('button', {
-          className: 'product-notes-toggle expanded',
-          dataset: {
-            toggleType: 'notes'
-          },
-          innerHTML: `
-            ${this.config.i18n.hideNotes}
-            <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
-          `
-        });
+        toggleButton = document.createElement('button');
+
+        // Mark as expanded by default and use the proper class for the arrow
+        toggleButton.className = 'product-notes-toggle expanded';
+        toggleButton.setAttribute('data-toggle-type', 'notes');
+
+        // Use the hideNotes text (since it's expanded) and arrow-up icon
+        toggleButton.innerHTML = `
+        ${this.config.i18n.hideNotes}
+        <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+      `;
 
         // Insert button before the notes container
         productItem.insertBefore(toggleButton, notesContainer);
@@ -443,6 +436,8 @@ class ProductDetailsToggle {
         this.toggleNotes(button);
       };
 
+
+
       // Add event listener
       button.addEventListener('click', button._toggleHandler);
 
@@ -501,6 +496,7 @@ class ProductDetailsToggle {
     this.log('All toggle events bound');
   }
 
+  // Add a new method to toggle suggestions visibility
   /**
    * Toggle the visibility of suggested products
    * @param {HTMLElement} toggleButton - The button that was clicked
@@ -571,13 +567,14 @@ class ProductDetailsToggle {
     }
   }
 
+
   /**
    * Toggle the visibility of similar products
    * @param {HTMLElement} toggleButton - The button that was clicked
    */
   toggleSimilarProducts(toggleButton) {
     // Find parent product item
-    const productItem = dom.closest(toggleButton, this.config.selectors.productItem);
+    const productItem = toggleButton.closest(this.config.selectors.productItem);
 
     if (!productItem) {
       this.log('Product item not found for toggle button');
@@ -602,7 +599,6 @@ class ProductDetailsToggle {
     if (isExpanded) {
       // Hide similar products
       similarProductsContainer.classList.remove('visible');
-      // Using dom.toggleVisibility would be appropriate here, but we need to explicitly set display: none
       similarProductsContainer.style.display = 'none';
       toggleButton.classList.remove('expanded');
 
@@ -639,8 +635,8 @@ class ProductDetailsToggle {
    * @param {HTMLElement} toggleButton - The button that was clicked
    */
   toggleNotes(toggleButton) {
-    // Find parent product item using the dom utility
-    const productItem = dom.closest(toggleButton, this.config.selectors.productItem);
+    // Find parent product item
+    const productItem = toggleButton.closest(this.config.selectors.productItem);
 
     if (!productItem) {
       this.log('Product item not found for notes toggle button');
@@ -756,10 +752,9 @@ class ProductDetailsToggle {
       // If no container exists but there is an includes section, we need to create one
       if (!includesContainer) {
         this.log('Creating new includes container');
-        // Create a container using dom utility
-        includesContainer = dom.createElement('div', {
-          className: 'includes-container visible' // Add visible class
-        });
+        // Create a container to wrap includes
+        includesContainer = document.createElement('div');
+        includesContainer.className = 'includes-container visible'; // Add visible class
 
         // Move includes into the container (if not already in one)
         if (includesSection.parentNode !== includesContainer) {
@@ -779,16 +774,17 @@ class ProductDetailsToggle {
       let toggleButton = productItem.querySelector('.product-includes-toggle');
       if (!toggleButton) {
         this.log('Adding includes toggle button to product item');
-        toggleButton = dom.createElement('button', {
-          className: 'product-includes-toggle expanded',
-          dataset: {
-            toggleType: 'includes'
-          },
-          innerHTML: `
-            ${this.config.i18n.hideIncludes || 'Product Includes'}
-            <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
-          `
-        });
+        toggleButton = document.createElement('button');
+
+        // Mark as expanded by default and use the proper class for the arrow
+        toggleButton.className = 'product-includes-toggle expanded';
+        toggleButton.setAttribute('data-toggle-type', 'includes');
+
+        // Use the hideIncludes text (since it's expanded) and arrow-up icon
+        toggleButton.innerHTML = `
+        ${this.config.i18n.hideIncludes || 'Product Includes'}
+        <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+      `;
 
         // Insert button before the includes container
         productItem.insertBefore(toggleButton, includesContainer);
@@ -817,8 +813,8 @@ class ProductDetailsToggle {
    * @param {HTMLElement} toggleButton - The button that was clicked
    */
   toggleIncludes(toggleButton) {
-    // Find parent product item using dom utility
-    const productItem = dom.closest(toggleButton, this.config.selectors.productItem);
+    // Find parent product item
+    const productItem = toggleButton.closest(this.config.selectors.productItem);
 
     if (!productItem) {
       this.log('Product item not found for includes toggle button');
@@ -873,12 +869,11 @@ class ProductDetailsToggle {
 
   /**
    * Log debug messages if debug mode is enabled
-   * Uses the central log utility
    * @param {...any} args - Arguments to log
    */
   log(...args) {
     if (this.config.debug) {
-      log('ProductDetailsToggle', ...args);
+      console.log('[ProductDetailsToggle]', ...args);
     }
   }
 }

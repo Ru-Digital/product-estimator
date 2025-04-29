@@ -7,6 +7,7 @@
  */
 
 use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
+use RuDigital\ProductEstimator\Includes\Loader;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -403,11 +404,9 @@ function product_estimator_calculate_total_price_with_additions($product_id, $ro
     ];
 
     // Check for auto-add products if the ProductAdditionsManager is accessible
-    if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
-        $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule(
-            'product-estimator',
-            PRODUCT_ESTIMATOR_VERSION
-        );
+    $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+
+    if ($product_additions_manager) {
 
         // Get product categories
         $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
@@ -490,11 +489,9 @@ function product_estimator_calculate_total_price_with_additions_for_display($pro
     ];
 
     // Check for auto-add products if the ProductAdditionsManager is accessible
-    if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
-        $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule(
-            'product-estimator',
-            PRODUCT_ESTIMATOR_VERSION
-        );
+    $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+
+    if ($product_additions_manager) {
 
         $product_id_for_categories = $product['id'];
         $productObj = wc_get_product($product['id']);
@@ -842,10 +839,12 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
 }
 
 
+
 /**
  * Get the URL for viewing a PDF of an estimate
  *
  * @param int $estimate_id The database ID of the estimate
+ * @param bool $for_customer Whether this is for customer view (true) or admin view (false)
  * @return string The URL for viewing the PDF
  */
 function product_estimator_get_pdf_url($estimate_id, $for_customer = true) {

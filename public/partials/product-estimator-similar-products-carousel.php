@@ -1,13 +1,16 @@
 <?php
+
+use RuDigital\ProductEstimator\Includes\Frontend\SimilarProductsFrontend;
+
 if (isset($product['id']) && !empty($product['id'])):
     // Check if we have the similar products module available
-    if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\SimilarProductsSettingsModule')):
-        // Initialize the module
-        $similar_products_module = new \RuDigital\ProductEstimator\Includes\Admin\Settings\SimilarProductsSettingsModule(
-            'product-estimator',
-            PRODUCT_ESTIMATOR_VERSION
-        );
+    // Initialize the Similar Products module
+    $similar_products_module = new SimilarProductsFrontend(
+        'product-estimator',
+        PRODUCT_ESTIMATOR_VERSION
+    );
 
+    if ($similar_products_module):
         // Get similar products for this specific product (limited to 10 for better carousel)
         $similar_products = $similar_products_module->get_similar_products_for_display($product['id'], 10);
 

@@ -1,8 +1,8 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes;
 
+use RuDigital\ProductEstimator\Includes\Frontend\SimilarProductsFrontend;
 use WP_Error;
-use RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule;
 use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
 
 /**
@@ -1120,9 +1120,9 @@ class AjaxHandler {
     private function generateSuggestions($room_products) {
         $suggestions = array();
 
-        if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
-            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
+        $product_additions_manager = Loader::get_product_additions_manager_module();
 
+        if ($product_additions_manager) {
             // Get product categories
             $product_categories = array();
             foreach ($room_products as $product) {
@@ -1307,10 +1307,10 @@ class AjaxHandler {
 
             // Now get the categories using the appropriate product ID
             $product_categories = wp_get_post_terms($product_id_for_categories, 'product_cat', array('fields' => 'ids'));
+            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
 
             // Check if ProductAdditionsManager is accessible
-            if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductAdditionsSettingsModule')) {
-                $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.3');
+            if ($product_additions_manager) {
 
                 foreach ($product_categories as $category_id) {
                     // Get auto-add products
@@ -1696,15 +1696,10 @@ class AjaxHandler {
             return;
         }
 
-        // Ensure the similar products module is available
-        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\SimilarProductsSettingsModule')) {
-            wp_send_json_error(['message' => __('Similar Products module not available', 'product-estimator')]);
-            return;
-        }
 
         try {
             // Initialize the Similar Products module
-            $similar_products_module = new \RuDigital\ProductEstimator\Includes\Admin\Settings\SimilarProductsSettingsModule(
+            $similar_products_module = new SimilarProductsFrontend(
                 'product-estimator',
                 PRODUCT_ESTIMATOR_VERSION
             );
@@ -2315,9 +2310,10 @@ class AjaxHandler {
             ]);
         }
     }
+
     /**
      * Check if customer has an email set in session
-     * This is used by the PrintEstimate JS module before generating PDFs
+     * Add this to the AjaxHandler class in class-ajax-handler.php
      */
     public function check_customer_email() {
         // Verify nonce
@@ -2325,7 +2321,6 @@ class AjaxHandler {
 
         // Get estimate ID if provided
         $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
-
 
         try {
             // Ensure session is started
@@ -2434,6 +2429,11 @@ class AjaxHandler {
         }
     }
 
+
+    /**
+     * Generate a secure PDF URL with token
+     * Add this to the AjaxHandler class in class-ajax-handler.php
+     */
     public function get_secure_pdf_url() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');

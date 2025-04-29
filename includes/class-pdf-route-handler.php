@@ -60,8 +60,10 @@ class PDFRouteHandler {
         }
     }
 
+
     /**
      * Register custom rewrite rule for PDF endpoint
+     * Add this to PDFRouteHandler.php
      */
     public function register_rewrite_rules() {
         // Token-based access
@@ -342,7 +344,15 @@ class PDFRouteHandler {
         ));
     }
 
-    function generate_secure_pdf_token($estimate_id, $expiry = 86400) {
+
+    /**
+     * Generate a secure token for PDF access
+     *
+     * @param int $estimate_id The database ID of the estimate
+     * @param int $expiry Token expiry time in seconds (default 24 hours)
+     * @return string|false The generated token or false on failure
+     */
+    public function generate_secure_pdf_token($estimate_id, $expiry = 86400) {
         // Create a token with: estimate_id + customer_email + timestamp + secret_key
         $estimate = $this->get_estimate_from_db($estimate_id);
         if (!$estimate || empty($estimate['customer_details']['email'])) {
@@ -357,6 +367,12 @@ class PDFRouteHandler {
         return urlencode(base64_encode($data . '|' . $signature));
     }
 
+    /**
+     * Validate a PDF token
+     *
+     * @param string $token The token to validate
+     * @return int|false The estimate ID if valid, false otherwise
+     */
     private function validate_pdf_token($token) {
         try {
             $decoded = base64_decode(urldecode($token));
@@ -391,5 +407,14 @@ class PDFRouteHandler {
             }
             return false;
         }
+    }
+
+    /**
+     * Flush rewrite rules - add this to plugin activation hook
+     */
+    public static function flush_pdf_routes() {
+        $handler = new self();
+        $handler->register_rewrite_rules();
+        flush_rewrite_rules(true);
     }
 }

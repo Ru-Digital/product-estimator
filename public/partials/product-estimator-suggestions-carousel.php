@@ -23,9 +23,9 @@ foreach ($room['products'] as $product) {
 $suggestions = [];
 
 // Check if we have the ProductAdditionsManager class
-if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductAdditionsSettingsModule')) {
-    $manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+$product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
 
+if ($product_additions_manager) {
     // Generate suggestions based on products in this room
     foreach ($room['products'] as $product) {
         // Skip notes or products without IDs
@@ -42,7 +42,7 @@ if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\Produc
             // Check each category for suggestions
             foreach ($categories as $category_id) {
                 // Get suggested products for this category
-                $category_suggestions = $manager->get_suggested_products_for_category($category_id);
+                $category_suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
                 if (!empty($category_suggestions)) {
                     // Add each suggested product to the array
                     foreach ($category_suggestions as $suggestion_id) {

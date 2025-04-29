@@ -55,7 +55,10 @@
             "includes/class-estimate-handler.php",
             "includes/traits/trait-estimate-db-handler.php",
             "includes/models/class-estimate-model.php",
-            "includes/class-pdf-route-handler.php"
+            "includes/class-pdf-route-handler.php",
+            "includes/frontend/class-frontend-base.php",
+            "includes/frontend/class-similar-products-frontend.php",
+            "includes/frontend/class-product-additions-frontend.php"
         ],
         "files": [
             "includes/functions.php"

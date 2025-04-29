@@ -16,7 +16,7 @@ $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInsta
 $estimates = $session_handler->getEstimates();
 //
 //echo "<pre>";
-//unset($_SESSION['product_estimator']);
+////unset($_SESSION['product_estimator']);
 //print_r($_SESSION['product_estimator']);
 //echo "</pre>";
 
@@ -177,6 +177,8 @@ $options = get_option('product_estimator_settings');
                 <ul>
                     <li>
                         <?php
+                        // Estimate actions section for product-estimator-estimates-list.php
+
                         // Check if the estimate has a database ID
                         $db_id = isset($estimate['db_id']) ? $estimate['db_id'] : false;
 
@@ -191,6 +193,7 @@ $options = get_option('product_estimator_settings');
                             ?>
                             <a class="print-estimate-pdf"
                                href="<?php echo esc_url($pdf_url); ?>"
+                               data-estimate-id="<?php echo esc_attr($db_id); ?>"
                                target="_blank"
                                title="<?php esc_attr_e('View Estimate as PDF', 'product-estimator'); ?>">
                                 <span class="dashicons dashicons-pdf"></span> View PDF

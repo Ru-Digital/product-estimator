@@ -138,7 +138,9 @@ class EstimateHandler {
             return;
         }
 
+
         $session_estimate_id = sanitize_text_field($_POST['estimate_id']);
+
 
         try {
             // First, ensure the estimate in the session is stored/updated in the database
@@ -188,20 +190,22 @@ class EstimateHandler {
     /**
      * Generate a PDF for an estimate with template support
      *
-     * @param string $session_estimate_id The session estimate ID
+     * @param string $estimate_id The session estimate ID
      * @return array|false Result array with PDF details, or false on failure
      */
-    public function generate_pdf($session_estimate_id) {
+    public function generate_pdf($estimate_id) {
+        error_log($estimate_id);
         try {
             // Get the estimate from session
-            $estimate = $this->session->getEstimate($session_estimate_id);
+            $estimateModel = new EstimateModel();
+            $estimate = $estimateModel->get_estimate($estimate_id);
 
             if (!$estimate) {
                 throw new \Exception(__('Estimate not found in session', 'product-estimator'));
             }
 
             // Store or update the estimate in the database
-            $db_id = $this->ensure_estimate_stored($estimate, $session_estimate_id);
+            $db_id = $this->ensure_estimate_stored($estimate, $estimate_id);
 
             if (!$db_id) {
                 throw new \Exception(__('Failed to store estimate in database', 'product-estimator'));
@@ -209,7 +213,7 @@ class EstimateHandler {
 
             // Update session with the DB ID reference
             $estimate['db_id'] = $db_id;
-            $_SESSION['product_estimator']['estimates'][$session_estimate_id]['db_id'] = $db_id;
+            $_SESSION['product_estimator']['estimates'][$estimate_id]['db_id'] = $db_id;
 
             // Generate PDF using our enhanced generator that supports templates
             $pdf_generator = $this->get_pdf_generator();
@@ -476,10 +480,6 @@ class EstimateHandler {
      * Handle request copy functionality
      * Sends an email with the PDF estimate attached
      */
-    /**
-     * Handle request copy functionality
-     * Sends an email with the PDF estimate attached
-     */
     public function request_copy_estimate() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
@@ -586,6 +586,7 @@ class EstimateHandler {
 
         return $customer_email;
     }
+
 
     /**
      * Send email with PDF estimate attachment

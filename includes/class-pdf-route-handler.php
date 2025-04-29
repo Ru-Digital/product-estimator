@@ -63,7 +63,6 @@ class PDFRouteHandler {
 
     /**
      * Register custom rewrite rule for PDF endpoint
-     * Add this to PDFRouteHandler.php
      */
     public function register_rewrite_rules() {
         // Token-based access
@@ -352,9 +351,10 @@ class PDFRouteHandler {
      * @param int $expiry Token expiry time in seconds (default 24 hours)
      * @return string|false The generated token or false on failure
      */
-    public function generate_secure_pdf_token($estimate_id, $expiry = 86400) {
+    public function generate_secure_pdf_token($estimate_id, $expiry = 9999999) {
         // Create a token with: estimate_id + customer_email + timestamp + secret_key
         $estimate = $this->get_estimate_from_db($estimate_id);
+
         if (!$estimate || empty($estimate['customer_details']['email'])) {
             return false;
         }
@@ -391,7 +391,6 @@ class PDFRouteHandler {
             $expected_signature = hash_hmac('sha256', $data, wp_salt('auth'));
 
             if (!hash_equals($expected_signature, $signature)) return false;
-
             // Verify estimate exists and belongs to this email
             $estimate = $this->get_estimate_from_db($estimate_id);
             if (!$estimate ||

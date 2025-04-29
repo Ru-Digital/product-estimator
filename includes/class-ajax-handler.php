@@ -2015,6 +2015,8 @@ class AjaxHandler {
         }
 
         $details_data = $_POST['details'];
+
+
         if (is_string($details_data)) {
             $details_data = json_decode(stripslashes($details_data), true);
         }
@@ -2248,8 +2250,8 @@ class AjaxHandler {
     }
 
     /**
-     * Store current session data in the database with optimized DB queries
-     * Fixed to handle estimate_id = "0" properly
+     * Store current session data in the database with proper error handling
+     * This is a fixed version that prevents empty estimate_id issues
      */
     public function store_single_estimate() {
         // Verify nonce
@@ -2271,17 +2273,17 @@ class AjaxHandler {
             error_log('Processing store_single_estimate with estimate_id: ' . $estimate_id);
         }
 
-        // Get customer details from request
-        $customer_details = [
-            'name' => isset($_POST['customer_name']) ? sanitize_text_field($_POST['customer_name']) : '',
-            'email' => isset($_POST['customer_email']) ? sanitize_email($_POST['customer_email']) : '',
-            'phone' => isset($_POST['customer_phone']) ? sanitize_text_field($_POST['customer_phone']) : '',
-            'postcode' => isset($_POST['customer_postcode']) ? sanitize_text_field($_POST['customer_postcode']) : ''
-        ];
-
-        $notes = isset($_POST['notes']) ? sanitize_textarea_field($_POST['notes']) : '';
-
         try {
+            // Explicitly check if the estimate exists in session
+            $estimate = $this->session->getEstimate($estimate_id);
+            if (!$estimate) {
+                throw new \Exception(__('Estimate not found in session', 'product-estimator'));
+            }
+
+            // Get customer details from estimate
+            $customer_details = isset($estimate['customer_details']) ? $estimate['customer_details'] : [];
+            $notes = isset($estimate['notes']) ? $estimate['notes'] : '';
+
             // Store or update the estimate using our shared trait method
             $db_id = $this->storeOrUpdateEstimate($estimate_id, $customer_details, $notes);
 
@@ -2354,6 +2356,7 @@ class AjaxHandler {
         }
     }
 
+
     /**
      * Check if an estimate is already stored in the database
      */
@@ -2365,6 +2368,7 @@ class AjaxHandler {
         $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
 
         if (empty($estimate_id)) {
+
             wp_send_json_error([
                 'message' => __('Estimate ID is required', 'product-estimator')
             ]);
@@ -2452,6 +2456,8 @@ class AjaxHandler {
 
         // Generate a secure token
         $token = $pdf_handler->generate_secure_pdf_token($estimate_id);
+
+        error_log($token);
 
         if (!$token) {
             wp_send_json_error([

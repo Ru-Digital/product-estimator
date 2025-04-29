@@ -840,6 +840,7 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
 
 
 
+
 /**
  * Get the URL for viewing a PDF of an estimate
  *
@@ -952,16 +953,6 @@ function product_estimator_get_db_id($estimate_id)
     }
 
     return false;
-}
-
-function product_estimator_debug_log($message, $data = null) {
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        if ($data !== null) {
-            error_log($message . ': ' . print_r($data, true));
-        } else {
-            error_log($message);
-        }
-    }
 }
 
 

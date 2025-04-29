@@ -1,8 +1,10 @@
 /**
- * PrintEstimate.js - Enhanced
+ * PrintEstimate.js
  *
- * Updated to properly handle PDF generation and email verification
+ * Handles PDF generation and viewing for the Product Estimator plugin.
+ * Manages email verification, secure token generation, and PDF display.
  */
+
 class PrintEstimate {
   /**
    * Initialize the PrintEstimate module
@@ -67,7 +69,7 @@ class PrintEstimate {
         if (printButton.classList.contains('print-estimate-pdf')) {
           // This is a direct PDF link - check email before proceeding
           const estimateId = printButton.dataset.estimateId;
-
+          console.log("Winnnn");
           this.checkCustomerEmail(estimateId)
             .then(hasEmail => {
               if (hasEmail) {
@@ -105,8 +107,43 @@ class PrintEstimate {
         }
       }
 
-      // Handle other buttons (request copy, etc.)
-      // [Code for other buttons would go here]
+      // Handle request copy button (email PDF to customer)
+      const requestCopyButton = e.target.closest(this.config.selectors.requestCopyButton);
+      if (requestCopyButton && !this.processing) {
+        e.preventDefault();
+
+        this.processing = true;
+        this.setButtonLoading(requestCopyButton, true);
+
+        const estimateId = requestCopyButton.dataset.estimateId;
+
+        this.checkCustomerEmail(estimateId)
+          .then(hasEmail => {
+            if (hasEmail) {
+              // Email exists, send the copy
+              this.requestCopyEstimate(estimateId)
+                .then(response => {
+                  this.showMessage(`Estimate has been emailed to ${response.email}`, 'success');
+                })
+                .catch(error => {
+                  this.showError('Error sending estimate copy. Please try again.');
+                });
+            } else {
+              // No email, show prompt
+              this.showEmailPrompt(estimateId, requestCopyButton, 'request_copy');
+            }
+          })
+          .catch(error => {
+            this.showError('Error checking customer email. Please try again.');
+          })
+          .finally(() => {
+            // Reset button state
+            this.setButtonLoading(requestCopyButton, false);
+            this.processing = false;
+          });
+      }
+
+      // Other button handlers can be added here
     });
   }
 
@@ -260,6 +297,20 @@ class PrintEstimate {
                 this.setButtonLoading(button, false);
                 this.processing = false;
               });
+          } else if (action === 'request_copy') {
+            this.setButtonLoading(button, true);
+            this.processing = true;
+            this.requestCopyEstimate(estimateId)
+              .then(response => {
+                this.showMessage(`Estimate has been emailed to ${response.email}`, 'success');
+              })
+              .catch(error => {
+                this.showError('Error sending estimate copy. Please try again.');
+              })
+              .finally(() => {
+                this.setButtonLoading(button, false);
+                this.processing = false;
+              });
           }
         })
         .catch(error => {
@@ -318,34 +369,92 @@ class PrintEstimate {
   }
 
   /**
-   * Get a secure PDF URL for an estimate
-   * @param {number|string} dbId - The database ID
-   * @returns {Promise<string>} Promise that resolves to the secure URL
+   * Update customer email
+   * @param {string} estimateId - The estimate ID
+   * @param {string} email - The email address
+   * @returns {Promise} Promise that resolves when email is updated
    */
-  getSecurePdfUrl(dbId) {
+  updateCustomerEmail(estimateId, email) {
     return new Promise((resolve, reject) => {
+      // First get existing customer details
       fetch(productEstimatorVars.ajax_url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: new URLSearchParams({
-          action: 'get_secure_pdf_url',
+          action: 'check_customer_email',
           nonce: productEstimatorVars.nonce,
-          estimate_id: dbId
+          estimate_id: estimateId
         })
       })
         .then(response => response.json())
         .then(response => {
-          if (response.success && response.data.url) {
-            this.log('Received secure PDF URL:', response.data);
-            resolve(response.data.url);
+          if (!response.success) {
+            throw new Error('Failed to get customer details');
+          }
+
+          // Get existing details or initialize empty object
+          const existingDetails = response.data.customer_details || {};
+
+          // Merge existing details with new email, ensuring we preserve all required fields
+          const updatedDetails = {
+            ...existingDetails,
+            email: email
+          };
+
+          // Make sure name and postcode exist (required fields)
+          if (!updatedDetails.name) {
+            updatedDetails.name = 'Customer';
+          }
+
+          if (!updatedDetails.postcode) {
+            updatedDetails.postcode = '0000'; // Default postcode
+          }
+
+          // Update customer details
+          return fetch(productEstimatorVars.ajax_url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+              action: 'update_customer_details',
+              nonce: productEstimatorVars.nonce,
+              details: JSON.stringify(updatedDetails)
+            })
+          });
+        })
+        .then(response => response.json())
+        .then(response => {
+          if (!response.success) {
+            throw new Error(response.data?.message || 'Error updating customer details');
+          }
+
+          // Now store the estimate to the database, passing ONLY the estimate_id
+          return fetch(productEstimatorVars.ajax_url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+              action: 'store_single_estimate',
+              nonce: productEstimatorVars.nonce,
+              estimate_id: estimateId
+            })
+          });
+        })
+        .then(response => response.json())
+        .then(response => {
+          if (response.success) {
+            resolve(response.data);
           } else {
-            reject(new Error(response.data?.message || 'Failed to get secure PDF URL'));
+            console.error('Error storing estimate:', response);
+            throw new Error(response.data?.message || 'Error storing estimate');
           }
         })
         .catch(error => {
-          this.log('Error getting secure PDF URL:', error);
+          console.error('Error in updateCustomerEmail:', error);
           reject(error);
         });
     });
@@ -386,62 +495,73 @@ class PrintEstimate {
   }
 
   /**
-   * Update customer email
-   * @param {string} estimateId - The estimate ID
-   * @param {string} email - The email address
-   * @returns {Promise} Promise that resolves when email is updated
+   * Get a secure PDF URL for an estimate
+   * @param {number|string} dbId - The database ID
+   * @returns {Promise<string>} Promise that resolves to the secure URL
    */
-  updateCustomerEmail(estimateId, email) {
+  getSecurePdfUrl(dbId) {
     return new Promise((resolve, reject) => {
-      // First update customer details
       fetch(productEstimatorVars.ajax_url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: new URLSearchParams({
-          action: 'update_customer_details',
+          action: 'get_secure_pdf_url',
           nonce: productEstimatorVars.nonce,
-          details: JSON.stringify({
-            email: email,
-            // These are required fields, provide fallbacks
-            name: 'Customer',
-            postcode: ''
-          })
+          estimate_id: dbId
+        })
+      })
+        .then(response => response.json())
+        .then(response => {
+          if (response.success && response.data.url) {
+            this.log('Received secure PDF URL:', response.data);
+            resolve(response.data.url);
+          } else {
+            reject(new Error(response.data?.message || 'Failed to get secure PDF URL'));
+          }
+        })
+        .catch(error => {
+          this.log('Error getting secure PDF URL:', error);
+          reject(error);
+        });
+    });
+  }
+
+  /**
+   * Request a copy of the estimate to be sent via email
+   * @param {string} estimateId - The estimate ID
+   * @returns {Promise<Object>} Promise that resolves when email is sent
+   */
+  requestCopyEstimate(estimateId) {
+    return new Promise((resolve, reject) => {
+      fetch(productEstimatorVars.ajax_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          action: 'request_copy_estimate',
+          nonce: productEstimatorVars.nonce,
+          estimate_id: estimateId
         })
       })
         .then(response => response.json())
         .then(response => {
           if (response.success) {
-            // Now store the estimate with updated email
-            return fetch(productEstimatorVars.ajax_url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-              },
-              body: new URLSearchParams({
-                action: 'store_single_estimate',
-                nonce: productEstimatorVars.nonce,
-                estimate_id: estimateId,
-                customer_email: email,
-                customer_name: 'Customer',
-                customer_postcode: ''
-              })
-            })
-              .then(response => response.json())
-              .then(response => {
-                if (response.success) {
-                  resolve(response.data);
-                } else {
-                  throw new Error(response.data?.message || 'Error storing estimate with updated email');
-                }
-              });
+            this.log('Estimate copy requested successfully', response.data);
+            resolve(response.data);
           } else {
-            throw new Error(response.data?.message || 'Error updating customer details');
+            // Special handling for no email case
+            if (response.data?.code === 'no_email') {
+              reject(new Error('no_email'));
+            } else {
+              reject(new Error(response.data?.message || 'Error requesting estimate copy'));
+            }
           }
         })
         .catch(error => {
-          this.log('Error in updateCustomerEmail:', error);
+          this.log('Error requesting estimate copy:', error);
           reject(error);
         });
     });
@@ -470,6 +590,27 @@ class PrintEstimate {
       button.classList.remove('loading');
       button.textContent = originalText;
       button.disabled = false;
+    }
+  }
+
+  /**
+   * Show success or error message
+   * @param {string} message - Message text
+   * @param {string} type - Message type ('success' or 'error')
+   */
+  showMessage(message, type = 'success') {
+    // Try to use modal message display if available
+    if (window.productEstimator &&
+      window.productEstimator.core &&
+      typeof window.productEstimator.core.showMessage === 'function') {
+      window.productEstimator.core.showMessage(message, type);
+    } else {
+      // Fall back to alert
+      if (type === 'error') {
+        alert(message);
+      } else {
+        alert(message);
+      }
     }
   }
 

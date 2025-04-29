@@ -101,110 +101,134 @@ trait EstimateDbHandler {
 
     /**
      * Store or update an estimate in the database
+     * Fixed version to handle potential errors better
      *
      * @param string $session_estimate_id The session estimate ID
      * @param array $customer_details Customer details array
      * @param string $notes Additional notes
      * @return int|false The database ID of the stored/updated estimate or false on failure
      */
-    // In trait-estimate-db-handler.php
-
     private function storeOrUpdateEstimate($session_estimate_id, $customer_details = [], $notes = '') {
-        // Get the estimate from session
-        $estimate = $this->session->getEstimate($session_estimate_id);
-
-        if (!$estimate) {
+        // Validate session_estimate_id
+        if (!isset($session_estimate_id) || $session_estimate_id === '') {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('storeOrUpdateEstimate called with empty session_estimate_id');
+            }
             return false;
         }
 
-        // Add customer details to the estimate if provided
-        if (!empty($customer_details)) {
-            $estimate['customer_details'] = $customer_details;
-        }
+        try {
+            // Get the estimate from session
+            $estimate = $this->session->getEstimate($session_estimate_id);
 
-        // Check if this estimate is already stored using the trait's method
-        $db_id = $this->getEstimateDbId($estimate);
-
-        // Initialize database table name
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'product_estimator_estimates';
-
-        // Prepare common data for insert/update
-        $data = [
-            'name' => isset($estimate['customer_details']['name']) ?
-                sanitize_text_field($estimate['customer_details']['name']) : '',
-            'email' => isset($estimate['customer_details']['email']) ?
-                sanitize_email($estimate['customer_details']['email']) : '',
-            'phone_number' => isset($estimate['customer_details']['phone']) ?
-                sanitize_text_field($estimate['customer_details']['phone']) : '',
-            'postcode' => isset($estimate['customer_details']['postcode']) ?
-                sanitize_text_field($estimate['customer_details']['postcode']) : '',
-            'total_min' => isset($estimate['min_total']) ? floatval($estimate['min_total']) : 0,
-            'total_max' => isset($estimate['max_total']) ? floatval($estimate['max_total']) : 0,
-            'markup' => isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0,
-            'estimate_data' => json_encode($estimate),
-            'notes' => $notes
-        ];
-
-        // Common format definitions
-        $formats = [
-            '%s', // name
-            '%s', // email
-            '%s', // phone_number
-            '%s', // postcode
-            '%f', // total_min
-            '%f', // total_max
-            '%f', // markup
-            '%s', // estimate_data
-            '%s'  // notes
-        ];
-
-        if ($db_id) {
-            // Update existing record
-            $data['updated_at'] = current_time('mysql');
-            $formats[] = '%s'; // updated_at
-
-            $result = $wpdb->update(
-                $table_name,
-                $data,
-                ['id' => $db_id],
-                $formats,
-                ['%d'] // id
-            );
-
-            if ($result === false) {
-                throw new \Exception('Database error updating estimate: ' . $wpdb->last_error);
+            if (!$estimate) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Cannot find estimate with ID: {$session_estimate_id} in session");
+                    error_log("Available estimate IDs: " . implode(', ', array_keys($this->session->getEstimates())));
+                }
+                return false;
             }
 
-            // Return the existing DB ID
-            return $db_id;
-        } else {
-            // Insert new record
-            $data['created_at'] = current_time('mysql');
-            $data['status'] = 'saved';
-
-            $formats[] = '%s'; // created_at
-            $formats[] = '%s'; // status
-
-            $result = $wpdb->insert(
-                $table_name,
-                $data,
-                $formats
-            );
-
-            if ($result === false) {
-                throw new \Exception('Database error inserting estimate: ' . $wpdb->last_error);
+            // Add customer details to the estimate if provided
+            if (!empty($customer_details)) {
+                $estimate['customer_details'] = $customer_details;
             }
 
-            $new_db_id = $wpdb->insert_id;
+            // Initialize database table name
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'product_estimator_estimates';
 
-            // Update the session data with the new DB ID
-            $this->setEstimateDbId($session_estimate_id, $new_db_id);
+            // Check if this estimate is already stored using the trait's method
+            $db_id = $this->getEstimateDbId($estimate);
 
-            return $new_db_id;
+            // Prepare common data for insert/update
+            $data = [
+                'name' => isset($estimate['customer_details']['name']) ?
+                    sanitize_text_field($estimate['customer_details']['name']) : '',
+                'email' => isset($estimate['customer_details']['email']) ?
+                    sanitize_email($estimate['customer_details']['email']) : '',
+                'phone_number' => isset($estimate['customer_details']['phone']) ?
+                    sanitize_text_field($estimate['customer_details']['phone']) : '',
+                'postcode' => isset($estimate['customer_details']['postcode']) ?
+                    sanitize_text_field($estimate['customer_details']['postcode']) : '',
+                'total_min' => isset($estimate['min_total']) ? floatval($estimate['min_total']) : 0,
+                'total_max' => isset($estimate['max_total']) ? floatval($estimate['max_total']) : 0,
+                'markup' => isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0,
+                'estimate_data' => json_encode($estimate),
+                'notes' => $notes
+            ];
+
+            // Common format definitions
+            $formats = [
+                '%s', // name
+                '%s', // email
+                '%s', // phone_number
+                '%s', // postcode
+                '%f', // total_min
+                '%f', // total_max
+                '%f', // markup
+                '%s', // estimate_data
+                '%s'  // notes
+            ];
+
+            if ($db_id) {
+                // Update existing record
+                $data['updated_at'] = current_time('mysql');
+                $formats[] = '%s'; // updated_at
+
+                $result = $wpdb->update(
+                    $table_name,
+                    $data,
+                    ['id' => $db_id],
+                    $formats,
+                    ['%d'] // id
+                );
+
+                if ($result === false) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Database error updating estimate: ' . $wpdb->last_error);
+                    }
+                    throw new \Exception('Database error updating estimate: ' . $wpdb->last_error);
+                }
+
+                // Return the existing DB ID
+                return $db_id;
+            } else {
+                // Insert new record
+                $data['created_at'] = current_time('mysql');
+                $data['status'] = 'saved';
+
+                $formats[] = '%s'; // created_at
+                $formats[] = '%s'; // status
+
+                $result = $wpdb->insert(
+                    $table_name,
+                    $data,
+                    $formats
+                );
+
+                if ($result === false) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Database error inserting estimate: ' . $wpdb->last_error);
+                    }
+                    throw new \Exception('Database error inserting estimate: ' . $wpdb->last_error);
+                }
+
+                $new_db_id = $wpdb->insert_id;
+
+                // Update the session data with the new DB ID
+                $this->setEstimateDbId($session_estimate_id, $new_db_id);
+
+                return $new_db_id;
+            }
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Exception in storeOrUpdateEstimate: ' . $e->getMessage());
+                error_log('Stack trace: ' . $e->getTraceAsString());
+            }
+            return false;
         }
     }
-
     /**
      * Get an estimate from the database by ID
      *

@@ -534,37 +534,48 @@ class PrintEstimate {
    * @returns {Promise<Object>} Promise that resolves when email is sent
    */
   requestCopyEstimate(estimateId) {
-    return new Promise((resolve, reject) => {
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'request_copy_estimate',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateId
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success) {
-            this.log('Estimate copy requested successfully', response.data);
-            resolve(response.data);
-          } else {
-            // Special handling for no email case
-            if (response.data?.code === 'no_email') {
-              reject(new Error('no_email'));
-            } else {
-              reject(new Error(response.data?.message || 'Error requesting estimate copy'));
+    this.checkCustomerEmail(estimateId)
+      .then(hasEmail => {
+        if (!hasEmail) return;
+
+        return this.storeEstimate(estimateId)
+          .then(data => {
+            if (!data || !data.estimate_id) {
+              throw new Error('Failed to store estimate');
             }
-          }
-        })
-        .catch(error => {
-          this.log('Error requesting estimate copy:', error);
-          reject(error);
-        });
-    });
+
+            return new Promise((resolve, reject) => {
+              fetch(productEstimatorVars.ajax_url, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                  action: 'request_copy_estimate',
+                  nonce: productEstimatorVars.nonce,
+                  estimate_id: estimateId
+                })
+              })
+                .then(response => response.json())
+                .then(response => {
+                  if (response.success) {
+                    this.log('Estimate copy requested successfully', response.data);
+                    resolve(response.data);
+                  } else {
+                    if (response.data?.code === 'no_email') {
+                      reject(new Error('no_email'));
+                    } else {
+                      reject(new Error(response.data?.message || 'Error requesting estimate copy'));
+                    }
+                  }
+                })
+                .catch(error => {
+                  this.log('Error requesting estimate copy:', error);
+                  reject(error);
+                });
+            });
+          });
+      });
   }
 
   /**

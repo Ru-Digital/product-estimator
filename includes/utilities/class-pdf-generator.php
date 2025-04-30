@@ -152,7 +152,6 @@ class PDFGenerator
 
         // Generate content using native TCPDF methods
         $this->render_content_native($pdf, $estimate);
-
         // Return the generated PDF
         return $pdf->Output('', 'S');
     }
@@ -1111,4 +1110,8 @@ class PDFGenerator
 
         // Move below graph
         $pdf->SetY($graph_y + $options['graph_height'] + ($options['show_labels'] ? 7 : 3));
-    }}
+    }
+
+
+
+}

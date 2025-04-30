@@ -103,8 +103,8 @@ class AjaxHandler {
             add_action('wp_ajax_nopriv_store_single_estimate', array($this, 'store_single_estimate'));
 
             // In the constructor of AjaxHandler class
-            add_action('wp_ajax_print_estimate', array($this, 'print_estimate'));
-            add_action('wp_ajax_nopriv_print_estimate', array($this, 'print_estimate'));
+//            add_action('wp_ajax_print_estimate', array($this, 'print_estimate'));
+//            add_action('wp_ajax_nopriv_print_estimate', array($this, 'print_estimate'));
 
             add_action('wp_ajax_check_estimate_stored', array($this, 'check_estimate_stored'));
             add_action('wp_ajax_nopriv_check_estimate_stored', array($this, 'check_estimate_stored'));
@@ -2400,21 +2400,6 @@ class AjaxHandler {
         } catch (\Exception $e) {
             wp_send_json_error([
                 'message' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Forward print_estimate AJAX request to EstimateHandler
-     */
-    public function print_estimate() {
-        // Check if EstimateHandler is available
-        if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\EstimateHandler')) {
-            $handler = new \RuDigital\ProductEstimator\Includes\EstimateHandler();
-            $handler->handle_print_estimate();
-        } else {
-            wp_send_json_error([
-                'message' => __('Print functionality is unavailable', 'product-estimator')
             ]);
         }
     }

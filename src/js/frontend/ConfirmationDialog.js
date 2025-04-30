@@ -171,6 +171,7 @@ class ConfirmationDialog {
       cancelText: i18n.cancel || 'Cancel',
       onConfirm: null,
       onCancel: null,
+      action: 'delete',
       showCancel: true  // New option to control cancel button visibility
     };
 
@@ -214,9 +215,19 @@ class ConfirmationDialog {
     // Remove all type classes
     this.dialog.classList.remove('pe-dialog-type-product', 'pe-dialog-type-room', 'pe-dialog-type-estimate', 'pe-dialog-notification');
 
+    [...this.dialog.classList].forEach(className => {
+      if (/^pe-dialog-action-/.test(className)) {
+        this.dialog.classList.remove(className);
+      }
+    });
+
     // Add type class if specified
     if (settings.type) {
-      this.dialog.classList.add(`pe-dialog-type-${settings.type}`);
+      this.dialog.classList.add (`pe-dialog-type-${settings.type}`);
+    }
+
+    if(settings.action) {
+      this.dialog.classList.add (`pe-dialog-action-${settings.action}`);
     }
 
     // Add notification class if it's a success notification
@@ -240,7 +251,7 @@ class ConfirmationDialog {
       if (buttonToFocus) buttonToFocus.focus();
     }, 100);
   }
-  
+
   /**
    * Hide the dialog
    */

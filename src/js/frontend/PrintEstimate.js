@@ -607,6 +607,7 @@ class PrintEstimate {
         title: 'Estimate Sent',
         message: message,
         type: 'estimate',
+        action: 'confirm',
         confirmText: 'OK',
         cancelText: null,
         onConfirm: () => {

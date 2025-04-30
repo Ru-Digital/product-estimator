@@ -112,24 +112,43 @@
   border-color: #ddd;
 }
 
-.pe-dialog-confirm {
-  background-color: #00833F;
-  color: white;
-  border-color: #00833F;
-}
-
 .pe-dialog-cancel:hover {
   background-color: #e5e5e5;
 }
 
-.pe-dialog-confirm:hover {
-  background-color: #015529;
-}
-
 .pe-dialog-cancel:focus,
 .pe-dialog-confirm:focus {
-  outline: 2px solid #00833F;
+  outline: 2px solid #007cba;
   outline-offset: 1px;
+}
+.pe-dialog-title {
+  color: #00833F;
+}
+
+.pe-dialog-confirm {
+  background-color: #00833F;
+  border-color: #00833F;
+  color: #fff;
+}
+
+.pe-dialog-confirm:hover {
+  background-color: #016331;
+  border-color: #016331;
+}
+
+/* Dialog types */
+.pe-dialog-action-delete .pe-dialog-title {
+  color: #d9534f;
+}
+
+.pe-dialog-action-delete .pe-dialog-confirm {
+  color: #fff;
+  background-color: #d9534f;
+  border-color: #d9534f;
+}
+
+.pe-dialog-action-delete .pe-dialog-confirm:hover {
+  background-color: #c30400;
 }
 
 

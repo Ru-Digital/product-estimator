@@ -5,6 +5,9 @@
  * Manages email verification, secure token generation, and PDF display.
  */
 
+import ConfirmationDialog from './ConfirmationDialog';
+
+
 class PrintEstimate {
   /**
    * Initialize the PrintEstimate module
@@ -98,8 +101,8 @@ class PrintEstimate {
             })
             .finally(() => {
               // Reset button state
-              this.setButtonLoading(printButton, false);
-              this.processing = false;
+              // this.setButtonLoading(printButton, false);
+              // this.processing = false;
             });
         } else {
           // This is a JS-based print button
@@ -117,13 +120,16 @@ class PrintEstimate {
 
         const estimateId = requestCopyButton.dataset.estimateId;
 
-        this.checkCustomerEmail(estimateId)
+        return this.checkCustomerEmail(estimateId)
           .then(hasEmail => {
             if (hasEmail) {
               // Email exists, send the copy
-              this.requestCopyEstimate(estimateId)
+              this.requestCopyEstimate(estimateId, requestCopyButton)
                 .then(response => {
-                  this.showMessage(`Estimate has been emailed to ${response.email}`, 'success');
+                  this.showMessage(`Estimate has been emailed to ${response.email}`, 'success', () => {
+                    this.setButtonLoading(requestCopyButton, false);
+                    this.processing = false;
+                  });
                 })
                 .catch(error => {
                   this.showError('Error sending estimate copy. Please try again.');
@@ -138,8 +144,7 @@ class PrintEstimate {
           })
           .finally(() => {
             // Reset button state
-            this.setButtonLoading(requestCopyButton, false);
-            this.processing = false;
+
           });
       }
 
@@ -178,6 +183,8 @@ class PrintEstimate {
               }
             })
             .then(pdfUrl => {
+              this.setButtonLoading(button, false);
+              this.processing = false;
               // Open the PDF URL in a new tab
               window.open(pdfUrl, '_blank');
             });
@@ -194,8 +201,8 @@ class PrintEstimate {
       })
       .finally(() => {
         // Reset button state
-        this.setButtonLoading(button, false);
-        this.processing = false;
+        // this.setButtonLoading(button, false);
+        // this.processing = false;
       });
   }
 
@@ -270,47 +277,32 @@ class PrintEstimate {
         .then(() => {
           // Remove prompt
           promptEl.remove();
-
+          this.setButtonLoading(button, true);
+          this.processing = true;
           // Continue with the original action
           if (action === 'print') {
-            this.setButtonLoading(button, true);
-            this.processing = true;
+
             this.handlePrintEstimate(button);
-          } else if (action === 'pdf') {
-            this.setButtonLoading(button, true);
-            this.processing = true;
-            this.storeEstimate(estimateId)
-              .then(data => {
-                if (data && data.estimate_id) {
-                  return this.getSecurePdfUrl(data.estimate_id);
-                } else {
-                  throw new Error('Failed to store estimate');
-                }
-              })
-              .then(pdfUrl => {
-                window.open(pdfUrl, '_blank');
-              })
-              .catch(error => {
-                this.showError('Error generating PDF. Please try again.');
-              })
-              .finally(() => {
-                this.setButtonLoading(button, false);
-                this.processing = false;
-              });
           } else if (action === 'request_copy') {
-            this.setButtonLoading(button, true);
-            this.processing = true;
-            this.requestCopyEstimate(estimateId)
+
+            this.requestCopyEstimate(estimateId, button)
               .then(response => {
-                this.showMessage(`Estimate has been emailed to ${response.email}`, 'success');
+                this.showMessage(
+                  `Estimate has been emailed to ${response.email}`,
+                  'success',
+                  () => {
+                    this.setButtonLoading(button, false);
+                    this.processing = false;
+                  }
+                );
               })
-              .catch(error => {
-                this.showError('Error sending estimate copy. Please try again.');
-              })
-              .finally(() => {
-                this.setButtonLoading(button, false);
-                this.processing = false;
+                  .catch(error => {
+                    this.showError('Error sending estimate copy. Please try again.');
+                  })
+                  .finally(() => {
+
               });
+
           }
         })
         .catch(error => {
@@ -533,11 +525,12 @@ class PrintEstimate {
    * @param {string} estimateId - The estimate ID
    * @returns {Promise<Object>} Promise that resolves when email is sent
    */
-  requestCopyEstimate(estimateId) {
-    this.checkCustomerEmail(estimateId)
+  requestCopyEstimate(estimateId, button) {
+    return this.checkCustomerEmail(estimateId)
       .then(hasEmail => {
-        if (!hasEmail) return;
-
+        if (!hasEmail) {
+          return Promise.reject(new Error('no_email'));
+        }
         return this.storeEstimate(estimateId)
           .then(data => {
             if (!data || !data.estimate_id) {
@@ -559,7 +552,6 @@ class PrintEstimate {
                 .then(response => response.json())
                 .then(response => {
                   if (response.success) {
-                    this.log('Estimate copy requested successfully', response.data);
                     resolve(response.data);
                   } else {
                     if (response.data?.code === 'no_email') {
@@ -609,18 +601,24 @@ class PrintEstimate {
    * @param {string} message - Message text
    * @param {string} type - Message type ('success' or 'error')
    */
-  showMessage(message, type = 'success') {
-    // Try to use modal message display if available
-    if (window.productEstimator &&
-      window.productEstimator.core &&
-      typeof window.productEstimator.core.showMessage === 'function') {
-      window.productEstimator.core.showMessage(message, type);
+  showMessage(message, type = 'success', onConfirm = null) {
+    if (window.productEstimator && window.productEstimator.dialog) {
+      window.productEstimator.dialog.show({
+        title: 'Estimate Sent',
+        message: message,
+        type: 'estimate',
+        confirmText: 'OK',
+        cancelText: null,
+        onConfirm: () => {
+          if (typeof onConfirm === 'function') {
+            onConfirm();
+          }
+        }
+      });
     } else {
-      // Fall back to alert
-      if (type === 'error') {
-        alert(message);
-      } else {
-        alert(message);
+      alert(message);
+      if (typeof onConfirm === 'function') {
+        onConfirm();
       }
     }
   }

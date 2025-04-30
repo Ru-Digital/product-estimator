@@ -62,7 +62,11 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
             'alerts' => [
                 'title' => __('Alerts', 'product-estimator'),
                 'description' => __('Labels used for alert and notification messages.', 'product-estimator')
-            ]
+            ],
+            'other_labels' => [
+                'title' => __('Other Labels', 'product-estimator'),
+                'description' => __('Miscellaneous Labels.', 'product-estimator')
+            ],
         ];
     }
 
@@ -423,6 +427,20 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
                     ]
                 ]);
                 break;
+
+            case "other_labels":
+                $fields = array_merge($fields, [
+                    // Alert Messages
+                    'label_price_graph_notice' => [
+                        'title' => __('Notice for price graphs', 'product-estimator'),
+                        'type' => 'text',
+                        'description' => __('A notice to display under the price graphs', 'product-estimator'),
+                        'default' => __('Prices are subject to check measures without notices.', 'product-estimator'),
+                        'section' => 'other_general'
+                    ],
+                ]);
+                 break;
+
         }
 
         return $fields;

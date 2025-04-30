@@ -1,6 +1,7 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes\Utilities;
 
+use RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend;
 use setasign\Fpdi\Tcpdf\Fpdi;
 
 /**
@@ -52,6 +53,11 @@ class PDFGenerator
     private $debug = false;
 
     /**
+     * @var LabelsFrontend
+     */
+    private $product_estimator_labels_frontend;
+
+    /**
      * Font constants
      */
     const FONT_FAMILY = 'helvetica';
@@ -70,6 +76,8 @@ class PDFGenerator
     {
         $this->debug = defined('WP_DEBUG') && WP_DEBUG;
         $this->image_data = [];
+
+        $this->product_estimator_labels_frontend = new LabelsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
     }
 
     /**
@@ -1108,8 +1116,18 @@ class PDFGenerator
             }
         }
 
+        // Add text underneath the label area
+        $pdf->SetFont(self::FONT_FAMILY, '', 7);
+        $pdf->SetTextColor(self::COLOR_LIGHTER_TEXT[0], self::COLOR_LIGHTER_TEXT[1], self::COLOR_LIGHTER_TEXT[2]);
+
+        $info_text = $this->product_estimator_labels_frontend->get_label('label_price_graph_notice');
+
+        $pdf->SetXY($graph_x, $tick_y + 5); // Position slightly below the last tick
+        $pdf->Cell($graph_width, 4, $info_text, 0, 0, 'R');
+
+
         // Move below graph
-        $pdf->SetY($graph_y + $options['graph_height'] + ($options['show_labels'] ? 7 : 3));
+        $pdf->SetY($graph_y + 3 + $options['graph_height'] + ($options['show_labels'] ? 7 : 3));
     }
 
 

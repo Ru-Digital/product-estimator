@@ -834,6 +834,12 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
+        <div class="price-notice">
+            <?php
+            global $product_estimator_labels_frontend;
+            echo $product_estimator_labels_frontend->get_label('label_price_graph_notice');
+            ?>
+        </div>
     </div>
     <?php
 }

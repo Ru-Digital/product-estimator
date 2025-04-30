@@ -118,7 +118,6 @@ class LabelsFrontend extends FrontendBase {
     public function get_label($key, $args = []) {
         // Get all label settings - use dedicated labels option
         $settings = get_option($this->option_name, []);
-        error_log(print_r($settings, true));
 
         // If the label exists in settings, use it
         if (isset($settings[$key])) {

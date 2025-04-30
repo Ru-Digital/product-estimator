@@ -33,15 +33,15 @@ $has_phone = isset($customer_details['phone']) && !empty($customer_details['phon
                 <input type="text" id="customer-name" name="customer_name" placeholder="<?php esc_attr_e('Your full name', 'product-estimator'); ?>" required>
             </div>
 
-            <div class="form-group">
-                <label for="customer-email"><?php esc_html_e('Email Address', 'product-estimator'); ?></label>
-                <input type="email" id="customer-email" name="customer_email" placeholder="<?php esc_attr_e('Your email address', 'product-estimator'); ?>">
-            </div>
+<!--            <div class="form-group">-->
+<!--                <label for="customer-email">--><?php //esc_html_e('Email Address', 'product-estimator'); ?><!--</label>-->
+<!--                <input type="email" id="customer-email" name="customer_email" placeholder="--><?php //esc_attr_e('Your email address', 'product-estimator'); ?><!--">-->
+<!--            </div>-->
 
-            <div class="form-group">
-                <label for="customer-phone"><?php esc_html_e('Phone Number', 'product-estimator'); ?></label>
-                <input type="tel" id="customer-phone" name="customer_phone" placeholder="<?php esc_attr_e('Your phone number (optional)', 'product-estimator'); ?>">
-            </div>
+<!--            <div class="form-group">-->
+<!--                <label for="customer-phone">--><?php //esc_html_e('Phone Number', 'product-estimator'); ?><!--</label>-->
+<!--                <input type="tel" id="customer-phone" name="customer_phone" placeholder="--><?php //esc_attr_e('Your phone number (optional)', 'product-estimator'); ?><!--">-->
+<!--            </div>-->
 
             <div class="form-group">
                 <label for="customer-postcode"><?php esc_html_e('Postcode', 'product-estimator'); ?></label>

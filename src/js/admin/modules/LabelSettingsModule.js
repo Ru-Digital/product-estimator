@@ -19,8 +19,13 @@ class LabelSettingsModule {
    * Initialize the module
    */
   init() {
+    console.log('Label Settings Module initialized');
     this.bindEvents();
-    this.setupVerticalTabs();
+
+    // Slight delay to ensure DOM is fully rendered
+    setTimeout(() => {
+      this.setupVerticalTabs();
+    }, 100);
   }
 
   /**
@@ -35,11 +40,13 @@ class LabelSettingsModule {
     // Form submission - convert to AJAX
     $('.label-settings-form').on('submit', this.handleFormSubmit.bind(this));
 
-    // Vertical tabs navigation
-    $('.vertical-tabs-nav a').on('click', this.handleVerticalTabClick.bind(this));
+    // Vertical tabs navigation - use delegated events to handle dynamically loaded content
+    $(document).on('click', '.vertical-tabs-nav a', this.handleVerticalTabClick.bind(this));
 
     // Email validation
-    $('input[type="email"]').on('change', this.validateEmail.bind(this));
+    $(document).on('change', 'input[type="email"]', this.validateEmail.bind(this));
+
+    console.log('Label Settings events bound');
   }
 
   /**
@@ -52,7 +59,7 @@ class LabelSettingsModule {
     const email = $field.val().trim();
 
     if (email && !validation.validateEmail(email)) {
-      this.showFieldError($field, labelSettings.i18n.validationErrorEmail || 'Please enter a valid email address');
+      this.showFieldError($field, 'Please enter a valid email address');
       return false;
     }
 
@@ -70,7 +77,7 @@ class LabelSettingsModule {
       typeof ProductEstimatorSettings.showFieldError === 'function') {
       ProductEstimatorSettings.showFieldError($field, message);
     } else {
-      clearFieldError($field);
+      validation.clearFieldError($field);
       const $error = jQuery(`<span class="field-error">${message}</span>`);
       $field.after($error).addClass('error');
     }
@@ -85,7 +92,7 @@ class LabelSettingsModule {
       typeof ProductEstimatorSettings.clearFieldError === 'function') {
       ProductEstimatorSettings.clearFieldError($field);
     } else {
-      $field.removeClass('error').next('.field-error').remove();
+      validation.clearFieldError($field);
     }
   }
 
@@ -94,9 +101,10 @@ class LabelSettingsModule {
    */
   setupVerticalTabs() {
     const $ = jQuery;
+    console.log('Setting up vertical tabs');
 
     // First check URL parameters for sub_tab
-    let activeTabId = 'general'; // Default to general
+    let activeTabId = 'labels-general'; // Default to general
 
     // Check for sub_tab in URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -108,6 +116,8 @@ class LabelSettingsModule {
     else if ($('.vertical-tabs-nav .tab-item.active a').length) {
       activeTabId = $('.vertical-tabs-nav .tab-item.active a').data('tab');
     }
+
+    console.log('Active tab ID:', activeTabId);
 
     // Show the active tab
     this.showVerticalTab(activeTabId);
@@ -125,7 +135,9 @@ class LabelSettingsModule {
   adjustTabContentHeight() {
     const $ = jQuery;
     const navHeight = $('.vertical-tabs-nav').outerHeight();
-    $('.vertical-tabs-content').css('min-height', navHeight + 'px');
+    if (navHeight) {
+      $('.vertical-tabs-content').css('min-height', navHeight + 'px');
+    }
   }
 
   /**
@@ -138,6 +150,8 @@ class LabelSettingsModule {
 
     const $link = $(e.currentTarget);
     const tabId = $link.data('tab');
+
+    console.log('Vertical tab clicked:', tabId);
 
     // Update URL hash
     window.history.pushState({}, '', `?page=product-estimator-settings&tab=labels&sub_tab=${tabId}`);
@@ -153,13 +167,15 @@ class LabelSettingsModule {
   showVerticalTab(tabId) {
     const $ = jQuery;
 
+    console.log('Showing vertical tab:', tabId);
+
     // Update active tab in navigation
     $('.vertical-tabs-nav .tab-item').removeClass('active');
     $(`.vertical-tabs-nav a[data-tab="${tabId}"]`).parent().addClass('active');
 
     // Show the tab content
-    $('.vertical-tab-content').removeClass('active');
-    $(`#${tabId}`).addClass('active');
+    $('.vertical-tab-content').hide().removeClass('active');
+    $(`#${tabId}`).show().addClass('active');
   }
 
   /**
@@ -169,8 +185,13 @@ class LabelSettingsModule {
    */
   handleTabChanged(e, tabId) {
     // If our tab becomes active, refresh vertical tabs
-    if (tabId === labelSettings.tab_id) {
-      this.setupVerticalTabs();
+    if (tabId === 'labels') {
+      console.log('Labels tab activated');
+
+      // Slight delay to ensure content is rendered
+      setTimeout(() => {
+        this.setupVerticalTabs();
+      }, 100);
     }
   }
 
@@ -184,7 +205,9 @@ class LabelSettingsModule {
 
     const $form = $(e.currentTarget);
     const formData = $form.serialize();
-    const type = $form.data('type') || 'general';
+    const type = $form.data('type') || 'labels-general';
+
+    console.log('Form submitted for type:', type);
 
     // Show loading state
     const $submitButton = $form.find('.save-settings');
@@ -203,6 +226,9 @@ class LabelSettingsModule {
       }
     });
 
+    // Log the data being sent
+    console.log('Sending form data:', formDataStr);
+
     // Submit the form via AJAX - use the direct save_labels_settings action
     ajax.ajaxRequest({
       url: productEstimatorSettings.ajax_url,
@@ -215,21 +241,23 @@ class LabelSettingsModule {
       }
     })
       .then(response => {
+        console.log('Success response:', response);
         // Show success message
         if (typeof ProductEstimatorSettings !== 'undefined' &&
           typeof ProductEstimatorSettings.showNotice === 'function') {
-          ProductEstimatorSettings.showNotice(response.message || labelSettings.i18n.saveSuccess, 'success');
+          ProductEstimatorSettings.showNotice(response.message || 'Labels saved successfully', 'success');
         } else {
-          showNotice(response.message || labelSettings.i18n.saveSuccess, 'success');
+          showNotice(response.message || 'Labels saved successfully', 'success');
         }
       })
       .catch(error => {
+        console.error('Error response:', error);
         // Show error message
         if (typeof ProductEstimatorSettings !== 'undefined' &&
           typeof ProductEstimatorSettings.showNotice === 'function') {
-          ProductEstimatorSettings.showNotice(error.message || labelSettings.i18n.saveError, 'error');
+          ProductEstimatorSettings.showNotice(error.message || 'Error saving labels', 'error');
         } else {
-          showNotice(error.message || labelSettings.i18n.saveError, 'error');
+          showNotice(error.message || 'Error saving labels', 'error');
         }
       })
       .finally(() => {
@@ -240,12 +268,15 @@ class LabelSettingsModule {
   }
 }
 
-// Initialize the module
+// Initialize the module and make it globally available
+let labelSettingsInstance = null;
+
 jQuery(document).ready(function() {
-  const module = new LabelSettingsModule();
+  console.log('Document ready, initializing Label Settings Module');
+  labelSettingsInstance = new LabelSettingsModule();
 
   // Export the module globally for backward compatibility
-  window.LabelSettingsModule = module;
+  window.LabelSettingsModule = labelSettingsInstance;
 });
 
 export default LabelSettingsModule;

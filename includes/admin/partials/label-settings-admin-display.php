@@ -12,20 +12,18 @@ if (!defined('WPINC')) {
     exit;
 }
 
-// Get settings
-$options = get_option('product_estimator_settings', []);
-
-// Get label typesd
+// Get settings - use the correct option name
 $labels = get_option($this->option_name, []);
 
+// Get label types
 $label_types = $this->get_label_types();
 
 // Default to label_general settings as the active sub-tab
-$active_sub_tab = isset($_GET['sub_tab']) ? sanitize_key($_GET['sub_tab']) : 'general';
+$active_sub_tab = isset($_GET['sub_tab']) ? sanitize_key($_GET['sub_tab']) : 'labels-general';
 
 // Ensure the active sub-tab exists, default to general if not
 if (!isset($label_types[$active_sub_tab])) {
-    $active_sub_tab = 'general';
+    $active_sub_tab = 'labels-general';
 }
 ?>
 
@@ -68,33 +66,33 @@ if (!isset($label_types[$active_sub_tab])) {
             <?php endforeach; ?>
         </div>
     </div>
-</div>
 
-    <!-- Usage information sidebar -->
-<!--    <div class="label-usage-info">-->
-<!--        <h3>--><?php //esc_html_e('Label Usage Information', 'product-estimator'); ?><!--</h3>-->
-<!--        <p>--><?php //esc_html_e('Labels are used throughout the Product Estimator plugin to customize the text displayed to users.', 'product-estimator'); ?><!--</p>-->
-<!---->
-<!--        <div class="label-usage-section">-->
-<!--            <h4>--><?php //esc_html_e('Using Labels in Templates', 'product-estimator'); ?><!--</h4>-->
-<!--            <p>--><?php //esc_html_e('In PHP templates, use the following function to display labels:', 'product-estimator'); ?><!--</p>-->
-<!--            <code>product_estimator_get_label('label_key');</code>-->
-<!--        </div>-->
-<!---->
-<!--        <div class="label-usage-section">-->
-<!--            <h4>--><?php //esc_html_e('Using Labels in JavaScript', 'product-estimator'); ?><!--</h4>-->
-<!--            <p>--><?php //esc_html_e('In JavaScript, access labels through the global object:', 'product-estimator'); ?><!--</p>-->
-<!--            <code>productEstimatorVars.labels.label_key</code>-->
-<!--        </div>-->
-<!---->
-<!--        <div class="label-usage-section">-->
-<!--            <h4>--><?php //esc_html_e('Placeholder Variables', 'product-estimator'); ?><!--</h4>-->
-<!--            <p>--><?php //esc_html_e('Some labels support the following placeholder variables:', 'product-estimator'); ?><!--</p>-->
-<!--            <ul>-->
-<!--                <li><code>{product_name}</code> - --><?php //esc_html_e('The name of the product', 'product-estimator'); ?><!--</li>-->
-<!--                <li><code>{estimate_name}</code> - --><?php //esc_html_e('The name of the estimate', 'product-estimator'); ?><!--</li>-->
-<!--                <li><code>{customer_name}</code> - --><?php //esc_html_e('The customer\'s name', 'product-estimator'); ?><!--</li>-->
-<!--                <li><code>{price}</code> - --><?php //esc_html_e('The formatted price', 'product-estimator'); ?><!--</li>-->
-<!--            </ul>-->
-<!--        </div>-->
-<!--    </div>-->
+    <!-- Label usage information sidebar -->
+    <div class="label-usage-info">
+        <h3><?php esc_html_e('Label Usage Information', 'product-estimator'); ?></h3>
+        <p><?php esc_html_e('Labels are used throughout the Product Estimator plugin to customize the text displayed to users.', 'product-estimator'); ?></p>
+
+        <div class="label-usage-section">
+            <h4><?php esc_html_e('Using Labels in Templates', 'product-estimator'); ?></h4>
+            <p><?php esc_html_e('In PHP templates, use the following function to display labels:', 'product-estimator'); ?></p>
+            <code>product_estimator_get_label('label_key');</code>
+        </div>
+
+        <div class="label-usage-section">
+            <h4><?php esc_html_e('Using Labels in JavaScript', 'product-estimator'); ?></h4>
+            <p><?php esc_html_e('In JavaScript, access labels through the global object:', 'product-estimator'); ?></p>
+            <code>productEstimatorLabels.label_key</code>
+        </div>
+
+        <div class="label-usage-section">
+            <h4><?php esc_html_e('Placeholder Variables', 'product-estimator'); ?></h4>
+            <p><?php esc_html_e('Some labels support the following placeholder variables:', 'product-estimator'); ?></p>
+            <ul>
+                <li><code>{product_name}</code> - <?php esc_html_e('The name of the product', 'product-estimator'); ?></li>
+                <li><code>{estimate_name}</code> - <?php esc_html_e('The name of the estimate', 'product-estimator'); ?></li>
+                <li><code>{customer_name}</code> - <?php esc_html_e('The customer\'s name', 'product-estimator'); ?></li>
+                <li><code>{price}</code> - <?php esc_html_e('The formatted price', 'product-estimator'); ?></li>
+            </ul>
+        </div>
+    </div>
+</div>

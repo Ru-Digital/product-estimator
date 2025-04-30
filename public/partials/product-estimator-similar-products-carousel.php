@@ -20,8 +20,13 @@ if (isset($product['id']) && !empty($product['id'])):
 
             ?>
             <!-- Similar Products Toggle Button -->
+            <?php
+
+            $similar_products_label = $product_estimator_labels_frontend->get_label('label_similar_products');
+
+            ?>
             <button class="product-details-toggle">
-                <?php esc_html_e('Similar Products', 'product-estimator'); ?>
+                <?php esc_html_e($similar_products_label, 'product-estimator'); ?>
                 <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span>
             </button>
 <!-- Similar Products Container - TOGGLEABLE (Hidden by default) -->

@@ -65,6 +65,7 @@ class LabelsFrontend extends FrontendBase {
             'label_print_estimate' => __('Print Estimate', 'product-estimator'),
             'label_request_copy' => __('Request a Copy', 'product-estimator'),
             'label_save_estimate' => __('Save Estimate', 'product-estimator'),
+            'label_similar_products' => __('Similar Products', 'product-estimator'),
 
             // General - Product Labels
             'label_product_includes' => __('Includes', 'product-estimator'),
@@ -117,6 +118,7 @@ class LabelsFrontend extends FrontendBase {
     public function get_label($key, $args = []) {
         // Get all label settings - use dedicated labels option
         $settings = get_option($this->option_name, []);
+        error_log(print_r($settings, true));
 
         // If the label exists in settings, use it
         if (isset($settings[$key])) {
@@ -166,6 +168,7 @@ class LabelsFrontend extends FrontendBase {
             'label_print_estimate',
             'label_request_copy',
             'label_save_estimate',
+            'label_similar_products',
 
             // Product labels
             'label_product_includes',
@@ -247,7 +250,7 @@ class LabelsFrontend extends FrontendBase {
         $labels = [];
 
         $prefixes = [
-            'general' => ['label_print', 'label_request', 'label_save', 'label_product', 'label_estimate', 'label_room'],
+            'general' => ['label_print', 'label_request', 'label_save', 'label_similar', 'label_product', 'label_estimate', 'label_room'],
             'pdf' => ['label_company', 'label_estimate_title', 'label_customer_details', 'label_estimate_summary', 'label_price_range'],
             'alerts' => ['alert_', 'validation_', 'success_']
         ];

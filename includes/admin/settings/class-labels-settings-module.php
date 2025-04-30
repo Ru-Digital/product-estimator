@@ -36,6 +36,7 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
         parent::__construct($plugin_name, $version);
         $this->option_name = 'product_estimator_labels';
     }
+
     /**
      * Set the tab and section details.
      *
@@ -50,7 +51,7 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
 
         // Define available label types (vertical tabs)
         $this->label_types = [
-            'general' => [
+            'labels-general' => [
                 'title' => __('General', 'product-estimator'),
                 'description' => __('General labels used throughout the estimator.', 'product-estimator')
             ],
@@ -206,7 +207,7 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
         $fields = [];
 
         switch ($type) {
-            case 'general':
+            case 'labels-general':
                 $fields = array_merge($fields, [
                     // Estimate Action Buttons
                     'label_print_estimate' => [
@@ -244,6 +245,13 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
                         'type' => 'text',
                         'description' => __('Label for product notes section.', 'product-estimator'),
                         'default' => __('Notes', 'product-estimator'),
+                        'section' => 'product_labels'
+                    ],
+                    'label_similar_products' => [
+                        'title' => __('Similar Products', 'product-estimator'),
+                        'type' => 'text',
+                        'description' => __('Label for similar products section.', 'product-estimator'),
+                        'default' => __('Similar Products', 'product-estimator'),
                         'section' => 'product_labels'
                     ],
                     'label_additional_products' => [
@@ -481,28 +489,25 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
         switch ($args['type']) {
             case 'checkbox':
                 printf(
-                    '<input type="checkbox" id="%1$s" name="product_estimator_settings[%1$s]" value="1" %3$s />',
+                    '<input type="checkbox" id="%1$s" name="product_estimator_settings[%1$s]" value="1" %2$s />',
                     esc_attr($id),
-                    esc_attr($this->option_name),
                     checked($value, 1, false)
                 );
                 break;
 
             case 'textarea':
                 printf(
-                    '<textarea id="%1$s" name="product_estimator_settings[%1$s]" rows="5" cols="50">%3$s</textarea>',
+                    '<textarea id="%1$s" name="product_estimator_settings[%1$s]" rows="5" cols="50">%2$s</textarea>',
                     esc_attr($id),
-                    esc_attr($this->option_name),
                     esc_textarea($value)
                 );
                 break;
 
             default:
                 printf(
-                    '<input type="%1$s" id="%2$s" name="product_estimator_settings[%2$s]" value="%4$s" class="regular-text"%5$s />',
+                    '<input type="%1$s" id="%2$s" name="product_estimator_settings[%2$s]" value="%3$s" class="regular-text"%4$s />',
                     esc_attr($args['type']),
                     esc_attr($id),
-                    esc_attr($this->option_name),
                     esc_attr($value),
                     $extra_attrs
                 );
@@ -707,7 +712,7 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
         parse_str($_POST['form_data'], $form_data);
 
         // Get label type for messaging
-        $label_type = isset($_POST['label_type']) ? sanitize_key($_POST['label_type']) : 'general';
+        $label_type = isset($_POST['label_type']) ? sanitize_key($_POST['label_type']) : 'labels-general';
         $label_type_display = ucfirst($label_type);
 
         // Basic validation

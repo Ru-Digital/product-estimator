@@ -1,6 +1,7 @@
 <?php
 namespace RuDigital\ProductEstimator;
 
+use RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend;
 use RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration;
 use RuDigital\ProductEstimator\Includes\PDFRouteHandler;
 use RuDigital\ProductEstimator\Includes\SessionHandler;
@@ -12,6 +13,7 @@ use RuDigital\ProductEstimator\Includes\Loader;
 use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
 use RuDigital\ProductEstimator\Includes\Admin\AdminScriptHandler;
 use RuDigital\ProductEstimator\Includes\EstimateHandler;
+
 
 /**
  * Main plugin class
@@ -82,9 +84,13 @@ class ProductEstimator {
     private $netsuite_integration;
 
     /**
-     * @var EstimateHandler Estimate Handler instance
+     * Labels frontend
+     *
+     * @var LabelsFrontend
      */
-    protected $estimate_handler;
+    private $labels_frontend;
+
+
 
     /**
      * Initialize the class and set its properties.
@@ -97,6 +103,9 @@ class ProductEstimator {
         $this->plugin_name = $plugin_name;
         $this->version = $plugin_version;
 
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-labels-frontend.php';
+
+        $this->labels_frontend = new LabelsFrontend($this->plugin_name, $this->version);
         // Initialize session handler (high priority)
         $this->session = SessionHandler::getInstance();
 
@@ -190,6 +199,9 @@ class ProductEstimator {
      * Add the modal HTML to the footer
      */
     public function addModalToFooter() {
+        global $product_estimator_labels_frontend;
+        $product_estimator_labels_frontend = $this->labels_frontend;
+
         // Always add the modal to the footer on all pages
         include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
     }

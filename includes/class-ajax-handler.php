@@ -422,6 +422,17 @@ class AjaxHandler {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
+        // Make sure the LabelsFrontend class is available
+        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\LabelsFrontend')) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-labels-frontend.php';
+        }
+
+        // Get the global labels_frontend instance or create a new one
+        global $product_estimator_labels_frontend;
+        if (!isset($product_estimator_labels_frontend) || is_null($product_estimator_labels_frontend)) {
+            $product_estimator_labels_frontend = new \RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+        }
+
         // Start output buffer to capture HTML
         ob_start();
 

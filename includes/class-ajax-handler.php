@@ -1,6 +1,7 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes;
 
+use RuDigital\ProductEstimator\Includes\Frontend\ProductUpgradesFrontend;
 use RuDigital\ProductEstimator\Includes\Frontend\SimilarProductsFrontend;
 use WP_Error;
 use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
@@ -2165,7 +2166,7 @@ class AjaxHandler {
         }
 
         // Get product upgrades settings module
-        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductUpgradesSettingsModule')) {
+        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\ProductUpgradesFrontend')) {
             wp_send_json_error([
                 'message' => __('Product Upgrades module not available', 'product-estimator')
             ]);
@@ -2173,7 +2174,7 @@ class AjaxHandler {
         }
 
         // Initialize the settings module
-        $upgrades_module = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductUpgradesSettingsModule(
+        $upgrades_module = new ProductUpgradesFrontend(
             'product-estimator',
             PRODUCT_ESTIMATOR_VERSION
         );

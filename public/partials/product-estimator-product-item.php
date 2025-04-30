@@ -35,6 +35,10 @@ if (isset($estimate_id)) {
     $estimate = $session_handler->getEstimate($estimate_id);
     if ($estimate && isset($estimate['default_markup'])) {
         $default_markup = floatval($estimate['default_markup']);
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Using estimate's markup for product item: $default_markup%");
+        }
     } else {
         // If no markup found in the estimate, fall back to global settings
         $options = get_option('product_estimator_settings');
@@ -74,78 +78,88 @@ if (isset($estimate_id)) {
             <div class="product-details-wrapper">
                 <div class="product-details">
                     <?php
+
+                    ?>
+                    <!--                    <span class="product-name">-->
+                    <!--                        --><?php //echo esc_html($product['name']); ?>
+                    <!--                    </span>-->
+
+                    <?php
                     // Room area display - ensure values are floats
                     $room_width = isset($room['width']) ? floatval($room['width']) : 0;
                     $room_length = isset($room['length']) ? floatval($room['length']) : 0;
                     $room_area = isset($product['room_area']) ? floatval($product['room_area']) : ($room_width * $room_length);
 
-                    // Check if required price data exists
-                    $price_data = [];
-                    if (function_exists('product_estimator_calculate_total_price_with_additions_for_display')) {
-                        $price_data = product_estimator_calculate_total_price_with_additions_for_display($product);
-                    }
+                    $price_data = product_estimator_calculate_total_price_with_additions_for_display($product);
 
-                    // Set default values
-                    $min_price = isset($product['min_price']) ? $product['min_price'] : 0;
-                    $max_price = isset($product['max_price']) ? $product['max_price'] : 0;
-                    $min_total = isset($product['min_price_total']) ? $product['min_price_total'] : 0;
-                    $max_total = isset($product['max_price_total']) ? $product['max_price_total'] : 0;
-                    $pricing_source = isset($product['pricing_source']) ? $product['pricing_source'] : '';
-                    $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'sqm';
+                    $price_breakdown = $price_data['breakdown'];
+                    $has_auto_add = count($price_breakdown) > 1;
 
-                    // Get breakdown data if available
-                    $price_breakdown = isset($price_data['breakdown']) ? $price_data['breakdown'] : [];
-                    $has_auto_add = !empty($price_breakdown) && count($price_breakdown) > 1;
-
-                    // Use price data values if available
-                    if (!empty($price_data)) {
-                        $min_price = isset($price_data['min_total']) ? $price_data['min_total'] : $min_price;
-                        $max_price = isset($price_data['max_total']) ? $price_data['max_total'] : $max_price;
-                    }
-
-                    if ($has_auto_add && isset($price_breakdown[0])) {
+                    if($has_auto_add) {
                         $main_product = $price_breakdown[0];
-                        // Update pricing method if available in breakdown
-                        if (isset($main_product['pricing_method'])) {
-                            $pricing_method = $main_product['pricing_method'];
-                        }
+                    } else {
+                        $main_product = $price_data;
                     }
+
+                    $min_price = $price_data['min_price'];
+                    $max_price = $price_data['max_price'];
+                    $min_total = $price_data['min_total'];
+                    $max_total = $price_data['max_total'];
+                    $pricing_source = $main_product['pricing_source'];
+                    $pricing_method = $main_product['pricing_method'];
+
                     ?>
+                    <!--                    <span class="product-room-area">-->
+                    <!--                        --><?php //echo sprintf(__('%.2f m²', 'product-estimator'), $room_area); ?>
+                    <!--                    </span>-->
+
+                    <?php if (isset($min_total) && isset($max_total)): ?>
+                        <?php
+                        // Apply markup adjustment - subtract from min, add to max
+                        $min_price = $min_total;
+                        $max_price = $max_total;
+
+                        // Calculate totals based on pricing method
+                        if ($pricing_method === 'sqm') {
+                            // Per square meter - multiply by room area
+                            $unit_price_text = '/m²'; // Show unit price for sqm pricing
+                        } else {
+                            // Fixed pricing - use price directly
+                            $unit_price_text = ''; // No unit price for fixed pricing
+                        }
+                        ?>
+                        <?php if ($min_total === $max_total): ?>
+
+                            <!--                            <span class="product-price">-->
+                            <!--                                --><?php //echo display_price_with_markup($min_total, $default_markup, "up"); ?>
+                            <!--                            </span>-->
+                        <?php else: ?>
+
+
+                            <!--                            <span class="product-price">-->
+                            <!--                                --><?php //echo display_price_with_markup($min_total, $default_markup, "down"); ?><!-- - --><?php //echo display_price_with_markup($max_total, $default_markup, "up"); ?>
+                            <!--                            </span>-->
+                        <?php endif; ?>
+
+                        <!-- Unit price display - only for sqm pricing method -->
+                        <?php if ($pricing_method === 'sqm'): ?>
+                            <!-- Unit price commented out as in original template -->
+                        <?php endif; ?>
+                    <?php endif; ?>
 
                     <?php
-                    // Display the price graph if the function exists
-                    if (function_exists('display_price_graph')) {
-                        display_price_graph(
-                            $min_price,
-                            $max_price,
-                            $default_markup,
-                            esc_html($product['name']),
-                            $room_area,
-                            $pricing_method,
-                            [
-                                'label_count' => 6,
-                                'min_bar_width' => 5
-                            ]
-                        );
-                    } else {
-                        // Fallback if function doesn't exist
-                        echo '<span class="product-name">' . esc_html($product['name']) . '</span>';
-
-                        if (isset($min_total) && isset($max_total)) {
-                            if ($min_total === $max_total) {
-                                echo '<span class="product-price">' .
-                                    (function_exists('display_price_with_markup') ?
-                                        display_price_with_markup($min_total, $default_markup, "up") :
-                                        wc_price($min_total)) . '</span>';
-                            } else {
-                                echo '<span class="product-price">' .
-                                    (function_exists('display_price_with_markup') ?
-                                        display_price_with_markup($min_total, $default_markup, "down") . ' - ' .
-                                        display_price_with_markup($max_total, $default_markup, "up") :
-                                        wc_price($min_total) . ' - ' . wc_price($max_total)) . '</span>';
-                            }
-                        }
-                    }
+                    display_price_graph(
+                        $min_total,
+                        $max_total,
+                        $default_markup,
+                        esc_html($product['name']),
+                        $room_area,
+                        $pricing_method,
+                        [
+                            'label_count' => 6, // Adjust number of labels as needed
+                            'round_to' => 500  // Round to nearest thousand
+                        ]
+                    );
                     ?>
 
                     <button class="remove-product"
@@ -171,7 +185,7 @@ if (isset($estimate_id)) {
 
     <?php
     // Display additional products if available - NOW TOGGLEABLE
-    if ($has_auto_add && !empty($price_breakdown)):
+    if ($has_auto_add):
         ?>
         <!-- Includes Toggle Button -->
         <button class="product-includes-toggle expanded">
@@ -183,19 +197,15 @@ if (isset($estimate_id)) {
         <div class="includes-container visible" style="display: block;">
             <div class="product-includes">
                 <div class="product-includes-items">
-                    <?php foreach ($price_breakdown as $index => $additional_product):
-                        // Skip the first item as it's the main product
-                        if ($index === 0) continue;
-                        ?>
+                    <?php foreach ($price_breakdown as $additional_product): ?>
                         <div class="include-item">
                             <span class="product-includes-icon">
                                 <span class="dashicons dashicons-plus-alt"></span>
                             </span>
                             <div class="include-item-name">
-                                <?php echo isset($additional_product['name']) ? esc_html($additional_product['name']) : ''; ?>
+                                <?php echo esc_html($additional_product['name']); ?>
                             </div>
-                            <?php if(isset($additional_product['min_total']) && $additional_product['min_total'] > 0 &&
-                                isset($additional_product['max_total']) && $additional_product['max_total'] > 0 ): ?>
+                            <?php if($additional_product['min_total'] > 0 && $additional_product['max_total'] > 0 ): ?>
                                 <div class="include-item-prices">
                                     <?php if (isset($additional_product['min_total']) && isset($additional_product['max_total'])): ?>
                                         <?php
@@ -205,24 +215,39 @@ if (isset($estimate_id)) {
 
                                         if ($add_min_total === $add_max_total):
                                             ?>
+
+
                                             <div class="include-item-total-price">
-                                                <?php echo function_exists('display_price_with_markup') ?
-                                                    display_price_with_markup($add_min_total, $default_markup, null) :
-                                                    wc_price($add_min_total); ?>
+                                                <?php echo display_price_with_markup($additional_product['min_total'], $default_markup, null); ?>
                                             </div>
                                         <?php else: ?>
+
+
                                             <div class="include-item-total-price">
-                                                <?php
-                                                if (function_exists('display_price_with_markup')) {
-                                                    echo display_price_with_markup($add_min_total, $default_markup, "down") .
-                                                        ' - ' .
-                                                        display_price_with_markup($add_max_total, $default_markup, "up");
-                                                } else {
-                                                    echo wc_price($add_min_total) . ' - ' . wc_price($add_max_total);
-                                                }
-                                                ?>
+                                                <?php echo display_price_with_markup($additional_product['min_total'], $default_markup, "down"); ?> - <?php echo display_price_with_markup($additional_product['max_total'], $default_markup, "up"); ?>
                                             </div>
                                         <?php endif; ?>
+                                    <?php endif; ?>
+
+                                    <?php if (isset($additional_product['min_price']) && isset($additional_product['max_price'])): ?>
+                                        <?php
+                                        // Apply markup to unit prices
+                                        $add_min_price_unit = $additional_product['min_price'];
+                                        $add_max_price_unit = $additional_product['max_price'];
+//
+//                                    if ($add_min_price_unit === $add_max_price_unit):
+////                                        ?>
+                                        <!--                                        <div class="include-item-unit-price">-->
+                                        <!--                                            --><?php //echo sprintf(__('%s/m²', 'product-estimator'), display_price_with_markup($add_min_price_unit, $default_markup, "up")); ?>
+                                        <!--                                        </div>-->
+                                        <!---->
+                                        <!--                                    --><?php //else: ?>
+                                        <!--                                        <div class="include-item-unit-price">-->
+                                        <!--                                            --><?php //echo sprintf(__('%s - %s/m²', 'product-estimator'),
+//                                                display_price_with_markup($add_min_price_unit, $default_markup, "down"),
+//                                                display_price_with_markup($add_max_price_unit, $default_markup, "up")); ?>
+                                        <!--                                        </div>-->
+                                        <!--                                    --><?php //endif; ?>
                                     <?php endif; ?>
                                 </div>
                             <?php endif; ?>
@@ -232,67 +257,13 @@ if (isset($estimate_id)) {
                 <?php
                 // Include product upgrades template if available
                 if (!isset($product['type']) || $product['type'] !== 'note') {
-                    // Make sure we have a valid product ID for upgrades
-                    $upgrade_product_id = isset($product['id']) ? $product['id'] : 0;
+                    $upgrade_product_id = $additional_product['id'];
                     $upgrade_type = "additional_products";
                     if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-upgrades-display.php')) {
                         include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-upgrades-display.php';
                     }
                 }
                 ?>
-            </div>
-        </div>
-    <?php elseif ($has_includes): ?>
-        <!-- Includes Toggle Button for original additional_products -->
-        <button class="product-includes-toggle expanded">
-            <?php esc_html_e('Product Includes', 'product-estimator'); ?>
-            <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
-        </button>
-
-        <!-- Includes Container - TOGGLEABLE -->
-        <div class="includes-container visible" style="display: block;">
-            <div class="product-includes">
-                <div class="product-includes-items">
-                    <?php foreach ($product['additional_products'] as $additional_product): ?>
-                        <div class="include-item">
-                            <span class="product-includes-icon">
-                                <span class="dashicons dashicons-plus-alt"></span>
-                            </span>
-                            <div class="include-item-name">
-                                <?php echo isset($additional_product['name']) ? esc_html($additional_product['name']) : ''; ?>
-                            </div>
-                            <?php if(isset($additional_product['min_price_total']) && $additional_product['min_price_total'] > 0 &&
-                                isset($additional_product['max_price_total']) && $additional_product['max_price_total'] > 0 ): ?>
-                                <div class="include-item-prices">
-                                    <?php
-                                    $add_min_total = $additional_product['min_price_total'];
-                                    $add_max_total = $additional_product['max_price_total'];
-
-                                    if ($add_min_total === $add_max_total):
-                                        ?>
-                                        <div class="include-item-total-price">
-                                            <?php echo function_exists('display_price_with_markup') ?
-                                                display_price_with_markup($add_min_total, $default_markup, null) :
-                                                wc_price($add_min_total); ?>
-                                        </div>
-                                    <?php else: ?>
-                                        <div class="include-item-total-price">
-                                            <?php
-                                            if (function_exists('display_price_with_markup')) {
-                                                echo display_price_with_markup($add_min_total, $default_markup, "down") .
-                                                    ' - ' .
-                                                    display_price_with_markup($add_max_total, $default_markup, "up");
-                                            } else {
-                                                echo wc_price($add_min_total) . ' - ' . wc_price($add_max_total);
-                                            }
-                                            ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
             </div>
         </div>
     <?php endif; ?>

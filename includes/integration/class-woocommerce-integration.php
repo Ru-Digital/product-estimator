@@ -385,6 +385,7 @@ class WoocommerceIntegration {
      * @return bool Whether estimator is enabled
      */
     public static function isEstimatorEnabled($product_id) {
+
         $product = wc_get_product($product_id);
 
         if (!$product) {
@@ -396,9 +397,9 @@ class WoocommerceIntegration {
 
         // Check if this is a variation
         if ($product->is_type('variation')) {
+
             // Check variation first - if it has a specific setting, use that
             $variation_meta = get_post_meta($product_id, '_enable_estimator', true);
-
             // Only if it's explicitly 'yes', consider it enabled
             if ($variation_meta === 'yes') {
                 return true;

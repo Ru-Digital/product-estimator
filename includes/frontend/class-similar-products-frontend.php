@@ -92,8 +92,19 @@ class SimilarProductsFrontend extends FrontendBase {
             return array();
         }
 
+        $is_variation = false;
+        $parent_id = null;
+
+        if ( $product instanceof \WC_Product_Variation ) {
+            $parent_id = $product->get_parent_id();
+            $is_variation = true;
+            $product = wc_get_product($product->get_parent_id());
+
+
+        }
+
         // Get product categories
-        $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
+        $product_categories = wp_get_post_terms(($is_variation) ? $parent_id : $product_id, 'product_cat', array('fields' => 'ids'));
 
         if (empty($product_categories)) {
             return array();
@@ -121,6 +132,8 @@ class SimilarProductsFrontend extends FrontendBase {
 
             // Check if any of the product's categories match any of the rule's source categories
             $intersect = array_intersect($product_categories, $rule['source_categories']);
+
+
             if (!empty($intersect)) {
                 $matching_rules[] = $rule;
             }
@@ -148,6 +161,12 @@ class SimilarProductsFrontend extends FrontendBase {
         if (isset($category_products[$product_id])) {
             unset($category_products[$product_id]);
         }
+
+        // Remove the source product parent
+        if ($parent_id && isset($category_products[$parent_id])) {
+            unset($category_products[$parent_id]);
+        }
+
 
         if (empty($category_products)) {
             return array();
@@ -178,6 +197,7 @@ class SimilarProductsFrontend extends FrontendBase {
             $similarity_scores[$candidate_id] = $max_score;
         }
 
+
         // Filter products based on highest similarity threshold from matching rules
         $max_threshold = 0;
         foreach ($matching_rules as $rule) {
@@ -196,7 +216,8 @@ class SimilarProductsFrontend extends FrontendBase {
         arsort($similar_products);
 
         // Limit to top 10 results
-        return array_slice(array_keys($similar_products), 0, 10);
+        $return = array_slice(array_keys($similar_products), 0, 10);
+        return $return;
     }
 
 

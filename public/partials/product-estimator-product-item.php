@@ -297,16 +297,9 @@ if (isset($estimate_id)) {
         </div>
     <?php endif; ?>
 
-    <?php if ($has_similar_products): ?>
-        <!-- Similar Products Toggle Button -->
-        <button class="product-details-toggle">
-            <?php esc_html_e('Similar Products', 'product-estimator'); ?>
-            <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span>
-        </button>
 
-        <!-- Similar Products Container - TOGGLEABLE (Hidden by default) -->
-        <div class="similar-products-container" style="display: none;">
+
+
             <?php include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-similar-products-carousel.php'; ?>
-        </div>
-    <?php endif; ?>
+
 </div>

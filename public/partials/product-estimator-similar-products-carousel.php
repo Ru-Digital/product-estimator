@@ -17,6 +17,17 @@ if (isset($product['id']) && !empty($product['id'])):
 
         // Filter out products already in this room
         if (!empty($similar_products) && !empty($room['products'])):
+
+            ?>
+            <!-- Similar Products Toggle Button -->
+            <button class="product-details-toggle">
+                <?php esc_html_e('Similar Products', 'product-estimator'); ?>
+                <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span>
+            </button>
+<!-- Similar Products Container - TOGGLEABLE (Hidden by default) -->
+<div class="similar-products-container" style="display: none;">
+        <?php
+
             $room_product_ids = [];
             foreach ($room['products'] as $room_product) {
                 if (!empty($room_product['id']) && !isset($room_product['type'])) {
@@ -162,6 +173,7 @@ if (isset($product['id']) && !empty($product['id'])):
                         <span class="dashicons dashicons-arrow-right-alt2"></span>
                     </div>
                 </div>
+            </div>
             </div>
         <?php
         endif;

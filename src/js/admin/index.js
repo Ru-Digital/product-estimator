@@ -11,10 +11,11 @@ import './modules/ProductAdditionsSettingsModule';
 import './modules/PricingRulesSettingsModule';
 import './modules/SimilarProductsSettingsModule';
 import './modules/ProductUpgradesSettingsModule';
+import './modules/LabelSettingsModule';
 
 // This is the main entry point for the frontend script bundle
 // The admin modules are imported separately due to code splitting in webpack
 
-console.log('Product Estimator initialized');
+console.log('Product Estimator Admin initialized');
 
 // Frontend functionality can be added here

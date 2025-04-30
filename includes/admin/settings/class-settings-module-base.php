@@ -215,7 +215,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             exit;
         }
 
-        if (!current_user_can('manage_options')) {
+        if (!current_user_can('manage_noptions')) {
             wp_send_json_error(array('message' => __('You do not have permission to change these settings', 'product-estimator')));
             exit;
         }

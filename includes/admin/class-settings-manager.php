@@ -118,7 +118,8 @@ class SettingsManager {
             'ProductAdditionsSettingsModule',
             'PricingRulesSettingsModule',
             'SimilarProductsSettingsModule',
-            'ProductUpgradesSettingsModule'
+            'ProductUpgradesSettingsModule',
+            'LabelsSettingsModule',
         ];
 
         // Load and initialize each module

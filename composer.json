@@ -60,6 +60,7 @@
             "includes/frontend/class-similar-products-frontend.php",
             "includes/frontend/class-product-additions-frontend.php",
             "includes/frontend/class-product-upgrades-frontend.php",
+            "includes/frontend/class-labels-frontend.php",
             "includes/utilities/class-pdf-generator.php"
         ],
         "files": [

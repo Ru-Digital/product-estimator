@@ -69,7 +69,7 @@ class PrintEstimate {
         if (printButton.classList.contains('print-estimate-pdf')) {
           // This is a direct PDF link - check email before proceeding
           const estimateId = printButton.dataset.estimateId;
-          console.log("Winnnn");
+
           this.checkCustomerEmail(estimateId)
             .then(hasEmail => {
               if (hasEmail) {

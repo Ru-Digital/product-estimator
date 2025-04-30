@@ -16,7 +16,7 @@ $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInsta
 $estimates = $session_handler->getEstimates();
 //
 //echo "<pre>";
-////unset($_SESSION['product_estimator']);
+//////unset($_SESSION['product_estimator']);
 //print_r($_SESSION['product_estimator']);
 //echo "</pre>";
 

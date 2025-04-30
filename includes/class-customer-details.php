@@ -98,12 +98,18 @@ class CustomerDetails {
 
         // Save under the standardized customer_details key
         $_SESSION['product_estimator']['customer_details'] = $this->details;
+        $estimates = $_SESSION['product_estimator']['estimates'];
 
-        // If old key exists, remove it
-        if (isset($_SESSION['product_estimator']['user_details'])) {
-            unset($_SESSION['product_estimator']['user_details']);
+        if($_SESSION['product_estimator']['estimates']) {
+            foreach ($_SESSION['product_estimator']['estimates'] as $key => $estimate) {
+                error_log("key : $key");
+
+                $_SESSION['product_estimator']['estimates'][$key]['customer_details'] = $this->details;
+            }
         }
+        error_log("UPDATED ESTIMATES CUSTOMER DATA");
 
+        error_log(print_r($_SESSION['product_estimator'], true));
         return true;
     }
 

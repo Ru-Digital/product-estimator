@@ -691,7 +691,8 @@ function product_estimator_calculate_price_steps($min_price, $max_price, $option
     $step_values = [];
     for ($i = 0; $i <= $step_count; $i++) {
         $value = $scale_min + ($i * $nice_step_size);
-        $percent = ($value - $scale_min) / ($scale_max - $scale_min) * 100;
+//        $percent = ($value - $scale_min) / ($scale_max - $scale_min) * 100;
+        $percent = ($i / $step_count) * 100;
         $step_values[] = [
             'value' => round($value),
             'percent' => $percent,
@@ -826,21 +827,29 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
 
         <?php if ($min_price > 0 && $max_price > 0 && $options['show_labels']): ?>
             <div class="price-graph-labels">
-                <?php foreach ($step_values as $step): ?>
-                    <div class="price-label" style="left: <?php echo esc_attr($step['percent']); ?>%;">
+                <?php foreach ($step_values as $index => $step): ?>
+                    <?php
+                    $percent = floatval($step['percent']);
+                    $is_last = ($index === array_key_last($step_values));
+                    $left = $is_last ? 100 : min($percent, 100);
+                    $transform = $is_last ? 'transform: translateX(-100%);' : '';
+                    ?>
+                    <div class="price-label" style="left: <?php echo esc_attr($left); ?>%; <?php echo $transform; ?>">
                         <div class="price-tick"></div>
                         <div class="price-value"><?php echo esc_html($step['formatted']); ?></div>
                     </div>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-        <div class="price-notice">
-            <?php
-            global $product_estimator_labels_frontend;
-            echo $product_estimator_labels_frontend->get_label('label_price_graph_notice');
-            ?>
-        </div>
+
+    <div class="price-notice">
+        <?php
+        global $product_estimator_labels_frontend;
+        echo $product_estimator_labels_frontend->get_label('label_price_graph_notice');
+        ?>
     </div>
+    </div>
+
     <?php
 }
 

@@ -120,34 +120,9 @@ class PrintEstimate {
 
         const estimateId = requestCopyButton.dataset.estimateId;
 
-        return this.checkCustomerEmail(estimateId)
-          .then(hasEmail => {
-            if (hasEmail) {
-              // Email exists, send the copy
-              this.requestCopyEstimate(estimateId, requestCopyButton)
-                .then(response => {
-                  this.showMessage(`Estimate has been emailed to ${response.email}`, 'success', () => {
-                    this.setButtonLoading(requestCopyButton, false);
-                    this.processing = false;
-                  });
-                })
-                .catch(error => {
-                  this.showError('Error sending estimate copy. Please try again.');
-                });
-            } else {
-              // No email, show prompt
-              this.showEmailPrompt(estimateId, requestCopyButton, 'request_copy');
-            }
-          })
-          .catch(error => {
-            this.showError('Error checking customer email. Please try again.');
-          })
-          .finally(() => {
-            // Reset button state
-
-          });
+        // Show contact method choice modal
+        this.showContactSelectionPrompt(estimateId, requestCopyButton, 'request_copy');
       }
-
       // Other button handlers can be added here
     });
   }
@@ -296,10 +271,10 @@ class PrintEstimate {
                   }
                 );
               })
-                  .catch(error => {
-                    this.showError('Error sending estimate copy. Please try again.');
-                  })
-                  .finally(() => {
+              .catch(error => {
+                this.showError('Error sending estimate copy. Please try again.');
+              })
+              .finally(() => {
 
               });
 
@@ -326,6 +301,82 @@ class PrintEstimate {
     }, 100);
   }
 
+  /**
+   * Show email prompt modal
+   * @param {string} estimateId - The estimate ID
+   * @param {HTMLElement} button - The button element
+   * @param {string} action - The action type ('print', 'copy', etc.)
+   */
+  showContactSelectionPrompt(estimateId, button, action = 'request_copy') {
+    const modalHtml = `
+    <div class="email-prompt-overlay"></div>
+    <div class="email-prompt-container">
+      <div class="email-prompt-header">
+        <h3>How would you like to receive your estimate?</h3>
+      </div>
+      <div class="email-prompt-body">
+        <p>Please choose how you'd prefer to receive your estimate:</p>
+      </div>
+      <div class="email-prompt-footer">
+        <button type="button" class="button cancel-email-btn">Cancel</button>
+        <button type="button" class="button submit-email-btn email-choice">Email</button>
+        <button type="button" class="button submit-email-btn sms-choice">SMS</button>
+      </div>
+    </div>
+  `;
+
+    const promptEl = document.createElement('div');
+    promptEl.className = 'email-prompt-modal';
+    promptEl.innerHTML = modalHtml;
+    document.body.appendChild(promptEl);
+
+    const cancelBtn = promptEl.querySelector('.cancel-email-btn');
+    const emailBtn = promptEl.querySelector('.email-choice');
+    const smsBtn = promptEl.querySelector('.sms-choice');
+
+    cancelBtn.addEventListener('click', () => {
+      this.setButtonLoading(button, false);
+      this.processing = false;
+      promptEl.remove();
+    });
+
+    emailBtn.addEventListener('click', () => {
+      promptEl.remove();
+
+      // Run the original flow for "Email"
+      this.checkCustomerEmail(estimateId)
+        .then(hasEmail => {
+          if (hasEmail) {
+            this.requestCopyEstimate(estimateId, button)
+              .then(response => {
+                this.showMessage(`Estimate has been emailed to ${response.email}`, 'success', () => {
+                  this.setButtonLoading(button, false);
+                  this.processing = false;
+                });
+              })
+              .catch(() => {
+                this.showError('Error sending estimate copy. Please try again.');
+                this.setButtonLoading(button, false);
+                this.processing = false;
+              });
+          } else {
+            this.showEmailPrompt(estimateId, button, 'request_copy');
+          }
+        })
+        .catch(() => {
+          this.showError('Error checking customer email. Please try again.');
+          this.setButtonLoading(button, false);
+          this.processing = false;
+        });
+    });
+
+    smsBtn.addEventListener('click', () => {
+      promptEl.remove();
+      this.showMessage('SMS option coming soon.');
+      this.setButtonLoading(button, false);
+      this.processing = false;
+    });
+  }
   /**
    * Check if customer has an email address
    * @param {string} estimateId - The estimate ID

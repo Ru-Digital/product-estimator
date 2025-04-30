@@ -375,6 +375,7 @@ class CustomerDetailsManager {
         title: this.config.i18n.delete_customer_details || 'Delete Customer Details',
         message: this.config.i18n.confirm_delete_details || 'Are you sure you want to delete your saved details?',
         confirmText: this.config.i18n.delete || 'Delete',
+        action: 'delete',
         cancelText: this.config.i18n.cancel || 'Cancel',
         onConfirm: () => {
           this.deleteCustomerDetails();

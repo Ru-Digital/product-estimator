@@ -34,11 +34,19 @@ class PDFRouteHandler {
     private $estimate_model;
 
     /**
+     * @var EstimateHandler Estimate handler instance
+     */
+    private $estimate_handler;
+
+    /**
      * Initialize the class and set up hooks
      */
     public function __construct() {
         // Initialize session handler
         $this->session = SessionHandler::getInstance();
+
+        $this->estimate_handler = new EstimateHandler();
+
 
         // Initialize estimate model if the class exists
         if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Models\\EstimateModel')) {
@@ -53,12 +61,8 @@ class PDFRouteHandler {
 
         // Handle the custom endpoint
         add_action('template_redirect', array($this, 'handle_pdf_endpoint'));
-
-        // Add a link in the admin bar for testing (debug mode only)
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            add_action('admin_bar_menu', array($this, 'add_admin_bar_pdf_link'), 999);
-        }
     }
+
 
     /**
      * Register custom rewrite rule for PDF endpoint
@@ -173,7 +177,7 @@ class PDFRouteHandler {
             }
 
             // Now load the estimate from the database (which should now have the latest data)
-            $estimate_data = $this->get_estimate_from_db($db_id);
+            $estimate_data = $this->estimate_handler->get_estimate_from_db($db_id);
 
             if (empty($estimate_data)) {
                 $this->output_error('Estimate not found');
@@ -213,73 +217,8 @@ class PDFRouteHandler {
         }
     }
 
-    /**
-     * Get estimate data from the database
-     *
-     * @param int $db_id The database ID
-     * @return array|false The estimate data or false if not found
-     */
-    private function get_estimate_from_db($db_id) {
-        // First try using the EstimateModel
-        if (isset($this->estimate_model) && method_exists($this->estimate_model, 'get_estimate')) {
-            $estimate_row = $this->estimate_model->get_estimate($db_id);
 
-            if ($estimate_row && isset($estimate_row['estimate_data'])) {
-                if (is_array($estimate_row['estimate_data'])) {
-                    // Data already decoded
-                    $estimate_data = $estimate_row['estimate_data'];
-                } else {
-                    // Data needs to be decoded from JSON
-                    $estimate_data = json_decode($estimate_row['estimate_data'], true);
-                }
 
-                if (is_array($estimate_data)) {
-                    // Make sure the db_id is set in the estimate data for proper display
-                    $estimate_data['db_id'] = $db_id;
-                    return $estimate_data;
-                }
-            }
-        }
-
-        // Fall back to using the trait method if available
-        if (method_exists($this, 'getEstimateFromDb')) {
-            return $this->getEstimateFromDb($db_id);
-        }
-
-        // Last resort - query the database directly
-        return $this->fallback_get_estimate($db_id);
-    }
-
-    /**
-     * Fallback method to get estimate directly from database
-     *
-     * @param int $db_id The database ID
-     * @return array|false The estimate data or false on failure
-     */
-    private function fallback_get_estimate($db_id) {
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'product_estimator_estimates';
-
-        $estimate_row = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $table_name WHERE id = %d",
-            $db_id
-        ), ARRAY_A);
-
-        if (!$estimate_row || !isset($estimate_row['estimate_data'])) {
-            return false;
-        }
-
-        // Decode JSON data
-        $estimate_data = json_decode($estimate_row['estimate_data'], true);
-
-        if (is_array($estimate_data)) {
-            // Add db_id to the data for proper referencing
-            $estimate_data['db_id'] = $db_id;
-            return $estimate_data;
-        }
-
-        return false;
-    }
 
     /**
      * Output error message
@@ -310,41 +249,20 @@ class PDFRouteHandler {
         exit;
     }
 
+
+
     /**
-     * Add test link in admin bar for debug purposes
-     * Only shows in debug mode and if user is an admin
+     * Generate a secure token for PDF access
      *
-     * @param WP_Admin_Bar $admin_bar Admin bar object
+     * @param int $estimate_id The database ID of the estimate
+     * @param int $expiry Token expiry time in seconds (default 24 hours)
+     * @return string|false The generated token or false on failure
      */
-    public function add_admin_bar_pdf_link($admin_bar) {
-        // Only show for admins
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-
-        // Get a random estimate ID from the database
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'product_estimator_estimates';
-        $random_id = $wpdb->get_var("SELECT id FROM {$table_name} ORDER BY id DESC LIMIT 1");
-
-        if (!$random_id) {
-            return; // No estimates in the database
-        }
-
-        $admin_bar->add_menu(array(
-            'id'    => 'product-estimator-pdf-test',
-            'title' => 'Test PDF (ID: ' . $random_id . ')',
-            'href'  => home_url('/product-estimator/pdf/' . $random_id),
-            'meta'  => array(
-                'title' => 'Open PDF in new tab',
-                'target' => '_blank'
-            )
-        ));
-    }
-
-    function generate_secure_pdf_token($estimate_id, $expiry = 86400) {
+    public function generate_secure_pdf_token($estimate_id, $expiry = 9999999) {
         // Create a token with: estimate_id + customer_email + timestamp + secret_key
-        $estimate = $this->get_estimate_from_db($estimate_id);
+
+        $estimate = $this->estimate_handler->get_estimate_from_db($estimate_id);
+
         if (!$estimate || empty($estimate['customer_details']['email'])) {
             return false;
         }
@@ -357,6 +275,12 @@ class PDFRouteHandler {
         return urlencode(base64_encode($data . '|' . $signature));
     }
 
+    /**
+     * Validate a PDF token
+     *
+     * @param string $token The token to validate
+     * @return int|false The estimate ID if valid, false otherwise
+     */
     private function validate_pdf_token($token) {
         try {
             $decoded = base64_decode(urldecode($token));
@@ -375,9 +299,8 @@ class PDFRouteHandler {
             $expected_signature = hash_hmac('sha256', $data, wp_salt('auth'));
 
             if (!hash_equals($expected_signature, $signature)) return false;
-
             // Verify estimate exists and belongs to this email
-            $estimate = $this->get_estimate_from_db($estimate_id);
+            $estimate = $this->estimate_handler->get_estimate_from_db($estimate_id);
             if (!$estimate ||
                 !isset($estimate['customer_details']['email']) ||
                 $estimate['customer_details']['email'] !== $email) {
@@ -391,5 +314,14 @@ class PDFRouteHandler {
             }
             return false;
         }
+    }
+
+    /**
+     * Flush rewrite rules - add this to plugin activation hook
+     */
+    public static function flush_pdf_routes() {
+        $handler = new self();
+        $handler->register_rewrite_rules();
+        flush_rewrite_rules(true);
     }
 }

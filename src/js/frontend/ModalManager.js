@@ -1224,6 +1224,7 @@ class ModalManager {
         title = dialogTitles.estimate || 'Delete Estimate';
         message = dialogMessages.estimate || 'Are you sure you want to delete this estimate and all its rooms?';
         confirmText = i18n.delete || 'Delete';
+        type = 'delete';
         break;
       case 'room':
         title = dialogTitles.room || 'Delete Room';
@@ -1245,6 +1246,7 @@ class ModalManager {
       title: title,
       message: message,
       type: type,
+      action: 'delete',
       confirmText: confirmText,
       onConfirm: () => {
         this.log(`User confirmed deletion of ${type}`);
@@ -3050,6 +3052,7 @@ class ModalManager {
         title: 'Confirm Upgrade',
         message: confirmMessage,
         type: 'product', // Using product type for styling
+        action: 'upgrade_product',
         confirmText: 'Upgrade',
         cancelText: 'Cancel',
         onConfirm: () => {

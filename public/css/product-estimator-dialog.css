@@ -112,18 +112,8 @@
   border-color: #ddd;
 }
 
-.pe-dialog-confirm {
-  background-color: #d9534f;
-  color: white;
-  border-color: #d43f3a;
-}
-
 .pe-dialog-cancel:hover {
   background-color: #e5e5e5;
-}
-
-.pe-dialog-confirm:hover {
-  background-color: #c9302c;
 }
 
 .pe-dialog-cancel:focus,
@@ -131,46 +121,36 @@
   outline: 2px solid #007cba;
   outline-offset: 1px;
 }
+.pe-dialog-title {
+  color: #00833F;
+}
+
+.pe-dialog-confirm {
+  background-color: #00833F;
+  border-color: #00833F;
+  color: #fff;
+}
+
+.pe-dialog-confirm:hover {
+  background-color: #016331;
+  border-color: #016331;
+}
 
 /* Dialog types */
-.pe-dialog-type-product .pe-dialog-title {
+.pe-dialog-action-delete .pe-dialog-title {
   color: #d9534f;
 }
 
-.pe-dialog-type-product .pe-dialog-confirm {
+.pe-dialog-action-delete .pe-dialog-confirm {
+  color: #fff;
   background-color: #d9534f;
   border-color: #d9534f;
 }
 
-.pe-dialog-type-product .pe-dialog-confirm:hover {
-  background-color: #d9534f;
+.pe-dialog-action-delete .pe-dialog-confirm:hover {
+  background-color: #c30400;
 }
 
-.pe-dialog-type-room .pe-dialog-title {
-  color: #d9534f;
-}
-
-.pe-dialog-type-room .pe-dialog-confirm {
-  background-color: #d9534f;
-  border-color: #d9534f;
-}
-
-.pe-dialog-type-room .pe-dialog-confirm:hover {
-  background-color: #d9534f;
-}
-
-.pe-dialog-type-estimate .pe-dialog-title {
-  color: #d9534f;
-}
-
-.pe-dialog-type-estimate .pe-dialog-confirm {
-  background-color: #d9534f;
-  border-color: #d43f3a;
-}
-
-.pe-dialog-type-estimate .pe-dialog-confirm:hover {
-  background-color: #c9302c;
-}
 
 /* Icon support */
 .pe-dialog-icon {

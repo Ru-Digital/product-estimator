@@ -805,4 +805,22 @@ class SessionHandler {
             }
         }
     }
+
+    public function getEstimateSessionByDbId($db_id) {
+        if (!isset($this->session_data['estimates']) || !is_array($this->session_data['estimates'])) {
+            return null;
+        }
+
+        foreach ($this->session_data['estimates'] as $estimate_id => $estimate) {
+            if (isset($estimate['db_id']) && $estimate['db_id'] == $db_id) {
+
+                return [
+                    "id" => $estimate_id,
+                    "data" => $estimate
+                ];
+            }
+        }
+
+        return null;
+    }
 }

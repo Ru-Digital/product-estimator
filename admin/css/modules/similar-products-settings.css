@@ -324,3 +324,30 @@
     min-height: 150px;
   }
 }
+
+/* Select2 styling */
+.select2-container--default .select2-selection--multiple {
+  border-color: #ddd;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+  border-color: #2271b1;
+  box-shadow: 0 0 0 1px #2271b1;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+  background-color: #f0f7fc;
+  border-color: #c5d6e8;
+}
+
+/* Tab styling */
+.nav-tab-wrapper {
+  margin-bottom: 20px;
+}
+
+.tab-content {
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-top: none;
+}

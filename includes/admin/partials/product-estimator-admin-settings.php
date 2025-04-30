@@ -16,11 +16,13 @@ if (!defined('WPINC')) {
 
 // Get all modules from the Settings Manager
 $modules = $this->get_modules();
-$active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
+$active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : '';
 
 // Ensure the active tab exists, default to general if not
-if (!isset($modules[$active_tab])) {
-    $active_tab = 'general';
+if (empty($active_tab) || !isset($modules[$active_tab])) {
+    // Get first module as default
+    reset($modules);
+    $active_tab = key($modules);
 }
 ?>
 
@@ -40,38 +42,35 @@ if (!isset($modules[$active_tab])) {
                 </a>
             <?php endforeach; ?>
         </nav>
-    <?php
-        foreach ($modules as $module) {
-        $tab_id = $module->get_tab_id();
-        $display_style = ($current_tab === $tab_id) ? 'block' : 'none';
-        ?>
-        <div id="<?php echo esc_attr($tab_id); ?>" class="tab-content" style="display: <?php echo esc_attr($display_style); ?>;">
-            <?php
-            // For standard settings tabs with fields
-            if (method_exists($module, 'render_module_content')) {
-                // Custom rendering for modules with special UI
-                $module->render_module_content();
-            } else {
-                // Standard settings form
-                ?>
-                <form method="post" action="javascript:void(0);" class="product-estimator-form">
-                    <?php
-                    // Output section heading and fields
-                    settings_fields($this->plugin_name . '_options');
-                    do_settings_sections($this->plugin_name . '_' . $tab_id);
-                    ?>
-                    <p class="submit">
-                        <button type="submit" class="button button-primary">
-                            <?php esc_html_e('Save Settings', 'product-estimator'); ?>
-                        </button>
-                    </p>
-                </form>
+
+        <!-- Tab Content -->
+        <?php foreach ($modules as $tab_id => $module): ?>
+            <div id="<?php echo esc_attr($tab_id); ?>" class="tab-content" style="display: <?php echo $active_tab === $tab_id ? 'block' : 'none'; ?>;">
                 <?php
-            }
-            ?>
-        </div>
-        <?php
-    }
-    ?>
+                // For modules with custom content rendering
+                if (method_exists($module, 'render_module_content')) {
+                    // Custom rendering for modules with special UI
+                    $module->render_module_content();
+                } else {
+                    // Standard settings form
+                    ?>
+                    <form method="post" action="javascript:void(0);" class="product-estimator-form" data-tab="<?php echo esc_attr($tab_id); ?>">
+                        <?php
+                        // Output section heading and fields
+                        settings_fields($this->plugin_name . '_options');
+                        do_settings_sections($this->plugin_name . '_' . $tab_id);
+                        ?>
+                        <p class="submit">
+                            <button type="submit" class="button button-primary save-settings">
+                                <?php esc_html_e('Save Settings', 'product-estimator'); ?>
+                            </button>
+                            <span class="spinner"></span>
+                        </p>
+                    </form>
+                    <?php
+                }
+                ?>
+            </div>
+        <?php endforeach; ?>
     </div>
 </div>

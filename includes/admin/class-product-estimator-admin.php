@@ -38,13 +38,22 @@ class ProductEstimatorAdmin {
     private $settings_manager;
 
     /**
-     * The customer estimates  instance
+     * The customer estimates instance
      *
      * @since    1.1.0
      * @access   private
      * @var      CustomerEstimatesAdmin    $customer_estimates    Customer Estimates
      */
     private $customer_estimates;
+
+    /**
+     * The admin script handler instance
+     *
+     * @since    1.2.0
+     * @access   private
+     * @var      AdminScriptHandler    $admin_script_handler    Admin script handler
+     */
+    private $admin_script_handler;
 
     /**
      * Initialize the class and set its properties.
@@ -58,8 +67,21 @@ class ProductEstimatorAdmin {
         $this->version = $version;
 
         $this->load_dependencies();
+
+        // FIX: Initialize script handler first before any other components
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-admin-script-handler.php';
+        $this->admin_script_handler = new AdminScriptHandler($this->plugin_name, $this->version);
+
+        // Make the admin script handler globally available for modules
+        global $product_estimator_script_handler;
+        $product_estimator_script_handler = $this->admin_script_handler;
+
         $this->init_components();
         $this->define_hooks();
+
+        // Make this instance globally available
+        global $product_estimator;
+        $product_estimator = $this;
     }
 
     /**
@@ -78,6 +100,8 @@ class ProductEstimatorAdmin {
         // Load Customer Estimates List Table
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-customer-estimates-list-table.php';
 
+        // Load CSV Export Handler
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-csv-export-handler.php';
     }
 
     /**
@@ -87,11 +111,24 @@ class ProductEstimatorAdmin {
      * @access   private
      */
     private function init_components() {
-        // Initialize Settings Manager
-        $this->settings_manager = new SettingsManager($this->plugin_name, $this->version);
+
+
+        // Initialize Settings Manager with the admin script handler
+        $this->settings_manager = new SettingsManager(
+            $this->plugin_name,
+            $this->version,
+            $this->admin_script_handler
+        );
 
         // Initialize Customer Estimates Admin
         $this->customer_estimates = new CustomerEstimatesAdmin($this->plugin_name, $this->version);
+
+        // Initialize CSV Export Handler
+        new CSVExportHandler();
+
+        // Make the admin script handler globally available for modules
+        global $product_estimator_admin_script_handler;
+        $product_estimator_admin_script_handler = $this->admin_script_handler;
     }
 
     /**
@@ -103,58 +140,8 @@ class ProductEstimatorAdmin {
         // Add the main admin menu
         add_action('admin_menu', array($this, 'add_plugin_admin_menu'));
 
-        // Register admin scripts and styles
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_styles'));
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts'));
-
         // Add action links to plugins page
-//        add_filter('plugin_action_links_' . PRODUCT_ESTIMATOR_BASENAME, array($this, 'add_action_links'));
-
-        // WooCommerce product integration
-//        $this->init_woocommerce_integration();
-    }
-
-    /**
-     * Register the stylesheets for the admin area.
-     *
-     * @since    1.0.0
-     */
-    public function enqueue_styles() {
-        wp_enqueue_style(
-            $this->plugin_name,
-            plugin_dir_url(dirname(dirname(__FILE__))) . 'admin/css/product-estimator-admin.css',
-            array(),
-            $this->version,
-            'all'
-        );
-    }
-
-    /**
-     * Register the JavaScript for the admin area.
-     *
-     * @since    1.0.0
-     */
-    public function enqueue_scripts() {
-        wp_enqueue_script(
-            $this->plugin_name,
-            plugin_dir_url(dirname(dirname(__FILE__))) . 'admin/js/product-estimator-admin.js',
-            array('jquery'),
-            $this->version,
-            true
-        );
-
-        wp_localize_script(
-            $this->plugin_name,
-            'productEstimatorAdmin',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('product_estimator_admin_nonce'),
-                'i18n' => array(
-                    'save_success' => __('Settings saved successfully!', 'product-estimator'),
-                    'save_error' => __('Error saving settings.', 'product-estimator')
-                )
-            )
-        );
+        add_filter('plugin_action_links_' . PRODUCT_ESTIMATOR_BASENAME, array($this, 'add_action_links'));
     }
 
     /**
@@ -201,14 +188,57 @@ class ProductEstimatorAdmin {
      * @since    1.0.0
      */
     public function display_plugin_admin_page() {
-        // Fix the path to point to the correct location
-        $template_path = plugin_dir_path(dirname(dirname(__FILE__))) .
-            'includes/admin/partials/product-estimator-admin-display.php';
+        // Include the main admin dashboard template
+        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/partials/product-estimator-admin-display.php';
+    }
 
-        if (file_exists($template_path)) {
-            include_once $template_path;
-        } else {
-            wp_die(__('Admin template file not found:', 'product-estimator') . ' ' . $template_path);
-        }
+    /**
+     * Get the settings manager instance
+     *
+     * @since    1.2.0
+     * @return   SettingsManager    The settings manager instance
+     */
+    public function get_settings_manager() {
+        return $this->settings_manager;
+    }
+
+    /**
+     * Get the customer estimates admin instance
+     *
+     * @since    1.2.0
+     * @return   CustomerEstimatesAdmin    The customer estimates admin instance
+     */
+    public function get_customer_estimates() {
+        return $this->customer_estimates;
+    }
+
+    /**
+     * Get the admin script handler instance
+     *
+     * @since    1.2.0
+     * @return   AdminScriptHandler    The admin script handler instance
+     */
+    public function get_admin_script_handler() {
+        return $this->admin_script_handler;
+    }
+
+    /**
+     * Get plugin name
+     *
+     * @since    1.2.0
+     * @return   string    The plugin name
+     */
+    public function get_plugin_name() {
+        return $this->plugin_name;
+    }
+
+    /**
+     * Get plugin version
+     *
+     * @since    1.2.0
+     * @return   string    The plugin version
+     */
+    public function get_version() {
+        return $this->version;
     }
 }

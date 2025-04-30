@@ -44,7 +44,7 @@ if (!empty($selected_categories)) {
 ?>
 <div class="similar-products-rule" data-rule-id="<?php echo esc_attr($rule_id); ?>">
     <div class="rule-header">
-        <div class="rule-title"><?php echo esc_html($category_name); ?></div>
+        <div class="rule-title" title="<?php echo esc_attr($category_name); ?>"><?php echo esc_html($category_name); ?></div>
         <div class="rule-actions">
             <button type="button" class="button save-rule"><?php esc_html_e('Save', 'product-estimator'); ?></button>
             <button type="button" class="button delete-rule"><?php esc_html_e('Delete', 'product-estimator'); ?></button>

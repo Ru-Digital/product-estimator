@@ -581,34 +581,33 @@ class CustomerEstimatesAdmin {
     }
 
     /**
-     * Register the JavaScript for the admin area.
+     * Enqueue scripts for the Customer Estimates admin page
+     *
+     * @since    1.1.0
+     * @access   public
      */
-    public function enqueue_scripts($hook) {
-        if (strpos($hook, $this->plugin_name . '-estimates') === false) {
-            return;
-        }
+    public function enqueue_scripts() {
+        // No need to directly enqueue the JS file as it's bundled in the admin.bundle.js
 
-        wp_enqueue_script(
-            $this->plugin_name . '-estimates',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/customer-estimates-admin.js',
-            array('jquery'),
-            $this->version,
-            true
-        );
-
+        // Just localize the script with data for this module
         wp_localize_script(
-            $this->plugin_name . '-estimates',
+            $this->plugin_name . '-admin',
             'customerEstimatesAdmin',
             array(
                 'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('customer_estimates_nonce'),
+                'nonce' => wp_create_nonce('customer_estimates_admin_nonce'),
                 'i18n' => array(
-                    'confirmDelete' => __('Are you sure you want to delete this estimate?', 'product-estimator'),
                     'confirmBulkDelete' => __('Are you sure you want to delete the selected estimates?', 'product-estimator'),
-                    'emailSending' => __('Sending email...', 'product-estimator'),
+                    'emailSending' => __('Sending...', 'product-estimator'),
                     'emailSuccess' => __('Email sent successfully!', 'product-estimator'),
-                    'emailError' => __('Error sending email.', 'product-estimator')
-                )
+                    'emailError' => __('Failed to send email', 'product-estimator'),
+                    'deleteConfirm' => __('Are you sure you want to delete this estimate?', 'product-estimator'),
+                    'duplicateConfirm' => __('Are you sure you want to duplicate this estimate?', 'product-estimator'),
+                    'loadingMessage' => __('Loading...', 'product-estimator'),
+                    'errorMessage' => __('An error occurred', 'product-estimator'),
+                    'noEstimatesMessage' => __('No estimates found', 'product-estimator')
+                ),
+                'current_filter' => isset($_GET['status_filter']) ? sanitize_text_field($_GET['status_filter']) : 'all'
             )
         );
     }

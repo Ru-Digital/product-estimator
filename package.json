@@ -1,6 +1,7 @@
 {
   "name": "product-estimator",
-  "version": "1.0.0",
+  "version": "1.3.0",
+  "description": "WooCommerce Product Estimator Plugin",
   "main": "index.js",
   "scripts": {
     "build": "webpack --mode=production",
@@ -10,22 +11,29 @@
     "type": "git",
     "url": "git+https://github.com/Ru-Digital/product-estimator.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "woocommerce",
+    "wordpress",
+    "product",
+    "estimator"
+  ],
+  "author": "Ru Digital",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Ru-Digital/product-estimator/issues"
   },
   "homepage": "https://github.com/Ru-Digital/product-estimator#readme",
-  "description": "",
   "devDependencies": {
     "@babel/core": "^7.26.10",
     "@babel/plugin-transform-runtime": "^7.26.10",
     "@babel/preset-env": "^7.26.9",
     "babel-loader": "^10.0.0",
+    "webpack": "^5.91.0",
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "@babel/runtime-corejs3": "^7.27.0"
+    "@babel/runtime": "^7.27.0",
+    "@babel/runtime-corejs3": "^7.27.0",
+    "core-js": "^3.36.1"
   }
 }

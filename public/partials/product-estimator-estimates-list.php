@@ -177,6 +177,8 @@ $options = get_option('product_estimator_settings');
                 <ul>
                     <li>
                         <?php
+                        // Estimate actions section for product-estimator-estimates-list.php
+
                         // Check if the estimate has a database ID
                         $db_id = isset($estimate['db_id']) ? $estimate['db_id'] : false;
 
@@ -185,18 +187,19 @@ $options = get_option('product_estimator_settings');
                             $db_id = product_estimator_get_db_id($estimate_id);
                         }
 
-                        if ($db_id) {
-                            // If we have a DB ID, use direct PDF link
-                            $pdf_url = product_estimator_get_pdf_url($db_id);
-                            ?>
-                            <a class="print-estimate-pdf"
-                               href="<?php echo esc_url($pdf_url); ?>"
-                               target="_blank"
-                               title="<?php esc_attr_e('View Estimate as PDF', 'product-estimator'); ?>">
-                                <span class="dashicons dashicons-pdf"></span> View PDF
-                            </a>
-                            <?php
-                        } else {
+//                        if ($db_id) {
+//                            // If we have a DB ID, use direct PDF link
+//                            $pdf_url = product_estimator_get_pdf_url($db_id);
+//                            ?>
+<!--                            <a class="print-estimate-pdf"-->
+<!--                               href="--><?php //echo esc_url($pdf_url); ?><!--"-->
+<!--                               data-estimate-id="--><?php //echo esc_attr($db_id); ?><!--"-->
+<!--                               target="_blank"-->
+<!--                               title="--><?php //esc_attr_e('View Estimate as PDF', 'product-estimator'); ?><!--">-->
+<!--                                <span class="dashicons dashicons-pdf"></span> View PDF-->
+<!--                            </a>-->
+<!--                            --><?php
+//                        } else {
                             // Fall back to the JavaScript-based print function for unsaved estimates
                             ?>
                             <a class="print-estimate"
@@ -205,7 +208,7 @@ $options = get_option('product_estimator_settings');
                                 <span class="dashicons dashicons-pdf"></span> Print estimate
                             </a>
                             <?php
-                        }
+//                        }
                         ?>
                     </li>
                     <li>

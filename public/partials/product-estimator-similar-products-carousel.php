@@ -1,24 +1,45 @@
 <?php
+
+use RuDigital\ProductEstimator\Includes\Frontend\SimilarProductsFrontend;
+
 if (isset($product['id']) && !empty($product['id'])):
     // Check if we have the similar products module available
-    if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\SimilarProductsSettingsModule')):
-        // Initialize the module
-        $similar_products_module = new \RuDigital\ProductEstimator\Includes\Admin\Settings\SimilarProductsSettingsModule(
-            'product-estimator',
-            PRODUCT_ESTIMATOR_VERSION
-        );
+    // Initialize the Similar Products module
+    $similar_products_module = new SimilarProductsFrontend(
+        'product-estimator',
+        PRODUCT_ESTIMATOR_VERSION
+    );
 
+    if ($similar_products_module):
         // Get similar products for this specific product (limited to 10 for better carousel)
         $similar_products = $similar_products_module->get_similar_products_for_display($product['id'], 10);
 
+
         // Filter out products already in this room
         if (!empty($similar_products) && !empty($room['products'])):
+
+            ?>
+            <!-- Similar Products Toggle Button -->
+            <?php
+
+            $similar_products_label = $product_estimator_labels_frontend->get_label('label_similar_products');
+
+            ?>
+            <button class="product-details-toggle">
+                <?php esc_html_e($similar_products_label, 'product-estimator'); ?>
+                <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span>
+            </button>
+<!-- Similar Products Container - TOGGLEABLE (Hidden by default) -->
+<div class="similar-products-container" style="display: none;">
+        <?php
+
             $room_product_ids = [];
             foreach ($room['products'] as $room_product) {
                 if (!empty($room_product['id']) && !isset($room_product['type'])) {
                     $room_product_ids[] = $room_product['id'];
                 }
             }
+
 
             $filtered_similar_products = [];
             foreach ($similar_products as $similar_product) {
@@ -30,7 +51,6 @@ if (isset($product['id']) && !empty($product['id'])):
             $similar_products = $filtered_similar_products;
         endif;
 
-        // FIXED: Filter to only include products with estimator enabled
         if (!empty($similar_products)):
             $estimator_enabled_products = [];
             foreach ($similar_products as $similar_product) {
@@ -40,13 +60,18 @@ if (isset($product['id']) && !empty($product['id'])):
                 } else {
                     // For variations, try to get the parent product and check its variations
                     $product_obj = wc_get_product($similar_product['id']);
+
                     if ($product_obj && $product_obj->is_type('variable')) {
                         // Get available variations
                         $variations = $product_obj->get_available_variations();
 
                         // Check if any variation has estimator enabled
                         foreach ($variations as $variation) {
+
+
                             if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation['variation_id'])) {
+
+
                                 // Use the variation instead
                                 $similar_product['id'] = $variation['variation_id'];
                                 $similar_product['name'] = $product_obj->get_name() . ' - ' . wc_get_formatted_variation($variation['attributes'], true);
@@ -57,11 +82,16 @@ if (isset($product['id']) && !empty($product['id'])):
                     }
                 }
             }
+
+
             $similar_products = $estimator_enabled_products;
         endif;
 
+
         // Display similar products if we have any
         if (!empty($similar_products)):
+
+
             // Get room dimensions for area calculation
             $room_width = isset($room['width']) ? floatval($room['width']) : 0;
             $room_length = isset($room['length']) ? floatval($room['length']) : 0;
@@ -82,11 +112,13 @@ if (isset($product['id']) && !empty($product['id'])):
             <!-- This is a similar products carousel - should be bound by product-item -->
             <div class="product-similar-products">
                 <div class="suggestions-carousel similar-products-carousel">
-                    <div class="suggestions-nav prev" aria-label="<?php esc_attr_e('Previous', 'product-estimator'); ?>">
+                    <div class="suggestions-nav prev"
+                         aria-label="<?php esc_attr_e('Previous', 'product-estimator'); ?>">
                         <span class="dashicons dashicons-arrow-left-alt2"></span>
                     </div>
 
                     <div class="suggestions-container">
+
                         <?php foreach ($similar_products as $similar):
                             // Use our new helper function to calculate price with auto-add products
                             $price_data = product_estimator_calculate_total_price_with_additions(
@@ -118,7 +150,7 @@ if (isset($product['id']) && !empty($product['id'])):
 
                                     <div class="suggestion-price">
                                         <?php if ($min_total !== $max_total): ?>
-                                            <?php echo display_price_with_markup($min_total, $default_markup, "down"); ?> - <?php echo display_price_with_markup($max_total, $default_markup, "up" ); ?>
+                                            <?php echo display_price_with_markup($min_total, $default_markup, "down"); ?> - <?php echo display_price_with_markup($max_total, $default_markup, "up"); ?>
                                         <?php else: ?>
                                             <?php echo display_price_with_markup($min_total, $default_markup, "up"); ?>
                                         <?php endif; ?>
@@ -146,6 +178,7 @@ if (isset($product['id']) && !empty($product['id'])):
                         <span class="dashicons dashicons-arrow-right-alt2"></span>
                     </div>
                 </div>
+            </div>
             </div>
         <?php
         endif;

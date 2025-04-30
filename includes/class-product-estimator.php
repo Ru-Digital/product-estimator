@@ -1,7 +1,9 @@
 <?php
 namespace RuDigital\ProductEstimator;
 
+use RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend;
 use RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration;
+use RuDigital\ProductEstimator\Includes\PDFRouteHandler;
 use RuDigital\ProductEstimator\Includes\SessionHandler;
 use RuDigital\ProductEstimator\Includes\AjaxHandler;
 use RuDigital\ProductEstimator\Includes\Frontend\ScriptHandler;
@@ -9,7 +11,9 @@ use RuDigital\ProductEstimator\Includes\Frontend\Shortcodes;
 use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
 use RuDigital\ProductEstimator\Includes\Loader;
 use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
+use RuDigital\ProductEstimator\Includes\Admin\AdminScriptHandler;
 use RuDigital\ProductEstimator\Includes\EstimateHandler;
+
 
 /**
  * Main plugin class
@@ -59,6 +63,13 @@ class ProductEstimator {
     private $ajax_handler;
 
     /**
+     * Admin script handler
+     *
+     * @var AdminScriptHandler
+     */
+    private $admin_script_handler;
+
+    /**
      * WooCommerce integration
      *
      * @var WoocommerceIntegration
@@ -73,9 +84,13 @@ class ProductEstimator {
     private $netsuite_integration;
 
     /**
-     * @var EstimateHandler Estimate Handler instance
+     * Labels frontend
+     *
+     * @var LabelsFrontend
      */
-    protected $estimate_handler;
+    private $labels_frontend;
+
+
 
     /**
      * Initialize the class and set its properties.
@@ -88,12 +103,25 @@ class ProductEstimator {
         $this->plugin_name = $plugin_name;
         $this->version = $plugin_version;
 
+        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-labels-frontend.php';
+
+        $this->labels_frontend = new LabelsFrontend($this->plugin_name, $this->version);
         // Initialize session handler (high priority)
         $this->session = SessionHandler::getInstance();
 
+        // Initialize admin script handler early if in admin
+        if (is_admin()) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-admin-script-handler.php';
+            $this->admin_script_handler = new AdminScriptHandler($plugin_name, $plugin_version);
+
+            // Make it globally available
+            global $product_estimator_script_handler;
+            $product_estimator_script_handler = $this->admin_script_handler;
+        }
+
         // Make sure this code is actually running
         require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-pdf-route-handler.php';
-        new \RuDigital\ProductEstimator\Includes\PDFRouteHandler();
+        new PDFRouteHandler($plugin_name, $plugin_version);
 
         // Initialize totals for existing session data
         $this->session->initializeAllTotals();
@@ -171,6 +199,9 @@ class ProductEstimator {
      * Add the modal HTML to the footer
      */
     public function addModalToFooter() {
+        global $product_estimator_labels_frontend;
+        $product_estimator_labels_frontend = $this->labels_frontend;
+
         // Always add the modal to the footer on all pages
         include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
     }

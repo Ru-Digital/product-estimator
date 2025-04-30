@@ -170,11 +170,18 @@ class ConfirmationDialog {
       confirmText: i18n.confirm || 'Confirm',
       cancelText: i18n.cancel || 'Cancel',
       onConfirm: null,
-      onCancel: null
+      onCancel: null,
+      action: 'delete',
+      showCancel: true  // New option to control cancel button visibility
     };
 
     // Merge options with defaults
     const settings = { ...defaults, ...options };
+
+    // If cancelText is explicitly null/false, hide the cancel button
+    if (options.cancelText === null || options.cancelText === false) {
+      settings.showCancel = false;
+    }
 
     // Set callbacks
     this.callbacks.confirm = settings.onConfirm;
@@ -189,14 +196,43 @@ class ConfirmationDialog {
     if (titleEl) titleEl.textContent = settings.title;
     if (messageEl) messageEl.textContent = settings.message;
     if (confirmEl) confirmEl.textContent = settings.confirmText;
-    if (cancelEl) cancelEl.textContent = settings.cancelText;
+
+    // Handle cancel button visibility
+    if (cancelEl) {
+      if (settings.showCancel) {
+        cancelEl.style.display = '';
+        cancelEl.textContent = settings.cancelText;
+      } else {
+        cancelEl.style.display = 'none';
+
+        // When cancel button is hidden, make confirm button full width
+        if (confirmEl) {
+          confirmEl.style.width = '100%';
+        }
+      }
+    }
 
     // Remove all type classes
-    this.dialog.classList.remove('pe-dialog-type-product', 'pe-dialog-type-room', 'pe-dialog-type-estimate');
+    this.dialog.classList.remove('pe-dialog-type-product', 'pe-dialog-type-room', 'pe-dialog-type-estimate', 'pe-dialog-notification');
+
+    [...this.dialog.classList].forEach(className => {
+      if (/^pe-dialog-action-/.test(className)) {
+        this.dialog.classList.remove(className);
+      }
+    });
 
     // Add type class if specified
     if (settings.type) {
-      this.dialog.classList.add(`pe-dialog-type-${settings.type}`);
+      this.dialog.classList.add (`pe-dialog-type-${settings.type}`);
+    }
+
+    if(settings.action) {
+      this.dialog.classList.add (`pe-dialog-action-${settings.action}`);
+    }
+
+    // Add notification class if it's a success notification
+    if (!settings.showCancel && settings.type === 'estimate') {
+      this.dialog.classList.add('pe-dialog-notification');
     }
 
     // Show the dialog - force it to the front
@@ -206,13 +242,14 @@ class ConfirmationDialog {
     // Add active class for animation
     if (this.dialog) this.dialog.classList.add('active');
 
-
-    // Focus the cancel button
+    // Focus the appropriate button
     setTimeout(() => {
-      const cancelBtn = this.dialog.querySelector('.pe-dialog-cancel');
-      if (cancelBtn) cancelBtn.focus();
-    }, 100);
+      const buttonToFocus = settings.showCancel ?
+        this.dialog.querySelector('.pe-dialog-cancel') :
+        this.dialog.querySelector('.pe-dialog-confirm');
 
+      if (buttonToFocus) buttonToFocus.focus();
+    }, 100);
   }
 
   /**

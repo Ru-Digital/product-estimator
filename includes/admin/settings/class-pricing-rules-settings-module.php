@@ -26,12 +26,41 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
     }
 
     /**
+     * Register module with the settings manager
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function register() {
+        add_action('product_estimator_register_settings_modules', function($manager) {
+            $manager->register_module($this);
+        });
+    }
+
+    /**
+     * Check if this module handles a specific setting
+     *
+     * @since    1.1.0
+     * @access   public
+     * @param    string    $key    Setting key
+     * @return   bool      Whether this module handles the setting
+     */
+    public function has_setting($key) {
+        $module_settings = [
+            'default_pricing_method',
+            'default_pricing_source'
+        ];
+
+        return in_array($key, $module_settings);
+    }
+
+    /**
      * Register the module-specific settings fields.
      *
      * @since    1.1.0
      * @access   protected
      */
-    protected function register_fields() {
+    public function register_fields() {
         // Add default pricing method and source fields
         $fields = array(
             'default_pricing_method' => array(
@@ -71,6 +100,42 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
     }
 
     /**
+     * Validate module-specific settings
+     *
+     * @since    1.1.0
+     * @access   public
+     * @param    array    $input    The settings to validate
+     * @return   array    The validated settings
+     */
+    public function validate_settings($input) {
+        $valid = [];
+
+        // Validate default pricing method
+        if (isset($input['default_pricing_method'])) {
+            $method = $input['default_pricing_method'];
+            $valid_methods = array_keys($this->get_pricing_methods());
+            if (in_array($method, $valid_methods)) {
+                $valid['default_pricing_method'] = $method;
+            } else {
+                $valid['default_pricing_method'] = 'sqm'; // Default fallback
+            }
+        }
+
+        // Validate default pricing source
+        if (isset($input['default_pricing_source'])) {
+            $source = $input['default_pricing_source'];
+            $valid_sources = array_keys($this->get_pricing_sources());
+            if (in_array($source, $valid_sources)) {
+                $valid['default_pricing_source'] = $source;
+            } else {
+                $valid['default_pricing_source'] = 'website'; // Default fallback
+            }
+        }
+
+        return $valid;
+    }
+
+    /**
      * Render a settings field.
      *
      * @since    1.1.0
@@ -82,33 +147,6 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
             $this->render_select_field($args);
         } else {
             $this->render_field($args);
-        }
-    }
-
-    /**
-     * Render a select field.
-     *
-     * @since    1.1.0
-     * @access   private
-     * @param    array    $args    Field arguments.
-     */
-    private function render_select_field($args) {
-        $options = get_option('product_estimator_settings');
-        $id = $args['id'];
-        $current_value = isset($options[$id]) ? $options[$id] : '';
-
-        if (empty($current_value) && isset($args['default'])) {
-            $current_value = $args['default'];
-        }
-
-        echo '<select id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']">';
-        foreach ($args['options'] as $value => $label) {
-            echo '<option value="' . esc_attr($value) . '" ' . selected($current_value, $value, false) . '>' . esc_html($label) . '</option>';
-        }
-        echo '</select>';
-
-        if (isset($args['description'])) {
-            echo '<p class="description">' . esc_html($args['description']) . '</p>';
         }
     }
 
@@ -158,6 +196,19 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
     }
 
     /**
+     * Additional actions after saving
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $form_data    The processed form data
+     */
+    protected function after_save_actions($form_data) {
+        // Clear any caches related to pricing rules
+        wp_cache_delete('product_estimator_pricing_rules', 'options');
+        delete_transient('product_estimator_pricing_rules');
+    }
+
+    /**
      * Render the section description.
      *
      * @since    1.1.0
@@ -165,6 +216,33 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
      */
     public function render_section_description() {
         echo '<p>' . esc_html__('Configure default pricing settings and category-specific pricing rules.', 'product-estimator') . '</p>';
+    }
+
+    /**
+     * Render a select field.
+     *
+     * @since    1.1.0
+     * @access   private
+     * @param    array    $args    Field arguments.
+     */
+    private function render_select_field($args) {
+        $options = get_option('product_estimator_settings');
+        $id = $args['id'];
+        $current_value = isset($options[$id]) ? $options[$id] : '';
+
+        if (empty($current_value) && isset($args['default'])) {
+            $current_value = $args['default'];
+        }
+
+        echo '<select id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']">';
+        foreach ($args['options'] as $value => $label) {
+            echo '<option value="' . esc_attr($value) . '" ' . selected($current_value, $value, false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select>';
+
+        if (isset($args['description'])) {
+            echo '<p class="description">' . esc_html($args['description']) . '</p>';
+        }
     }
 
     /**
@@ -216,21 +294,13 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
      * @access   public
      */
     public function enqueue_scripts() {
-        // Enqueue Select2 for multiple select functionality
+        // Enqueue Select2 for multiple select functionality if needed (external library)
         wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), '4.1.0-rc.0', true);
         wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0-rc.0');
 
-        wp_enqueue_script(
-            $this->plugin_name . '-pricing-rules-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/modules/pricing-rules-settings.js',
-            array('jquery', 'select2', $this->plugin_name . '-settings'),
-            $this->version,
-            true
-        );
-
-        // Localize script with all required parameters
+        // Localize script with module data
         wp_localize_script(
-            $this->plugin_name . '-pricing-rules-settings',
+            $this->plugin_name . '-admin',
             'pricingRulesSettings',
             array(
                 'ajax_url' => admin_url('admin-ajax.php'),
@@ -483,3 +553,11 @@ class PricingRulesSettingsModule extends SettingsModuleBase {
         );
     }
 }
+
+// Initialize and register the module
+add_action('plugins_loaded', function() {
+    $module = new PricingRulesSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
+        $manager->register_module($module);
+    });
+});

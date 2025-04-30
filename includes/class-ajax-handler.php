@@ -1,8 +1,9 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes;
 
+use RuDigital\ProductEstimator\Includes\Frontend\ProductUpgradesFrontend;
+use RuDigital\ProductEstimator\Includes\Frontend\SimilarProductsFrontend;
 use WP_Error;
-use RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule;
 use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
 
 /**
@@ -102,8 +103,8 @@ class AjaxHandler {
             add_action('wp_ajax_nopriv_store_single_estimate', array($this, 'store_single_estimate'));
 
             // In the constructor of AjaxHandler class
-            add_action('wp_ajax_print_estimate', array($this, 'print_estimate'));
-            add_action('wp_ajax_nopriv_print_estimate', array($this, 'print_estimate'));
+//            add_action('wp_ajax_print_estimate', array($this, 'print_estimate'));
+//            add_action('wp_ajax_nopriv_print_estimate', array($this, 'print_estimate'));
 
             add_action('wp_ajax_check_estimate_stored', array($this, 'check_estimate_stored'));
             add_action('wp_ajax_nopriv_check_estimate_stored', array($this, 'check_estimate_stored'));
@@ -420,6 +421,17 @@ class AjaxHandler {
     public function getEstimatesList() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Make sure the LabelsFrontend class is available
+        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\LabelsFrontend')) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-labels-frontend.php';
+        }
+
+        // Get the global labels_frontend instance or create a new one
+        global $product_estimator_labels_frontend;
+        if (!isset($product_estimator_labels_frontend) || is_null($product_estimator_labels_frontend)) {
+            $product_estimator_labels_frontend = new \RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+        }
 
         // Start output buffer to capture HTML
         ob_start();
@@ -1120,9 +1132,9 @@ class AjaxHandler {
     private function generateSuggestions($room_products) {
         $suggestions = array();
 
-        if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
-            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.4');
+        $product_additions_manager = Loader::get_product_additions_manager_module();
 
+        if ($product_additions_manager) {
             // Get product categories
             $product_categories = array();
             foreach ($room_products as $product) {
@@ -1307,10 +1319,10 @@ class AjaxHandler {
 
             // Now get the categories using the appropriate product ID
             $product_categories = wp_get_post_terms($product_id_for_categories, 'product_cat', array('fields' => 'ids'));
+            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
 
             // Check if ProductAdditionsManager is accessible
-            if (class_exists('RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductAdditionsSettingsModule')) {
-                $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule('product-estimator', '1.0.3');
+            if ($product_additions_manager) {
 
                 foreach ($product_categories as $category_id) {
                     // Get auto-add products
@@ -1696,15 +1708,10 @@ class AjaxHandler {
             return;
         }
 
-        // Ensure the similar products module is available
-        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\SimilarProductsSettingsModule')) {
-            wp_send_json_error(['message' => __('Similar Products module not available', 'product-estimator')]);
-            return;
-        }
 
         try {
             // Initialize the Similar Products module
-            $similar_products_module = new \RuDigital\ProductEstimator\Includes\Admin\Settings\SimilarProductsSettingsModule(
+            $similar_products_module = new SimilarProductsFrontend(
                 'product-estimator',
                 PRODUCT_ESTIMATOR_VERSION
             );
@@ -2020,6 +2027,8 @@ class AjaxHandler {
         }
 
         $details_data = $_POST['details'];
+
+
         if (is_string($details_data)) {
             $details_data = json_decode(stripslashes($details_data), true);
         }
@@ -2168,7 +2177,7 @@ class AjaxHandler {
         }
 
         // Get product upgrades settings module
-        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductUpgradesSettingsModule')) {
+        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\ProductUpgradesFrontend')) {
             wp_send_json_error([
                 'message' => __('Product Upgrades module not available', 'product-estimator')
             ]);
@@ -2176,7 +2185,7 @@ class AjaxHandler {
         }
 
         // Initialize the settings module
-        $upgrades_module = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductUpgradesSettingsModule(
+        $upgrades_module = new ProductUpgradesFrontend(
             'product-estimator',
             PRODUCT_ESTIMATOR_VERSION
         );
@@ -2253,8 +2262,8 @@ class AjaxHandler {
     }
 
     /**
-     * Store current session data in the database with optimized DB queries
-     * Fixed to handle estimate_id = "0" properly
+     * Store current session data in the database with proper error handling
+     * This is a fixed version that prevents empty estimate_id issues
      */
     public function store_single_estimate() {
         // Verify nonce
@@ -2276,17 +2285,17 @@ class AjaxHandler {
             error_log('Processing store_single_estimate with estimate_id: ' . $estimate_id);
         }
 
-        // Get customer details from request
-        $customer_details = [
-            'name' => isset($_POST['customer_name']) ? sanitize_text_field($_POST['customer_name']) : '',
-            'email' => isset($_POST['customer_email']) ? sanitize_email($_POST['customer_email']) : '',
-            'phone' => isset($_POST['customer_phone']) ? sanitize_text_field($_POST['customer_phone']) : '',
-            'postcode' => isset($_POST['customer_postcode']) ? sanitize_text_field($_POST['customer_postcode']) : ''
-        ];
-
-        $notes = isset($_POST['notes']) ? sanitize_textarea_field($_POST['notes']) : '';
-
         try {
+            // Explicitly check if the estimate exists in session
+            $estimate = $this->session->getEstimate($estimate_id);
+            if (!$estimate) {
+                throw new \Exception(__('Estimate not found in session', 'product-estimator'));
+            }
+
+            // Get customer details from estimate
+            $customer_details = isset($estimate['customer_details']) ? $estimate['customer_details'] : [];
+            $notes = isset($estimate['notes']) ? $estimate['notes'] : '';
+
             // Store or update the estimate using our shared trait method
             $db_id = $this->storeOrUpdateEstimate($estimate_id, $customer_details, $notes);
 
@@ -2315,9 +2324,10 @@ class AjaxHandler {
             ]);
         }
     }
+
     /**
      * Check if customer has an email set in session
-     * This is used by the PrintEstimate JS module before generating PDFs
+     * Add this to the AjaxHandler class in class-ajax-handler.php
      */
     public function check_customer_email() {
         // Verify nonce
@@ -2325,7 +2335,6 @@ class AjaxHandler {
 
         // Get estimate ID if provided
         $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
-
 
         try {
             // Ensure session is started
@@ -2359,6 +2368,7 @@ class AjaxHandler {
         }
     }
 
+
     /**
      * Check if an estimate is already stored in the database
      */
@@ -2370,6 +2380,7 @@ class AjaxHandler {
         $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
 
         if (empty($estimate_id)) {
+
             wp_send_json_error([
                 'message' => __('Estimate ID is required', 'product-estimator')
             ]);
@@ -2405,21 +2416,6 @@ class AjaxHandler {
     }
 
     /**
-     * Forward print_estimate AJAX request to EstimateHandler
-     */
-    public function print_estimate() {
-        // Check if EstimateHandler is available
-        if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\EstimateHandler')) {
-            $handler = new \RuDigital\ProductEstimator\Includes\EstimateHandler();
-            $handler->handle_print_estimate();
-        } else {
-            wp_send_json_error([
-                'message' => __('Print functionality is unavailable', 'product-estimator')
-            ]);
-        }
-    }
-
-    /**
      * Forward request_copy_estimate AJAX request to EstimateHandler
      */
     public function request_copy_estimate() {
@@ -2434,6 +2430,11 @@ class AjaxHandler {
         }
     }
 
+
+    /**
+     * Generate a secure PDF URL with token
+     * Add this to the AjaxHandler class in class-ajax-handler.php
+     */
     public function get_secure_pdf_url() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
@@ -2452,6 +2453,8 @@ class AjaxHandler {
 
         // Generate a secure token
         $token = $pdf_handler->generate_secure_pdf_token($estimate_id);
+
+        error_log($token);
 
         if (!$token) {
             wp_send_json_error([

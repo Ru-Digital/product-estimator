@@ -15,12 +15,15 @@ if (!defined('ABSPATH')) {
 }
 
 // Ensure we have a product ID and the product upgrades module is available
-if (!isset($upgrade_product_id) || !class_exists('\\RuDigital\\ProductEstimator\\Includes\\Admin\\Settings\\ProductUpgradesSettingsModule')) {
+if (!isset($upgrade_product_id) || !class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\ProductUpgradesFrontend')) {
     return;
 }
 
 // Initialize the upgrades module
-$upgrades_module = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductUpgradesSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+$upgrades_module = new \RuDigital\ProductEstimator\Includes\Frontend\ProductUpgradesFrontend(
+    'product-estimator',
+    PRODUCT_ESTIMATOR_VERSION
+);
 
 
 // Get upgrades for this product

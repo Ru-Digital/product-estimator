@@ -7,6 +7,7 @@
  */
 
 use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
+use RuDigital\ProductEstimator\Includes\Loader;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -403,11 +404,9 @@ function product_estimator_calculate_total_price_with_additions($product_id, $ro
     ];
 
     // Check for auto-add products if the ProductAdditionsManager is accessible
-    if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
-        $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule(
-            'product-estimator',
-            PRODUCT_ESTIMATOR_VERSION
-        );
+    $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+
+    if ($product_additions_manager) {
 
         // Get product categories
         $product_categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
@@ -490,11 +489,9 @@ function product_estimator_calculate_total_price_with_additions_for_display($pro
     ];
 
     // Check for auto-add products if the ProductAdditionsManager is accessible
-    if (class_exists('RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule')) {
-        $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Admin\Settings\ProductAdditionsSettingsModule(
-            'product-estimator',
-            PRODUCT_ESTIMATOR_VERSION
-        );
+    $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+
+    if ($product_additions_manager) {
 
         $product_id_for_categories = $product['id'];
         $productObj = wc_get_product($product['id']);
@@ -694,7 +691,8 @@ function product_estimator_calculate_price_steps($min_price, $max_price, $option
     $step_values = [];
     for ($i = 0; $i <= $step_count; $i++) {
         $value = $scale_min + ($i * $nice_step_size);
-        $percent = ($value - $scale_min) / ($scale_max - $scale_min) * 100;
+//        $percent = ($value - $scale_min) / ($scale_max - $scale_min) * 100;
+        $percent = ($i / $step_count) * 100;
         $step_values[] = [
             'value' => round($value),
             'percent' => $percent,
@@ -829,23 +827,40 @@ function display_price_graph($min_price, $max_price, $markup = 0, $title = null,
 
         <?php if ($min_price > 0 && $max_price > 0 && $options['show_labels']): ?>
             <div class="price-graph-labels">
-                <?php foreach ($step_values as $step): ?>
-                    <div class="price-label" style="left: <?php echo esc_attr($step['percent']); ?>%;">
+                <?php foreach ($step_values as $index => $step): ?>
+                    <?php
+                    $percent = floatval($step['percent']);
+                    $is_last = ($index === array_key_last($step_values));
+                    $left = $is_last ? 100 : min($percent, 100);
+                    $transform = $is_last ? 'transform: translateX(-100%);' : '';
+                    ?>
+                    <div class="price-label" style="left: <?php echo esc_attr($left); ?>%; <?php echo $transform; ?>">
                         <div class="price-tick"></div>
                         <div class="price-value"><?php echo esc_html($step['formatted']); ?></div>
                     </div>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
+
+    <div class="price-notice">
+        <?php
+        global $product_estimator_labels_frontend;
+        echo $product_estimator_labels_frontend->get_label('label_price_graph_notice');
+        ?>
     </div>
+    </div>
+
     <?php
 }
+
+
 
 
 /**
  * Get the URL for viewing a PDF of an estimate
  *
  * @param int $estimate_id The database ID of the estimate
+ * @param bool $for_customer Whether this is for customer view (true) or admin view (false)
  * @return string The URL for viewing the PDF
  */
 function product_estimator_get_pdf_url($estimate_id, $for_customer = true) {
@@ -955,12 +970,77 @@ function product_estimator_get_db_id($estimate_id)
     return false;
 }
 
-function product_estimator_debug_log($message, $data = null) {
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        if ($data !== null) {
-            error_log($message . ': ' . print_r($data, true));
-        } else {
-            error_log($message);
+
+/**
+ * Global helper functions for accessing Product Estimator components
+ *
+ * These functions make it easy to access the main plugin instance and its components
+ * from anywhere in the code, including modules.
+ *
+ * @package    Product_Estimator
+ * @subpackage Product_Estimator/includes
+ */
+
+if (!function_exists('product_estimator')) {
+    /**
+     * Get the main Product Estimator admin instance
+     *
+     * @return   \RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin|null  Admin instance or null
+     * @since    1.2.0
+     */
+    function product_estimator()
+    {
+        global $product_estimator;
+        return isset($product_estimator) ? $product_estimator : null;
+    }
+}
+
+if (!function_exists('product_estimator_admin_script_handler')) {
+    /**
+     * Get the Admin Script Handler instance
+     *
+     * @return   \RuDigital\ProductEstimator\Includes\Admin\AdminScriptHandler|null  Admin script handler or null
+     * @since    1.2.0
+     */
+    function product_estimator_admin_script_handler()
+    {
+        global $product_estimator_admin_script_handler;
+
+        if (!isset($product_estimator_admin_script_handler)) {
+            $admin = product_estimator();
+            if ($admin && method_exists($admin, 'get_admin_script_handler')) {
+                $product_estimator_admin_script_handler = $admin->get_admin_script_handler();
+            }
         }
+
+        return $product_estimator_admin_script_handler;
+    }
+}
+
+if (!function_exists('product_estimator_settings_manager')) {
+    /**
+     * Get the Settings Manager instance
+     *
+     * @return   \RuDigital\ProductEstimator\Includes\Admin\SettingsManager|null  Settings manager or null
+     * @since    1.2.0
+     */
+    function product_estimator_settings_manager()
+    {
+        $admin = product_estimator();
+        return $admin && method_exists($admin, 'get_settings_manager') ? $admin->get_settings_manager() : null;
+    }
+}
+
+if (!function_exists('product_estimator_customer_estimates')) {
+    /**
+     * Get the Customer Estimates admin instance
+     *
+     * @return   \RuDigital\ProductEstimator\Includes\Admin\CustomerEstimatesAdmin|null  Customer estimates or null
+     * @since    1.2.0
+     */
+    function product_estimator_customer_estimates()
+    {
+        $admin = product_estimator();
+        return $admin && method_exists($admin, 'get_customer_estimates') ? $admin->get_customer_estimates() : null;
     }
 }

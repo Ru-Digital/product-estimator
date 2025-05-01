@@ -229,9 +229,6 @@ class PDFGenerator
                             );
                         }
 
-                        if ($this->debug) {
-                            error_log("Applied template to page {$currentPage}");
-                        }
                     } catch (\Exception $e) {
                         if ($this->debug) {
                             error_log('Error applying template to page: ' . $e->getMessage());
@@ -860,9 +857,6 @@ class PDFGenerator
 
         // If it's a URL, download it
         if (filter_var($url, FILTER_VALIDATE_URL)) {
-            if ($this->debug) {
-                error_log("Processing image URL: $url");
-            }
 
             $temp_file = wp_tempnam('pe_img_');
 

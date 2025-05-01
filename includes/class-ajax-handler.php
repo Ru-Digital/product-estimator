@@ -2476,8 +2476,6 @@ class AjaxHandler {
         // Generate a secure token
         $token = $pdf_handler->generate_secure_pdf_token($estimate_id);
 
-        error_log($token);
-
         if (!$token) {
             wp_send_json_error([
                 'message' => __('Failed to generate secure PDF token', 'product-estimator')

@@ -272,8 +272,6 @@
     // Show saving state
     $saveButton.text(settings.saving).prop('disabled', true);
 
-    var similarityThreshold = $rule.find('.similarity-threshold').val();
-
     // Save data via AJAX
     $.ajax({
       url: settings.ajaxUrl,
@@ -284,8 +282,7 @@
         nonce: settings.nonce,
         rule_id: ruleId,
         source_categories: sourceCategories,
-        attributes: selectedAttributes,
-        similarity_threshold: similarityThreshold
+        attributes: selectedAttributes
       },
       success: function(response) {
         if (response.success) {

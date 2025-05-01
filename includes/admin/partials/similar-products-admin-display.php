@@ -41,8 +41,7 @@ $categories = isset($categories) ? $categories : [];
         // Use a placeholder ID for the template
         $this->render_rule_item('TEMPLATE_ID', array(
             'source_categories' => [],
-            'attributes' => array(),
-            'similarity_threshold' => 0.5
+            'attributes' => array()
         ), $categories);
         ?>
     </div>

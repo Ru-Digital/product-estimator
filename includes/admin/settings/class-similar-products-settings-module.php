@@ -384,8 +384,6 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
         // Update or add the rule
         $settings[$rule_id] = array(
             'source_categories' => $source_categories,
-            'attributes' => $attributes,
-            'similarity_threshold' => $similarity_threshold
         );
 
         // Save settings

@@ -22,9 +22,6 @@ if (empty($selected_categories) && isset($rule['source_category'])) {
 // Format attributes for hidden field
 $attributes_string = !empty($rule['attributes']) ? implode(',', $rule['attributes']) : '';
 
-// Set default threshold
-$threshold = isset($rule['similarity_threshold']) ? $rule['similarity_threshold'] : 0.5;
-
 // Get a readable category name for display in the rule header
 $category_name = __('Select Categories', 'product-estimator');
 if (!empty($selected_categories)) {

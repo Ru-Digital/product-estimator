@@ -10,7 +10,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class NetsuiteSettingsModule extends SettingsModuleBase {
+class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Set the tab and section details.
@@ -225,6 +225,15 @@ class NetsuiteSettingsModule extends SettingsModuleBase {
 
         $settings = $form_data['product_estimator_settings'];
 
+        // Fix for checkbox fields - ensure they're properly set to 0 when unchecked
+        $checkbox_fields = ['netsuite_enabled'];
+
+        foreach ($checkbox_fields as $field) {
+            if (!isset($settings[$field])) {
+                $settings[$field] = 0;
+            }
+        }
+
         // If NetSuite integration is enabled, validate the required fields
         if (isset($settings['netsuite_enabled']) && $settings['netsuite_enabled']) {
             // Check client ID
@@ -285,6 +294,9 @@ class NetsuiteSettingsModule extends SettingsModuleBase {
                 }
             }
         }
+
+        // Update the settings array in the form data
+        $form_data['product_estimator_settings'] = $settings;
 
         return true;
     }
@@ -449,6 +461,10 @@ class NetsuiteSettingsModule extends SettingsModuleBase {
                 )
             ]);
         }
+    }
+
+    protected function get_checkbox_fields() {
+        return ['netsuite_enabled'];
     }
 }
 

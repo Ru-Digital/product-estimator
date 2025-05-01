@@ -85,7 +85,9 @@ class NotificationSettingsModule {
   toggleNotificationTypeFields(notificationType, enabled) {
     const $ = jQuery;
     const $form = $(`.notification-type-form[data-type="${notificationType}"]`);
-    const $fields = $form.find('input, textarea, button').not(`#notification_${notificationType}_enabled`);
+    const $fields = $form.find('input, textarea, button')
+      .not(`#notification_${notificationType}_enabled`)
+      .not('.save-settings'); // Don't disable the save button
 
     if (enabled) {
       $fields.prop('disabled', false);
@@ -176,7 +178,9 @@ class NotificationSettingsModule {
 
     if (enabled) {
       $verticalTabsNav.removeClass('disabled');
-      $notificationForms.find('input, textarea, button').prop('disabled', false);
+      $notificationForms.find('input, textarea, button')
+        .not('.save-settings') // Don't touch the save buttons
+        .prop('disabled', false);
 
       // Re-apply individual notification type toggles
       $('[id^="notification_"][id$="_enabled"]').each(function(i, el) {
@@ -187,8 +191,9 @@ class NotificationSettingsModule {
 
     } else {
       $verticalTabsNav.addClass('disabled');
-      $notificationForms.find('input, textarea, button').prop('disabled', true);
-    }
+      $notificationForms.find('input, textarea, button')
+        .not('.save-settings') // Don't touch the save buttons
+        .prop('disabled', true);    }
   }
 
   /**

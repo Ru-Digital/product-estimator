@@ -228,6 +228,17 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
         parse_str($_POST['form_data'], $form_data);
 
+        if (isset($form_data['product_estimator_settings'])) {
+            $checkbox_fields = $this->get_checkbox_fields();
+
+            foreach ($checkbox_fields as $field) {
+                if (!isset($form_data['product_estimator_settings'][$field])) {
+                    $form_data['product_estimator_settings'][$field] = 0;
+                }
+            }
+        }
+
+
         // Process the settings specific to this module
         $result = $this->process_form_data($form_data);
 

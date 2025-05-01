@@ -2306,6 +2306,12 @@ class AjaxHandler {
             $notes = isset($estimate['notes']) ? $estimate['notes'] : '';
 
             // Store or update the estimate using our shared trait method
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Calling storeOrUpdateEstimate with:');
+                error_log('Estimate ID: ' . print_r($estimate_id, true));
+                error_log('Customer details: ' . print_r($customer_details, true));
+                error_log('Notes: ' . print_r($notes, true));
+            }
             $db_id = $this->storeOrUpdateEstimate($estimate_id, $customer_details, $notes);
 
             if (!$db_id) {

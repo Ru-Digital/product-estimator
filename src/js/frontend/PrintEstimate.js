@@ -4,6 +4,7 @@
  * Handles PDF generation and viewing for the Product Estimator plugin.
  * Manages customer detail verification, secure token generation, and PDF display.
  * Includes support for persistent customer details across estimates.
+ * Added functionality for store contact requests via email or phone.
  */
 
 import ConfirmationDialog from './ConfirmationDialog';
@@ -651,39 +652,48 @@ class PrintEstimate {
           throw new Error('Failed to store estimate');
         }
 
-        // Make the request to notify the store
+        // Prepare data for the server-side request
+        const requestData = {
+          action: 'request_store_contact',
+          nonce: productEstimatorVars.nonce,
+          estimate_id: estimateId,
+          contact_method: contactMethod,
+          customer_details: JSON.stringify(customerDetails)
+        };
+
+        this.log('Sending store contact request with data:', requestData);
+
+        // Make the AJAX request to send the email
         return fetch(productEstimatorVars.ajax_url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
           },
-          body: new URLSearchParams({
-            action: 'request_store_contact',
-            nonce: productEstimatorVars.nonce,
-            estimate_id: estimateId,
-            contact_method: contactMethod
-          })
+          body: new URLSearchParams(requestData)
         });
       })
       .then(response => response.json())
       .then(response => {
         if (response.success) {
+          this.log('Store contact request successful:', response.data);
+
           // Show success message based on contact method
           let message = '';
           if (contactMethod === 'email') {
-            message = `Your request has been sent to the store. They will contact you at ${customerDetails.email} shortly.`;
+            message = `Your request has been sent. Our store will contact you at ${customerDetails.email} shortly.`;
           } else {
-            message = `Your request has been sent to the store. They will contact you at ${customerDetails.phone} shortly.`;
+            message = `Your request has been sent. Our store will call you at ${customerDetails.phone} shortly.`;
           }
 
           this.showMessage(message, 'success');
         } else {
+          this.log('Store contact request failed:', response.data);
           this.showError(response.data?.message || 'Error sending contact request. Please try again.');
         }
       })
       .catch(error => {
+        this.log('Error in requestStoreContact:', error);
         this.showError('Error sending contact request. Please try again.');
-        console.error('Error in requestStoreContact:', error);
       })
       .finally(() => {
         this.setButtonLoading(button, false);

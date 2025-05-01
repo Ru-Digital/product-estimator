@@ -407,37 +407,19 @@ class PDFGenerator
             $image_x = $startX + $padding;
             $image_y = $startY + $padding;
 
-            // Get file extension to determine image type
-            $file_extension = strtolower(pathinfo($image_path, PATHINFO_EXTENSION));
-
-            // Determine if this is a PNG or WebP image that might have transparency
-            $has_transparency = in_array($file_extension, ['png', 'webp']);
-
-            if ($has_transparency) {
-                // Use the ImagePng method with transparency support
-                $pdf->Image(
-                    $image_path,
-                    $image_x,
-                    $image_y,
-                    $image_width,
-                    $image_height,
-                    '', // Determine type from extension
-                    '', // URL link (none)
-                    '', // Alignment (default)
-                    true, // Reset Y position
-                    300, // DPI
-                    '', // Palette (default)
-                    false, // isDataURL
-                    false, // Inline
-                    0, // Border
-                    false, // Fit to page
-                    false, // CMYK
-                    true  // Preserve alpha channel - THIS IS THE KEY PARAMETER
-                );
-            } else {
-                // Use standard Image method for other formats
-                $pdf->Image($image_path, $image_x, $image_y, $image_width, $image_height);
-            }
+            // Use standard Image method, TCPDF will handle the image format appropriately
+            $pdf->Image(
+                $image_path,
+                $image_x,
+                $image_y,
+                $image_width,
+                $image_height,
+                '', // Determine type from extension
+                '', // URL link (none)
+                '', // Alignment (default)
+                true, // Reset Y position
+                300  // DPI
+            );
         }
 
         // Calculate content position
@@ -857,6 +839,12 @@ class PDFGenerator
      * @param string $url Image URL
      * @return string|false Local file path or false on failure
      */
+    /**
+     * Get local file path for an image URL with better format handling
+     *
+     * @param string $url Image URL
+     * @return string|false Local file path or false on failure
+     */
     private function get_image_path($url)
     {
         // Check if we already processed this URL
@@ -891,23 +879,7 @@ class PDFGenerator
                     file_put_contents($temp_file, $image_data);
 
                     if (filesize($temp_file) > 0) {
-                        $file_ext = strtolower(pathinfo($temp_file, PATHINFO_EXTENSION));
-
-                        // Convert WebP with transparency to PNG
-                        if ($file_ext === 'webp' && function_exists('imagecreatefromwebp')) {
-                            $image = imagecreatefromwebp($temp_file);
-                            if ($image) {
-                                imagealphablending($image, false);
-                                imagesavealpha($image, true);
-
-                                $png_file = $temp_file . '.png';
-                                imagepng($image, $png_file);
-                                imagedestroy($image);
-                                unlink($temp_file); // delete original webp
-                                $temp_file = $png_file;
-                            }
-                        }
-
+                        // Store the file path - no conversion needed
                         $this->image_data[$url] = $temp_file;
                         return $temp_file;
                     }
@@ -956,7 +928,6 @@ class PDFGenerator
 
         return false;
     }
-
     /**
      * PDF version of the price graph renderer
      * - To be placed in your class-pdf-generator.php file

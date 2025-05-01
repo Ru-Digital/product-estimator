@@ -24,9 +24,9 @@ class CustomerDetailsManager {
         detailsHeader: '.customer-details-header',
         editForm: '.customer-details-edit-form',
         formContainer: '.product-estimator-modal-form-container'
-      },
-      i18n: window.productEstimatorVars?.i18n || {}
+      }
     }, config);
+
 
     // Store reference to data service
     this.dataService = dataService;
@@ -86,8 +86,8 @@ class CustomerDetailsManager {
     this.log(`Checking for email field updates: hasEmail=${hasEmail}`);
 
     // If the edit form is already visible, update it
-    const editForm = document.querySelector(this.config.selectors.editForm);
-    if (editForm && hasEmail) {
+    const editForms = document.querySelectorAll(this.config.selectors.editForm);
+    editForms.forEach(editForm => {
       // Check if email field already exists
       let emailField = editForm.querySelector('#edit-customer-email');
 
@@ -130,15 +130,30 @@ class CustomerDetailsManager {
         // If field exists, ensure value is up to date
         emailField.value = details.email;
       }
-    }
 
-    // Update data-has-email attribute on the main form
-    const newEstimateForm = document.querySelector('#new-estimate-form');
-    if (newEstimateForm) {
-      newEstimateForm.setAttribute('data-has-email', hasEmail ? 'true' : 'false');
-    }
+      // Update other fields if they exist
+      const nameField = editForm.querySelector('#edit-customer-name');
+      if (nameField && details.name) {
+        nameField.value = details.name;
+      }
+
+      const phoneField = editForm.querySelector('#edit-customer-phone');
+      if (phoneField && details.phone) {
+        phoneField.value = details.phone;
+      }
+
+      const postcodeField = editForm.querySelector('#edit-customer-postcode');
+      if (postcodeField && details.postcode) {
+        postcodeField.value = details.postcode;
+      }
+    });
+
+    // Update data-has-email attribute on any new estimate forms
+    const newEstimateForms = document.querySelectorAll('#new-estimate-form');
+    newEstimateForms.forEach(form => {
+      form.setAttribute('data-has-email', hasEmail ? 'true' : 'false');
+    });
   }
-
   /**
    * Bind events for customer details management
    */
@@ -250,7 +265,7 @@ class CustomerDetailsManager {
     const originalText = saveButton.textContent;
 
     // Show loading state
-    saveButton.textContent = this.config.i18n.saving || 'Saving...';
+    saveButton.textContent = (this.config.i18n && this.config.i18n.saving) || 'Saving...';
     saveButton.disabled = true;
 
     // Get updated details - collect all available fields
@@ -372,9 +387,9 @@ class CustomerDetailsManager {
     // Use the confirmation dialog if available
     if (window.productEstimator && window.productEstimator.dialog) {
       window.productEstimator.dialog.show({
-        title: this.config.i18n.delete_customer_details || 'Delete Customer Details',
-        message: this.config.i18n.confirm_delete_details || 'Are you sure you want to delete your saved details?',
-        confirmText: this.config.i18n.delete || 'Delete',
+        title: (this.config.i18n && this.config.i18n.delete_customer_details) || 'Delete Customer Details',
+        message: (this.config.i18n && this.config.i18n.confirm_delete_details) || 'Are you sure you want to delete your saved details?',
+        confirmText: (this.config.i18n && this.config.i18n.delete) || 'Delete',
         action: 'delete',
         cancelText: this.config.i18n.cancel || 'Cancel',
         onConfirm: () => {
@@ -488,26 +503,37 @@ class CustomerDetailsManager {
    * @param {Object} details - The updated details
    */
   updateDisplayedDetails(details) {
-    const detailsContainer = document.querySelector(this.config.selectors.detailsContainer);
-    if (!detailsContainer) return;
+    const detailsContainers = document.querySelectorAll(this.config.selectors.detailsContainer);
 
-    // Build HTML
-    let detailsHtml = `<p><strong>${details.name}</strong><br>`;
-
-    // Only include email if it exists
-    if (details.email) {
-      detailsHtml += `${details.email}<br>`;
+    if (!detailsContainers.length) {
+      this.log('No customer details containers found for updating');
+      return;
     }
 
-    // Only include phone if it exists
-    if (details.phone) {
-      detailsHtml += `${details.phone}<br>`;
-    }
+    this.log(`Updating ${detailsContainers.length} customer details containers`);
 
-    detailsHtml += `${details.postcode}</p>`;
+    detailsContainers.forEach(container => {
+      // Build HTML with new details
+      let detailsHtml = '<p>';
 
-    // Update container
-    detailsContainer.innerHTML = detailsHtml;
+      if (details.name && details.name.trim() !== '') {
+        detailsHtml += `<strong>${details.name}</strong><br>`;
+      }
+
+      if (details.email && details.email.trim() !== '') {
+        detailsHtml += `${details.email}<br>`;
+      }
+
+      if (details.phone && details.phone.trim() !== '') {
+        detailsHtml += `${details.phone}<br>`;
+      }
+
+      detailsHtml += details.postcode || '';
+      detailsHtml += '</p>';
+
+      // Update container
+      container.innerHTML = detailsHtml;
+    });
   }
 
   /**

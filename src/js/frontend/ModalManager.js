@@ -1934,6 +1934,75 @@ class ModalManager {
   }
 
   /**
+   * Add this method to the ModalManager class to handle customer details updates
+   */
+  onCustomerDetailsUpdated(event) {
+    if (event.detail && event.detail.details) {
+      console.log('Customer details updated:', event.detail.details);
+
+      // Update any new estimate form in the modal
+      const newEstimateForm = this.modal?.querySelector('#new-estimate-form');
+      if (newEstimateForm) {
+        // Set data-has-email attribute to update UI behavior
+        const hasEmail = event.detail.details.email && event.detail.details.email.trim() !== '';
+        newEstimateForm.setAttribute('data-has-email', hasEmail ? 'true' : 'false');
+      }
+
+      // If there's a customer details confirmation area, update it with new details
+      this.updateCustomerDetailsDisplay(event.detail.details);
+    }
+  }
+
+  /**
+   * Add this method to the ModalManager class to update the customer details display
+   */
+  updateCustomerDetailsDisplay(details) {
+    // Find any customer details confirmation areas in the modal
+    const detailsConfirmations = this.modal?.querySelectorAll('.customer-details-confirmation');
+
+    if (!detailsConfirmations || detailsConfirmations.length === 0) {
+      return; // No confirmation areas found
+    }
+
+    detailsConfirmations.forEach(confirmation => {
+      // Find the details paragraph
+      const detailsPara = confirmation.querySelector('.saved-customer-details p');
+      if (!detailsPara) return;
+
+      // Build HTML with new details
+      let html = '';
+
+      if (details.name && details.name.trim() !== '') {
+        html += `<strong>${details.name}</strong><br>`;
+      }
+
+      if (details.email && details.email.trim() !== '') {
+        html += `${details.email}<br>`;
+      }
+
+      if (details.phone && details.phone.trim() !== '') {
+        html += `${details.phone}<br>`;
+      }
+
+      html += details.postcode || '';
+
+      // Update the paragraph
+      detailsPara.innerHTML = html;
+
+      // Update input fields in the edit form as well
+      const editNameField = confirmation.querySelector('#edit-customer-name');
+      const editEmailField = confirmation.querySelector('#edit-customer-email');
+      const editPhoneField = confirmation.querySelector('#edit-customer-phone');
+      const editPostcodeField = confirmation.querySelector('#edit-customer-postcode');
+
+      if (editNameField && details.name) editNameField.value = details.name;
+      if (editEmailField && details.email) editEmailField.value = details.email;
+      if (editPhoneField && details.phone) editPhoneField.value = details.phone;
+      if (editPostcodeField && details.postcode) editPostcodeField.value = details.postcode;
+    });
+  }
+
+  /**
    * Handle room selection form submission with multi-estimate support
    * @param {HTMLFormElement} form - The submitted form
    */

@@ -3,6 +3,7 @@
  *
  * Handles PDF generation and viewing for the Product Estimator plugin.
  * Manages customer detail verification, secure token generation, and PDF display.
+ * Includes support for persistent customer details across estimates.
  */
 
 import ConfirmationDialog from './ConfirmationDialog';
@@ -126,8 +127,7 @@ class PrintEstimate {
         this.showContactSelectionPrompt(estimateId, requestCopyButton, 'request_copy');
       }
 
-
-      // NEW HANDLER: Request contact from store button
+      // Handle request contact from store button
       const requestContactButton = e.target.closest(this.config.selectors.requestContactButton);
       if (requestContactButton && !this.processing) {
         e.preventDefault();
@@ -140,7 +140,6 @@ class PrintEstimate {
         // Show contact method choice modal - similar to request copy but with different messaging
         this.showContactSelectionPrompt(estimateId, requestContactButton, 'request_contact');
       }
-      // Other button handlers can be added here
     });
   }
 
@@ -211,7 +210,9 @@ class PrintEstimate {
     const requiredFields = {
       'print': ['name', 'email'],
       'request_copy_email': ['name', 'email'],
-      'request_copy_sms': ['name', 'phone']
+      'request_copy_sms': ['name', 'phone'],
+      'request_contact_email': ['name', 'email'],
+      'request_contact_phone': ['name', 'phone']
     };
 
     // First check which fields are already available in customer details
@@ -353,6 +354,7 @@ class PrintEstimate {
       !customerInfo || !customerInfo[field] || customerInfo[field].trim() === ''
     );
   }
+
   /**
    * Get readable label for a field
    * @param {string} field - Field name
@@ -384,6 +386,10 @@ class PrintEstimate {
       instruction = 'An email address is required to send your estimate copy.';
     } else if (action === 'request_copy_sms') {
       instruction = 'A phone number is required to send your estimate via SMS.';
+    } else if (action === 'request_contact_email') {
+      instruction = 'Your details are required for our store to contact you via email.';
+    } else if (action === 'request_contact_phone') {
+      instruction = 'Your details are required for our store to contact you via phone.';
     } else if (missingFields.includes('email') && !missingFields.includes('name')) {
       instruction = 'An email address is required to view your estimate.';
     }
@@ -403,7 +409,7 @@ class PrintEstimate {
     missingFields.forEach(field => {
       const fieldLabel = this.getFieldLabel(field);
       const fieldValue = existingDetails[field] || '';
-      const fieldType = field === 'email' ? 'email' : 'text';
+      const fieldType = field === 'email' ? 'email' : (field === 'phone' ? 'tel' : 'text');
 
       html += `
         <div class="form-group">
@@ -501,12 +507,6 @@ class PrintEstimate {
    * @param {string} estimateId - The estimate ID
    * @param {HTMLElement} button - The button element
    * @param {string} action - The action type
-   */
-  /**
-   * Updated version of showContactSelectionPrompt to support both request_copy and request_contact
-   * @param {string} estimateId - The estimate ID
-   * @param {HTMLElement} button - The button element
-   * @param {string} action - The action type ('request_copy' or 'request_contact')
    */
   showContactSelectionPrompt(estimateId, button, action = 'request_copy') {
     // Customize title and prompt based on the action
@@ -704,7 +704,7 @@ class PrintEstimate {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: new URLSearchParams({
-          action: 'check_customer_details', // We'll reuse this endpoint but extract all details
+          action: 'check_customer_details',
           nonce: productEstimatorVars.nonce,
           estimate_id: estimateId
         })
@@ -727,6 +727,7 @@ class PrintEstimate {
 
   /**
    * Update customer details with multiple fields
+   * This version dispatches an event to update all forms
    * @param {string} estimateId - The estimate ID
    * @param {Object} details - Updated customer details
    * @returns {Promise<Object>} Promise that resolves when details are updated
@@ -755,6 +756,15 @@ class PrintEstimate {
           if (!response.success) {
             throw new Error(response.data?.message || 'Error updating customer details');
           }
+
+          // Dispatch an event to notify other components of updated details
+          const event = new CustomEvent('customer_details_updated', {
+            bubbles: true,
+            detail: {
+              details: details
+            }
+          });
+          document.dispatchEvent(event);
 
           // Now store the estimate to the database, passing ONLY the estimate_id
           return fetch(productEstimatorVars.ajax_url, {

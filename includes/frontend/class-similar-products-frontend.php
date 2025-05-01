@@ -95,16 +95,14 @@ class SimilarProductsFrontend extends FrontendBase {
         $is_variation = false;
         $parent_id = null;
 
-        if ( $product instanceof \WC_Product_Variation ) {
+        if ($product instanceof \WC_Product_Variation) {
             $parent_id = $product->get_parent_id();
             $is_variation = true;
-            $product = wc_get_product($product->get_parent_id());
-
-
+            $product = wc_get_product($parent_id);
         }
 
         // Get product categories
-        $product_categories = wp_get_post_terms(($is_variation) ? $parent_id : $product_id, 'product_cat', array('fields' => 'ids'));
+        $product_categories = wp_get_post_terms(($is_variation ? $parent_id : $product_id), 'product_cat', array('fields' => 'ids'));
 
         if (empty($product_categories)) {
             return array();
@@ -121,18 +119,14 @@ class SimilarProductsFrontend extends FrontendBase {
         $matching_rules = array();
 
         foreach ($settings as $rule) {
-            // Skip if no source categories
             if (empty($rule['source_categories'])) {
-                // Legacy support for old format
                 if (isset($rule['source_category']) && in_array($rule['source_category'], $product_categories)) {
                     $matching_rules[] = $rule;
                 }
                 continue;
             }
 
-            // Check if any of the product's categories match any of the rule's source categories
             $intersect = array_intersect($product_categories, $rule['source_categories']);
-
 
             if (!empty($intersect)) {
                 $matching_rules[] = $rule;
@@ -149,7 +143,6 @@ class SimilarProductsFrontend extends FrontendBase {
             if (isset($rule['source_categories'])) {
                 $all_rule_categories = array_merge($all_rule_categories, $rule['source_categories']);
             } elseif (isset($rule['source_category'])) {
-                // Legacy support
                 $all_rule_categories[] = $rule['source_category'];
             }
         }
@@ -158,15 +151,12 @@ class SimilarProductsFrontend extends FrontendBase {
         $category_products = $this->get_products_in_categories($all_rule_categories);
 
         // Remove the source product
-        if (isset($category_products[$product_id])) {
-            unset($category_products[$product_id]);
-        }
+        unset($category_products[$product_id]);
 
-        // Remove the source product parent
-        if ($parent_id && isset($category_products[$parent_id])) {
+        // Remove the parent if applicable
+        if ($parent_id) {
             unset($category_products[$parent_id]);
         }
-
 
         if (empty($category_products)) {
             return array();
@@ -185,10 +175,8 @@ class SimilarProductsFrontend extends FrontendBase {
                     $rule['attributes']
                 );
 
-                // Keep the highest score from any matching rule
                 $max_score = max($max_score, $score);
 
-                // If we've reached maximum similarity, no need to check other rules
                 if ($max_score >= 1) {
                     break;
                 }
@@ -197,29 +185,12 @@ class SimilarProductsFrontend extends FrontendBase {
             $similarity_scores[$candidate_id] = $max_score;
         }
 
-
-        // Filter products based on highest similarity threshold from matching rules
-        $max_threshold = 0;
-        foreach ($matching_rules as $rule) {
-            $max_threshold = max($max_threshold, $rule['similarity_threshold']);
-        }
-
-        $similar_products = array();
-
-        foreach ($similarity_scores as $id => $score) {
-            if ($score >= $max_threshold) {
-                $similar_products[$id] = $score;
-            }
-        }
-
         // Sort by similarity score (descending)
-        arsort($similar_products);
+        arsort($similarity_scores);
 
         // Limit to top 10 results
-        $return = array_slice(array_keys($similar_products), 0, 10);
-        return $return;
+        return array_slice(array_keys($similarity_scores), 0, 10);
     }
-
 
     /**
      * Get products in specified categories

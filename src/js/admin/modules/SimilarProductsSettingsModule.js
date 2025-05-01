@@ -43,9 +43,6 @@
     // Initialize existing rules
     initializeExistingRules();
 
-    // Initialize slider value display
-    initializeSliders();
-
     // Listen for tab changes
     $(document).on('product_estimator_tab_changed', handleTabChanged);
   }
@@ -60,7 +57,6 @@
     if (tabId === 'similar_products') {
       // Re-initialize rules when tab becomes active
       initializeExistingRules();
-      initializeSliders();
       console.log('Tab changed to Similar Products');
     }
   }
@@ -165,33 +161,8 @@
     if (selectedCategories && selectedCategories.length > 0) {
       loadCategoryAttributes(selectedCategories, $rule);
     }
-
-    // Initialize the threshold slider
-    initializeSlider($rule.find('.similarity-threshold'));
   }
 
-  /**
-   * Initialize all threshold sliders
-   */
-  function initializeSliders() {
-    $('.similarity-threshold').each(function(index, element) {
-      initializeSlider($(element));
-    });
-  }
-
-  /**
-   * Initialize a single threshold slider
-   * @param {jQuery} $slider The slider element
-   */
-  function initializeSlider($slider) {
-    if (!$slider.length) return;
-
-    // Update the displayed value when slider changes
-    $slider.on('input change', function() {
-      var value = $(this).val();
-      $(this).closest('.slider-container').find('.similarity-threshold-value').text(value);
-    });
-  }
 
   /**
    * Load attributes for multiple categories

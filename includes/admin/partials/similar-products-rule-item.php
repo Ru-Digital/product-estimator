@@ -89,23 +89,5 @@ if (!empty($selected_categories)) {
                 <?php endif; ?>
             </div>
         </div>
-
-        <div class="rule-field">
-            <label for="<?php echo esc_attr($rule_id); ?>-similarity-threshold">
-                <?php esc_html_e('Similarity Threshold', 'product-estimator'); ?>
-            </label>
-            <p class="description">
-                <?php esc_html_e('Products with attribute similarity above this threshold will be considered similar.', 'product-estimator'); ?>
-            </p>
-
-            <div class="slider-container">
-                <input type="range" id="<?php echo esc_attr($rule_id); ?>-similarity-threshold"
-                       name="<?php echo esc_attr($rule_id); ?>[similarity_threshold]"
-                       class="similarity-threshold"
-                       min="0" max="1" step="0.05"
-                       value="<?php echo esc_attr($threshold); ?>">
-                <span class="similarity-threshold-value"><?php echo esc_html($threshold); ?></span>
-            </div>
-        </div>
     </div>
 </div>

@@ -176,14 +176,6 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
             } else {
                 $rule['attributes'] = array();
             }
-
-            if (isset($rule['similarity_threshold'])) {
-                $rule['similarity_threshold'] = floatval($rule['similarity_threshold']);
-                // Ensure threshold is between 0 and 1
-                $rule['similarity_threshold'] = max(0, min(1, $rule['similarity_threshold']));
-            } else {
-                $rule['similarity_threshold'] = 0.5; // Default threshold
-            }
         }
 
         return $settings;
@@ -366,7 +358,6 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
             ? array_map('sanitize_text_field', $_POST['attributes'])
             : array();
 
-        $similarity_threshold = isset($_POST['similarity_threshold']) ? floatval($_POST['similarity_threshold']) : 0.5;
 
         // Validate data
         if (empty($source_categories)) {

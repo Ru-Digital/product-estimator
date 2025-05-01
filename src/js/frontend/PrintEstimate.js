@@ -519,7 +519,7 @@ class PrintEstimate {
       title = 'How would you like to be contacted?';
       prompt = 'Please choose how you\'d prefer our store to contact you:';
       emailBtnText = 'Email';
-      smsBtnText = 'Phone/SMS';
+      smsBtnText = 'Phone';
     }
 
     const modalHtml = `

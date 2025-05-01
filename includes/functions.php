@@ -1043,4 +1043,5 @@ if (!function_exists('product_estimator_customer_estimates')) {
         $admin = product_estimator();
         return $admin && method_exists($admin, 'get_customer_estimates') ? $admin->get_customer_estimates() : null;
     }
+
 }

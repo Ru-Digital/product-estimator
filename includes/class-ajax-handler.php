@@ -109,8 +109,8 @@ class AjaxHandler {
             add_action('wp_ajax_check_estimate_stored', array($this, 'check_estimate_stored'));
             add_action('wp_ajax_nopriv_check_estimate_stored', array($this, 'check_estimate_stored'));
 
-            add_action('wp_ajax_check_customer_email', array($this, 'check_customer_email'));
-            add_action('wp_ajax_nopriv_check_customer_email', array($this, 'check_customer_email'));
+            add_action('wp_ajax_check_customer_details', array($this, 'check_customer_details'));
+            add_action('wp_ajax_nopriv_check_customer_details', array($this, 'check_customer_details'));
 
             add_action('wp_ajax_request_copy_estimate', array($this, 'request_copy_estimate'));
             add_action('wp_ajax_nopriv_request_copy_estimate', array($this, 'request_copy_estimate'));
@@ -895,8 +895,7 @@ class AjaxHandler {
     /**
      * Remove an entire estimate
      */
-    public function removeEstimate()
-    {
+    public function removeEstimate() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
@@ -916,6 +915,11 @@ class AjaxHandler {
                 return;
             }
 
+            // Add debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Removing estimate ID: {$estimate_id}");
+            }
+
             // Remove the estimate
             $removed = $this->session->removeEstimate($estimate_id);
 
@@ -925,7 +929,8 @@ class AjaxHandler {
             }
 
             wp_send_json_success([
-                'message' => __('Estimate removed successfully', 'product-estimator')
+                'message' => __('Estimate removed successfully', 'product-estimator'),
+                'estimate_id' => $estimate_id
             ]);
 
         } catch (\Exception $e) {
@@ -2043,8 +2048,12 @@ class AjaxHandler {
         $details = [];
 
         // Always include required fields
-        $details['name'] = isset($details_data['name']) ? sanitize_text_field($details_data['name']) : '';
         $details['postcode'] = isset($details_data['postcode']) ? sanitize_text_field($details_data['postcode']) : '';
+
+        // Only include email if it was provided in the form
+        if (isset($details_data['name'])) {
+            $details['name'] = sanitize_text_field($details_data['name']);
+        }
 
         // Only include email if it was provided in the form
         if (isset($details_data['email'])) {
@@ -2057,7 +2066,7 @@ class AjaxHandler {
         }
 
         // Validate required fields
-        if (empty($details['name']) || empty($details['postcode'])) {
+        if (empty($details['postcode'])) {
             wp_send_json_error(['message' => __('Please fill in all required fields', 'product-estimator')]);
             return;
         }
@@ -2123,10 +2132,10 @@ class AjaxHandler {
                 <div class="customer-details-section">
                     <h4><?php esc_html_e('Your Details', 'product-estimator'); ?></h4>
 
-                    <div class="form-group">
-                        <label for="customer-name"><?php esc_html_e('Full Name', 'product-estimator'); ?></label>
-                        <input type="text" id="customer-name" name="customer_name" placeholder="<?php esc_attr_e('Your full name', 'product-estimator'); ?>" required>
-                    </div>
+<!--                    <div class="form-group">-->
+<!--                        <label for="customer-name">--><?php //esc_html_e('Full Name', 'product-estimator'); ?><!--</label>-->
+<!--                        <input type="text" id="customer-name" name="customer_name" placeholder="--><?php //esc_attr_e('Your full name', 'product-estimator'); ?><!--" required>-->
+<!--                    </div>-->
 
                     <div class="form-group">
                         <label for="customer-postcode"><?php esc_html_e('Postcode', 'product-estimator'); ?></label>
@@ -2326,10 +2335,14 @@ class AjaxHandler {
     }
 
     /**
-     * Check if customer has an email set in session
+     * Check if customer has valid details set in session
      * Add this to the AjaxHandler class in class-ajax-handler.php
      */
-    public function check_customer_email() {
+    /**
+     * Enhanced version of the check_customer_details method for AjaxHandler
+     * This now returns the full customer details object for better handling in JavaScript
+     */
+    public function check_customer_details() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
@@ -2345,29 +2358,38 @@ class AjaxHandler {
             $customer_details = $customer_details_manager->getDetails();
             $has_email = $customer_details_manager->hasEmail();
 
+            // Check for name, email and phone
+            $has_name = isset($customer_details['name']) && !empty($customer_details['name']);
+            $has_phone = isset($customer_details['phone']) && !empty($customer_details['phone']);
+
             // If no email in global details, check the specific estimate
             if (!$has_email && $estimate_id) {
                 $estimate = $this->session->getEstimate($estimate_id);
                 if ($estimate && isset($estimate['customer_details']['email']) && !empty($estimate['customer_details']['email'])) {
                     $customer_details = $estimate['customer_details'];
                     $has_email = true;
+
+                    // Update name and phone flag based on estimate data
+                    $has_name = isset($customer_details['name']) && !empty($customer_details['name']);
+                    $has_phone = isset($customer_details['phone']) && !empty($customer_details['phone']);
                 }
             }
 
             wp_send_json_success([
                 'has_email' => $has_email,
+                'has_name' => $has_name,
+                'has_phone' => $has_phone,
                 'customer_details' => $customer_details
             ]);
 
         } catch (Exception $e) {
-            error_log('Error checking customer email: ' . $e->getMessage());
+            error_log('Error checking customer details: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => $e->getMessage(),
                 'error' => 'session_error'
             ]);
         }
     }
-
 
     /**
      * Check if an estimate is already stored in the database

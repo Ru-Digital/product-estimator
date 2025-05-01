@@ -378,13 +378,20 @@ class DataService {
    * @returns {Promise<Object>} Result data
    */
   removeEstimate(estimateId) {
+    console.log(`DataService: Removing estimate ${estimateId}`);
+
     return this.request('remove_estimate', {
       estimate_id: estimateId
     })
       .then(data => {
         // Invalidate caches since we modified data
         this.invalidateCache();
+        console.log(`DataService: Successfully removed estimate ${estimateId}`);
         return data;
+      })
+      .catch(error => {
+        console.error(`DataService: Error removing estimate ${estimateId}`, error);
+        throw error; // Make sure to re-throw so the error propagates
       });
   }
 

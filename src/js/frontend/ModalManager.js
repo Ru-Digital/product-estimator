@@ -1065,8 +1065,13 @@ class ModalManager {
   handleEstimateRemoval(estimateId) {
     this.showLoading();
 
+    // Log the estimate ID being removed for debugging
+    console.log(`Attempting to remove estimate ID: ${estimateId}`);
+
     this.dataService.removeEstimate(estimateId)
-      .then(() => {
+      .then((response) => {
+        console.log('Estimate removal response:', response);
+
         // Refresh estimates list
         this.loadEstimatesList()
           .then(() => {
@@ -1074,18 +1079,19 @@ class ModalManager {
             this.showMessage('Estimate removed successfully', 'success');
           })
           .catch(error => {
-            this.log('Error refreshing estimates list:', error);
+            console.error('Error refreshing estimates list:', error);
             this.showError('Error refreshing estimates list. Please try again.');
           });
       })
       .catch(error => {
-        this.log('Error removing estimate:', error);
+        console.error('Error removing estimate:', error);
         this.showError(error.message || 'Error removing estimate. Please try again.');
       })
       .finally(() => {
         this.hideLoading();
       });
   }
+
   /**
    * Bind product removal events with duplicate prevention
    */
@@ -1224,7 +1230,6 @@ class ModalManager {
         title = dialogTitles.estimate || 'Delete Estimate';
         message = dialogMessages.estimate || 'Are you sure you want to delete this estimate and all its rooms?';
         confirmText = i18n.delete || 'Delete';
-        type = 'delete';
         break;
       case 'room':
         title = dialogTitles.room || 'Delete Room';
@@ -1239,19 +1244,39 @@ class ModalManager {
     }
 
     // Log what we're trying to delete
-    this.log(`Confirming deletion of ${type} - ID: ${type === 'product' ? productIndex : (type === 'room' ? roomId : estimateId)}`);
+    console.log(`Confirming deletion of ${type} - ID: ${type === 'product' ? productIndex : (type === 'room' ? roomId : estimateId)}`);
 
     // Use our custom confirmation dialog
-    ConfirmationDialog.show({
-      title: title,
-      message: message,
-      type: type,
-      action: 'delete',
-      confirmText: confirmText,
-      onConfirm: () => {
-        this.log(`User confirmed deletion of ${type}`);
+    if (window.productEstimator && window.productEstimator.dialog) {
+      window.productEstimator.dialog.show({
+        title: title,
+        message: message,
+        type: type,
+        confirmText: confirmText,
+        onConfirm: () => {
+          console.log(`User confirmed deletion of ${type}`);
 
-        // Handle deletion based on type
+          // Handle deletion based on type
+          switch (type) {
+            case 'estimate':
+              this.handleEstimateRemoval(estimateId);
+              break;
+            case 'room':
+              this.handleRoomRemoval(estimateId, roomId);
+              break;
+            case 'product':
+              this.handleProductRemoval(estimateId, roomId, productIndex);
+              break;
+          }
+        },
+        onCancel: () => {
+          console.log(`User cancelled deletion of ${type}`);
+          // No action needed on cancel
+        }
+      });
+    } else {
+      // Fallback to standard confirm if custom dialog not available
+      if (confirm(message)) {
         switch (type) {
           case 'estimate':
             this.handleEstimateRemoval(estimateId);
@@ -1263,14 +1288,10 @@ class ModalManager {
             this.handleProductRemoval(estimateId, roomId, productIndex);
             break;
         }
-      },
-      onCancel: () => {
-        this.log(`User cancelled deletion of ${type}`);
-        // No action needed on cancel
       }
-    });
-  }
+    }
 
+  }
   /**
    * Load estimate selection form via AJAX
    * @returns {Promise} Promise that resolves when form is loaded

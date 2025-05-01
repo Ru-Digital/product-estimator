@@ -14,6 +14,7 @@ $customer_details = $customer_details_manager->getDetails();
 // Check if email and phone are set - explicitly set these variables for template use
 $has_email = $customer_details_manager->hasEmail();
 $has_phone = isset($customer_details['phone']) && !empty($customer_details['phone']);
+$has_customer_name = isset($customer_details['name']) && !empty($customer_details['name']);
 ?>
 <h2><?php esc_html_e('Create New Estimate', 'product-estimator'); ?></h2>
 
@@ -27,11 +28,11 @@ $has_phone = isset($customer_details['phone']) && !empty($customer_details['phon
         <!-- Customer details section - only shown if not already in session -->
         <div class="customer-details-section">
             <h4><?php esc_html_e('Your Details', 'product-estimator'); ?></h4>
-
-            <div class="form-group">
-                <label for="customer-name"><?php esc_html_e('Full Name', 'product-estimator'); ?></label>
-                <input type="text" id="customer-name" name="customer_name" placeholder="<?php esc_attr_e('Your full name', 'product-estimator'); ?>" required>
-            </div>
+<!---->
+<!--            <div class="form-group">-->
+<!--                <label for="customer-name">--><?php //esc_html_e('Full Name', 'product-estimator'); ?><!--</label>-->
+<!--                <input type="text" id="customer-name" name="customer_name" placeholder="--><?php //esc_attr_e('Your full name', 'product-estimator'); ?><!--" required>-->
+<!--            </div>-->
 
 <!--            <div class="form-group">-->
 <!--                <label for="customer-email">--><?php //esc_html_e('Email Address', 'product-estimator'); ?><!--</label>-->
@@ -64,7 +65,10 @@ $has_phone = isset($customer_details['phone']) && !empty($customer_details['phon
             </div>
 
             <div class="saved-customer-details">
-                <p><strong><?php echo esc_html($customer_details['name']); ?></strong><br>
+                <p>
+                    <?php if ($has_customer_name): ?>
+                        <strong><?php echo esc_html($customer_details['name']); ?></strong><br>
+                    <?php endif; ?>
                     <?php if ($has_email): ?>
                         <?php echo esc_html($customer_details['email']); ?><br>
                     <?php endif; ?>
@@ -72,19 +76,23 @@ $has_phone = isset($customer_details['phone']) && !empty($customer_details['phon
                     <?php if ($has_phone): ?>
                         <?php echo esc_html($customer_details['phone']); ?><br>
                     <?php endif; ?>
-                    <?php echo esc_html($customer_details['postcode']); ?></p>
+                    <?php echo esc_html($customer_details['postcode']); ?>
+                </p>
             </div>
 
             <!-- Hidden edit form - will be shown when edit button is clicked -->
             <div class="customer-details-edit-form" style="display: none;">
                 <h4><?php esc_html_e('Edit Your Details', 'product-estimator'); ?></h4>
 
+
+                <?php if ($has_customer_name): ?>
+
                 <div class="form-group">
                     <label for="edit-customer-name"><?php esc_html_e('Full Name', 'product-estimator'); ?></label>
                     <input type="text" id="edit-customer-name" name="edit_customer_name"
                            value="<?php echo esc_attr($customer_details['name']); ?>" required>
                 </div>
-
+                <?php endif; ?>
                 <!-- Always include email field in edit form if it exists in customer details -->
                 <?php if ($has_email): ?>
                     <div class="form-group">

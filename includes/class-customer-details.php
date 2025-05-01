@@ -66,12 +66,12 @@ class CustomerDetails {
      */
     public function setDetails($details) {
         // Basic validation
-        if (!isset($details['name']) || !isset($details['postcode'])) {
+        if (!isset($details['postcode'])) {
             return false;
         }
 
         $this->details = [
-            'name' => sanitize_text_field($details['name']),
+            'name' =>  isset($details['email']) ? sanitize_text_field($details['name']) : '',
             'email' => isset($details['email']) ? sanitize_email($details['email']) : '',
             'phone' => isset($details['phone']) ? sanitize_text_field($details['phone']) : '',
             'postcode' => sanitize_text_field($details['postcode']),
@@ -120,7 +120,6 @@ class CustomerDetails {
      */
     public function hasCompleteDetails() {
         return !empty($this->details) &&
-            isset($this->details['name']) &&
             isset($this->details['postcode']);
     }
 
@@ -175,9 +174,9 @@ class CustomerDetails {
         $errors = [];
 
         // Required fields
-        if (empty($form_data['customer_name'])) {
-            $errors[] = __('Your name is required', 'product-estimator');
-        }
+//        if (!empty($form_data['customer_name'])) {
+//            $errors[] = __('Your name is required', 'product-estimator');
+//        }
 
         if (empty($form_data['customer_postcode'])) {
             $errors[] = __('Your postcode is required', 'product-estimator');
@@ -194,7 +193,7 @@ class CustomerDetails {
 
         // Return sanitized data
         return [
-            'name' => sanitize_text_field($form_data['customer_name']),
+            'name' =>  !empty($form_data['customer_name']) ?  sanitize_text_field($form_data['customer_name']) : '',
             'email' => !empty($form_data['customer_email']) ? sanitize_email($form_data['customer_email']) : '',
             'phone' => !empty($form_data['customer_phone']) ? sanitize_text_field($form_data['customer_phone']) : '',
             'postcode' => sanitize_text_field($form_data['customer_postcode'])

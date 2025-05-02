@@ -25,7 +25,8 @@ class EstimatorCore {
         estimatorMenuButtons: '.product-estimator-menu-item a, a.product-estimator-menu-item',
         modalContainer: '#product-estimator-modal'
       },
-      autoInit: true
+      autoInit: true,
+      i18n: window.productEstimatorVars?.i18n || {} // Get i18n from global vars on init
     }, config);
 
     // Module references

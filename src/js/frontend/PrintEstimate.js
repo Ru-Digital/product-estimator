@@ -8,13 +8,16 @@
  */
 
 import ConfirmationDialog from './ConfirmationDialog';
+import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails } from './CustomerStorage'; // Import the new functions
+import DataService from './DataService'; // <--- Add this line
 
 class PrintEstimate {
   /**
    * Initialize the PrintEstimate module
    * @param {Object} config - Configuration options
+   * @param {DataService} dataService - The data service instance // Added dataService parameter
    */
-  constructor(config = {}) {
+  constructor(config = {}, dataService) {
     // Default configuration
     this.config = Object.assign({
       debug: false,
@@ -27,10 +30,14 @@ class PrintEstimate {
       i18n: window.productEstimatorVars?.i18n || {}
     }, config);
 
+    // Store reference to data service
+    this.dataService = dataService; // Store the dataService
+
     // State
     this.initialized = false;
     this.processing = false;
-    this.customerDetails = this.loadCustomerDetails(); // Load details on init
+    // Use the imported loadCustomerDetails function on init
+    this.customerDetails = loadCustomerDetails();
 
     // Initialize if auto-init is not set to false
     if (config.autoInit !== false) {
@@ -56,60 +63,9 @@ class PrintEstimate {
     return this;
   }
 
-  /**
-   * Load customer details from localStorage with fallback to sessionStorage
-   * @returns {Object} Customer details object
-   */
-  loadCustomerDetails() {
-    try {
-      const storedDetails = localStorage.getItem('customerDetails');
-      if (storedDetails) {
-        return JSON.parse(storedDetails);
-      } else {
-        const sessionDetails = sessionStorage.getItem('customerDetails');
-        return sessionDetails ? JSON.parse(sessionDetails) : {};
-      }
-    } catch (error) {
-      console.error('Error loading customer details:', error);
-      return {}; // Return empty object on error
-    }
-  }
+  // Removed duplicated loadCustomerDetails, saveCustomerDetails, and clearCustomerDetails methods
+  // The imported functions from CustomerStorage.js will be used instead.
 
-  /**
-   * Save customer details to localStorage with fallback to sessionStorage
-   * @param {Object} details - Customer details to save
-   */
-  saveCustomerDetails(details) {
-    try {
-      localStorage.setItem('customerDetails', JSON.stringify(details));
-    } catch (localStorageError) {
-      console.warn('localStorage not available, using sessionStorage:', localStorageError);
-      try {
-        sessionStorage.setItem('customerDetails', JSON.stringify(details));
-      } catch (sessionStorageError) {
-        console.error('sessionStorage not available:', sessionStorageError);
-        // If neither is available, details won't persist, but we can continue
-      }
-    }
-    this.customerDetails = details; // Update the class property
-  }
-
-  /**
-   * Clear customer details from both localStorage and sessionStorage
-   */
-  clearCustomerDetails() {
-    try {
-      localStorage.removeItem('customerDetails');
-    } catch (localStorageError) {
-      console.warn('localStorage not available:', localStorageError);
-    }
-    try {
-      sessionStorage.removeItem('customerDetails');
-    } catch (sessionStorageError) {
-      console.warn('sessionStorage not available:', sessionStorageError);
-    }
-    this.customerDetails = {}; // Clear the class property
-  }
 
   /**
    * Bind events for printing estimates
@@ -273,7 +229,11 @@ class PrintEstimate {
     };
 
     // Use the class property for initial check
+    // IMPORTANT: Make sure this.customerDetails is up-to-date by calling loadCustomerDetails before this.
+    // Or, pass the latest customer details object fetched from checkCustomerDetails call
+    // For now, let's assume customerDetails property is updated before this call.
     let missingFields = this.getMissingFields(this.customerDetails, action);
+
 
     if (missingFields.length === 0) {
       // No missing fields, proceed with the action
@@ -608,43 +568,37 @@ class PrintEstimate {
       // Determine the specific action for email
       const emailAction = action === 'request_contact' ? 'request_contact_email' : 'request_copy_email';
 
-      // Check customer details
-      this.checkCustomerDetails(estimateId)
-        .then(customerInfo => {
-          // Always check for name, plus email for email actions
-          const missingFields = [];
-          if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
-          if (!customerInfo.email || customerInfo.email.trim() === '') missingFields.push('email');
+      // Check customer details using the imported function
+      const customerInfo = loadCustomerDetails();
 
-          if (missingFields.length === 0) {
-            // All required details exist, proceed with the action
-            if (action === 'request_contact') {
-              this.requestStoreContact(estimateId, 'email', button, customerInfo);
-            } else {
-              // Original request_copy email flow
-              this.requestCopyEstimate(estimateId, button)
-                .then(response => {
-                  this.showMessage(`Estimate has been emailed to ${customerInfo.email}`, 'success', () => {
-                    this.setButtonLoading(button, false);
-                    this.processing = false;
-                  });
-                })
-                .catch(() => {
-                  this.showError('Error sending estimate copy. Please try again.');
-                  this.setButtonLoading(button, false);
-                  this.processing = false;
-                });
-            }
-          } else {
-            // Missing details, show prompt
-            this.showCustomerDetailsPrompt(estimateId, button, emailAction);
-          }
-        })
-        .catch(() => {
-          this.showError('Error checking customer details. Please try again.');
-          this.setButtonLoading(button, false);
-          this.processing = false;
-        });
+      // Always check for name, plus email for email actions
+      const missingFields = [];
+      if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
+      if (!customerInfo.email || customerInfo.email.trim() === '') missingFields.push('email');
+
+      if (missingFields.length === 0) {
+        // All required details exist, proceed with the action
+        if (action === 'request_contact') {
+          this.requestStoreContact(estimateId, 'email', button, customerInfo);
+        } else {
+          // Original request_copy email flow
+          this.requestCopyEstimate(estimateId, button)
+            .then(response => {
+              this.showMessage(`Estimate has been emailed to ${customerInfo.email}`, 'success', () => {
+                this.setButtonLoading(button, false);
+                this.processing = false;
+              });
+            })
+            .catch(() => {
+              this.showError('Error sending estimate copy. Please try again.');
+              this.setButtonLoading(button, false);
+              this.processing = false;
+            });
+        }
+      } else {
+        // Missing details, show prompt
+        this.showCustomerDetailsPrompt(estimateId, button, emailAction);
+      }
     });
 
     smsBtn.addEventListener('click', () => {
@@ -653,34 +607,28 @@ class PrintEstimate {
       // Determine the specific action for SMS/phone
       const smsAction = action === 'request_contact' ? 'request_contact_phone' : 'request_copy_sms';
 
-      // Check customer details
-      this.checkCustomerDetails(estimateId)
-        .then(customerInfo => {
-          // Always check for name, plus phone for SMS/phone actions
-          const missingFields = [];
-          if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
-          if (!customerInfo.phone || customerInfo.phone.trim() === '') missingFields.push('phone');
+      // Check customer details using the imported function
+      const customerInfo = loadCustomerDetails();
 
-          if (missingFields.length === 0) {
-            // All required details exist, proceed with the action
-            if (action === 'request_contact') {
-              this.requestStoreContact(estimateId, 'phone', button, customerInfo);
-            } else {
-              // Original request_copy SMS flow (coming soon)
-              this.showMessage('SMS option coming soon.', 'success');
-              this.setButtonLoading(button, false);
-              this.processing = false;
-            }
-          } else {
-            // Missing details, show prompt
-            this.showCustomerDetailsPrompt(estimateId, button, smsAction);
-          }
-        })
-        .catch(() => {
-          this.showError('Error checking customer details. Please try again.');
+      // Always check for name, plus phone for SMS/phone actions
+      const missingFields = [];
+      if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
+      if (!customerInfo.phone || customerInfo.phone.trim() === '') missingFields.push('phone');
+
+      if (missingFields.length === 0) {
+        // All required details exist, proceed with the action
+        if (action === 'request_contact') {
+          this.requestStoreContact(estimateId, 'phone', button, customerInfo);
+        } else {
+          // Original request_copy SMS flow (coming soon)
+          this.showMessage('SMS option coming soon.', 'success');
           this.setButtonLoading(button, false);
           this.processing = false;
-        });
+        }
+      } else {
+        // Missing details, show prompt
+        this.showCustomerDetailsPrompt(estimateId, button, smsAction);
+      }
     });
   }
 
@@ -701,8 +649,6 @@ class PrintEstimate {
 
         // Prepare data for the server-side request
         const requestData = {
-          action: 'request_store_contact',
-          nonce: productEstimatorVars.nonce,
           estimate_id: estimateId,
           contact_method: contactMethod,
           customer_details: JSON.stringify(customerDetails)
@@ -710,33 +656,21 @@ class PrintEstimate {
 
         this.log('Sending store contact request with data:', requestData);
 
-        // Make the AJAX request to send the email
-        return fetch(productEstimatorVars.ajax_url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: new URLSearchParams(requestData)
-        });
+        // Use DataService for the AJAX request
+        return this.dataService.request('request_store_contact', requestData);
       })
-      .then(response => response.json())
       .then(response => {
-        if (response.success) {
-          this.log('Store contact request successful:', response.data);
+        this.log('Store contact request successful:', response);
 
-          // Show success message based on contact method
-          let message = '';
-          if (contactMethod === 'email') {
-            message = `Your request has been sent. Our store will contact you at ${customerDetails.email} shortly.`;
-          } else {
-            message = `Your request has been sent. Our store will call you at ${customerDetails.phone} shortly.`;
-          }
-
-          this.showMessage(message, 'success');
+        // Show success message based on contact method
+        let message = '';
+        if (contactMethod === 'email') {
+          message = `Your request has been sent. Our store will contact you at ${customerDetails.email} shortly.`;
         } else {
-          this.log('Store contact request failed:', response.data);
-          this.showError(response.data?.message || 'Error sending contact request. Please try again.');
+          message = `Your request has been sent. Our store will call you at ${customerDetails.phone} shortly.`;
         }
+
+        this.showMessage(message, 'success');
       })
       .catch(error => {
         this.log('Error in requestStoreContact:', error);
@@ -755,40 +689,50 @@ class PrintEstimate {
    */
   checkCustomerDetails(estimateId) {
     return new Promise((resolve, reject) => {
-      // If we have customer details, resolve immediately
-      if (this.customerDetails && this.customerDetails.name && this.customerDetails.email) {
+      // If we have customer details in local storage, resolve immediately
+      // Use the imported loadCustomerDetails function
+      const currentDetails = loadCustomerDetails();
+      // Add a check for required fields (name and email are typically needed for printing/contact)
+      // Adjust the check below based on which fields are *always* required for this check.
+      // If any required fields are missing from local storage, proceed to AJAX.
+      if (currentDetails && currentDetails.name && currentDetails.email) {
+        this.customerDetails = currentDetails; // Update class property
+        this.log('Customer details found in local storage.');
         resolve(this.customerDetails);
-        return;
+        return; // Exit early
       }
 
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'check_customer_details',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateId
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success) {
-            this.log('Customer details check result:', response.data);
-            // Save to local storage
-            this.saveCustomerDetails(response.data.customer_details || {});
+      // If not in local storage, fetch from the server using DataService
+      this.log('Customer details not fully available in local storage, fetching from server.');
+      this.dataService.request('check_customer_details', { estimate_id: estimateId })
+        .then(data => {
+          this.log('Customer details check result from server:', data);
+          if (data && data.customer_details) {
+            // Save to local storage using the imported function
+            saveCustomerDetails(data.customer_details);
+            // Load updated details into class property using the imported function
+            this.customerDetails = loadCustomerDetails();
             resolve(this.customerDetails);
           } else {
-            reject(new Error(response.data?.message || 'Error checking customer details'));
+            // Even if server returns success, if no details are provided, treat as not found
+            this.log('Server check succeeded but no customer details returned.');
+            // Optionally save an empty state or just resolve with empty details
+            saveCustomerDetails({}); // Save empty details to indicate server has none
+            this.customerDetails = {};
+            resolve(this.customerDetails); // Resolve with empty object
           }
         })
         .catch(error => {
-          this.log('Error checking customer details:', error);
-          reject(error);
+          this.log('Error fetching customer details from server:', error);
+          // On AJAX error, resolve with empty details, but log the error
+          this.customerDetails = {};
+          resolve(this.customerDetails); // Resolve with empty object on error
+          // Or reject if a server error should halt the process:
+          // reject(error);
         });
     });
   }
+
 
   /**
    * Update customer details with multiple fields
@@ -804,24 +748,9 @@ class PrintEstimate {
         details.postcode = '0000'; // Default postcode if not set
       }
 
-      // Update customer details
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'update_customer_details',
-          nonce: productEstimatorVars.nonce,
-          details: JSON.stringify(details)
-        })
-      })
-        .then(response => response.json())
+      // Update customer details using DataService
+      this.dataService.request('update_customer_details', { details: JSON.stringify(details) })
         .then(response => {
-          if (!response.success) {
-            throw new Error(response.data?.message || 'Error updating customer details');
-          }
-
           // Dispatch an event to notify other components of updated details
           const event = new CustomEvent('customer_details_updated', {
             bubbles: true,
@@ -831,29 +760,14 @@ class PrintEstimate {
           });
           document.dispatchEvent(event);
 
-          // Now store the estimate to the database, passing ONLY the estimate_id
-          return fetch(productEstimatorVars.ajax_url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-              action: 'store_single_estimate',
-              nonce: productEstimatorVars.nonce,
-              estimate_id: estimateId
-            })
-          });
+          // Now store the estimate to the database using DataService
+          return this.dataService.request('store_single_estimate', { estimate_id: estimateId });
         })
-        .then(response => response.json())
         .then(response => {
-          if (response.success) {
-            // Save updated details to local storage
-            this.saveCustomerDetails(details);
-            resolve(response.data);
-          } else {
-            console.error('Error storing estimate:', response);
-            throw new Error(response.data?.message || 'Error storing estimate');
-          }
+          // Save updated details to local storage using the imported function
+          saveCustomerDetails(details);
+          this.customerDetails = details; // Update class property
+          resolve(response); // Resolve with the response from storing the estimate
         })
         .catch(error => {
           console.error('Error in updateCustomerDetails:', error);
@@ -863,37 +777,31 @@ class PrintEstimate {
   }
 
   /**
+   * This method is now redundant and can be removed, as it's handled by CustomerStorage.js
+   */
+  /*
+  clearCustomerDetails() {
+    try {
+      localStorage.removeItem('customerDetails');
+    } catch (localStorageError) {
+      console.warn('localStorage not available:', localStorageError);
+    }
+    try {
+      sessionStorage.removeItem('customerDetails');
+    } catch (sessionStorageError) {
+      console.warn('sessionStorage not available:', sessionStorageError);
+    }
+    this.customerDetails = {}; // Clear the class property
+  }
+  */
+  /**
    * Store the estimate in the database
    * @param {string} estimateId - The estimate ID
    * @returns {Promise<Object>} Promise that resolves when estimate is stored
    */
   storeEstimate(estimateId) {
-    return new Promise((resolve, reject) => {
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'store_single_estimate',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateId
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success) {
-            this.log('Estimate stored successfully', response.data);
-            resolve(response.data);
-          } else {
-            reject(new Error(response.data?.message || 'Error storing estimate'));
-          }
-        })
-        .catch(error => {
-          this.log('Error storing estimate:', error);
-          reject(error);
-        });
-    });
+    // Use DataService for the AJAX request
+    return this.dataService.request('store_single_estimate', { estimate_id: estimateId });
   }
 
   /**
@@ -902,32 +810,16 @@ class PrintEstimate {
    * @returns {Promise<string>} Promise that resolves to the secure URL
    */
   getSecurePdfUrl(dbId) {
-    return new Promise((resolve, reject) => {
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'get_secure_pdf_url',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: dbId
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success && response.data.url) {
-            this.log('Received secure PDF URL:', response.data);
-            resolve(response.data.url);
-          } else {
-            reject(new Error(response.data?.message || 'Failed to get secure PDF URL'));
-          }
-        })
-        .catch(error => {
-          this.log('Error getting secure PDF URL:', error);
-          reject(error);
-        });
-    });
+    // Use DataService for the AJAX request
+    return this.dataService.request('get_secure_pdf_url', { estimate_id: dbId })
+      .then(data => {
+        if (data && data.url) {
+          this.log('Received secure PDF URL:', data);
+          return data.url; // Resolve with the URL string
+        } else {
+          throw new Error('Failed to get secure PDF URL');
+        }
+      });
   }
 
   /**
@@ -937,47 +829,30 @@ class PrintEstimate {
    * @returns {Promise<Object>} Promise that resolves when email is sent
    */
   requestCopyEstimate(estimateId, button) {
-    return this.checkCustomerDetails(estimateId)
-      .then(customerInfo => {
-        if (!customerInfo.email) {
-          return Promise.reject(new Error('no_email'));
-        }
-        return this.storeEstimate(estimateId)
-          .then(data => {
-            if (!data || !data.estimate_id) {
-              throw new Error('Failed to store estimate');
-            }
+    // Use the imported loadCustomerDetails function
+    const customerInfo = loadCustomerDetails();
 
-            return new Promise((resolve, reject) => {
-              fetch(productEstimatorVars.ajax_url, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: new URLSearchParams({
-                  action: 'request_copy_estimate',
-                  nonce: productEstimatorVars.nonce,
-                  estimate_id: estimateId
-                })
-              })
-                .then(response => response.json())
-                .then(response => {
-                  if (response.success) {
-                    resolve(response.data);
-                  } else {
-                    if (response.data?.code === 'no_email') {
-                      reject(new Error('no_email'));
-                    } else {
-                      reject(new Error(response.data?.message || 'Error requesting estimate copy'));
-                    }
-                  }
-                })
-                .catch(error => {
-                  this.log('Error requesting estimate copy:', error);
-                  reject(error);
-                });
-            });
-          });
+    if (!customerInfo.email) {
+      return Promise.reject(new Error('no_email'));
+    }
+
+    return this.storeEstimate(estimateId)
+      .then(data => {
+        if (!data || !data.estimate_id) {
+          throw new Error('Failed to store estimate');
+        }
+
+        // Use DataService for the AJAX request
+        return this.dataService.request('request_copy_estimate', { estimate_id: estimateId });
+      })
+      .catch(error => {
+        // Handle specific no_email error from server response if needed
+        if (error.data?.code === 'no_email') {
+          throw new Error('no_email');
+        } else {
+          this.log('Error requesting estimate copy:', error);
+          throw error; // Re-throw other errors
+        }
       });
   }
 
@@ -1065,4 +940,3 @@ class PrintEstimate {
 
 // Export the class
 export default PrintEstimate;
-

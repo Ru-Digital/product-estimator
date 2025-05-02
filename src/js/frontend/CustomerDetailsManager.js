@@ -5,6 +5,9 @@
  * Follows the ES6 module architecture used in the project.
  */
 
+import { saveCustomerDetails, clearCustomerDetails } from './CustomerStorage'; // Import the new functions
+import DataService from "./DataService";
+
 class CustomerDetailsManager {
   /**
    * Initialize the CustomerDetailsManager
@@ -24,7 +27,8 @@ class CustomerDetailsManager {
         detailsHeader: '.customer-details-header',
         editForm: '.customer-details-edit-form',
         formContainer: '.product-estimator-modal-form-container'
-      }
+      },
+      i18n: {}
     }, config);
 
 
@@ -285,30 +289,55 @@ class CustomerDetailsManager {
       updatedDetails.phone = phoneField.value || '';
     }
 
-    // Try to save to localStorage first
+    // Use the imported saveCustomerDetails function
     try {
-      localStorage.setItem('customerDetails', JSON.stringify(updatedDetails));
+      saveCustomerDetails(updatedDetails); // Use the imported function
       this.log('Customer details saved to localStorage:', updatedDetails);
-      this.handleSaveSuccess(updatedDetails, updatedDetails); // Pass updatedDetails twice
-      saveButton.textContent = originalText;
-      saveButton.disabled = false;
-    } catch (error) {
-      this.log('Error saving to localStorage:', error);
-      // Fallback to server storage (session)
+
+      // 2. Now, send the update to the server asynchronously using DataService
       this.dataService.request('update_customer_details', {
         details: JSON.stringify(updatedDetails)
       })
         .then(data => {
-          this.handleSaveSuccess(data, updatedDetails); // Pass updatedDetails here as well, so we have the values from the form
-          saveButton.textContent = originalText;
-          saveButton.disabled = false;
+          // Handle successful server update
+          this.log('Customer details updated on server successfully:', data);
+          this.handleSaveSuccess(data, updatedDetails); // Call success handler with server response data and updated details
         })
         .catch(error => {
-          this.handleSaveError(error);
+          // Handle server update error
+          this.handleSaveError(error); // Show error message
+          // Note: Details are already saved locally, so we don't revert local storage on server error.
+        })
+        .finally(() => {
+          // This block runs after both success or error of the AJAX request
+          saveButton.textContent = originalText;
+          saveButton.disabled = false;
+        });
+
+    } catch (localStorageError) {
+      // Handle synchronous local storage save error
+      this.log('Error saving to localStorage using imported function:', localStorageError);
+      this.showError('Could not save details locally.'); // Show local storage error
+      // We still attempt server save even if local save fails
+      this.dataService.request('update_customer_details', {
+        details: JSON.stringify(updatedDetails)
+      })
+        .then(data => {
+          // Handle successful server update even after local failure
+          this.log('Customer details updated on server successfully (after local storage error):', data);
+          this.handleSaveSuccess(data, updatedDetails); // Call success handler
+        })
+        .catch(error => {
+          // Handle server update error after local failure
+          this.handleSaveError(error); // Show server error message
+        })
+        .finally(() => {
+          // This block runs after both success or error of the AJAX request
           saveButton.textContent = originalText;
           saveButton.disabled = false;
         });
     }
+
   }
 
   /**
@@ -394,14 +423,15 @@ class CustomerDetailsManager {
       confirmationContainer.classList.add('loading');
     }
 
-    // Try to remove from localStorage first
+    // Use the imported clearCustomerDetails function
     try {
-      localStorage.removeItem('customerDetails');
-      this.log('Customer details removed from localStorage');
+      clearCustomerDetails(); // Clear using imported function
+      this.log('Customer details removed from localStorage using imported function'); // Log the success
       this.handleDeleteSuccess({message: "Details deleted successfully from local storage"}, confirmationContainer);
     } catch (e) {
-      this.log('localStorage error on delete', e);
+      this.log('localStorage error on delete using imported function', e); // Log any error
     }
+
 
     // Use the dataService to make the AJAX request if available
     if (this.dataService && typeof this.dataService.request === 'function') {

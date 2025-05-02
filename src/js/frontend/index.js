@@ -85,6 +85,8 @@ function initApp() {
 /**
  * Initialize the estimator core
  */
+// In index.js (inside initEstimator function)
+
 function initEstimator(debugMode) {
   try {
     // One final check to prevent race conditions
@@ -96,6 +98,7 @@ function initEstimator(debugMode) {
     console.log('Initializing EstimatorCore...');
 
     // Initialize core with configuration
+    // This call creates the EstimatorCore.dataService instance internally
     EstimatorCore.init({
       debug: debugMode,
       // Add any other configuration here
@@ -104,12 +107,21 @@ function initEstimator(debugMode) {
     // Make dialog available globally
     window.productEstimator = window.productEstimator || {};
     window.productEstimator.initialized = true;
-    window.productEstimator.core = EstimatorCore;
-    window.productEstimator.dialog = ConfirmationDialog; // Add dialog to global object
+    window.productEstimator.core = EstimatorCore; // EstimatorCore instance is stored here
+    window.productEstimator.dialog = new ConfirmationDialog(); // <--- ADD 'new' HERE
 
     // Initialize PrintEstimate and make it available globally
-    const printEstimate = new PrintEstimate({ debug: debugMode });
-    window.productEstimator.printEstimate = printEstimate;
+    // Get the dataService instance from the initialized EstimatorCore
+    const dataServiceInstance = window.productEstimator.core.dataService;
+
+    if (!dataServiceInstance) {
+      console.error("DataService instance not found on EstimatorCore. Cannot initialize PrintEstimate.");
+      // Optionally return or handle this error case
+      return;
+    }
+
+    // Pass the dataService instance to the PrintEstimate constructor
+    window.productEstimator.printEstimate =  new PrintEstimate({ debug: debugMode }, dataServiceInstance);
 
     // Make ProductDetailsToggle available globally
     window.productEstimator.detailsToggle = ProductDetailsToggle; // Add toggle module to global object
@@ -128,7 +140,6 @@ function initEstimator(debugMode) {
     console.error('Error during EstimatorCore initialization:', e);
   }
 }
-
 /**
  * Initialize the ProductDetailsToggle functionality
  */

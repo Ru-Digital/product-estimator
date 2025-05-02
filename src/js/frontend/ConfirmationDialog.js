@@ -284,4 +284,4 @@ class ConfirmationDialog {
 }
 
 // Export a singleton instance
-export default new ConfirmationDialog();
+export default ConfirmationDialog;

@@ -30,6 +30,7 @@ class PrintEstimate {
     // State
     this.initialized = false;
     this.processing = false;
+    this.customerDetails = this.loadCustomerDetails(); // Load details on init
 
     // Initialize if auto-init is not set to false
     if (config.autoInit !== false) {
@@ -53,6 +54,61 @@ class PrintEstimate {
     this.initialized = true;
     this.log('PrintEstimate initialized');
     return this;
+  }
+
+  /**
+   * Load customer details from localStorage with fallback to sessionStorage
+   * @returns {Object} Customer details object
+   */
+  loadCustomerDetails() {
+    try {
+      const storedDetails = localStorage.getItem('customerDetails');
+      if (storedDetails) {
+        return JSON.parse(storedDetails);
+      } else {
+        const sessionDetails = sessionStorage.getItem('customerDetails');
+        return sessionDetails ? JSON.parse(sessionDetails) : {};
+      }
+    } catch (error) {
+      console.error('Error loading customer details:', error);
+      return {}; // Return empty object on error
+    }
+  }
+
+  /**
+   * Save customer details to localStorage with fallback to sessionStorage
+   * @param {Object} details - Customer details to save
+   */
+  saveCustomerDetails(details) {
+    try {
+      localStorage.setItem('customerDetails', JSON.stringify(details));
+    } catch (localStorageError) {
+      console.warn('localStorage not available, using sessionStorage:', localStorageError);
+      try {
+        sessionStorage.setItem('customerDetails', JSON.stringify(details));
+      } catch (sessionStorageError) {
+        console.error('sessionStorage not available:', sessionStorageError);
+        // If neither is available, details won't persist, but we can continue
+      }
+    }
+    this.customerDetails = details; // Update the class property
+  }
+
+  /**
+   * Clear customer details from both localStorage and sessionStorage
+   */
+  clearCustomerDetails() {
+    try {
+      localStorage.removeItem('customerDetails');
+    } catch (localStorageError) {
+      console.warn('localStorage not available:', localStorageError);
+    }
+    try {
+      sessionStorage.removeItem('customerDetails');
+    } catch (sessionStorageError) {
+      console.warn('sessionStorage not available:', sessionStorageError);
+    }
+    this.customerDetails = {}; // Clear the class property
   }
 
   /**
@@ -216,120 +272,111 @@ class PrintEstimate {
       'request_contact_phone': ['name', 'phone']
     };
 
-    // First check which fields are already available in customer details
-    this.checkCustomerDetails(estimateId)
-      .then(customerInfo => {
-        // Determine which fields are missing based on action type
-        const missingFields = this.getMissingFields(customerInfo, action);
+    // Use the class property for initial check
+    let missingFields = this.getMissingFields(this.customerDetails, action);
 
-        if (missingFields.length === 0) {
-          // No missing fields, proceed with the action
-          this.continueWithAction(action, estimateId, button, customerInfo);
+    if (missingFields.length === 0) {
+      // No missing fields, proceed with the action
+      this.continueWithAction(action, estimateId, button, this.customerDetails);
+      return;
+    }
+
+    // Create modal HTML with dynamic fields based on what's missing
+    const modalHtml = this.createPromptModalHtml(missingFields, action, this.customerDetails);
+
+    // Create container for the modal
+    const promptEl = document.createElement('div');
+    promptEl.className = 'email-prompt-modal';
+    promptEl.innerHTML = modalHtml;
+    document.body.appendChild(promptEl);
+
+    // Get elements
+    const cancelBtn = promptEl.querySelector('.cancel-email-btn');
+    const submitBtn = promptEl.querySelector('.submit-email-btn');
+    const validationMsg = promptEl.querySelector('.email-validation-message');
+
+    // Handle cancel
+    cancelBtn.addEventListener('click', () => {
+      promptEl.remove();
+      this.setButtonLoading(button, false);
+      this.processing = false;
+    });
+
+    // Handle submit
+    submitBtn.addEventListener('click', () => {
+      // Collect values from all input fields
+      const updatedDetails = { ...this.customerDetails }; // Start with existing details
+      let isValid = true;
+
+      // Validate and collect all fields
+      missingFields.forEach(field => {
+        const input = promptEl.querySelector(`#customer-${field}-input`);
+        const value = input ? input.value.trim() : '';
+
+        if (!value) {
+          validationMsg.textContent = `${this.getFieldLabel(field)} is required`;
+          isValid = false;
           return;
         }
 
-        // Create modal HTML with dynamic fields based on what's missing
-        const modalHtml = this.createPromptModalHtml(missingFields, action, customerInfo);
+        // Special validation for email and phone
+        if (field === 'email' && !this.validateEmail(value)) {
+          validationMsg.textContent = 'Please enter a valid email address';
+          isValid = false;
+          return;
+        }
 
-        // Create container for the modal
-        const promptEl = document.createElement('div');
-        promptEl.className = 'email-prompt-modal';
-        promptEl.innerHTML = modalHtml;
-        document.body.appendChild(promptEl);
+        if (field === 'phone' && !this.validatePhone(value)) {
+          validationMsg.textContent = 'Please enter a valid phone number';
+          isValid = false;
+          return;
+        }
 
-        // Get elements
-        const cancelBtn = promptEl.querySelector('.cancel-email-btn');
-        const submitBtn = promptEl.querySelector('.submit-email-btn');
-        const validationMsg = promptEl.querySelector('.email-validation-message');
-
-        // Handle cancel
-        cancelBtn.addEventListener('click', () => {
-          promptEl.remove();
-          this.setButtonLoading(button, false);
-          this.processing = false;
-        });
-
-        // Handle submit
-        submitBtn.addEventListener('click', () => {
-          // Collect values from all input fields
-          const updatedDetails = {...customerInfo};
-          let isValid = true;
-
-          // Validate and collect all fields
-          missingFields.forEach(field => {
-            const input = promptEl.querySelector(`#customer-${field}-input`);
-            const value = input ? input.value.trim() : '';
-
-            if (!value) {
-              validationMsg.textContent = `${this.getFieldLabel(field)} is required`;
-              isValid = false;
-              return;
-            }
-
-            // Special validation for email and phone
-            if (field === 'email' && !this.validateEmail(value)) {
-              validationMsg.textContent = 'Please enter a valid email address';
-              isValid = false;
-              return;
-            }
-
-            if (field === 'phone' && !this.validatePhone(value)) {
-              validationMsg.textContent = 'Please enter a valid phone number';
-              isValid = false;
-              return;
-            }
-
-            updatedDetails[field] = value;
-          });
-
-          if (!isValid) return;
-
-          // Show loading state
-          submitBtn.disabled = true;
-          submitBtn.textContent = 'Saving...';
-
-          // Update customer details with the new values
-          this.updateCustomerDetails(estimateId, updatedDetails)
-            .then(() => {
-              // Remove prompt
-              promptEl.remove();
-              this.setButtonLoading(button, true);
-              this.processing = true;
-
-              // Continue with the original action
-              this.continueWithAction(action, estimateId, button, updatedDetails);
-            })
-            .catch(error => {
-              validationMsg.textContent = 'Error saving details. Please try again.';
-              submitBtn.disabled = false;
-              submitBtn.textContent = 'Continue';
-            });
-        });
-
-        // Set focus to the first input field
-        setTimeout(() => {
-          const firstInput = promptEl.querySelector('input');
-          if (firstInput) {
-            firstInput.focus();
-
-            // Add enter key handler to all inputs
-            const allInputs = promptEl.querySelectorAll('input');
-            allInputs.forEach(input => {
-              input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  submitBtn.click();
-                }
-              });
-            });
-          }
-        }, 100);
-      })
-      .catch(error => {
-        this.showError('Error checking customer details. Please try again.');
-        this.setButtonLoading(button, false);
-        this.processing = false;
+        updatedDetails[field] = value;
       });
+
+      if (!isValid) return;
+
+      // Show loading state
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+
+      // Update customer details with the new values
+      this.updateCustomerDetails(estimateId, updatedDetails)
+        .then(() => {
+          // Remove prompt
+          promptEl.remove();
+          this.setButtonLoading(button, true);
+          this.processing = true;
+
+          // Continue with the original action
+          this.continueWithAction(action, estimateId, button, updatedDetails);
+        })
+        .catch(error => {
+          validationMsg.textContent = 'Error saving details. Please try again.';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Continue';
+        });
+    });
+
+    // Set focus to the first input field
+    setTimeout(() => {
+      const firstInput = promptEl.querySelector('input');
+      if (firstInput) {
+        firstInput.focus();
+
+        // Add enter key handler to all inputs
+        const allInputs = promptEl.querySelectorAll('input');
+        allInputs.forEach(input => {
+          input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              submitBtn.click();
+            }
+          });
+        });
+      }
+    }, 100);
   }
 
   /**
@@ -708,6 +755,12 @@ class PrintEstimate {
    */
   checkCustomerDetails(estimateId) {
     return new Promise((resolve, reject) => {
+      // If we have customer details, resolve immediately
+      if (this.customerDetails && this.customerDetails.name && this.customerDetails.email) {
+        resolve(this.customerDetails);
+        return;
+      }
+
       fetch(productEstimatorVars.ajax_url, {
         method: 'POST',
         headers: {
@@ -723,7 +776,9 @@ class PrintEstimate {
         .then(response => {
           if (response.success) {
             this.log('Customer details check result:', response.data);
-            resolve(response.data.customer_details || {});
+            // Save to local storage
+            this.saveCustomerDetails(response.data.customer_details || {});
+            resolve(this.customerDetails);
           } else {
             reject(new Error(response.data?.message || 'Error checking customer details'));
           }
@@ -792,6 +847,8 @@ class PrintEstimate {
         .then(response => response.json())
         .then(response => {
           if (response.success) {
+            // Save updated details to local storage
+            this.saveCustomerDetails(details);
             resolve(response.data);
           } else {
             console.error('Error storing estimate:', response);
@@ -876,7 +933,7 @@ class PrintEstimate {
   /**
    * Request a copy of the estimate to be sent via email
    * @param {string} estimateId - The estimate ID
-   * @param {HTMLElement} button - The button element
+   * @param {HTMLElement} button - The buttonelement
    * @returns {Promise<Object>} Promise that resolves when email is sent
    */
   requestCopyEstimate(estimateId, button) {
@@ -1008,3 +1065,4 @@ class PrintEstimate {
 
 // Export the class
 export default PrintEstimate;
+

@@ -128,7 +128,7 @@ class DataService {
   }
 
   /**
-   * Add method to consistently bind the Create Estimate button event
+   * Addmethod to consistently bind the Create Estimate button event
    */
   bindCreateEstimateButton() {
     // Find the button in the DOM

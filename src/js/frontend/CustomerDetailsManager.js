@@ -285,46 +285,26 @@ class CustomerDetailsManager {
       updatedDetails.phone = phoneField.value || '';
     }
 
-    // Use the dataService to make the AJAX request or fall back to direct fetch
-    if (this.dataService && typeof this.dataService.request === 'function') {
+    // Try to save to localStorage first
+    try {
+      localStorage.setItem('customerDetails', JSON.stringify(updatedDetails));
+      this.log('Customer details saved to localStorage:', updatedDetails);
+      this.handleSaveSuccess(updatedDetails, updatedDetails); // Pass updatedDetails twice
+      saveButton.textContent = originalText;
+      saveButton.disabled = false;
+    } catch (error) {
+      this.log('Error saving to localStorage:', error);
+      // Fallback to server storage (session)
       this.dataService.request('update_customer_details', {
         details: JSON.stringify(updatedDetails)
       })
         .then(data => {
-          this.handleSaveSuccess(data, updatedDetails);
+          this.handleSaveSuccess(data, updatedDetails); // Pass updatedDetails here as well, so we have the values from the form
           saveButton.textContent = originalText;
           saveButton.disabled = false;
         })
         .catch(error => {
           this.handleSaveError(error);
-          saveButton.textContent = originalText;
-          saveButton.disabled = false;
-        });
-    } else {
-      // Fallback to direct fetch if dataService not available
-      fetch(window.productEstimatorVars?.ajax_url || '/wp-admin/admin-ajax.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'update_customer_details',
-          nonce: window.productEstimatorVars?.nonce || '',
-          details: JSON.stringify(updatedDetails)
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success) {
-            this.handleSaveSuccess(response.data, updatedDetails);
-          } else {
-            this.handleSaveError(new Error(response.data?.message || 'Error updating details'));
-          }
-        })
-        .catch(error => {
-          this.handleSaveError(error);
-        })
-        .finally(() => {
           saveButton.textContent = originalText;
           saveButton.disabled = false;
         });
@@ -338,10 +318,10 @@ class CustomerDetailsManager {
    */
   handleSaveSuccess(data, updatedDetails) {
     // Update the displayed customer details
-    this.updateDisplayedDetails(data.details || updatedDetails);
+    this.updateDisplayedDetails(updatedDetails);  // Use the passed updatedDetails
 
     // Check if email was added and update forms
-    this.checkAndUpdateEmailField(data.details || updatedDetails);
+    this.checkAndUpdateEmailField(updatedDetails); // Use updatedDetails
 
     // Show success message
     this.showMessage('success', data.message || 'Details updated successfully!');
@@ -359,7 +339,7 @@ class CustomerDetailsManager {
     const event = new CustomEvent('customer_details_updated', {
       bubbles: true,
       detail: {
-        details: data.details || updatedDetails
+        details: updatedDetails // Use updatedDetails
       }
     });
     document.dispatchEvent(event);
@@ -405,13 +385,22 @@ class CustomerDetailsManager {
   }
 
   /**
-   * Delete customer details via AJAX
+   * Delete customer details
    */
   deleteCustomerDetails() {
     // Get the customer details confirmation container
     const confirmationContainer = document.querySelector('.customer-details-confirmation');
     if (confirmationContainer) {
       confirmationContainer.classList.add('loading');
+    }
+
+    // Try to remove from localStorage first
+    try {
+      localStorage.removeItem('customerDetails');
+      this.log('Customer details removed from localStorage');
+      this.handleDeleteSuccess({message: "Details deleted successfully from local storage"}, confirmationContainer);
+    } catch (e) {
+      this.log('localStorage error on delete', e);
     }
 
     // Use the dataService to make the AJAX request if available

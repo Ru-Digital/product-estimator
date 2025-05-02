@@ -239,44 +239,44 @@ function initializeProductDetailsToggle(debugMode) {
         e.stopPropagation();
       }
 
-    // Handle includes toggle
-    if (e.target.closest('.product-includes-toggle')) {
-      const toggleButton = e.target.closest('.product-includes-toggle');
-      const productItem = toggleButton.closest('.product-item');
+      // Handle includes toggle
+      if (e.target.closest('.product-includes-toggle')) {
+        const toggleButton = e.target.closest('.product-includes-toggle');
+        const productItem = toggleButton.closest('.product-item');
 
-      if (!productItem) return;
+        if (!productItem) return;
 
-      const isExpanded = toggleButton.classList.contains('expanded');
-      const includesContainer = productItem.querySelector('.includes-container');
+        const isExpanded = toggleButton.classList.contains('expanded');
+        const includesContainer = productItem.querySelector('.includes-container');
 
-      if (!includesContainer) return;
+        if (!includesContainer) return;
 
-      // Toggle state
-      if (isExpanded) {
-        // Hide container
-        toggleButton.classList.remove('expanded');
-        includesContainer.style.display = 'none';
-        includesContainer.classList.remove('visible');
-        const icon = toggleButton.querySelector('.toggle-icon');
-        if (icon) {
-          icon.classList.remove('dashicons-arrow-up-alt2');
-          icon.classList.add('dashicons-arrow-down-alt2');
+        // Toggle state
+        if (isExpanded) {
+          // Hide container
+          toggleButton.classList.remove('expanded');
+          includesContainer.style.display = 'none';
+          includesContainer.classList.remove('visible');
+          const icon = toggleButton.querySelector('.toggle-icon');
+          if (icon) {
+            icon.classList.remove('dashicons-arrow-up-alt2');
+            icon.classList.add('dashicons-arrow-down-alt2');
+          }
+        } else {
+          // Show container
+          toggleButton.classList.add('expanded');
+          includesContainer.style.display = 'block';
+          includesContainer.classList.add('visible');
+          const icon = toggleButton.querySelector('.toggle-icon');
+          if (icon) {
+            icon.classList.remove('dashicons-arrow-down-alt2');
+            icon.classList.add('dashicons-arrow-up-alt2');
+          }
         }
-      } else {
-        // Show container
-        toggleButton.classList.add('expanded');
-        includesContainer.style.display = 'block';
-        includesContainer.classList.add('visible');
-        const icon = toggleButton.querySelector('.toggle-icon');
-        if (icon) {
-          icon.classList.remove('dashicons-arrow-down-alt2');
-          icon.classList.add('dashicons-arrow-up-alt2');
-        }
+
+        e.preventDefault();
+        e.stopPropagation();
       }
-
-      e.preventDefault();
-      e.stopPropagation();
-    }
 
       // Handle suggestions toggle
       if (e.target.closest('.product-suggestions-toggle')) {
@@ -323,7 +323,7 @@ function initializeProductDetailsToggle(debugMode) {
       }
 
 
-  });
+    });
 
     console.log('ProductDetailsToggle initialization complete');
   } catch (error) {

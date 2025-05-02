@@ -868,6 +868,13 @@ class ModalManager {
       });
   }
 
+  /**
+   *
+   * @param {*} productId
+   * @param {*} estimateId
+   * @param {*} roomId
+   * @param {*} buttonElement
+   */
   handleAddSuggestedProduct(productId, estimateId, roomId, buttonElement) {
     // Show loading indicator
     this.showLoading();
@@ -975,7 +982,7 @@ class ModalManager {
           // Get data attributes
           const productId = button.dataset.productId;
           const estimateId = button.dataset.estimateId;
-          const roomId = button.dataset.roomId;
+          const roomId =button.dataset.roomId;
 
           console.log('Add suggestion button clicked:', {
             productId,
@@ -1380,7 +1387,7 @@ class ModalManager {
         createButton.removeEventListener('click', this._createEstimateHandler);
       }
 
-      this._createEstimateHandler = (e) => {
+      this._createEstimateHandler = () => {
         console.log('Create estimate button clicked');
         this.showNewEstimateForm();
       };
@@ -1505,6 +1512,7 @@ class ModalManager {
     if (cancelButton) {
       // Remove any existing event listeners to prevent duplicates
       cancelButton.removeEventListener('click', this._cancelFormHandler);
+
 
       // Create and store new handler
       this._cancelFormHandler = () => {
@@ -2012,9 +2020,7 @@ class ModalManager {
     const productId = String(this.currentProductId || '').trim();
 
     // Get the estimate ID from the form's data attribute
-    const estimateId = String(this.roomSelectionForm.dataset.estimateId || '').trim();
-
-    // Validate required data - check for undefined, null, or empty string, but allow '0'
+    const estimateId = String(this.roomSelectionForm.dataset.estimateId || '').trim();// Validate required data - check for undefined, null, or empty string, but allow '0'
     if (roomId === undefined || roomId === null || roomId === '') {
       this.showError('Please select a room');
       console.error('Room selection requires a valid room ID but it was empty or invalid');
@@ -2073,7 +2079,7 @@ class ModalManager {
               this.showMessage('Product added successfully!', 'success');
             })
             .catch(error => {
-              this.log('Error refreshing estimates list:', error);
+              console.error('Error refreshing estimates list:', error);
               this.showError('Error refreshing estimates list. Please try again.');
             });
         } else {
@@ -2130,7 +2136,7 @@ class ModalManager {
                         if (typeof jQuery !== 'undefined') {
                           jQuery(content).slideDown(300, function() {
                             // Scroll to room after animation completes
-                            roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            roomElement[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
                           });
                         } else {
                           content.style.display = 'block';
@@ -2972,16 +2978,6 @@ class ModalManager {
   }
 
   /**
-   * Log debug messages
-   * @param {...any} args - Arguments to log
-   */
-  log(...args) {
-    if (this.config.debug) {
-      console.log('[ModalManager]', ...args);
-    }
-  }
-
-  /**
    * Completely revised bindReplaceProductButtons method that ensures
    * consistent button behavior between page refreshes
    */
@@ -3204,67 +3200,67 @@ class ModalManager {
               const estimateContent = estimateSection.querySelector('.estimate-content');
               if (estimateContent) {
                 estimateContent.style.display = 'block';
-
-                // Now find and expand the room
-                setTimeout(() => {
-                  const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`) ||
-                    this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-
-                  if (roomElement) {
-                    console.log(`Found and expanding room: ${roomId}`);
-
-                    // Add active class to header
-                    const header = roomElement.querySelector('.accordion-header');
-                    if (header) header.classList.add('active');
-
-                    // Show room content
-                    const content = roomElement.querySelector('.accordion-content');
-                    if (content) {
-                      content.style.display = 'block';
-
-                      // Initialize carousels in the expanded room
-                      setTimeout(() => {
-                        if (typeof initSuggestionsCarousels === 'function') {
-                          initSuggestionsCarousels();
-                        }
-
-                        // If a product ID was provided, highlight it briefly
-                        if (productId) {
-                          const productElements = content.querySelectorAll('.product-item');
-                          productElements.forEach(productEl => {
-                            // Look for the product item that contains data for this product
-                            if (productEl.dataset.productId === productId ||
-                              productEl.querySelector(`[data-product-id="${productId}"]`)) {
-
-                              // Highlight the product for attention
-                              productEl.classList.add('highlight-product');
-
-                              // Remove highlight after 2 seconds
-                              setTimeout(() => {
-                                productEl.classList.remove('highlight-product');
-                              }, 2000);
-
-                              // Scroll to make the product visible
-                              productEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
-                          });
-                        } else {
-                          // No specific product to highlight, just scroll to the room
-                          roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                      }, 150);
-                    }
-                  } else {
-                    console.warn(`Room ID ${roomId} not found for auto-expansion`);
-                  }
-                }, 150);
               }
-            } else {
-              console.warn(`Estimate ID ${estimateId} not found for auto-expansion`);
             }
 
-            resolve();
-          }, 200);
+            // Now find and expand the room
+            setTimeout(() => {
+              const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`) ||
+                this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+
+              if (roomElement) {
+                console.log(`Found and expanding room: ${roomId}`);
+
+                // Activate the header
+                const header = roomElement.querySelector('.accordion-header');
+                if (header) header.classList.add('active');
+
+                // Show the content
+                const content = roomElement.querySelector('.accordion-content');
+                if (content) {
+                  content.style.display = 'block';
+
+                  // Initialize carousels in the expanded room
+                  setTimeout(() => {
+                    if (typeof initSuggestionsCarousels === 'function') {
+                      initSuggestionsCarousels();
+                    }
+
+                    // If a product ID was provided, highlight it briefly
+                    if (productId) {
+                      const productElements = content.querySelectorAll('.product-item');
+                      productElements.forEach(productEl => {
+                        // Look for the product item that contains data for this product
+                        if (productEl.dataset.productId === productId ||
+                          productEl.querySelector(`[data-product-id="${productId}"]`)) {
+
+                          // Highlight the product for attention
+                          productEl.classList.add('highlight-product');
+
+                          // Remove highlight after 2 seconds
+                          setTimeout(() => {
+                            productEl.classList.remove('highlight-product');
+                          }, 2000);
+
+                          // Scroll to make the product visible
+                          productEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      });
+                    } else {
+                      // No specific product to highlight, just scroll to the room
+                      roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }, 150);
+                }
+              } else {
+                console.warn(`Room ID ${roomId} not found for auto-expansion`);
+              }
+            }, 150);
+            console.warn(`Estimate ID ${estimateId} not found for auto-expansion`);
+
+          });
+
+          resolve();
         })
         .catch(error => {
           console.error('Error reloading estimates list:', error);
@@ -3438,7 +3434,7 @@ class ModalManager {
       const roomId = button.dataset.roomId;
       const replaceProductId = button.dataset.replaceProductId;
 
-      const chainKey = `${roomId}_${replaceProductId}`;
+      const chainKey = `${roomId}_${productId}`; // Corrected line
       const replacementChain = window._productReplacementChains[chainKey];
 
       if (replacementChain) {
@@ -3522,7 +3518,13 @@ class ModalManager {
       console.log('No upgrade buttons found that need updating');
     }
   }
+  log(...args) {
+    if (this.config.debug) {
+      console.log('[EstimatorCore]', ...args);
+    }
+  }
 }
 
 // Export the class
 export default ModalManager;
+

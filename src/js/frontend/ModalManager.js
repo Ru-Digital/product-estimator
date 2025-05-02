@@ -6,7 +6,7 @@
  */
 import ConfirmationDialog from './ConfirmationDialog';
 import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
-
+import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails} from "./CustomerStorage";
 
 
 class ModalManager {
@@ -37,6 +37,10 @@ class ModalManager {
 
     // Store references to dependencies
     this.dataService = dataService;
+
+    this.loadCustomerDetails = loadCustomerDetails;
+    this.saveCustomerDetails = saveCustomerDetails;
+    this.clearCustomerDetails = clearCustomerDetails;
 
     // UI elements
     this.modal = null;
@@ -2189,6 +2193,17 @@ class ModalManager {
       .then(response => {
         // Check that we got a valid estimate_id
         console.log('New estimate created with ID:', response.estimate_id);
+
+        // === START: Save customer details from the form to localStorage ===
+        const customerDetails = {
+          name: formData.get('customer_name') || '',
+          email: formData.get('customer_email') || '',
+          phone: formData.get('customer_phone') || '',
+          postcode: formData.get('customer_postcode') || ''
+        };
+        saveCustomerDetails(customerDetails); // Use the imported function
+        this.log('Customer details from new estimate form saved to localStorage:', customerDetails);
+        // === END: Save customer details ===
 
         // Clear form
         form.reset();

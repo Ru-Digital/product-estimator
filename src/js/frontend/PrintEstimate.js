@@ -71,11 +71,26 @@ class PrintEstimate {
    * Bind events for printing estimates
    */
   bindEvents() {
+    this.log('Binding print events'); // <--- Added log
+
     // Use event delegation for better performance and to handle dynamically added elements
     document.addEventListener('click', (e) => {
+      this.log('Document click event triggered'); // <--- Added log
+
       // Handle print PDF buttons
       const printButton = e.target.closest(this.config.selectors.printButton);
+
+      if (printButton) {
+        this.log('Print button clicked or is ancestor of click target'); // <--- Added log
+      } else {
+        // If it's not a print button, exit this part of the handler early
+        return;
+      }
+
+
       if (printButton && !this.processing) {
+        this.log('Print button is active and not processing'); // <--- Added log
+
         e.preventDefault(); // Prevent default link behavior
 
         // Set processing state to prevent double-clicks
@@ -83,6 +98,7 @@ class PrintEstimate {
         this.setButtonLoading(printButton, true);
 
         if (printButton.classList.contains('print-estimate-pdf')) {
+          this.log('Handling direct PDF link'); // <--- Added log
           // This is a direct PDF link - check customer details before proceeding
           const estimateId = printButton.dataset.estimateId;
 
@@ -98,11 +114,14 @@ class PrintEstimate {
                 const pdfUrl = printButton.getAttribute('href');
 
                 if (pdfUrl && pdfUrl !== '#' && pdfUrl !== 'javascript:void(0)') {
+                  this.log('Opening PDF URL from href:', pdfUrl); // <--- Added log
                   window.open(pdfUrl, '_blank');
                 } else {
+                  this.log('href is missing or invalid, getting secure PDF URL'); // <--- Added log
                   // Get a fresh PDF URL
                   this.getSecurePdfUrl(estimateId)
                     .then(url => {
+                      this.log('Opening secure PDF URL:', url); // <--- Added log
                       window.open(url, '_blank');
                     })
                     .catch(error => {
@@ -110,6 +129,7 @@ class PrintEstimate {
                     });
                 }
               } else {
+                this.log('Missing required customer details for PDF link:', missingFields); // <--- Added log
                 // Missing details, show prompt
                 this.showCustomerDetailsPrompt(estimateId, printButton, 'print');
               }
@@ -121,14 +141,20 @@ class PrintEstimate {
               // Button state will be reset after PDF opens or error
             });
         } else {
+          this.log('Handling JS-based print button'); // <--- Added log
           // This is a JS-based print button
           this.handlePrintEstimate(printButton);
         }
+      } else if (this.processing) {
+        this.log('Print button clicked but processing is true, ignoring.'); // <--- Added log
       }
+    });
 
-      // Handle request copy button (email PDF to customer)
+    // Handle request copy button (email PDF to customer)
+    document.addEventListener('click', (e) => { // <--- Separate listener for clarity
       const requestCopyButton = e.target.closest(this.config.selectors.requestCopyButton);
       if (requestCopyButton && !this.processing) {
+        this.log('Request copy button clicked'); // <--- Added log
         e.preventDefault();
 
         this.processing = true;
@@ -139,10 +165,13 @@ class PrintEstimate {
         // Show contact method choice modal
         this.showContactSelectionPrompt(estimateId, requestCopyButton, 'request_copy');
       }
+    });
 
-      // Handle request contact from store button
+    // Handle request contact from store button
+    document.addEventListener('click', (e) => { // <--- Separate listener for clarity
       const requestContactButton = e.target.closest(this.config.selectors.requestContactButton);
       if (requestContactButton && !this.processing) {
+        this.log('Request contact button clicked'); // <--- Added log
         e.preventDefault();
 
         this.processing = true;
@@ -161,6 +190,7 @@ class PrintEstimate {
    * @param {HTMLElement} button - The clicked button
    */
   handlePrintEstimate(button) {
+    this.log('handlePrintEstimate called'); // <--- Added log
     const estimateId = button.dataset.estimateId;
 
     if (!estimateId) {
@@ -181,10 +211,12 @@ class PrintEstimate {
         if (!customerInfo.email || customerInfo.email.trim() === '') missingFields.push('email');
 
         if (missingFields.length === 0) {
+          this.log('Customer has required details, proceeding to store estimate'); // <--- Added log
           // Customer has all required details, proceed with store and generate
           return this.storeEstimate(estimateId)
             .then(data => {
               if (data && data.estimate_id) {
+                this.log('Estimate stored, getting secure PDF URL'); // <--- Added log
                 // Get a secure PDF URL
                 return this.getSecurePdfUrl(data.estimate_id);
               } else {
@@ -192,12 +224,14 @@ class PrintEstimate {
               }
             })
             .then(pdfUrl => {
+              this.log('Received PDF URL, opening:', pdfUrl); // <--- Added log
               this.setButtonLoading(button, false);
               this.processing = false;
               // Open the PDF URL in a new tab
               window.open(pdfUrl, '_blank');
             });
         } else {
+          this.log('Missing required customer details for JS print:', missingFields); // <--- Added log
           // Missing required details, show prompt
           this.showCustomerDetailsPrompt(estimateId, button, 'print');
           return Promise.reject(new Error('missing_customer_details'));
@@ -219,6 +253,7 @@ class PrintEstimate {
    * @param {string} action - The action type ('print', 'request_copy_email', 'request_copy_sms')
    */
   showCustomerDetailsPrompt(estimateId, button, action = 'print') {
+    this.log('showCustomerDetailsPrompt called'); // <--- Added log
     // Define which fields are required for each action type
     const requiredFields = {
       'print': ['name', 'email'],
@@ -236,11 +271,13 @@ class PrintEstimate {
 
 
     if (missingFields.length === 0) {
+      this.log('No missing fields, continuing with action:', action); // <--- Added log
       // No missing fields, proceed with the action
       this.continueWithAction(action, estimateId, button, this.customerDetails);
       return;
     }
 
+    this.log('Missing fields detected, showing prompt modal:', missingFields); // <--- Added log
     // Create modal HTML with dynamic fields based on what's missing
     const modalHtml = this.createPromptModalHtml(missingFields, action, this.customerDetails);
 
@@ -257,6 +294,7 @@ class PrintEstimate {
 
     // Handle cancel
     cancelBtn.addEventListener('click', () => {
+      this.log('Prompt modal cancelled'); // <--- Added log
       promptEl.remove();
       this.setButtonLoading(button, false);
       this.processing = false;
@@ -264,6 +302,7 @@ class PrintEstimate {
 
     // Handle submit
     submitBtn.addEventListener('click', () => {
+      this.log('Prompt modal submit clicked'); // <--- Added log
       // Collect values from all input fields
       const updatedDetails = { ...this.customerDetails }; // Start with existing details
       let isValid = true;
@@ -295,8 +334,12 @@ class PrintEstimate {
         updatedDetails[field] = value;
       });
 
-      if (!isValid) return;
+      if (!isValid) {
+        this.log('Prompt modal validation failed'); // <--- Added log
+        return;
+      }
 
+      this.log('Prompt modal validation successful, saving details:', updatedDetails); // <--- Added log
       // Show loading state
       submitBtn.disabled = true;
       submitBtn.textContent = 'Saving...';
@@ -304,6 +347,7 @@ class PrintEstimate {
       // Update customer details with the new values
       this.updateCustomerDetails(estimateId, updatedDetails)
         .then(() => {
+          this.log('Details saved successfully after prompt'); // <--- Added log
           // Remove prompt
           promptEl.remove();
           this.setButtonLoading(button, true);
@@ -313,6 +357,7 @@ class PrintEstimate {
           this.continueWithAction(action, estimateId, button, updatedDetails);
         })
         .catch(error => {
+          this.log('Error saving details after prompt:', error); // <--- Added log
           validationMsg.textContent = 'Error saving details. Please try again.';
           submitBtn.disabled = false;
           submitBtn.textContent = 'Continue';
@@ -471,6 +516,7 @@ class PrintEstimate {
    * @param {Object} customerDetails - Updated customer details
    */
   continueWithAction(action, estimateId, button, customerDetails) {
+    this.log('continueWithAction called:', action); // <--- Added log
     switch (action) {
       case 'print':
         this.handlePrintEstimate(button);
@@ -517,6 +563,7 @@ class PrintEstimate {
    * @param {string} action - The action type
    */
   showContactSelectionPrompt(estimateId, button, action = 'request_copy') {
+    this.log('showContactSelectionPrompt called:', action); // <--- Added log
     // Customize title and prompt based on the action
     let title = 'How would you like to receive your estimate?';
     let prompt = 'Please choose how you\'d prefer to receive your estimate:';
@@ -557,12 +604,14 @@ class PrintEstimate {
     const smsBtn = promptEl.querySelector('.sms-choice');
 
     cancelBtn.addEventListener('click', () => {
+      this.log('Contact selection cancelled'); // <--- Added log
       this.setButtonLoading(button, false);
       this.processing = false;
       promptEl.remove();
     });
 
     emailBtn.addEventListener('click', () => {
+      this.log('Email contact method selected'); // <--- Added log
       promptEl.remove();
 
       // Determine the specific action for email
@@ -577,6 +626,7 @@ class PrintEstimate {
       if (!customerInfo.email || customerInfo.email.trim() === '') missingFields.push('email');
 
       if (missingFields.length === 0) {
+        this.log('Required details for email contact exist, proceeding'); // <--- Added log
         // All required details exist, proceed with the action
         if (action === 'request_contact') {
           this.requestStoreContact(estimateId, 'email', button, customerInfo);
@@ -596,12 +646,14 @@ class PrintEstimate {
             });
         }
       } else {
+        this.log('Missing details for email contact, showing prompt:', missingFields); // <--- Added log
         // Missing details, show prompt
         this.showCustomerDetailsPrompt(estimateId, button, emailAction);
       }
     });
 
     smsBtn.addEventListener('click', () => {
+      this.log('Phone contact method selected'); // <--- Added log
       promptEl.remove();
 
       // Determine the specific action for SMS/phone
@@ -616,6 +668,7 @@ class PrintEstimate {
       if (!customerInfo.phone || customerInfo.phone.trim() === '') missingFields.push('phone');
 
       if (missingFields.length === 0) {
+        this.log('Required details for phone contact exist, proceeding'); // <--- Added log
         // All required details exist, proceed with the action
         if (action === 'request_contact') {
           this.requestStoreContact(estimateId, 'phone', button, customerInfo);
@@ -626,6 +679,7 @@ class PrintEstimate {
           this.processing = false;
         }
       } else {
+        this.log('Missing details for phone contact, showing prompt:', missingFields); // <--- Added log
         // Missing details, show prompt
         this.showCustomerDetailsPrompt(estimateId, button, smsAction);
       }
@@ -640,6 +694,7 @@ class PrintEstimate {
    * @param {Object} customerDetails - Customer details
    */
   requestStoreContact(estimateId, contactMethod, button, customerDetails) {
+    this.log('requestStoreContact called:', { estimateId, contactMethod, customerDetails }); // <--- Added log
     // First store the estimate to ensure it's in the database
     this.storeEstimate(estimateId)
       .then(data => {
@@ -688,6 +743,7 @@ class PrintEstimate {
    * @returns {Promise<Object>} Customer details object
    */
   checkCustomerDetails(estimateId) {
+    this.log('checkCustomerDetails called for estimate:', estimateId); // <--- Added log
     return new Promise((resolve, reject) => {
       // If we have customer details in local storage, resolve immediately
       // Use the imported loadCustomerDetails function
@@ -742,6 +798,7 @@ class PrintEstimate {
    * @returns {Promise<Object>} Promise that resolves when details are updated
    */
   updateCustomerDetails(estimateId, details) {
+    this.log('updateCustomerDetails called:', { estimateId, details }); // <--- Added log
     return new Promise((resolve, reject) => {
       // Make sure we have the minimum required fields
       if (!details.postcode) {
@@ -751,6 +808,7 @@ class PrintEstimate {
       // Update customer details using DataService
       this.dataService.request('update_customer_details', { details: JSON.stringify(details) })
         .then(response => {
+          this.log('Server update_customer_details successful:', response); // <--- Added log
           // Dispatch an event to notify other components of updated details
           const event = new CustomEvent('customer_details_updated', {
             bubbles: true,
@@ -764,13 +822,14 @@ class PrintEstimate {
           return this.dataService.request('store_single_estimate', { estimate_id: estimateId });
         })
         .then(response => {
+          this.log('Server store_single_estimate successful:', response); // <--- Added log
           // Save updated details to local storage using the imported function
           saveCustomerDetails(details);
           this.customerDetails = details; // Update class property
           resolve(response); // Resolve with the response from storing the estimate
         })
         .catch(error => {
-          console.error('Error in updateCustomerDetails:', error);
+          console.error('Error in updateCustomerDetails AJAX chain:', error); // <--- Added log
           reject(error);
         });
     });
@@ -800,6 +859,7 @@ class PrintEstimate {
    * @returns {Promise<Object>} Promise that resolves when estimate is stored
    */
   storeEstimate(estimateId) {
+    this.log('storeEstimate called:', estimateId); // <--- Added log
     // Use DataService for the AJAX request
     return this.dataService.request('store_single_estimate', { estimate_id: estimateId });
   }
@@ -810,6 +870,7 @@ class PrintEstimate {
    * @returns {Promise<string>} Promise that resolves to the secure URL
    */
   getSecurePdfUrl(dbId) {
+    this.log('getSecurePdfUrl called:', dbId); // <--- Added log
     // Use DataService for the AJAX request
     return this.dataService.request('get_secure_pdf_url', { estimate_id: dbId })
       .then(data => {
@@ -829,10 +890,12 @@ class PrintEstimate {
    * @returns {Promise<Object>} Promise that resolves when email is sent
    */
   requestCopyEstimate(estimateId, button) {
+    this.log('requestCopyEstimate called:', estimateId); // <--- Added log
     // Use the imported loadCustomerDetails function
     const customerInfo = loadCustomerDetails();
 
     if (!customerInfo.email) {
+      this.log('No email found for requestCopyEstimate'); // <--- Added log
       return Promise.reject(new Error('no_email'));
     }
 
@@ -848,6 +911,7 @@ class PrintEstimate {
       .catch(error => {
         // Handle specific no_email error from server response if needed
         if (error.data?.code === 'no_email') {
+          this.log('Server returned no_email error for requestCopyEstimate'); // <--- Added log
           throw new Error('no_email');
         } else {
           this.log('Error requesting estimate copy:', error);
@@ -862,7 +926,11 @@ class PrintEstimate {
    * @param {boolean} isLoading - Whether button is in loading state
    */
   setButtonLoading(button, isLoading) {
-    if (!button) return;
+    this.log('setButtonLoading called:', { button: button?.id || button?.className, isLoading }); // <--- Added log
+    if (!button) {
+      this.log('setButtonLoading called with null button'); // <--- Added log
+      return;
+    }
 
     const originalText = button.dataset.originalText || button.textContent;
 
@@ -889,14 +957,15 @@ class PrintEstimate {
    * @param {Function} onConfirm - Callback when confirmed
    */
   showMessage(message, type = 'success', onConfirm = null) {
+    this.log('showMessage called:', { message, type }); // <--- Added log
     if (window.productEstimator && window.productEstimator.dialog) {
       window.productEstimator.dialog.show({
-        title: 'Estimate Sent',
+        title: type === 'success' ? 'Success' : 'Error', // Use generic titles here
         message: message,
-        type: 'estimate',
+        type: 'estimate', // Use 'estimate' type for styling if appropriate
         action: 'confirm',
-        confirmText: 'OK',
-        cancelText: null,
+        confirmText: this.config.i18n.confirm || 'OK', // Use localized OK
+        cancelText: null, // Hide cancel for simple messages
         onConfirm: () => {
           if (typeof onConfirm === 'function') {
             onConfirm();
@@ -916,6 +985,7 @@ class PrintEstimate {
    * @param {string} message - Error message
    */
   showError(message) {
+    this.log('showError called:', message); // <--- Added log
     // Try to use modal error display if available
     if (window.productEstimator &&
       window.productEstimator.core &&

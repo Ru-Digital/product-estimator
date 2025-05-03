@@ -5,6 +5,9 @@
  * Provides a clean API for data operations and handles errors consistently.
  */
 
+import { addEstimate, loadEstimateData } from './EstimateStorage';
+
+
 class DataService {
   /**
    * Initialize the DataService
@@ -274,6 +277,24 @@ class DataService {
     if (productId) {
       requestData.product_id = productId;
     }
+
+    const estimateName = formData instanceof FormData ? formData.get('estimate_name') : (formData.estimate_name || 'Unnamed Estimate');
+
+    const existingData = loadEstimateData();
+    const existingEstimates = existingData.estimates || {};
+    const nextSequentialId = Object.keys(existingEstimates).length; // Use the count of existing estimates as the next ID
+
+    // Create a basic estimate object for local storage with the sequential ID
+    const clientSideEstimateData = {
+      id: String(nextSequentialId), // Ensure ID is a string for consistency with potential server IDs
+      name: estimateName,
+      rooms: {}, // Start with an empty rooms object
+      // Add any other default properties needed for a new estimate client-side
+    };
+
+    const clientSideEstimateId = addEstimate(clientSideEstimateData);
+    this.log(`Client-side estimate saved to localStorage with sequential ID: ${clientSideEstimateId}`);
+
 
     return this.request('add_new_estimate', requestData)
       .then(data => {

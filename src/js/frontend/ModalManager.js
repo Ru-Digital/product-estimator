@@ -7,6 +7,7 @@
 import ConfirmationDialog from './ConfirmationDialog';
 import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
 import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails} from "./CustomerStorage";
+import { loadEstimateData, saveEstimate, saveEstimateData, clearEstimateData, addEstimate, removeEstimate } from "./EstimateStorage";
 
 
 class ModalManager {
@@ -41,6 +42,13 @@ class ModalManager {
     this.loadCustomerDetails = loadCustomerDetails;
     this.saveCustomerDetails = saveCustomerDetails;
     this.clearCustomerDetails = clearCustomerDetails;
+
+    this.loadEstimateData = loadEstimateData;
+    this.clearEstimateData = clearEstimateData;
+    this.saveEstimateData = saveEstimateData;
+    // Make addEstimate and removeEstimate available if needed elsewhere, though direct import is used below
+    // this.addEstimate = addEstimate;
+    // this.removeEstimate = removeEstimate;
 
     // UI elements
     this.modal = null;
@@ -2183,11 +2191,14 @@ class ModalManager {
   handleNewEstimateSubmission(form) {
     const formData = new FormData(form);
     const productId = this.currentProductId;
+    const estimateName = formData.get('estimate_name') || 'Unnamed Estimate';
 
     this.showLoading();
 
     // Use console.log to debug the process
     console.log('Submitting new estimate form');
+
+    console.log(formData);
 
     this.dataService.addNewEstimate(formData, productId)
       .then(response => {

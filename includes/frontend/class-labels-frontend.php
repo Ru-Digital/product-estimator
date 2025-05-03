@@ -1,8 +1,6 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes\Frontend;
 
-use RuDigital\ProductEstimator\Includes\Admin\Settings\FrontendBase;
-
 /**
  * Frontend-only functionality for labels
  * This lightweight class provides only what's needed for the frontend

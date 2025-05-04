@@ -868,12 +868,15 @@ class ModalManager {
       });
   }
 
+
   /**
+   * Handle adding a suggested product to a room
+   * Moves the AJAX request to the DataService for consistency.
    *
-   * @param {*} productId
-   * @param {*} estimateId
-   * @param {*} roomId
-   * @param {*} buttonElement
+   * @param {string|number} productId - Product ID
+   * @param {string|number} estimateId - Estimate ID
+   * @param {string|number} roomId - Room ID
+   * @param {HTMLElement} buttonElement - The button element that triggered the action
    */
   handleAddSuggestedProduct(productId, estimateId, roomId, buttonElement) {
     // Show loading indicator
@@ -886,75 +889,56 @@ class ModalManager {
       buttonElement.innerHTML = '<span class="loading-dots">Adding...</span>';
     }
 
-    console.log(`Adding suggested product ${productId} to room ${roomId} in estimate ${estimateId}`);
+    console.log(`Adding suggested product ${productId} to room ${roomId} in estimate ${estimateId} via DataService`);
 
-    // Make AJAX request to add product to room
-    jQuery.ajax({
-      url: productEstimatorVars.ajax_url,
-      type: 'POST',
-      data: {
-        action: 'add_product_to_room',
-        nonce: productEstimatorVars.nonce,
-        product_id: productId,
-        room_id: roomId,
-        estimate_id: estimateId
-      },
-      success: (response) => {
-        console.log('Add suggested product response:', response);
+    // Use DataService to make the AJAX request
+    this.dataService.addProductToRoom(roomId, productId, estimateId)
+      .then(response => {
+        console.log('Add suggested product response from DataService:', response);
 
-        if (response.success) {
-          // Refresh the estimates list to show the updated room
-          this.loadEstimatesList(roomId, estimateId)
-            .then(() => {
-              // Auto-expand the room accordion after refreshing
-              setTimeout(() => {
-                const roomAccordion = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-                if (roomAccordion) {
-                  const header = roomAccordion.querySelector('.accordion-header');
-                  if (header && !header.classList.contains('active')) {
-                    header.click();
-                  }
+        // Refresh the estimates list to show the updated room
+        return this.loadEstimatesList(roomId, estimateId)
+          .then(() => {
+            // Auto-expand the room accordion after refreshing
+            setTimeout(() => {
+              const roomAccordion = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+              if (roomAccordion) {
+                const header = roomAccordion.querySelector('.accordion-header');
+                if (header && !header.classList.contains('active')) {
+                  header.click();
                 }
-              }, 300);
+              }
+            }, 300);
 
-              // Show success message
-              this.showMessage('Product added successfully!', 'success');
-            })
-            .catch(error => {
-              console.error('Error refreshing estimates list:', error);
-              this.showError('Error refreshing list. Please try again.');
-            });
+            // Show success message
+            this.showMessage('Product added successfully!', 'success');
+          });
+      })
+      .catch(error => {
+        // Handle error response from DataService
+        console.error('Error adding suggested product via DataService:', error);
+
+        // Check if this is a duplicate product error (assuming DataService adds this property)
+        if (error.data?.duplicate) {
+          console.log('Duplicate suggested product detected by DataService:', error.data);
+          this.showMessage(error.data.message || 'This product already exists in this room.', 'error');
+          // The room is likely already open, so no need to refresh or expand
         } else {
-          // Check if this is a duplicate product error
-          if (response.data?.duplicate) {
-            console.log('Duplicate suggested product detected:', response.data);
-
-            // Show specific error message
-            this.showMessage(response.data.message || 'This product already exists in this room.', 'error');
-
-            // The room is already open, so we don't need to refresh or expand
-          } else {
-            // Handle error response
-            this.showError(response.data?.message || 'Error adding product. Please try again.');
-          }
+          // Handle other errors
+          this.showError(error.message || 'Error adding product. Please try again.');
         }
-      },
-      error: (jqXHR, textStatus, errorThrown) => {
-        console.error('AJAX error:', textStatus, errorThrown);
-        this.showError('Error adding product. Please try again.');
-      },
-      complete: () => {
+      })
+      .finally(() => {
         // Reset button state
         if (buttonElement) {
           buttonElement.disabled = false;
           buttonElement.classList.remove('loading');
-          buttonElement.textContent = 'Add';
+          buttonElement.textContent = 'Add'; // Restore original text
         }
 
-        // Hide loading
+        // Hide loading indicator
         this.hideLoading();
-      }
-    });
+      });
   }
 
   bindSuggestedProductButtons() {

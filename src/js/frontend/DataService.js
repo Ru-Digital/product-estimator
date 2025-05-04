@@ -14,7 +14,7 @@ import {
   addProductToRoom as addProductToRoomStorage, // Imports from EstimateStorage (Renamed to avoid conflict)
   removeProductFromRoom as removeProductFromRoomStorage, // Imports from EstimateStorage
   replaceProductInRoom as replaceProductInRoomStorage, // Imports from EstimateStorage
-  getEstimate // Imports from EstimateStorage
+  getEstimate, addProductToRoom // Imports from EstimateStorage
 } from './EstimateStorage'; // Import necessary functions from storage
 
 class DataService {
@@ -713,6 +713,12 @@ class DataService {
    * @returns {Promise<Object>} Result data
    */
   addSuggestionToRoom(estimateId, roomId, productId) {
+
+    // Add to local
+    addProductToRoom(estimateId, roomId, productId);
+
+
+
     return this.request('add_product_to_room', {
       estimate_id: estimateId,
       room_id: roomId,

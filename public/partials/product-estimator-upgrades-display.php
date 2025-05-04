@@ -121,6 +121,7 @@ if (empty($upgrades['products'])) {
                                     </div>
 
                                     <button type="button" class="replace-product-in-room"
+                                            data-parent-product-id="<?= $product['id'] ?>"
                                             data-product-id="<?= $upgrade_product['id'] ?>"
                                             data-estimate-id="<?= $estimate_id; ?>"
                                             data-room-id="<?= $room_id ?>"

@@ -3000,6 +3000,8 @@ class ModalManager {
           const estimateId = button.dataset.estimateId;
           const roomId = button.dataset.roomId;
           const oldProductId = button.dataset.replaceProductId;
+          const parentProductId = button.dataset.parentProductId || null; // Get parent product ID
+
 
           // Get the replace type - defaulting to 'main' if not specified
           const replaceType = button.hasAttribute('data-replace-type') ?
@@ -3014,7 +3016,7 @@ class ModalManager {
           });
 
           // Handle replacing the product with confirmation dialog
-          this.handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, button, replaceType);
+          this.handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, parentProductId, button, replaceType);
         };
 
         // Add click event listener
@@ -3027,7 +3029,6 @@ class ModalManager {
     }
   }
 
-
   /**
    * Comprehensively fixed handleReplaceProduct method
    * This method handles replacing products with enhanced front-end handling
@@ -3036,15 +3037,17 @@ class ModalManager {
    * @param {string} roomId - Room ID
    * @param {string} oldProductId - ID of product to replace
    * @param {string} newProductId - ID of new product
+   * @param {string|null} parentProductId - ID of the parent product (if replacing additional product)
    * @param {HTMLElement} buttonElement - Button element for UI feedback
    * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
    */
-  handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType = 'main') {
+  handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, parentProductId, buttonElement, replaceType = 'main') {
     // First, log detailed replacement information for debugging
     console.log(`[PRODUCT REPLACEMENT] Starting product replacement process
     Type: ${replaceType}
     Old Product ID: ${oldProductId}
     New Product ID: ${newProductId}
+    Parent Product ID: ${parentProductId} // Log parent product ID
     Room ID: ${roomId}
     Estimate ID: ${estimateId}
   `);
@@ -3126,8 +3129,8 @@ class ModalManager {
         confirmText: 'Upgrade',
         cancelText: 'Cancel',
         onConfirm: () => {
-          // Proceed with replacement
-          this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType);
+          // Proceed with replacement, passing parentProductId
+          this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, parentProductId, buttonElement, replaceType);
         },
         onCancel: () => {
           // Reset button state if needed
@@ -3142,7 +3145,7 @@ class ModalManager {
     } else {
       // Fallback to browser confirm if custom dialog isn't available
       if (confirm(confirmMessage)) {
-        this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType);
+        this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, parentProductId, buttonElement, replaceType);
       } else {
         // Reset button state if needed
         if (buttonElement) {
@@ -3153,6 +3156,7 @@ class ModalManager {
       }
     }
   }
+
   /**
    * Enhanced method to reload and properly expand estimates and rooms,
    * especially after product replacements
@@ -3264,10 +3268,11 @@ class ModalManager {
    * @param {string} roomId - Room ID
    * @param {string} oldProductId - ID of product to replace
    * @param {string} newProductId - ID of new product
+  * @param {string|null} parentProductId - ID of the parent product (if replacing additional product)
    * @param {HTMLElement} buttonElement - Button element for UI feedback
    * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
    */
-  executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType = 'main') {
+  executeProductReplacement(estimateId, roomId, oldProductId, newProductId, parentProductId, buttonElement, replaceType = 'main') {
     // Show loading indicator
     this.showLoading();
 
@@ -3283,10 +3288,11 @@ class ModalManager {
   Old Product ID: ${oldProductId}
   New Product ID: ${newProductId}
   Room ID: ${roomId}
+  Parent Product ID: ${parentProductId}
   Estimate ID: ${estimateId}`);
 
     // Use DataService to make the replacement request
-    this.dataService.replaceProductInRoom(estimateId, roomId, oldProductId, newProductId, replaceType)
+    this.dataService.replaceProductInRoom(estimateId, roomId, oldProductId, newProductId, parentProductId, replaceType)
       .then(response => { // 'response' here is the 'data' payload from the server's successful response
         console.log('[PRODUCT REPLACEMENT] Server response (data payload):', response); // Added note for clarity
 

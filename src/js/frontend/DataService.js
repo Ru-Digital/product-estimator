@@ -344,15 +344,17 @@ class DataService {
    * @param {string|number} roomId - Room ID
    * @param {string|number} oldProductId - ID of product to replace
    * @param {string|number} newProductId - ID of new product
+   * @param {string|number|null} parentProductId - ID of the parent product (if replacing additional product)
    * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
    * @returns {Promise<Object>} Promise resolving to the server response data
    */
-  replaceProductInRoom(estimateId, roomId, oldProductId, newProductId, replaceType = 'main') {
+  replaceProductInRoom(estimateId, roomId, oldProductId, newProductId, parentProductId, replaceType = 'main') {
     console.log('DataService: Initiating product replacement request', {
       estimateId: estimateId,
       roomId: roomId,
       oldProductId: oldProductId,
       newProductId: newProductId,
+      parentProductId: parentProductId, // Log parent product ID
       replaceType: replaceType
     });
 
@@ -394,9 +396,9 @@ class DataService {
         const comprehensiveProductData = productDataResponse.product_data;
 
         try {
-          const success = replaceProductInRoomStorage(estimateId, roomId, oldProductId, newProductId, comprehensiveProductData, replaceType); // Perform replacement on loaded data
+          const success = replaceProductInRoomStorage(estimateId, roomId, oldProductId, newProductId, comprehensiveProductData, replaceType, parentProductId);
           if (success) {
-            this.log(`Product ID ${productId} successfully added to room ${roomId} in localStorage with comprehensive data.`);
+            this.log(`Product ID ${newProductId} successfully added to room ${roomId} in localStorage with comprehensive data.`);
           } else {
             console.warn(`Product replacement (old ID ${oldProductId}) failed in localStorage for room ${roomId}. Product not found?`);
             // Decide how to handle local storage failure - maybe still proceed with server request?
@@ -423,6 +425,11 @@ class DataService {
       replace_product_id: oldProductId, // The ID of the product being replaced
       replace_type: replaceType // Send the replacement type to the server
     };
+
+    // Include parent product ID if available
+    if (parentProductId !== null) {
+      requestData.parent_product_id = parentProductId;
+    }
 
     // Use the generic request method for the AJAX call
     return this.request('replace_product_in_room', requestData)

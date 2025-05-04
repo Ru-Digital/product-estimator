@@ -166,32 +166,6 @@ export function addRoom(estimateId, roomData) {
 }
 
 /**
- * Add suggestions to a room in localStorage
- * @param {string} estimateId - Estimate ID
- * @param {string} roomId - Room ID
- * @param {Array} suggestions - Array of suggestion products
- * @returns {boolean} Success or failure
- */
-export function addSuggestionsToRoom(estimateId, roomId, suggestions) {
-  const storedData = loadEstimateData();
-
-  if (!storedData.estimates ||
-    !storedData.estimates[estimateId] ||
-    !storedData.estimates[estimateId].rooms ||
-    !storedData.estimates[estimateId].rooms[roomId]) {
-    return false;
-  }
-
-  const room = storedData.estimates[estimateId].rooms[roomId];
-
-  // Store suggestions directly in the room
-  room.product_suggestions = suggestions;
-  saveEstimateData(storedData);
-
-  return true;
-}
-
-/**
  * Get suggestions for a room from localStorage
  * @param {string} estimateId - Estimate ID
  * @param {string} roomId - Room ID
@@ -459,6 +433,5 @@ export default {
   updateCustomerDetails,
   getEstimates,
   replaceProductInRoom,
-  addSuggestionsToRoom,
   getSuggestionsForRoom
 };

@@ -706,32 +706,6 @@ class DataService {
   }
 
   /**
-   * Add a suggested product to a room
-   * @param {string|number} estimateId - Estimate ID
-   * @param {string|number} roomId - Room ID
-   * @param {number} productId - Product ID
-   * @returns {Promise<Object>} Result data
-   */
-  addSuggestionToRoom(estimateId, roomId, productId) {
-
-    // Add to local
-    addProductToRoom(estimateId, roomId, productId);
-
-
-
-    return this.request('add_product_to_room', {
-      estimate_id: estimateId,
-      room_id: roomId,
-      product_id: productId
-    })
-      .then(data => {
-        // Invalidate caches since we modified data
-        this.invalidateCache();
-        return data;
-      });
-  }
-
-  /**
    * Get the variation estimator content
    * @param {number} variationId - Variation ID
    * @returns {Promise<Object>} Result with HTML content

@@ -873,7 +873,7 @@ class ProductDetailsToggle {
    */
   log(...args) {
     if (this.config.debug) {
-      console.log('[ProductDetailsToggle]', ...args);
+      // console.log('[ProductDetailsToggle]', ...args);
     }
   }
 }

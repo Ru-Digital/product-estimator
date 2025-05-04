@@ -198,7 +198,7 @@ class VariationHandler {
       });
     }
 
-    this.log('Variation events bound');
+    // this.log('Variation events bound');
   }
 
   /**

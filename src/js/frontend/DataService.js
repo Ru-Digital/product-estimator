@@ -5,8 +5,17 @@
  * Provides a clean API for data operations and handles errors consistently.
  */
 
-import { addEstimate, loadEstimateData } from './EstimateStorage';
-
+import {
+  addEstimate, // Imports from EstimateStorage
+  loadEstimateData, // Imports from EstimateStorage
+  addRoom, // Imports from EstimateStorage
+  removeRoom as removeRoomFromStorage, // Imports from EstimateStorage
+  removeEstimate as removeEstimateFromStorage, // Imports from EstimateStorage
+  addProductToRoom as addProductToRoomStorage, // Imports from EstimateStorage (Renamed to avoid conflict)
+  removeProductFromRoom as removeProductFromRoomStorage, // Imports from EstimateStorage
+  replaceProductInRoom as replaceProductInRoomStorage, // Imports from EstimateStorage
+  getEstimate // Imports from EstimateStorage
+} from './EstimateStorage'; // Import necessary functions from storage
 
 class DataService {
   /**
@@ -230,7 +239,7 @@ class DataService {
    * @param {string|number} roomId - Room ID
    * @param {number} productId - Product ID
    * @param {string|number|null} estimateId - Optional estimate ID to ensure correct room
-   * @returns {Promise<Object>} Result data
+   * @returns {Promise<Object>} Result data from server
    */
   addProductToRoom(roomId, productId, estimateId = null) {
     console.log('DataService: Adding product to room', {
@@ -239,29 +248,196 @@ class DataService {
       estimateId: estimateId
     });
 
-    const requestData = {
-      room_id: roomId,
-      product_id: productId
-    };
+    // Get the existing estimate data to find room dimensions for the local storage update
+    const existingData = loadEstimateData();
+    const estimate = existingData.estimates ? existingData.estimates[estimateId] : null;
+    const room = estimate && estimate.rooms ? estimate.rooms[roomId] : null;
 
-    // Include estimate ID if provided to ensure correct room selection
-    if (estimateId !== null) {
-      requestData.estimate_id = estimateId;
+    let roomWidth = null;
+    let roomLength = null;
+
+    if (room) {
+      roomWidth = room.width;
+      roomLength = room.length;
+    } else {
+      console.warn(`Room ID ${roomId} not found in local storage for estimate ${estimateId}. Cannot get dimensions for local product data.`);
     }
 
-    return this.request('add_product_to_room', requestData)
-      .then(data => {
-        console.log('DataService: Product added successfully', data);
 
-        // Invalidate caches since we modified data
-        this.invalidateCache();
-        return data;
+    // === START: Fetch comprehensive product data for local storage immediately ===
+    // Use a nested promise chain or async/await if available to fetch data first
+    // For now, we'll use a promise chain to align with existing structure
+
+    this.request('get_product_data_for_storage', {
+      product_id: productId,
+      room_width: roomWidth, // Pass dimensions to the new endpoint
+      room_length: roomLength // Pass dimensions to the new endpoint
+    })
+      .then(productDataResponse => {
+        console.log('DataService: Fetched comprehensive product data for storage:', productDataResponse);
+
+        if (!productDataResponse.product_data) {
+          throw new Error('Failed to get comprehensive product data from server.');
+        }
+
+        const comprehensiveProductData = productDataResponse.product_data;
+
+        // Use the addProductToRoom function from EstimateStorage to add the product to the specified room
+        // Note: This expects the EstimateStorage addProductToRoom to find the correct estimate and room by their IDs
+        try {
+          const success = addProductToRoomStorage(estimateId, roomId, comprehensiveProductData);
+          if (success) {
+            this.log(`Product ID ${productId} successfully added to room ${roomId} in localStorage with comprehensive data.`);
+          } else {
+            console.warn(`Failed to add product ID ${productId} to room ${roomId} in localStorage.`);
+            // Decide how to handle local storage failure - maybe still proceed with server request?
+            // For now, we'll proceed with the server request even if local storage fails.
+          }
+        } catch (e) {
+          console.error(`Error adding comprehensive product ID ${productId} to room ${roomId} in localStorage:`, e);
+          // Decide how to handle local storage failure - maybe still proceed with server request?
+          // For now, we'll proceed with the server request even if local storage fails.
+        }
       })
       .catch(error => {
-        console.error('DataService: Error adding product to room', error);
-        throw error;
+        console.error('DataService: Error fetching comprehensive product data for storage:', error);
+        // If fetching data for local storage fails, reject the entire promise chain
+        throw error; // Re-throw to allow handling upstream (e.g., in ModalManager)
+      });
+
+        // === END: Add product data to the room in local storage immediately ===
+
+
+        // Now, make the original AJAX request to the server to add the product to the session/database
+        const requestData = {
+          room_id: roomId,
+          product_id: productId
+        };
+
+        // Include estimate ID if provided to ensure correct room selection
+        if (estimateId !== null) {
+          requestData.estimate_id = estimateId;
+        }
+
+        // This is the original AJAX call that was selected
+        return this.request('add_product_to_room', requestData)
+          .then(data => {
+            console.log('DataService: Product added successfully (server response)', data);
+
+            // Invalidate caches since we modified data
+            this.invalidateCache();
+            return data; // Return the server response data
+          })
+          .catch(error => {
+            console.error('DataService: Error adding product to room (server response)', error);
+            // Note: The product was already added to local storage.
+            // If the server request fails, you might want to handle the discrepancy.
+            throw error; // Re-throw to allow handling upstream
+          });
+
+  }
+
+  /**
+   * Replace a product in a room with another product.
+   * Handles the AJAX request to the server.
+   * @param {string|number} estimateId - Estimate ID
+   * @param {string|number} roomId - Room ID
+   * @param {string|number} oldProductId - ID of product to replace
+   * @param {string|number} newProductId - ID of new product
+   * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
+   * @returns {Promise<Object>} Promise resolving to the server response data
+   */
+  replaceProductInRoom(estimateId, roomId, oldProductId, newProductId, replaceType = 'main') {
+    console.log('DataService: Initiating product replacement request', {
+      estimateId: estimateId,
+      roomId: roomId,
+      oldProductId: oldProductId,
+      newProductId: newProductId,
+      replaceType: replaceType
+    });
+
+    const storedData = loadEstimateData();
+    let roomWidth = null;
+    let roomLength = null;
+    if (storedData && storedData.estimates && storedData.estimates[estimateId]) {
+      const estimate = storedData.estimates[estimateId];
+
+      // Check if the estimate has rooms and the specific room exists
+      if (estimate.rooms && estimate.rooms[roomId]) {
+        const room = estimate.rooms[roomId];
+
+        // Extract width and length
+        roomWidth = room.width;
+        roomLength = room.length;
+
+        console.log(`Room ${roomId} in Estimate ${estimateId} has dimensions: Width = ${roomWidth}, Length = ${roomLength}`);
+      } else {
+        console.warn(`Room with ID ${roomId} not found in estimate ${estimateId}.`);
+      }
+    } else {
+      console.warn(`Estimate with ID ${estimateId} not found in localStorage.`);
+    }
+
+
+    this.request('get_product_data_for_storage', {
+      product_id: newProductId,
+      room_width: roomWidth, // Pass dimensions to the new endpoint
+      room_length: roomLength // Pass dimensions to the new endpoint
+    })
+      .then(productDataResponse => {
+        console.log('DataService: Fetched comprehensive product data for storage:', productDataResponse);
+
+        if (!productDataResponse.product_data) {
+          throw new Error('Failed to get comprehensive product data from server.');
+        }
+
+        const comprehensiveProductData = productDataResponse.product_data;
+
+        try {
+          const success = replaceProductInRoomStorage(estimateId, roomId, oldProductId, newProductId, comprehensiveProductData, replaceType); // Perform replacement on loaded data
+          if (success) {
+            this.log(`Product ID ${productId} successfully added to room ${roomId} in localStorage with comprehensive data.`);
+          } else {
+            console.warn(`Product replacement (old ID ${oldProductId}) failed in localStorage for room ${roomId}. Product not found?`);
+            // Decide how to handle local storage failure - maybe still proceed with server request?
+            // For now, we'll proceed with the server request even if local storage fails.
+          }
+        } catch (e) {
+          console.error(`Error performing local storage product replacement for room ${roomId}:`, e);
+          // Decide how to handle local storage failure - maybe still proceed with server request?
+          // For now, we'll proceed with the server request even if local storage fails.
+        }
+      })
+      .catch(error => {
+        console.error('DataService: Error fetching comprehensive product data for storage:', error);
+        // If fetching data for local storage fails, reject the entire promise chain
+        throw error; // Re-throw to allow handling upstream (e.g., in ModalManager)
+      });
+
+
+
+    const requestData = {
+      estimate_id: estimateId,
+      room_id: roomId,
+      product_id: newProductId, // The ID of the new product
+      replace_product_id: oldProductId, // The ID of the product being replaced
+      replace_type: replaceType // Send the replacement type to the server
+    };
+
+    // Use the generic request method for the AJAX call
+    return this.request('replace_product_in_room', requestData)
+      .then(data => {
+        console.log('DataService: Product replacement successful (server response)', data);
+        // Invalidate caches since we modified data on the server
+        this.invalidateCache();
+        return data; // Return the server response data
+      })
+      .catch(error => {
+        console.error('DataService: Error replacing product (server response)', error);
+        throw error; // Re-throw to allow handling upstream
       });
   }
+
 
   /**
    * Create a new estimate
@@ -318,6 +494,50 @@ class DataService {
       formData: formData instanceof FormData ? Object.fromEntries(formData) : formData
     });
 
+
+    const existingData = loadEstimateData();
+    const estimate = existingData.estimates ? existingData.estimates[estimateId] : null;
+
+
+    let clientSideRoomId = String(Object.keys(estimate.rooms).length);
+
+    const roomWidth = parseFloat(formData instanceof FormData ? formData.get('room_width') : formData.room_width) || 0;
+    const roomLength = parseFloat(formData instanceof FormData ? formData.get('room_length') : formData.room_length) || 0;
+
+    const newRoomData = {
+      id: clientSideRoomId, // Use the client-side ID for local storage
+      name: formData instanceof FormData ? formData.get('room_name') || 'Unnamed Room' : formData.room_name || 'Unnamed Room', // Get name from form data
+      width: roomWidth, // Add width from form data
+      length: roomLength, // Add length from form data
+      products: [], // New rooms start with no products
+      min_total: 0, // Initialize min_total to 0
+      max_total: 0  // Initialize max_total to 0
+    };
+
+    // Add the new room data to local storage for the specified estimate immediately
+    addRoom(estimateId, newRoomData);
+    this.log(`Room ID ${newRoomData.id} added to localStorage for estimate ${estimateId}`);
+
+    if (productId) {
+      // Create a minimal product data object with just the ID
+      // In a real scenario, you might fetch more details here if needed for local display
+      const minimalProductData = {
+        id: String(productId), // Ensure product ID is a string for consistency
+        // Add other minimal properties if necessary for local display, e.g., name: 'Product ' + productId
+      };
+      try {
+        // Use the addProductToRoom function from EstimateStorage to add the product to the newly added room
+        const success = addProductToRoomStorage(estimateId, clientSideRoomId, minimalProductData);
+        if (success) {
+          this.log(`Product ID ${productId} successfully added to room ${clientSideRoomId} in localStorage.`);
+        } else {
+          console.warn(`Failed to add product ID ${productId} to room ${clientSideRoomId} in localStorage.`);
+        }
+      } catch (e) {
+        console.error(`Error adding product ID ${productId} to room ${clientSideRoomId} in localStorage:`, e);
+      }
+    }
+
     let requestData = {
       form_data: this.formatFormData(formData),
       estimate_id: estimateId
@@ -327,6 +547,7 @@ class DataService {
       requestData.product_id = productId;
     }
 
+    // Use the generic request method for the AJAX call
     return this.request('add_new_room', requestData)
       .then(data => {
         // Log success for debugging
@@ -341,6 +562,7 @@ class DataService {
         throw error; // Re-throw to allow handling upstream
       });
   }
+
   /**
    * Remove a product from a room
    * @param {string|number} estimateId - Estimate ID
@@ -349,6 +571,19 @@ class DataService {
    * @returns {Promise<Object>} Result data
    */
   removeProductFromRoom(estimateId, roomId, productIndex) {
+
+
+    try {
+      const success = removeProductFromRoomStorage(estimateId, roomId, productIndex);
+      if (success) {
+        this.log(`Product at index ${productIndex} successfully removed from room ${roomId} in localStorage.`);
+      } else {
+        console.warn(`Product at index ${productIndex} not found in room ${roomId} in localStorage during removal attempt.`);
+      }
+    } catch (e) {
+      console.error(`Error removing product at index ${productIndex} from room ${roomId} in localStorage:`, e);
+    }
+
     return this.request('remove_product_from_room', {
       estimate_id: estimateId,
       room_id: roomId,
@@ -372,6 +607,17 @@ class DataService {
       estimateId: estimateId,
       roomId: roomId
     });
+
+    try {
+      const success = removeRoomFromStorage(estimateId, roomId);
+      if (success) {
+        this.log(`Room ID ${roomId} successfully removed from localStorage for estimate ${estimateId}`);
+      } else {
+        console.warn(`Room ID ${roomId} not found in localStorage for estimate ${estimateId} during removal attempt.`);
+      }
+    } catch (e) {
+      console.error(`Error removing room ID ${roomId} from localStorage:`, e);
+    }
 
     // Force string conversion for consistency
     const requestData = {
@@ -400,6 +646,17 @@ class DataService {
    */
   removeEstimate(estimateId) {
     console.log(`DataService: Removing estimate ${estimateId}`);
+
+    try {
+      const success = removeEstimateFromStorage(estimateId);
+      if (success) {
+        this.log(`Estimate ID ${estimateId} successfully removed from localStorage.`);
+      } else {
+        console.warn(`Estimate ID ${estimateId} not found in localStorage during removal attempt.`);
+      }
+    } catch (e) {
+      console.error(`Error removing estimate ID ${estimateId} from localStorage:`, e);
+    }
 
     return this.request('remove_estimate', {
       estimate_id: estimateId

@@ -53,7 +53,7 @@ class NetsuiteSettingsModule {
     // Add handler for form submission - THIS IS THE FIX
     $('.product-estimator-form').on('submit', this.handleFormSubmit.bind(this));
 
-    log('NetsuiteSettingsModule', 'Events bound successfully');
+    // log('NetsuiteSettingsModule', 'Events bound successfully');
   }
 
   /**

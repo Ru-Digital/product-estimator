@@ -184,7 +184,7 @@ class EstimatorCore {
 
       // Emit event for monitoring
       this.emit('core:eventsbound');
-      this.log('Global events bound');
+      // this.log('Global events bound');
     } catch (error) {
       console.error('Error binding global events:', error);
     }

@@ -38,7 +38,7 @@ class ConfirmationDialog {
     this.initialized = true;
 
     if (productEstimatorVars && productEstimatorVars.debug) {
-      console.log('[ConfirmationDialog] Initialized');
+      // console.log('[ConfirmationDialog] Initialized');
     }
   }
 

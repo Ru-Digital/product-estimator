@@ -192,7 +192,7 @@ class CustomerDetailsManager {
       this.bindButtonWithHandler(cancelButton, 'click', this.handleCancelClick.bind(this));
     }
 
-    this.log('Customer details events bound');
+    // this.log('Customer details events bound');
   }
 
   /**

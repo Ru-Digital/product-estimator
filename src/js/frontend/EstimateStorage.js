@@ -16,7 +16,9 @@ export function loadEstimateData() {
   try {
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (storedData) {
-      return JSON.parse(storedData);
+      const data = JSON.parse(storedData);
+      console.log("EstimateStorage: loadEstimateData - Data loaded:", data); // Add this log
+      return data;
     } else {
       const sessionDetails = sessionStorage.getItem(STORAGE_KEY);
       return sessionDetails ? JSON.parse(sessionDetails) : {};
@@ -317,86 +319,127 @@ export function getEstimates() {
  * @returns {boolean} Success or failure
  */
 export function replaceProductInRoom(estimateId, roomId, oldProductId, newProductId, newProductData, replaceType = 'main') {
-  const storedData = loadEstimateData();
+  const storedData = loadEstimateData(); // Load the current data from localStorage
 
+  // Check if estimate or room exists
   if (!storedData.estimates ||
-    !storedData.estimates[estimateId] ||
-    !storedData.estimates[estimateId].rooms ||
+    !storedData.estimates[estimateId] || // Accessing with estimateId
+    !storedData.estimates[estimateId].rooms || // Accessing rooms with estimateId
     !storedData.estimates[estimateId].rooms[roomId]) {
-    return false;
+
+    console.warn("Estimate or room not found in storedData."); // Original log
+    return false; // Return false if estimate or room is not found
   }
 
-  const room = storedData.estimates[estimateId].rooms[roomId];
+  const room = storedData.estimates[estimateId].rooms[roomId]; // Get the specific room object
+  console.log("Debugging: State of room.products:", room.products, `(Type: ${typeof room.products})`, `(Is Array: ${Array.isArray(room.products)})`);
 
+  // Check if the room has a 'products' array
   if (!room.products) {
-    return false;
+    return false; // Return false if there are no products in the room
   }
+
+  console.log("Debugging: Value of replaceType before check:", replaceType, `(Type: ${typeof replaceType})`);
 
   // If replacing an additional product
   if (replaceType === 'additional_products') {
-    // Look for the parent product containing the additional product to replace
+    console.log("Starting outer loop for main products..."); // Added log
+
+    // Look for the parent main product that contains the additional product to replace
+    // Iterate through the main products array
     for (let i = 0; i < room.products.length; i++) {
-      const product = room.products[i];
+      const product = room.products[i]; // 'product' here refers to a main product item
 
+      // Check if this main product has an 'additional_products' array and if it's valid
       if (product.additional_products && Array.isArray(product.additional_products)) {
-        for (let j = 0; j < product.additional_products.length; j++) {
-          const addProduct = product.additional_products[j];
+        console.log(`Checking additional products for main product ID: ${product.id}`); // Log main product ID
 
-          // Check if this is the product to replace
+
+        // Iterate through the additional products associated with this main product
+        for (let j = 0; j < product.additional_products.length; j++) {
+          const addProduct = product.additional_products[j]; // 'addProduct' refers to an item in the additional_products array
+
+
+          // --- CONDITION TO IDENTIFY THE ADDITIONAL PRODUCT TO REPLACE ---
+          // Check if the current additional product's ID matches the oldProductId
+          // OR if the oldProductId is present in the additional product's replacement chain (if it exists)
           if (addProduct.id == oldProductId ||
             (addProduct.replacement_chain && addProduct.replacement_chain.includes(oldProductId))) {
+            console.log(`  Match found for oldProductId ${oldProductId}! Replacing...`); // Log match found
 
-            // Create replacement chain if it doesn't exist
+
+            // --- REPLACEMENT CHAIN LOGIC ---
+            // Ensure the replacement_chain array exists on the additional product being replaced
             if (!addProduct.replacement_chain) {
               addProduct.replacement_chain = [];
             }
-
-            // Add current ID to chain if not already present
+            // Add the ID of the product currently in this slot to the chain, if it's not already there.
+            // This helps track the history of products that have occupied this additional product slot.
             if (!addProduct.replacement_chain.includes(addProduct.id)) {
               addProduct.replacement_chain.push(addProduct.id);
             }
-
-            // Update the product data with the replacement chain
+            // Assign the calculated replacement chain (based on the item being replaced)
+            // to the new product data that will take its place.
             newProductData.replacement_chain = addProduct.replacement_chain;
+            // --- END REPLACEMENT CHAIN LOGIC ---
 
-            // Replace the product
-            room.products[i].additional_products[j] = newProductData;
+
+            // === THE ACTUAL REPLACEMENT STEP ===
+            // Replace the old additional product object at index 'j'
+            // within the additional_products array of the main product at index 'i'
+            // with the newProductData object.
+              room.products[i].additional_products[j] = newProductData;
+
+            // === SAVE THE MODIFIED DATA TO LOCAL STORAGE ===
+            // Call saveEstimateData with the updated storedData object
             saveEstimateData(storedData);
-            return true;
+
+            // Return true to indicate successful replacement
+            return true; // Product found and replaced
           }
         }
       }
     }
 
+    console.warn(`Additional product with oldProductId ${oldProductId} not found in any additional_products array.`); // Log if not found
+
+    // If the loops finish without finding the additional product to replace
     return false;
   } else {
-    // For main products
+    // --- LOGIC FOR REPLACING MAIN PRODUCTS ---
     let found = false;
     let productIndex = -1;
 
-    // Find the product to replace
+    // Find the index of the main product to replace
     for (let i = 0; i < room.products.length; i++) {
       if (room.products[i].id == oldProductId) {
         found = true;
         productIndex = i;
-        break;
+        break; // Exit loop once the product is found
       }
     }
 
+    // If the main product was found
     if (found && productIndex >= 0) {
-      // Remove the old product
+      // Remove the old main product from the array at the found index
       room.products.splice(productIndex, 1);
 
-      // Add the new product
+      // Add the new product to the end of the main products array
       room.products.push(newProductData);
 
+      // === SAVE THE MODIFIED DATA TO LOCAL STORAGE ===
+      // Call saveEstimateData with the updated storedData object
       saveEstimateData(storedData);
+
+      // Return true to indicate successful replacement
       return true;
     }
 
+    // If the main product was not found
     return false;
   }
 }
+
 
 export default {
   loadEstimateData,

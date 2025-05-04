@@ -121,6 +121,9 @@ class AjaxHandler {
             add_action('wp_ajax_request_store_contact', array($this, 'request_store_contact'));
             add_action('wp_ajax_nopriv_request_store_contact', array($this, 'request_store_contact'));
 
+            add_action('wp_ajax_get_product_data_for_storage', array($this, 'get_product_data_for_storage'));
+            add_action('wp_ajax_nopriv_get_product_data_for_storage', array($this, 'get_product_data_for_storage'));
+
 
 
         } catch (\Exception $e) {
@@ -134,6 +137,175 @@ class AjaxHandler {
     /**
      * * Get variation estimator content via AJAX
      * */
+
+    /**
+     * AJAX handler to get comprehensive product data for local storage.
+     * This replicates the data gathering logic from prepareAndAddProductToRoom
+     * without modifying the session.
+     *
+     * @since 1.0.0
+     */
+    public function get_product_data_for_storage() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get product ID and optional room dimensions
+        $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+        $room_width = isset($_POST['room_width']) ? floatval($_POST['room_width']) : null;
+        $room_length = isset($_POST['room_length']) ? floatval($_POST['room_length']) : null;
+
+        if (!$product_id) {
+            wp_send_json_error(['message' => __('Product ID is required', 'product-estimator')]);
+            return;
+        }
+
+        try {
+            // Get product data
+            $product = wc_get_product($product_id);
+            if (!$product) {
+                wp_send_json_error(['message' => __('Product not found', 'product-estimator')]);
+                return;
+            }
+
+            // Calculate room area if dimensions are provided
+            $room_area = 0;
+            if ($room_width !== null && $room_length !== null) {
+                $room_area = $room_width * $room_length;
+            }
+            // Note: If dimensions are not provided, room_area remains 0, which is handled by pricing logic.
+
+            // Get pricing data using our helper function (assuming it's available globally or via a helper class)
+            // Ensure the helper function 'product_estimator_get_product_price' is accessible in this context.
+            if (!function_exists('product_estimator_get_product_price')) {
+                // Fallback or error if the helper is not loaded.
+                // In a real plugin, ensure this helper is always loaded.
+                wp_send_json_error(['message' => __('Pricing helper function not available', 'product-estimator')]);
+                return;
+            }
+            $pricing_data = product_estimator_get_product_price($product_id, $room_area, false); // Don't apply markup here
+
+            // Get pricing method and source
+            $pricing_method = $pricing_data['pricing_method'];
+            $pricing_source = $pricing_data['pricing_source'];
+            $min_price = $pricing_data['min_price'];
+            $max_price = $pricing_data['max_price'];
+
+            // Prepare base product data structure
+            $product_data = [
+                'id' => $product_id,
+                'name' => $product->get_name(),
+                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
+                'min_price' => $min_price,
+                'max_price' => $max_price,
+                'pricing_method' => $pricing_method,
+                'pricing_source' => $pricing_source,
+                'room_area' => $room_area,
+                'additional_products' => [],
+                'additional_notes' => [],
+                'min_price_total' => 0, // Initialize totals
+                'max_price_total' => 0
+            ];
+
+            // Calculate price totals based on pricing method
+            if ($pricing_method === 'sqm' && $room_area > 0) {
+                // Per square meter pricing - multiply by room area
+                $product_data['min_price_total'] = $min_price * $room_area;
+                $product_data['max_price_total'] = $max_price * $room_area;
+            } else {
+                // Fixed pricing - use price directly as total
+                $product_data['min_price_total'] = $min_price;
+                $product_data['max_price_total'] = $max_price;
+            }
+
+            // PRODUCT ADDITIONS - auto-add related products and notes
+            // Replicate the logic from prepareAndAddProductToRoom for auto-additions
+            $auto_add_products = array();
+            $auto_add_notes = array();
+
+            // Get product ID for categories - For variations, use parent product ID
+            $product_id_for_categories = $product_id;
+            if ($product->is_type('variation')) {
+                $product_id_for_categories = $product->get_parent_id();
+            }
+
+            $product_categories = wp_get_post_terms($product_id_for_categories, 'product_cat', array('fields' => 'ids'));
+
+            // Ensure ProductAdditionsFrontend is available
+            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\ProductAdditionsFrontend')) {
+                // Fallback or error if the class is not loaded.
+                // In a real plugin, ensure this class is always loaded when needed.
+                error_log('ProductAdditionsFrontend class not available for get_product_data_for_storage');
+            } else {
+                $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+
+                if ($product_additions_manager) {
+                    foreach ($product_categories as $category_id) {
+                        // Get auto-add products
+                        $category_auto_add_products = $product_additions_manager->get_auto_add_products_for_category($category_id);
+                        if (!empty($category_auto_add_products)) {
+                            $auto_add_products = array_merge($auto_add_products, $category_auto_add_products);
+                        }
+
+                        // Get auto-add notes
+                        $category_auto_add_notes = $product_additions_manager->get_auto_add_notes_for_category($category_id);
+                        if (!empty($category_auto_add_notes)) {
+                            $auto_add_notes = array_merge($auto_add_notes, $category_auto_add_notes);
+                        }
+                    }
+
+                    // Remove duplicates
+                    $auto_add_products = array_unique($auto_add_products);
+                    $auto_add_notes = array_unique($auto_add_notes);
+
+                    // Handle auto-add products - get their data and add to additional_products
+                    foreach ($auto_add_products as $related_product_id) {
+                        // Skip if it's the same product we are getting data for
+                        if ($related_product_id == $product_id) {
+                            continue;
+                        }
+
+                        // Get the related product data using the helper method
+                        // Pass room area for calculation
+                        $related_product_data = $this->prepareAdditionalProductData($related_product_id, $room_area);
+
+                        if ($related_product_data) {
+                            $product_data['additional_products'][] = $related_product_data;
+                        }
+                    }
+
+                    // Handle auto-add notes - add their data to additional_notes
+                    foreach ($auto_add_notes as $note_text) {
+                        $note_data = [
+                            'id' => 'note_' . uniqid(), // Generate a unique ID for the note
+                            'type' => 'note',
+                            'note_text' => $note_text,
+                        ];
+                        $product_data['additional_notes'][] = $note_data;
+                    }
+                }
+            }
+
+
+            // Send success response with the prepared product data
+            wp_send_json_success([
+                'message' => __('Product data retrieved successfully', 'product-estimator'),
+                'product_data' => $product_data,
+                'debug' => [
+                    'product_id' => $product_id,
+                    'room_dimensions' => ['width' => $room_width, 'length' => $room_length],
+                    'room_area' => $room_area
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            error_log('Exception in get_product_data_for_storage: ' . $e->getMessage());
+            wp_send_json_error([
+                'message' => __('An error occurred while retrieving product data', 'product-estimator'),
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
 
     public function getVariationEstimator() {
         // Verify nonce
@@ -1218,7 +1390,7 @@ class AjaxHandler {
      * @param float $room_length Room length (optional, will use existing room data if not provided)
      * @return array Result with status and product data
      */
-    private function prepareAndAddProductToRoom($product_id, $estimate_id, $room_id, $room_width = null, $room_length = null) {
+    public function prepareAndAddProductToRoom($product_id, $estimate_id, $room_id, $room_width = null, $room_length = null) {
         try {
             // First, check if this product already exists in the room
             $estimate = $this->session->getEstimate($estimate_id);

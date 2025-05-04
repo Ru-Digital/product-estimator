@@ -19,7 +19,7 @@ class SuggestionsCarousel {
     // Determine if this is a similar products carousel
     this.isSimilarProducts = container.classList.contains('similar-products-carousel');
 
-    console.log(`[${this.id}] Initializing carousel with ${this.items.length} items, isSimilarProducts: ${this.isSimilarProducts}`);
+    // console.log(`[${this.id}] Initializing carousel with ${this.items.length} items, isSimilarProducts: ${this.isSimilarProducts}`);
 
     // Only proceed if we have all necessary elements
     if (!this.itemsContainer || !this.items.length) {
@@ -59,14 +59,14 @@ class SuggestionsCarousel {
       const parentItem = this.container.closest('.product-item');
       if (parentItem) {
         const parentWidth = parentItem.offsetWidth;
-        console.log(`[${this.id}] Found product-item parent: ${parentWidth}px`);
+        // console.log(`[${this.id}] Found product-item parent: ${parentWidth}px`);
         return parentWidth - 10; // Subtract a small buffer
       }
     }
 
     // Default - use container's width
     const containerWidth = this.container.offsetWidth;
-    console.log(`[${this.id}] Using container width: ${containerWidth}px`);
+    // console.log(`[${this.id}] Using container width: ${containerWidth}px`);
     return containerWidth;
   }
 
@@ -78,7 +78,7 @@ class SuggestionsCarousel {
       const parentEl = this.container.closest('.product-item');
       if (parentEl) {
         const parentWidth = parentEl.offsetWidth;
-        console.log(`[${this.id}] Similar products parent width: ${parentWidth}px`);
+        // console.log(`[${this.id}] Similar products parent width: ${parentWidth}px`);
         this.container.style.maxWidth = `${parentWidth - 10}px`;
       }
 
@@ -108,7 +108,7 @@ class SuggestionsCarousel {
     const totalItemWidth = effectiveItemWidth + effectiveGap;
     const visibleItems = Math.max(1, Math.floor(availableWidth / totalItemWidth));
 
-    console.log(`[${this.id}] Container width: ${containerWidth}px, available: ${availableWidth}px, visible items: ${visibleItems}`);
+    // console.log(`[${this.id}] Container width: ${containerWidth}px, available: ${availableWidth}px, visible items: ${visibleItems}`);
 
     return visibleItems;
   }
@@ -138,14 +138,14 @@ class SuggestionsCarousel {
       this.resizeTimeout = setTimeout(this.handleResize, 150);
     });
 
-    console.log(`[${this.id}] Events bound`);
+    // console.log(`[${this.id}] Events bound`);
   }
 
   handlePrevClick(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    console.log(`[${this.id}] Prev button clicked, current position: ${this.currentPosition}`);
+    // console.log(`[${this.id}] Prev button clicked, current position: ${this.currentPosition}`);
 
     if (this.currentPosition > 0) {
       this.currentPosition--;
@@ -158,7 +158,7 @@ class SuggestionsCarousel {
     e.preventDefault();
     e.stopPropagation();
 
-    console.log(`[${this.id}] Next button clicked, current position: ${this.currentPosition}, max: ${this.maxPosition}`);
+    // console.log(`[${this.id}] Next button clicked, current position: ${this.currentPosition}, max: ${this.maxPosition}`);
 
     if (this.currentPosition < this.maxPosition) {
       this.currentPosition++;
@@ -176,7 +176,7 @@ class SuggestionsCarousel {
     this.visibleItems = this.calculateVisibleItems();
     this.maxPosition = Math.max(0, this.items.length - this.visibleItems);
 
-    console.log(`[${this.id}] Window resized, visible items: ${this.visibleItems}, max position: ${this.maxPosition}`);
+    // console.log(`[${this.id}] Window resized, visible items: ${this.visibleItems}, max position: ${this.maxPosition}`);
 
     // Ensure current position is valid after resize
     if (this.currentPosition > this.maxPosition) {
@@ -209,7 +209,7 @@ class SuggestionsCarousel {
         // Use the minimum of container width or product-item width
         availableWidth = Math.min(availableWidth, productItemWidth);
 
-        console.log(`Product item width: ${productItemWidth}px, Available width: ${availableWidth}px`);
+        // console.log(`Product item width: ${productItemWidth}px, Available width: ${availableWidth}px`);
       }
     } else {
       // For suggested products - respect the accordion item width
@@ -217,7 +217,7 @@ class SuggestionsCarousel {
       if (accordionContent) {
         const accordionWidth = accordionContent.clientWidth - 30; // Allow for padding
         availableWidth = Math.min(availableWidth, accordionWidth);
-        console.log(`Accordion content width: ${accordionWidth}px, Available width: ${availableWidth}px`);
+        // console.log(`Accordion content width: ${accordionWidth}px, Available width: ${availableWidth}px`);
       }
     }
 
@@ -240,7 +240,7 @@ class SuggestionsCarousel {
     // Apply the transform
     this.itemsContainer.style.transform = `translateX(${translateX}px)`;
 
-    console.log(`[${this.id}] Position updated to ${this.currentPosition}, translateX: ${translateX}px`);
+    // console.log(`[${this.id}] Position updated to ${this.currentPosition}, translateX: ${translateX}px`);
   }
 
   updateButtons() {
@@ -264,7 +264,7 @@ class SuggestionsCarousel {
       }
     }
 
-    console.log(`[${this.id}] Buttons updated - prev ${this.prevBtn ? (this.prevBtn.classList.contains('disabled') ? 'disabled' : 'enabled') : 'missing'}, next ${this.nextBtn ? (this.nextBtn.classList.contains('disabled') ? 'disabled' : 'enabled') : 'missing'}`);
+    // console.log(`[${this.id}] Buttons updated - prev ${this.prevBtn ? (this.prevBtn.classList.contains('disabled') ? 'disabled' : 'enabled') : 'missing'}, next ${this.nextBtn ? (this.nextBtn.classList.contains('disabled') ? 'disabled' : 'enabled') : 'missing'}`);
   }
 
   destroy() {
@@ -285,7 +285,7 @@ class SuggestionsCarousel {
       delete this.container.carouselInstance;
     }
 
-    console.log(`[${this.id}] Carousel destroyed`);
+    // console.log(`[${this.id}] Carousel destroyed`);
   }
 }
 
@@ -294,11 +294,11 @@ class SuggestionsCarousel {
  * and ensure navigation buttons work correctly
  */
 function initSuggestionsCarousels() {
-  console.log('Initializing all suggestion carousels');
+  // console.log('Initializing all suggestion carousels');
 
   // Find all carousel containers (both types: suggestions and similar products)
   const carouselContainers = document.querySelectorAll('.suggestions-carousel');
-  console.log(`Found ${carouselContainers.length} carousel containers`);
+  // console.log(`Found ${carouselContainers.length} carousel containers`);
 
   // Clean up any existing instances first
   carouselContainers.forEach(container => {
@@ -324,7 +324,7 @@ function initSuggestionsCarousels() {
 function initCarouselOnAccordionOpen() {
   // Find all accordion headers
   const accordionHeaders = document.querySelectorAll('.accordion-header');
-  console.log(`Setting up ${accordionHeaders.length} accordion headers for carousel initialization`);
+  // console.log(`Setting up ${accordionHeaders.length} accordion headers for carousel initialization`);
 
   accordionHeaders.forEach(header => {
     // Remove existing event listeners to prevent duplicates
@@ -350,11 +350,11 @@ function handleAccordionClick(e) {
 
     // Check if content is visible
     if (window.getComputedStyle(content).display !== 'none') {
-      console.log('Accordion opened, checking for carousels to initialize');
+      // console.log('Accordion opened, checking for carousels to initialize');
 
       // Find carousels within this accordion content - check for both types
       const carousels = content.querySelectorAll('.suggestions-carousel');
-      console.log(`Found ${carousels.length} carousels in opened accordion`);
+      // console.log(`Found ${carousels.length} carousels in opened accordion`);
 
       carousels.forEach(container => {
         // Reinitialize carousel to ensure proper rendering and functionality
@@ -369,7 +369,7 @@ function handleAccordionClick(e) {
 
 // Initialize carousels after DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM loaded, initializing carousels');
+  // console.log('DOM loaded, initializing carousels');
   initSuggestionsCarousels();
   initCarouselOnAccordionOpen();
 });

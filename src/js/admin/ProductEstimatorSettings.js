@@ -111,7 +111,7 @@ class ProductEstimatorSettings {
     // Window beforeunload for unsaved changes warning
     $(window).on('beforeunload', this.handleBeforeUnload.bind(this));
 
-    log('ProductEstimatorSettings', 'Events bound');
+    // log('ProductEstimatorSettings', 'Events bound');
   }
 
   /**

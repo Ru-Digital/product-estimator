@@ -97,7 +97,7 @@ class ProductUpgrades {
       }
     });
 
-    this.log('Events bound for product upgrades');
+    // this.log('Events bound for product upgrades');
   }
 
   /**

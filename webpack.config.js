@@ -13,6 +13,10 @@ module.exports = {
     path: path.resolve(__dirname, 'public/js'),
   },
   mode: process.env.NODE_ENV || 'development',
+
+  // Add the devtool property here for source maps
+  devtool: 'source-map', // Or 'eval-source-map' for faster builds
+
   resolve: {
     // Add aliases for easier imports
     alias: {

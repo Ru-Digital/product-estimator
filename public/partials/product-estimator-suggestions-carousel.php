@@ -36,8 +36,12 @@ if ($product_additions_manager) {
             continue;
         }
 
+        $parent_id = wp_get_post_parent_id($product['id']);
+
+        $product_id = $parent_id ?: $product['id'];
         // Get product categories
-        $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+        $categories = wp_get_post_terms($product_id, 'product_cat', array('fields' => 'ids'));
+
         if (!empty($categories)) {
             // Check each category for suggestions
             foreach ($categories as $category_id) {
@@ -93,6 +97,7 @@ $suggestions = array_values($suggestions);
 if (!empty($suggestions)) {
     $suggestions = array_values($suggestions);
 }
+
 
 // Check if we have any suggestions to display
 if (empty($suggestions)) {

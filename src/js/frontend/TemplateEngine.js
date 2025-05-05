@@ -130,6 +130,23 @@ class TemplateEngine {
       }
     });
 
+    // Handle product removal buttons specifically to ensure they get ALL required attributes
+    if (data.product_index !== undefined) {
+      // Find remove buttons
+      const removeButtons = element.querySelectorAll('.remove-product');
+      removeButtons.forEach(button => {
+        // Set product index directly (critical for deletion to work)
+        button.dataset.productIndex = data.product_index;
+
+        // Ensure other needed attributes
+        if (data.estimate_id !== undefined) button.dataset.estimateId = data.estimate_id;
+        if (data.room_id !== undefined) button.dataset.roomId = data.room_id;
+
+        // Debug log to verify attributes
+        console.log(`Setting removal button data attributes: estimate=${data.estimate_id}, room=${data.room_id}, product=${data.product_index}`);
+      });
+    }
+
     // Handle special data attributes like data-product-id
     if (data.estimate_id) {
       const elementsWithEstimateId = element.querySelectorAll('[data-estimate-id]');

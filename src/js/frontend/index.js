@@ -10,6 +10,11 @@ import ConfirmationDialog from './ConfirmationDialog';
 import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
 import ProductDetailsToggle from './ProductDetailsToggle';  // Import the default instance
 import PrintEstimate from './PrintEstimate';
+import { initializeTemplates } from './template-loader';
+
+// Initialize templates first
+const templateEngine = initializeTemplates();
+
 
 
 // Global initialization tracker - defined at the top level

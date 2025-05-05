@@ -1,0 +1,28 @@
+<template id="room-item-template">
+  <div class="accordion-item" data-room-id="" data-estimate-id="">
+    <div class="accordion-header-wrapper">
+      <button class="accordion-header">
+        <div class="price-graph-container">
+          <div class="price-range-title">
+            <span class="price-title room-name"></span>
+            <span class="price-dimensions"></span>
+            <span class="room-price"></span>
+          </div>
+          <div class="price-graph-bar">
+            <div class="price-graph-range"></div>
+          </div>
+          <div class="price-graph-labels"></div>
+        </div>
+      </button>
+      <button class="remove-room" data-estimate-id="" data-room-id="" title="Remove Room">
+        <span class="dashicons dashicons-trash"></span>
+      </button>
+    </div>
+    <div class="accordion-content">
+      <div class="room-products">
+        <h5>Products</h5>
+        <div class="product-list"></div>
+      </div>
+    </div>
+  </div>
+</template>

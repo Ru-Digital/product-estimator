@@ -1,0 +1,47 @@
+```html
+<template id="product-item-template">
+  <div class="product-item" data-product-index="">
+    <div class="product-wrapper">
+      <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Product" class="product-thumbnail">
+      <div class="product-details-wrapper">
+        <div class="product-details">
+          <div class="price-graph-container">
+            <div class="price-range-title">
+              <span class="price-title"></span>
+              <span class="price-dimensions"></span>
+              <span class="room-price"></span>
+            </div>
+            <div class="price-graph-bar">
+              <div class="price-graph-range"></div>
+            </div>
+            <div class="price-graph-labels"></div>
+          </div>
+          <button class="remove-product" data-estimate-id="" data-room-id="" data-product-index="">
+            <span class="dashicons dashicons-trash"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <button class="product-includes-toggle expanded">
+      <span>Product Includes</span>
+      <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+    </button>
+    <div class="includes-container visible">
+      <div class="product-includes">
+        <div class="product-includes-items"></div>
+      </div>
+    </div>
+
+    <button class="product-notes-toggle expanded">
+      <span>Product Notes</span>
+      <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+    </button>
+    <div class="notes-container visible">
+      <div class="product-notes">
+        <div class="product-notes-items"></div>
+      </div>
+    </div>
+  </div>
+</template>
+```

@@ -606,55 +606,6 @@ class ModalManager {
                     // Insert product using template
                     TemplateEngine.insert('product-item-template', productData, productList);
 
-                    // After rendering the product, check if there are additional products to render
-                    if (product.additional_products && product.additional_products.length > 0) {
-                      // Find the product element we just inserted
-                      const productElement = productList.querySelector(`.product-item[data-product-index="${productIndex}"]`);
-
-                      if (productElement) {
-                        // Find the appropriate container for additional products
-                        const includesContainer = productElement.querySelector('.includes-container');
-                        const includesItems = productElement.querySelector('.product-includes-items');
-
-                        if (includesContainer && includesItems) {
-                          // Render additional products
-                          console.log(`Found ${product.additional_products.length} additional products for product ${product.id}`);
-
-                          // Here you would render additional products based on your template structure
-                          // This would depend on how your additional products are displayed
-                        }
-                      }
-                    }
-
-                    // Check if there are notes to render
-                    if (product.additional_notes && product.additional_notes.length > 0) {
-                      console.log(`Found ${product.additional_notes.length} notes for product ${product.id}`);
-
-                      // Find the product element we just inserted
-                      const productElement = productList.querySelector(`.product-item[data-product-index="${productIndex}"]`);
-
-                      if (productElement) {
-                        // Find the notes container
-                        const notesContainer = productElement.querySelector('.notes-container');
-                        const notesItems = productElement.querySelector('.product-notes-items');
-
-                        if (notesContainer && notesItems) {
-                          // Render each note
-                          product.additional_notes.forEach((note) => {
-                            // Prepare note data
-                            const noteData = {
-                              estimate_id: estimateId,
-                              room_id: roomId,
-                              product_index: productIndex,
-                              ...note
-                            };
-
-                            // Insert note using template
-                            TemplateEngine.insert('note-item-template', noteData, notesItems);
-                          });
-                        }
-                      }
-                    }
                   });
                 } else {
                   console.log(`No products found in room ${roomId}`);
@@ -918,105 +869,105 @@ class ModalManager {
    * @param {string|null} expandEstimateId - Optional estimate ID containing the room
    * @returns {Promise} Promise that resolves when the list is loaded
    */
-  loadEstimatesList(expandRoomId = null, expandEstimateId = null) {
-    console.log('[loadEstimatesList] Function started', { expandRoomId, expandEstimateId });
-
-    return new Promise((resolve, reject) => {
-      // Show loading state
-      this.showLoading();
-
-      // Ensure estimates list container exists
-      if (!this.estimatesList) {
-        console.error('[loadEstimatesList] Estimates list container not found!');
-        reject(new Error('Estimates list container not found'));
-        return;
-      }
-
-      // Make sure it's visible
-      this.estimatesList.style.display = 'block';
-
-      try {
-        // Get data from localStorage via our imported function
-        const estimateData = this.loadEstimateData();
-        const estimates = estimateData.estimates || {};
-
-        // Clear existing content
-        this.estimatesList.innerHTML = '';
-
-        if (Object.keys(estimates).length === 0) {
-          // No estimates - show empty state
-          TemplateEngine.insert('estimates-empty-template', {}, this.estimatesList);
-
-          // Bind create button
-          const createButton = this.estimatesList.querySelector('#create-estimate-btn');
-          if (createButton) {
-            createButton.addEventListener('click', () => {
-              this.showNewEstimateForm();
-            });
-          }
-        } else {
-          // Render estimates from localStorage data
-          Object.entries(estimates).forEach(([estimateId, estimate]) => {
-            try {
-              // Create estimate element with explicit template data
-              TemplateEngine.insert('estimate-item-template', {
-                estimate_id: estimateId,
-                name: estimate.name || 'Unnamed Estimate',
-                min_total: estimate.min_total || 0,
-                max_total: estimate.max_total || 0,
-                default_markup: estimate.default_markup || 0
-              }, this.estimatesList);
-
-              // Find this estimate section to add rooms
-              const estimateSection = this.estimatesList.querySelector(
-                `.estimate-section[data-estimate-id="${estimateId}"]`
-              );
-
-              if (estimateSection) {
-                const roomsContainer = estimateSection.querySelector('.rooms-container');
-                if (roomsContainer && estimate.rooms) {
-                  // Add rooms
-                  Object.entries(estimate.rooms).forEach(([roomId, room]) => {
-                    TemplateEngine.insert('room-item-template', {
-                      room_id: roomId,
-                      estimate_id: estimateId,
-                      name: room.name || 'Unnamed Room',
-                      room_name: room.name || 'Unnamed Room',
-                      width: room.width || 0,
-                      length: room.length || 0,
-                      min_total: room.min_total || 0,
-                      max_total: room.max_total || 0
-                    }, roomsContainer);
-                  });
-                }
-              }
-            } catch (error) {
-              console.error(`Error rendering estimate ${estimateId}:`, error);
-            }
-          });
-        }
-
-        // CRUCIAL: Initialize both types of accordions after rendering
-        setTimeout(() => {
-          console.log('Calling initializeEstimateAccordions from loadEstimatesList');
-          this.initializeEstimateAccordions(expandRoomId, expandEstimateId);
-          this.initializeAccordions(expandRoomId, expandEstimateId);
-          this.bindProductRemovalEvents();
-          this.bindRoomRemovalEvents();
-          this.bindEstimateRemovalEvents();
-          this.initializeCarousels();
-          this.bindSuggestedProductButtons();
-        }, 100);
-
-        resolve(this.estimatesList.innerHTML);
-      } catch (error) {
-        console.error('[loadEstimatesList] Error loading estimates from localStorage:', error);
-        reject(error);
-      } finally {
-        this.hideLoading();
-      }
-    });
-  }
+  // loadEstimatesList(expandRoomId = null, expandEstimateId = null) {
+  //   console.log('[loadEstimatesList] Function started', { expandRoomId, expandEstimateId });
+  //
+  //   return new Promise((resolve, reject) => {
+  //     // Show loading state
+  //     this.showLoading();
+  //
+  //     // Ensure estimates list container exists
+  //     if (!this.estimatesList) {
+  //       console.error('[loadEstimatesList] Estimates list container not found!');
+  //       reject(new Error('Estimates list container not found'));
+  //       return;
+  //     }
+  //
+  //     // Make sure it's visible
+  //     this.estimatesList.style.display = 'block';
+  //
+  //     try {
+  //       // Get data from localStorage via our imported function
+  //       const estimateData = this.loadEstimateData();
+  //       const estimates = estimateData.estimates || {};
+  //
+  //       // Clear existing content
+  //       this.estimatesList.innerHTML = '';
+  //
+  //       if (Object.keys(estimates).length === 0) {
+  //         // No estimates - show empty state
+  //         TemplateEngine.insert('estimates-empty-template', {}, this.estimatesList);
+  //
+  //         // Bind create button
+  //         const createButton = this.estimatesList.querySelector('#create-estimate-btn');
+  //         if (createButton) {
+  //           createButton.addEventListener('click', () => {
+  //             this.showNewEstimateForm();
+  //           });
+  //         }
+  //       } else {
+  //         // Render estimates from localStorage data
+  //         Object.entries(estimates).forEach(([estimateId, estimate]) => {
+  //           try {
+  //             // Create estimate element with explicit template data
+  //             TemplateEngine.insert('estimate-item-template', {
+  //               estimate_id: estimateId,
+  //               name: estimate.name || 'Unnamed Estimate',
+  //               min_total: estimate.min_total || 0,
+  //               max_total: estimate.max_total || 0,
+  //               default_markup: estimate.default_markup || 0
+  //             }, this.estimatesList);
+  //
+  //             // Find this estimate section to add rooms
+  //             const estimateSection = this.estimatesList.querySelector(
+  //               `.estimate-section[data-estimate-id="${estimateId}"]`
+  //             );
+  //
+  //             if (estimateSection) {
+  //               const roomsContainer = estimateSection.querySelector('.rooms-container');
+  //               if (roomsContainer && estimate.rooms) {
+  //                 // Add rooms
+  //                 Object.entries(estimate.rooms).forEach(([roomId, room]) => {
+  //                   TemplateEngine.insert('room-item-template', {
+  //                     room_id: roomId,
+  //                     estimate_id: estimateId,
+  //                     name: room.name || 'Unnamed Room',
+  //                     room_name: room.name || 'Unnamed Room',
+  //                     width: room.width || 0,
+  //                     length: room.length || 0,
+  //                     min_total: room.min_total || 0,
+  //                     max_total: room.max_total || 0
+  //                   }, roomsContainer);
+  //                 });
+  //               }
+  //             }
+  //           } catch (error) {
+  //             console.error(`Error rendering estimate ${estimateId}:`, error);
+  //           }
+  //         });
+  //       }
+  //
+  //       // CRUCIAL: Initialize both types of accordions after rendering
+  //       setTimeout(() => {
+  //         console.log('Calling initializeEstimateAccordions from loadEstimatesList');
+  //         this.initializeEstimateAccordions(expandRoomId, expandEstimateId);
+  //         this.initializeAccordions(expandRoomId, expandEstimateId);
+  //         this.bindProductRemovalEvents();
+  //         this.bindRoomRemovalEvents();
+  //         this.bindEstimateRemovalEvents();
+  //         this.initializeCarousels();
+  //         this.bindSuggestedProductButtons();
+  //       }, 100);
+  //
+  //       resolve(this.estimatesList.innerHTML);
+  //     } catch (error) {
+  //       console.error('[loadEstimatesList] Error loading estimates from localStorage:', error);
+  //       reject(error);
+  //     } finally {
+  //       this.hideLoading();
+  //     }
+  //   });
+  // }
 
   /**
    * Handle product removal

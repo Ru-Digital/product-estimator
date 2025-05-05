@@ -13,6 +13,8 @@ import roomItemTemplate from '@templates/components/room-item.html';
 import estimateItemTemplate from '@templates/components/estimate-item.html';
 import suggestionItemTemplate from '@templates/components/suggestion-item.html';
 import noteItemTemplate from '@templates/components/note-item.html';
+import includeItemTemplate from '@templates/components/include-item.html';
+
 
 // Import form templates
 import newEstimateFormTemplate from '@templates/forms/new-estimate-form.html';
@@ -31,6 +33,7 @@ const templates = {
   'estimate-item-template': estimateItemTemplate,
   'suggestion-item-template': suggestionItemTemplate,
   'note-item-template': noteItemTemplate,
+  'include-item-template': includeItemTemplate, // Add this line
   'new-estimate-form-template': newEstimateFormTemplate,
   'new-room-form-template': newRoomFormTemplate,
   'room-selection-form-template': roomSelectionFormTemplate,

@@ -304,6 +304,10 @@ class ProductDetailsToggle {
   /**
    * Prepare the DOM for notes toggle
    */
+  /**
+   * Prepare the DOM for notes toggle
+   * This updated version only shows the notes section for products that actually have notes
+   */
   prepareNotesToggle() {
     // Find all product items
     const productItems = document.querySelectorAll(this.config.selectors.productItem);
@@ -324,7 +328,53 @@ class ProductDetailsToggle {
         return; // No notes to toggle
       }
 
-      this.log('Found notes section, processing', notesSection);
+      // Check if there's actual note content
+      let hasValidNotes = false;
+
+      // Check for note items within the notes section
+      const noteItems = notesSection.querySelectorAll('.product-note-item');
+      if (noteItems && noteItems.length > 0) {
+        hasValidNotes = true;
+      }
+
+      // Also check for notes in the product data
+      // Look for additional_notes data in the product data attributes
+      if (productItem.dataset.additionalNotes) {
+        try {
+          const notesData = JSON.parse(productItem.dataset.additionalNotes);
+          if (Array.isArray(notesData) && notesData.length > 0 &&
+            notesData.some(note => note && (note.note_text || note.text))) {
+            hasValidNotes = true;
+          }
+        } catch(e) {
+          // Invalid JSON, ignore
+        }
+      }
+
+      // Check the content of the notes section itself
+      if (notesSection.querySelector('.product-notes-items')) {
+        const itemsContent = notesSection.querySelector('.product-notes-items').textContent.trim();
+        if (itemsContent !== '') {
+          hasValidNotes = true;
+        }
+      }
+
+      // Skip if no valid notes found
+      if (!hasValidNotes) {
+        this.log('No valid notes found for product, skipping', productItem);
+        productItem.classList.add('notes-toggle-processed'); // Mark as processed anyway
+
+        // Hide any existing notes elements
+        const existingToggle = productItem.querySelector(this.config.selectors.notesToggleButton);
+        const existingContainer = productItem.querySelector(this.config.selectors.notesContainer);
+
+        if (existingToggle) existingToggle.style.display = 'none';
+        if (existingContainer) existingContainer.style.display = 'none';
+
+        return;
+      }
+
+      this.log('Found notes section with content, processing', notesSection);
 
       // Mark the product item as having notes
       productItem.classList.add('has-notes');
@@ -365,9 +415,9 @@ class ProductDetailsToggle {
 
         // Use the hideNotes text (since it's expanded) and arrow-up icon
         toggleButton.innerHTML = `
-        ${this.config.i18n.hideNotes}
-        <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
-      `;
+      ${this.config.i18n.hideNotes}
+      <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
+    `;
 
         // Insert button before the notes container
         productItem.insertBefore(toggleButton, notesContainer);

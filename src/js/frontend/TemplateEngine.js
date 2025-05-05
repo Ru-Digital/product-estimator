@@ -47,6 +47,9 @@ class TemplateEngine {
 
     console.log(`TemplateEngine initialized with ${Object.keys(this.templateElements).length} templates`);
     this.initialized = true;
+
+    this.verifyTemplates();
+
     return this;
   }
   /**
@@ -223,74 +226,138 @@ class TemplateEngine {
       }
     });
 
-    // Handle common product data patterns
-    if (data.additional_products && Array.isArray(data.additional_products) && data.additional_products.length > 0) {
+
+// Handle common product data patterns - UPDATED FOR PRODUCT INCLUDES
+    if (data.additional_products) {
       const includesContainer = element.querySelector('.includes-container');
       const includesItems = element.querySelector('.product-includes-items');
 
       if (includesContainer && includesItems) {
-        // Ensure includes container is visible
-        includesContainer.style.display = 'block';
-        includesContainer.classList.add('visible');
+        // Clear any previous items first
+        includesItems.innerHTML = '';
 
-        // Render each additional product
-        data.additional_products.forEach(product => {
-          const itemDiv = document.createElement('div');
-          itemDiv.className = 'include-item';
-          itemDiv.innerHTML = `<span class="include-item-name">${product.name || 'Additional Product'}</span>`;
-          includesItems.appendChild(itemDiv);
-        });
+        // Filter for valid additional products
+        const validProducts = Array.isArray(data.additional_products) ?
+          data.additional_products.filter(product => product && product.id) :
+          [];
+
+
+
+        if (validProducts.length > 0) {
+          // Ensure includes container is visible
+          includesContainer.style.display = 'block';
+          includesContainer.classList.add('visible');
+
+          // Render each additional product
+          validProducts.forEach(product => {
+
+
+            // Use template to create include item
+            if (this.getTemplate('include-item-template')) {
+              // Create data object for the include item
+              const includeItemData = {
+                product_id: product.id,
+                include_item_name: product.name || 'Additional Product'
+              };
+
+              // Add price information if available
+              if (product.min_price !== undefined && product.max_price !== undefined) {
+                includeItemData.include_item_price =
+                  `${product.min_price || 0} - ${product.max_price || 0}`;
+              product.price =  `${product.min_price || 0} - ${product.max_price || 0}`;
+
+              }
+
+              console.log("include item data:: ", includeItemData);
+              // Create the item from template
+              const includeFragment = this.create('include-item-template', includeItemData);
+
+              const includeNameElement = includeFragment.querySelector('.include-item-name');
+              if (includeNameElement) {
+                includeNameElement.textContent = product.name || '';
+              }
+
+              const includePriceElement = includeFragment.querySelector('.include-item-total-price');
+              if (includePriceElement) {
+                includePriceElement.textContent = product.price || 'test';
+              }
+
+              includesItems.appendChild(includeFragment);
+            }
+          });
+
+          // Show the toggle button if it exists
+          const toggleButton = element.querySelector('.product-includes-toggle');
+          if (toggleButton) {
+            toggleButton.style.display = '';
+          }
+        } else {
+          // Hide the includes container if no valid products
+          includesContainer.style.display = 'none';
+          includesContainer.classList.remove('visible');
+
+          // Also hide the toggle button if it exists
+          const toggleButton = element.querySelector('.product-includes-toggle');
+          if (toggleButton) {
+            toggleButton.style.display = 'none';
+          }
+        }
       }
     }
 
-    // Handle notes
-    if (data.additional_notes && Array.isArray(data.additional_notes) && data.additional_notes.length > 0) {
+    // Handle additional notes - THIS IS YOUR EXISTING CODE
+    if (data.additional_notes && Array.isArray(data.additional_notes)) {
       const notesContainer = element.querySelector('.notes-container');
       const notesItems = element.querySelector('.product-notes-items');
 
-      if (notesContainer && notesItems && this.getTemplate) {
-        // Ensure notes container is visible
-        notesContainer.style.display = 'block';
-        notesContainer.classList.add('visible');
+      if (notesContainer && notesItems) {
+        // Clear any previous notes first
+        notesItems.innerHTML = '';
 
-        // Check if we have a note template
-        if (this.getTemplate('note-item-template')) {
-          // Use template to render notes
-          data.additional_notes.forEach(note => {
-            // Prepare note data with parent product context
-            const noteData = {
-              estimate_id: data.estimate_id,
-              room_id: data.room_id,
-              product_index: data.product_index,
-              ...note
-            };
+        // Filter out empty notes
+        const validNotes = data.additional_notes.filter(note => {
+          // Check if the note has text content
+          return note && (note.note_text || note.text) &&
+            (note.note_text || note.text).trim() !== '';
+        });
 
-            // Create and append note using template
-            const noteElement = this.create('note-item-template', noteData);
-            notesItems.appendChild(noteElement);
+        if (validNotes.length > 0) {
+          // Ensure notes container is visible
+          notesContainer.style.display = 'block';
+          notesContainer.classList.add('visible');
+
+          // Render each valid note
+          validNotes.forEach((note) => {
+            // Use template to create note element
+            if (this.getTemplate('note-item-template')) {
+              // Create a clone of the template
+              const noteFragment = this.create('note-item-template', {});
+
+              // Find the note-text element and explicitly set its content
+              const noteTextElement = noteFragment.querySelector('.note-text');
+              if (noteTextElement) {
+                noteTextElement.textContent = note.note_text || note.text || '';
+              }
+
+              // Append the fragment to the notes container
+              notesItems.appendChild(noteFragment);
+            }
           });
         } else {
-          // Fallback if template is not available
-          data.additional_notes.forEach(note => {
-            const noteDiv = document.createElement('div');
-            noteDiv.className = 'product-note-item';
-            noteDiv.innerHTML = `
-            <div class="note-details-wrapper">
-              <div class="note-details">
-                <span class="note-icon">
-                  <span class="dashicons dashicons-sticky"></span>
-                </span>
-                <div class="note-content">${note.note_text || ''}</div>
-              </div>
-            </div>
-          `;
-            notesItems.appendChild(noteDiv);
-          });
+          // Hide the notes container if no valid notes
+          notesContainer.style.display = 'none';
+          notesContainer.classList.remove('visible');
+
+          // Also hide the toggle button if it exists
+          const toggleButton = element.querySelector('.product-notes-toggle');
+          if (toggleButton) {
+            toggleButton.style.display = 'none';
+          }
         }
       }
     }
   }
-  
+
   /**
    * Create and insert an element into the DOM
    * @param {string} templateId - Template ID
@@ -414,6 +481,42 @@ class TemplateEngine {
 
     console.groupEnd();
   }
+
+   debugNoteData(element, data) {
+    console.log('Note data processing:', {
+      hasNotes: !!(data.additional_notes && Array.isArray(data.additional_notes)),
+      notesCount: data.additional_notes ? data.additional_notes.length : 0,
+      notesContainer: element.querySelector('.notes-container') ? 'found' : 'missing',
+      notesItems: element.querySelector('.product-notes-items') ? 'found' : 'missing',
+      noteTemplate: this.getTemplate('note-item-template') ? 'found' : 'missing',
+      firstNote: data.additional_notes && data.additional_notes.length > 0 ? data.additional_notes[0] : null
+    });
+  }
+
+  // Add to TemplateEngine.js
+  verifyTemplates() {
+    console.group('Template Verification');
+
+    console.log('Registered templates:', Object.keys(this.templates));
+    console.log('Template elements:', Object.keys(this.templateElements));
+
+    // Check note template specifically
+    if (this.templates['note-item-template']) {
+      console.log('Note template HTML:', this.templates['note-item-template'].substring(0, 100) + '...');
+    } else {
+      console.warn('Note template not registered!');
+    }
+
+    // Check if template element exists
+    if (this.templateElements['note-item-template']) {
+      console.log('Note template element exists');
+    } else {
+      console.warn('Note template element not created!');
+    }
+
+    console.groupEnd();
+  }
+
 }
 
 // Export a singleton instance

@@ -134,6 +134,20 @@ class ModalManager {
     this.contentContainer = this.modal.querySelector(this.config.selectors.contentContainer);
     this.loadingIndicator = this.modal.querySelector(this.config.selectors.loadingIndicator);
 
+    // Find view containers - ASSUME they are now in the PHP template
+    this.estimatesList = this.modal.querySelector('#estimates');
+    this.estimateSelection = this.modal.querySelector('#estimate-selection-wrapper');
+    this.estimateSelectionForm = this.modal.querySelector('#estimate-selection-form-wrapper'); // If this is also a persistent wrapper
+    this.roomSelectionForm = this.modal.querySelector('#room-selection-form-wrapper');
+    this.newEstimateForm = this.modal.querySelector('#new-estimate-form-wrapper');
+    this.newRoomForm = this.modal.querySelector('#new-room-form-wrapper');
+
+    // Add checks and potential error handling if essential elements are missing
+    if (!this.estimatesList) {
+      console.error('[ModalManager] Critical: #estimates div not found in modal template!');
+      // You might want to disable the modal or show a fatal error message here
+    }
+
     // Create missing containers if needed
     if (!this.loadingIndicator) {
       console.warn('[ModalManager] Loading indicator not found, creating one');
@@ -146,34 +160,6 @@ class ModalManager {
       this.modal.appendChild(this.loadingIndicator);
     }
 
-    // Find view containers - directly use string IDs for performance
-    this.estimatesList = this.modal.querySelector('#estimates');
-    this.estimateSelection = this.modal.querySelector('#estimate-selection-wrapper');
-
-    // Create missing containers when needed
-    if (!this.estimateSelection && this.contentContainer) {
-      this.estimateSelection = document.createElement('div');
-      this.estimateSelection.id = 'estimate-selection-wrapper';
-      this.contentContainer.appendChild(this.estimateSelection);
-    }
-
-    this.estimateSelectionForm = this.modal.querySelector('#estimate-selection-form-wrapper');
-    if (!this.estimateSelectionForm && this.estimateSelection) {
-      this.estimateSelectionForm = document.createElement('div');
-      this.estimateSelectionForm.id = 'estimate-selection-form-wrapper';
-      this.estimateSelection.appendChild(this.estimateSelectionForm);
-    }
-
-    this.roomSelectionForm = this.modal.querySelector('#room-selection-form-wrapper');
-    if (!this.roomSelectionForm && this.contentContainer) {
-      this.roomSelectionForm = document.createElement('div');
-      this.roomSelectionForm.id = 'room-selection-form-wrapper';
-      this.roomSelectionForm.style.display = 'none';
-      this.contentContainer.appendChild(this.roomSelectionForm);
-    }
-
-    this.newEstimateForm = this.modal.querySelector('#new-estimate-form-wrapper');
-    this.newRoomForm = this.modal.querySelector('#new-room-form-wrapper');
 
     // Bind events to any existing forms
     // this.bindExistingForms();
@@ -367,23 +353,27 @@ class ModalManager {
     // Make sure modal exists and is initialized
     if (!this.modal) {
       console.error('Cannot open modal - not found in DOM');
+      this.showError('Modal element not found. Please contact support.');
       return;
     }
 
-    // Reset any previous modal state
-    this.resetModalState();
-
-    // Store product ID
-    this.currentProductId = productId;
-
-    // Set data attribute on modal
-    if (productId) {
-      this.modal.dataset.productId = productId;
-    } else {
-      delete this.modal.dataset.productId;
+    // Always ensure we have a reference to the estimates list container
+    // Select it from the DOM every time the modal is opened
+    const formContainer = this.modal.querySelector('.product-estimator-modal-form-container');
+    if (!formContainer) {
+      console.error('Form container not found in modal');
+      this.showError('Modal structure missing. Please contact support.');
+      return;
     }
 
-    // Always start with loader visible
+    this.estimatesList = formContainer.querySelector('#estimates');
+    if (!this.estimatesList) {
+      console.error('[ModalManager] Critical: #estimates div not found in form container!');
+      this.showError('Modal structure incomplete. Please contact support.');
+      return; // Stop execution if the container is missing
+    }
+
+    // Show loading state
     this.showLoading();
 
     // Make sure modal is visible
@@ -393,20 +383,47 @@ class ModalManager {
     document.body.classList.add('modal-open');
     this.isOpen = true;
 
-    // Get the form container for content
-    const formContainer = this.modal.querySelector('.product-estimator-modal-form-container');
-    if (!formContainer) {
-      console.error('Form container not found in modal');
-      this.hideLoading();
-      return;
+    // === NEW: Hide all potential dynamic view wrappers ===
+    // Find all direct children of formContainer that are view wrappers and hide them
+    // Assuming your view wrappers have IDs like #estimates, #estimate-selection-wrapper, etc.
+    const viewWrappers = formContainer.querySelectorAll('#estimates, #estimate-selection-wrapper, #room-selection-form-wrapper, #new-estimate-form-wrapper, #new-room-form-wrapper');
+    viewWrappers.forEach(wrapper => {
+      if (wrapper) wrapper.style.display = 'none';
+    });
+    // === END NEW ===
+
+
+    // Reset any previous modal state (this function also hides elements,
+    // ensure it doesn't conflict with the new hiding logic above)
+    // Consider if resetModalState is still needed or how it should be adjusted.
+    // This might need to be called AFTER determining which view to show.
+    // this.resetModalState(); // Maybe call this later or adjust its logic
+
+
+    // Store product ID
+    this.currentProductId = productId;
+    if (productId) {
+      this.modal.dataset.productId = productId;
+    } else {
+      delete this.modal.dataset.productId;
     }
 
-    // Clear any existing content
-    formContainer.innerHTML = '';
 
     // DETERMINE WHICH FLOW TO USE
     if (productId && !forceListView) {
       console.log('STARTING PRODUCT FLOW with product ID:', productId);
+
+      // Show the estimate selection wrapper
+      const estimateSelectionWrapper = formContainer.querySelector('#estimate-selection-wrapper');
+      if (estimateSelectionWrapper) {
+        estimateSelectionWrapper.style.display = 'block';
+      } else {
+        console.error('Estimate selection wrapper not found!');
+        this.showError('Modal structure incomplete. Please contact support.');
+        this.hideLoading();
+        return;
+      }
+
 
       // Check if estimates exist using DataService
       this.dataService.checkEstimatesExist()
@@ -414,246 +431,92 @@ class ModalManager {
           console.log('Has estimates check result:', hasEstimates);
 
           if (hasEstimates) {
-            // Show estimate selection view using template engine
-            this.dataService.getEstimatesData()
-              .then(estimates => {
-                // Check if template exists first
-                if (!TemplateEngine.getTemplate('estimate-selection-template')) {
-                  console.error('Template not found: estimate-selection-template');
-                  this.showError('Template not found. Please refresh and try again.');
+            // Show estimate selection form within the wrapper
+            // Load or show the estimate selection form content
+            const estimateSelectionForm = estimateSelectionWrapper.querySelector('#estimate-selection-form-wrapper'); // Select within the wrapper
+            if (estimateSelectionForm) {
+              estimateSelectionForm.style.display = 'block';
+              // Load form content if needed, then bind events
+              if (!estimateSelectionForm.querySelector('form')) {
+                this.loadEstimateSelectionForm().then(() => {
+                  this.loadEstimatesData(); // Load data for dropdown
                   this.hideLoading();
-                  return;
-                }
-
-                // Create and insert the estimate selection template
-                TemplateEngine.insert('estimate-selection-template', {
-                  estimates: estimates
-                }, formContainer);
-
-                // Populate the estimate dropdown
-                const estimateDropdown = formContainer.querySelector('#estimate-dropdown');
-                if (estimateDropdown) {
-                  estimates.forEach(estimate => {
-                    const option = document.createElement('option');
-                    option.value = estimate.id;
-                    const roomCount = estimate.rooms ? Object.keys(estimate.rooms).length : 0;
-                    option.textContent = `${estimate.name} (${roomCount} room${roomCount !== 1 ? 's' : ''})`;
-                    estimateDropdown.appendChild(option);
-                  });
-                }
-
-                // Bind events to the form
-                this.bindEstimateSelectionFormEvents();
-                this.hideLoading();
-              })
-              .catch(error => {
-                console.error('Error loading estimates data:', error);
-                TemplateEngine.showMessage('Error loading estimates data.', 'error', formContainer);
-                this.hideLoading();
-              });
-          } else {
-            // Show new estimate form
-            // Check if template exists first
-            if (!TemplateEngine.getTemplate('new-estimate-form-template')) {
-              console.error('Template not found: new-estimate-form-template');
-              this.showError('Template not found. Please refresh and try again.');
-              this.hideLoading();
-              return;
-            }
-
-            // Insert the template for new estimate form
-            TemplateEngine.insert('new-estimate-form-template', {}, formContainer);
-
-            // Bind events to the form
-            const form = formContainer.querySelector('#new-estimate-form');
-            if (form) {
-              // Set product ID as data attribute
-              form.dataset.productId = productId;
-
-              // Bind submit event
-              form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleNewEstimateSubmission(form);
-              });
-
-              // Bind cancel button
-              const cancelButton = form.querySelector('.cancel-btn');
-              if (cancelButton) {
-                cancelButton.addEventListener('click', () => {
-                  this.cancelForm('estimate');
+                }).catch(error => {
+                  console.error('Error loading estimate selection form:', error);
+                  this.showError('Error loading form. Please try again.');
+                  this.hideLoading();
                 });
+              } else {
+                // Form already loaded, just load data for dropdown and hide loading
+                this.loadEstimatesData();
+                this.hideLoading();
               }
+
+            } else {
+              console.error('Estimate selection form wrapper not found!');
+              this.showError('Modal structure incomplete. Please contact support.');
+              this.hideLoading();
             }
 
-            this.hideLoading();
+
+          } else {
+            // No estimates, show new estimate form wrapper
+            const newEstimateFormWrapper = formContainer.querySelector('#new-estimate-form-wrapper');
+            if (newEstimateFormWrapper) {
+              newEstimateFormWrapper.style.display = 'block';
+              // Load form content if needed, then bind events
+              if (!newEstimateFormWrapper.querySelector('form')) {
+                this.loadNewEstimateForm().finally(() => {
+                  this.hideLoading();
+                });
+              } else {
+                this.hideLoading();
+              }
+            } else {
+              console.error('New estimate form wrapper not found!');
+              this.showError('Modal structure incomplete. Please contact support.');
+              this.hideLoading();
+            }
           }
         })
         .catch(error => {
           console.error('Error checking estimates:', error);
-          if (formContainer) {
-            TemplateEngine.showMessage('Error checking estimates. Please try again.', 'error', formContainer);
-          }
+          this.showError('Error checking estimates. Please try again.');
           this.hideLoading();
         });
     } else {
       // LIST VIEW FLOW: No product ID or forcing list view
       console.log('STARTING LIST VIEW FLOW');
 
-      // First, create the estimates list container
-      this.estimatesList = document.createElement('div');
-      this.estimatesList.id = 'estimates';
-      formContainer.appendChild(this.estimatesList);
-
-      // Now that we have created the container, we can bind events to it
-      this.bindProductRemovalEvents();
-      this.bindRoomRemovalEvents();
-      this.bindEstimateRemovalEvents();
-
-      // Get estimates from localStorage
-      const estimateData = this.loadEstimateData();
-      console.log('ESTIMATE DATA:', JSON.stringify(estimateData, null, 2));
-
-      const estimates = estimateData.estimates || {};
-
-      if (Object.keys(estimates).length === 0) {
-        // No estimates - show empty state template
-        if (TemplateEngine.getTemplate('estimates-empty-template')) {
-          TemplateEngine.insert('estimates-empty-template', {}, this.estimatesList);
-
-          // Bind create button
-          const createButton = this.estimatesList.querySelector('#create-estimate-btn');
-          if (createButton) {
-            createButton.addEventListener('click', () => {
-              this.showNewEstimateForm();
-            });
-          }
-        } else {
-          this.estimatesList.innerHTML = '<div class="no-estimates"><p>You don\'t have any estimates yet.</p><button id="create-estimate-btn" class="button">Create New Estimate</button></div>';
-
-          // Bind create button
-          const createButton = this.estimatesList.querySelector('#create-estimate-btn');
-          if (createButton) {
-            createButton.addEventListener('click', () => {
-              this.showNewEstimateForm();
-            });
-          }
-        }
-      } else {
-        // Render estimates from localStorage data
-        Object.entries(estimates).forEach(([estimateId, estimate]) => {
-          console.log(`Rendering estimate ${estimateId}:`, estimate);
-
-          try {
-            // Create estimate element with template
-            const estimateData = {
-              estimate_id: estimateId,
-              name: estimate.name || 'Unnamed Estimate',
-              min_total: estimate.min_total || 0,
-              max_total: estimate.max_total || 0
-            };
-
-            // Insert the estimate template
-            TemplateEngine.insert('estimate-item-template', estimateData, this.estimatesList);
-
-            // Now that the estimate is in the DOM, find the rooms-container for this specific estimate
-            const estimateSection = this.estimatesList.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
-            if (!estimateSection) {
-              console.error(`Could not find estimate section with ID ${estimateId} in the DOM`);
-              return;
-            }
-
-            const roomsContainer = estimateSection.querySelector('.rooms-container');
-            if (!roomsContainer) {
-              console.error(`Could not find rooms-container in estimate ${estimateId}`);
-              return;
-            }
-
-            console.log(`Found rooms-container for estimate ${estimateId}, rendering ${Object.keys(estimate.rooms || {}).length} rooms`);
-
-            // Render rooms into this specific container
-            if (estimate.rooms && Object.keys(estimate.rooms).length > 0) {
-              Object.entries(estimate.rooms).forEach(([roomId, room]) => {
-                console.log(`Rendering room ${roomId} in estimate ${estimateId}:`, room);
-
-                const roomData = {
-                  room_id: roomId,
-                  estimate_id: estimateId,
-                  name: room.name || 'Unnamed Room',
-                  room_name: room.name || 'Unnamed Room',
-                  width: room.width || 0,
-                  length: room.length || 0,
-                  min_total: room.min_total || 0,
-                  max_total: room.max_total || 0
-                };
-
-                // Insert the room template directly into this estimate's rooms-container
-                TemplateEngine.insert('room-item-template', roomData, roomsContainer);
-
-                // Now find the product-list container for this room
-                const roomElement = roomsContainer.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-                if (!roomElement) {
-                  console.error(`Could not find room element with ID ${roomId} in the DOM`);
-                  return;
-                }
-
-                const productList = roomElement.querySelector('.product-list');
-                if (!productList) {
-                  console.error(`Could not find product-list in room ${roomId}`);
-                  return;
-                }
-
-                // Render products in this room if they exist
-                if (room.products && room.products.length > 0) {
-                  console.log(`Found ${room.products.length} products in room ${roomId}, rendering...`);
-
-                  // Render each product in the room
-                  room.products.forEach((product, productIndex) => {
-                    console.log(`Rendering product ${product.id} at index ${productIndex} in room ${roomId}`);
-
-                    // Prepare product data for template
-                    const productData = {
-                      product_index: productIndex,
-                      estimate_id: estimateId,
-                      room_id: roomId,
-                      ...product // Spread the product properties
-                    };
-
-                    // Insert product using template
-                    TemplateEngine.insert('product-item-template', productData, productList);
-                  });
-                } else {
-                  console.log(`No products found in room ${roomId}`);
-                }
-              });
-            }
-          } catch (error) {
-            console.error(`Error rendering estimate ${estimateId}:`, error);
-          }
-        });
+      // Make sure the estimates list container is visible
+      if (this.estimatesList) {
+        this.estimatesList.style.display = 'block';
       }
 
-      // Initialize accordions and add event handlers after all content is rendered
-      setTimeout(() => {
-        console.log('Initializing accordions and events after content rendering');
-        this.initializeEstimateAccordions();
-        this.initializeAccordions();
 
-        // Re-bind events to ensure they work with the newly rendered content
-        this.bindProductRemovalEvents();
-        this.bindRoomRemovalEvents();
-        this.bindEstimateRemovalEvents();
+      // Now that we have the container, we can bind events to it
+      // These bindings should target elements *within* the estimatesList
+      this.bindProductRemovalEvents();
+      this.bindRoomRemovalEvents();
+      this.bindEstimateListEventHandlers(); // Ensure add room button is bound
+      this.bindEstimateRemovalEvents();
 
-        // Initialize carousels
-        this.initializeCarousels();
 
-        // Initialize product details toggles
-        if (window.productEstimator && window.productEstimator.detailsToggle) {
-          window.productEstimator.detailsToggle.setup();
-        }
 
-        // Hide loading when everything is done
-        this.hideLoading();
-      }, 100);
+      // Get estimates from localStorage and render them
+      this.loadEstimatesList()
+        .catch(error => {
+          console.error('Error loading estimates list:', error);
+          // Show error message in the estimates list container if possible
+          if (this.estimatesList) {
+            TemplateEngine.showMessage('Error loading estimates. Please try again.', 'error', this.estimatesList);
+          } else {
+            this.showError('Error loading estimates. Please try again.');
+          }
+        })
+        .finally(() => {
+          this.hideLoading();
+        });
     }
   }
 
@@ -964,14 +827,29 @@ class ModalManager {
 
         // CRUCIAL: Initialize both types of accordions after rendering
         setTimeout(() => {
-          console.log('Calling initializeEstimateAccordions from loadEstimatesList');
-          this.initializeEstimateAccordions(expandRoomId, expandEstimateId);
-          this.initializeAccordions(expandRoomId, expandEstimateId);
-          this.bindProductRemovalEvents();
-          this.bindRoomRemovalEvents();
-          this.bindEstimateRemovalEvents();
+          console.log('Initializing accordions and events after content rendering');
+          this.initializeEstimateAccordions(); // Initialize estimate accordion handlers (keeps stopPropagation)
+          this.initializeAccordions(); // Initialize room accordion handlers
+
+          // Re-bind events to ensure they work with the newly rendered content
+          this.bindProductRemovalEvents(); // Keep delegated for products
+          this.bindRoomRemovalEvents(); // Keep delegated for rooms
+          this.bindEstimateListEventHandlers(); // e.g. Add Room button handler (delegated)
+
+          // --- NEW: Bind estimate removal directly ---
+          this.bindDirectEstimateRemovalEvents();
+          // --- END NEW ---
+
+          // Initialize carousels
           this.initializeCarousels();
-          this.bindSuggestedProductButtons();
+
+          // Initialize product details toggles
+          if (window.productEstimator && window.productEstimator.detailsToggle) {
+            window.productEstimator.detailsToggle.setup();
+          }
+
+          // Hide loading when everything is done
+          this.hideLoading();
         }, 100);
 
         resolve(this.estimatesList.innerHTML);
@@ -984,6 +862,58 @@ class ModalManager {
     });
   }
 
+  /**
+   * Bind estimate removal events directly to buttons after rendering.
+   * Used when event propagation is stopped by ancestor handlers (like accordion).
+   */
+  bindDirectEstimateRemovalEvents() {
+    console.log('>>> Entered bindDirectEstimateRemovalEvents function (Direct Binding)');
+
+    // Find all remove estimate buttons within the estimates list container
+    if (!this.estimatesList) {
+      console.error('Estimates list not available for direct binding.');
+      return;
+    }
+
+    const removeButtons = this.estimatesList.querySelectorAll('.remove-estimate');
+
+    if (removeButtons.length > 0) {
+      console.log(`>>> Found ${removeButtons.length} remove estimate buttons for direct binding`);
+
+      removeButtons.forEach(button => {
+        // Remove any existing direct handlers on this specific button
+        // This prevents duplicate bindings if loadEstimatesList is called multiple times
+        if (button._directEstimateRemovalHandler) {
+          button.removeEventListener('click', button._directEstimateRemovalHandler);
+        }
+
+        // Create and store the new handler directly on the button element
+        button._directEstimateRemovalHandler = (e) => {
+          console.log('>>> Direct click handler fired for remove estimate button.', button);
+          e.preventDefault(); // Prevent default button action
+          e.stopPropagation(); // Explicitly stop propagation from the button itself
+
+          const estimateId = button.dataset.estimateId;
+          console.log('>>> Direct handler extracted estimateId:', estimateId, 'Type:', typeof estimateId);
+
+          // Use the robust check for estimateId
+          if (estimateId !== null && estimateId !== undefined && estimateId !== '') {
+            console.log('>>> Direct handler found valid estimate ID. Calling confirmDelete.');
+            this.confirmDelete('estimate', estimateId);
+          } else {
+            console.error('>>> Direct handler found invalid estimate ID.', button);
+            this.showError('Cannot remove estimate: Missing ID.');
+          }
+        };
+
+        // Add the event listener directly to the button
+        button.addEventListener('click', button._directEstimateRemovalHandler);
+      });
+      console.log('>>> Direct estimate removal events bound successfully.');
+    } else {
+      console.log('>>> No remove estimate buttons found for direct binding.');
+    }
+  }
 
   /**
    * Handle product removal
@@ -1429,35 +1359,58 @@ class ModalManager {
    * Bind estimate removal events with duplicate prevention
    */
   bindEstimateRemovalEvents() {
+    console.log('>>> Entered bindEstimateRemovalEvents function'); // Should see this
     if (this.estimatesList) {
+      console.log('>>> Found estimatesList element for binding:', this.estimatesList); // Should see this
+
       // Remove any existing handlers
       if (this._estimateRemovalHandler) {
         this.estimatesList.removeEventListener('click', this._estimateRemovalHandler);
+        console.log('>>> Removed existing _estimateRemovalHandler.'); // Should see this if rebinding
       }
 
       // Create new handler and store reference
       this._estimateRemovalHandler = (e) => {
-        const removeButton = e.target.closest('.remove-estimate');
+        console.log('>>> Click event caught on estimatesList container!', e.target); // THIS LOG SHOULD APPEAR
+
+        const clickedElement = e.target;
+        console.log('>>> Debug: clickedElement is', clickedElement); // Log the target element
+
+        const removeButton = clickedElement.closest('.remove-estimate');
+
+        // Log the result of the closest() call immediately
+        console.log('>>> Debug: Result of closest(".remove-estimate"):', removeButton); // THIS LOG IS CRUCIAL
+
+        // Now, perform the check
         if (removeButton) {
-          e.preventDefault();
-          e.stopPropagation();
+          console.log('>>> removeButton is truthy. Entering the logic block.', removeButton); // THIS IS THE LOG WE WANT TO SEE
+
+          e.preventDefault(); // Prevent default button action
+          e.stopPropagation(); // Stop event propagation
 
           const estimateId = removeButton.dataset.estimateId;
+          console.log('>>> Debug: Extracted estimateId:', estimateId, 'Type:', typeof estimateId);
 
-          console.log('Remove estimate button clicked:', {
-            estimateId
-          });
-
-          if (estimateId) {
+          // Check if estimateId is not null, not undefined, and not an empty string.
+          if (estimateId !== null && estimateId !== undefined && estimateId !== '') {
+            console.log('>>> Debug: Valid estimate ID found. Calling confirmDelete.');
             this.confirmDelete('estimate', estimateId);
+          } else {
+            console.error('>>> Debug: Invalid estimate ID found.', removeButton);
+            this.showError('Cannot remove estimate: Missing ID.');
           }
+        } else {
+          console.warn('>>> Debug: Click caught on estimatesList, but not on a remove-estimate button or descendant. removeButton is falsy.', e.target); // Should see this if closest fails
         }
       };
-
       // Add the new handler
       this.estimatesList.addEventListener('click', this._estimateRemovalHandler);
+      console.log('>>> addEventListener called on estimatesList.'); // Should see this
+    } else {
+      console.warn('>>> estimatesList is not available for binding. Skipping binding.'); // Should see this if estimatesList is null
     }
   }
+
 
   /**
    * Confirm deletion with better error handling and logging

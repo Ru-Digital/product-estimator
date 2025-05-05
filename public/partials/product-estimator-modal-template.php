@@ -22,7 +22,11 @@ if (!defined('WPINC')) {
             <h2><?php esc_html_e('Product Estimator', 'product-estimator'); ?></h2>
         </div>
         <div class="product-estimator-modal-form-container">
-            <!-- Content will be added by JavaScript templates -->
+            <div id="estimates"></div>
+            <div id="estimate-selection-wrapper" style="display: none;"></div>
+            <div id="room-selection-form-wrapper" style="display: none;"></div>
+            <div id="new-estimate-form-wrapper" style="display: none;"></div>
+            <div id="new-room-form-wrapper" style="display: none;"></div>
         </div>
         <div class="product-estimator-modal-loading" style="display: none;">
             <div class="loading-spinner"></div>

@@ -2,42 +2,6 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ "./node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js":
-/*!*********************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js ***!
-  \*********************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ _arrayLikeToArray)
-/* harmony export */ });
-function _arrayLikeToArray(r, a) {
-  (null == a || a > r.length) && (a = r.length);
-  for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e];
-  return n;
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@babel/runtime/helpers/esm/arrayWithHoles.js":
-/*!*******************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/arrayWithHoles.js ***!
-  \*******************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ _arrayWithHoles)
-/* harmony export */ });
-function _arrayWithHoles(r) {
-  if (Array.isArray(r)) return r;
-}
-
-
-/***/ }),
-
 /***/ "./node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js":
 /*!**********************************************************************!*\
   !*** ./node_modules/@babel/runtime/helpers/esm/arrayWithoutHoles.js ***!
@@ -57,74 +21,6 @@ function _arrayWithoutHoles(r) {
 
 /***/ }),
 
-/***/ "./node_modules/@babel/runtime/helpers/esm/classCallCheck.js":
-/*!*******************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/classCallCheck.js ***!
-  \*******************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ _classCallCheck)
-/* harmony export */ });
-function _classCallCheck(a, n) {
-  if (!(a instanceof n)) throw new TypeError("Cannot call a class as a function");
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@babel/runtime/helpers/esm/createClass.js":
-/*!****************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/createClass.js ***!
-  \****************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ _createClass)
-/* harmony export */ });
-/* harmony import */ var _toPropertyKey_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./toPropertyKey.js */ "./node_modules/@babel/runtime/helpers/esm/toPropertyKey.js");
-
-function _defineProperties(e, r) {
-  for (var t = 0; t < r.length; t++) {
-    var o = r[t];
-    o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, (0,_toPropertyKey_js__WEBPACK_IMPORTED_MODULE_0__["default"])(o.key), o);
-  }
-}
-function _createClass(e, r, t) {
-  return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", {
-    writable: !1
-  }), e;
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@babel/runtime/helpers/esm/defineProperty.js":
-/*!*******************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/defineProperty.js ***!
-  \*******************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ _defineProperty)
-/* harmony export */ });
-/* harmony import */ var _toPropertyKey_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./toPropertyKey.js */ "./node_modules/@babel/runtime/helpers/esm/toPropertyKey.js");
-
-function _defineProperty(e, r, t) {
-  return (r = (0,_toPropertyKey_js__WEBPACK_IMPORTED_MODULE_0__["default"])(r)) in e ? Object.defineProperty(e, r, {
-    value: t,
-    enumerable: !0,
-    configurable: !0,
-    writable: !0
-  }) : e[r] = t, e;
-}
-
-
-/***/ }),
-
 /***/ "./node_modules/@babel/runtime/helpers/esm/iterableToArray.js":
 /*!********************************************************************!*\
   !*** ./node_modules/@babel/runtime/helpers/esm/iterableToArray.js ***!
@@ -137,64 +33,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 function _iterableToArray(r) {
   if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r);
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@babel/runtime/helpers/esm/iterableToArrayLimit.js":
-/*!*************************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/iterableToArrayLimit.js ***!
-  \*************************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ _iterableToArrayLimit)
-/* harmony export */ });
-function _iterableToArrayLimit(r, l) {
-  var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"];
-  if (null != t) {
-    var e,
-      n,
-      i,
-      u,
-      a = [],
-      f = !0,
-      o = !1;
-    try {
-      if (i = (t = t.call(r)).next, 0 === l) {
-        if (Object(t) !== t) return;
-        f = !1;
-      } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0);
-    } catch (r) {
-      o = !0, n = r;
-    } finally {
-      try {
-        if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return;
-      } finally {
-        if (o) throw n;
-      }
-    }
-    return a;
-  }
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@babel/runtime/helpers/esm/nonIterableRest.js":
-/*!********************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/nonIterableRest.js ***!
-  \********************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ _nonIterableRest)
-/* harmony export */ });
-function _nonIterableRest() {
-  throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
 }
 
 
@@ -234,31 +72,6 @@ function _readOnlyError(r) {
 
 /***/ }),
 
-/***/ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js":
-/*!******************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/slicedToArray.js ***!
-  \******************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ _slicedToArray)
-/* harmony export */ });
-/* harmony import */ var _arrayWithHoles_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./arrayWithHoles.js */ "./node_modules/@babel/runtime/helpers/esm/arrayWithHoles.js");
-/* harmony import */ var _iterableToArrayLimit_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./iterableToArrayLimit.js */ "./node_modules/@babel/runtime/helpers/esm/iterableToArrayLimit.js");
-/* harmony import */ var _unsupportedIterableToArray_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./unsupportedIterableToArray.js */ "./node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js");
-/* harmony import */ var _nonIterableRest_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./nonIterableRest.js */ "./node_modules/@babel/runtime/helpers/esm/nonIterableRest.js");
-
-
-
-
-function _slicedToArray(r, e) {
-  return (0,_arrayWithHoles_js__WEBPACK_IMPORTED_MODULE_0__["default"])(r) || (0,_iterableToArrayLimit_js__WEBPACK_IMPORTED_MODULE_1__["default"])(r, e) || (0,_unsupportedIterableToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(r, e) || (0,_nonIterableRest_js__WEBPACK_IMPORTED_MODULE_3__["default"])();
-}
-
-
-/***/ }),
-
 /***/ "./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js":
 /*!**********************************************************************!*\
   !*** ./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js ***!
@@ -279,100 +92,6 @@ __webpack_require__.r(__webpack_exports__);
 
 function _toConsumableArray(r) {
   return (0,_arrayWithoutHoles_js__WEBPACK_IMPORTED_MODULE_0__["default"])(r) || (0,_iterableToArray_js__WEBPACK_IMPORTED_MODULE_1__["default"])(r) || (0,_unsupportedIterableToArray_js__WEBPACK_IMPORTED_MODULE_2__["default"])(r) || (0,_nonIterableSpread_js__WEBPACK_IMPORTED_MODULE_3__["default"])();
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@babel/runtime/helpers/esm/toPrimitive.js":
-/*!****************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/toPrimitive.js ***!
-  \****************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ toPrimitive)
-/* harmony export */ });
-/* harmony import */ var _typeof_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./typeof.js */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
-
-function toPrimitive(t, r) {
-  if ("object" != (0,_typeof_js__WEBPACK_IMPORTED_MODULE_0__["default"])(t) || !t) return t;
-  var e = t[Symbol.toPrimitive];
-  if (void 0 !== e) {
-    var i = e.call(t, r || "default");
-    if ("object" != (0,_typeof_js__WEBPACK_IMPORTED_MODULE_0__["default"])(i)) return i;
-    throw new TypeError("@@toPrimitive must return a primitive value.");
-  }
-  return ("string" === r ? String : Number)(t);
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@babel/runtime/helpers/esm/toPropertyKey.js":
-/*!******************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/toPropertyKey.js ***!
-  \******************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ toPropertyKey)
-/* harmony export */ });
-/* harmony import */ var _typeof_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./typeof.js */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
-/* harmony import */ var _toPrimitive_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./toPrimitive.js */ "./node_modules/@babel/runtime/helpers/esm/toPrimitive.js");
-
-
-function toPropertyKey(t) {
-  var i = (0,_toPrimitive_js__WEBPACK_IMPORTED_MODULE_1__["default"])(t, "string");
-  return "symbol" == (0,_typeof_js__WEBPACK_IMPORTED_MODULE_0__["default"])(i) ? i : i + "";
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@babel/runtime/helpers/esm/typeof.js":
-/*!***********************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/typeof.js ***!
-  \***********************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ _typeof)
-/* harmony export */ });
-function _typeof(o) {
-  "@babel/helpers - typeof";
-
-  return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) {
-    return typeof o;
-  } : function (o) {
-    return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o;
-  }, _typeof(o);
-}
-
-
-/***/ }),
-
-/***/ "./node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js":
-/*!*******************************************************************************!*\
-  !*** ./node_modules/@babel/runtime/helpers/esm/unsupportedIterableToArray.js ***!
-  \*******************************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ _unsupportedIterableToArray)
-/* harmony export */ });
-/* harmony import */ var _arrayLikeToArray_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./arrayLikeToArray.js */ "./node_modules/@babel/runtime/helpers/esm/arrayLikeToArray.js");
-
-function _unsupportedIterableToArray(r, a) {
-  if (r) {
-    if ("string" == typeof r) return (0,_arrayLikeToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(r, a);
-    var t = {}.toString.call(r).slice(8, -1);
-    return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? (0,_arrayLikeToArray_js__WEBPACK_IMPORTED_MODULE_0__["default"])(r, a) : void 0;
-  }
 }
 
 
@@ -8980,6 +8699,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/helpers/slicedToArray */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
 /* harmony import */ var _babel_runtime_helpers_classCallCheck__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babel/runtime/helpers/classCallCheck */ "./node_modules/@babel/runtime/helpers/esm/classCallCheck.js");
 /* harmony import */ var _babel_runtime_helpers_createClass__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @babel/runtime/helpers/createClass */ "./node_modules/@babel/runtime/helpers/esm/createClass.js");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @utils */ "./src/js/utils/index.js");
 
 
 
@@ -8989,6 +8709,7 @@ __webpack_require__.r(__webpack_exports__);
  *
  * Manages HTML templates for the Product Estimator plugin.
  */
+
 var TemplateEngine = /*#__PURE__*/function () {
   /**
    * Initialize the template engine
@@ -9187,10 +8908,16 @@ var TemplateEngine = /*#__PURE__*/function () {
       }
 
       // Handle price display
-      if (data.min_price !== undefined && data.max_price !== undefined) {
-        var priceElements = element.querySelectorAll('.room-price, .price');
+      if (data.min_total !== undefined && data.max_total !== undefined) {
+        var priceElements = element.querySelectorAll('.estimate-price');
         priceElements.forEach(function (el) {
-          el.textContent = "".concat(data.min_price || 0, " - ").concat(data.max_price || 0);
+          el.textContent = "".concat(_utils__WEBPACK_IMPORTED_MODULE_4__.format.formatPrice(data.min_total), " - ").concat(_utils__WEBPACK_IMPORTED_MODULE_4__.format.formatPrice(data.max_total));
+        });
+      }
+      if (data.min_price_total !== undefined && data.max_price_total !== undefined) {
+        var _priceElements = element.querySelectorAll('.product-price');
+        _priceElements.forEach(function (el) {
+          el.textContent = "".concat(_utils__WEBPACK_IMPORTED_MODULE_4__.format.formatPrice(data.min_price_total), " - ").concat(_utils__WEBPACK_IMPORTED_MODULE_4__.format.formatPrice(data.max_price_total));
         });
       }
 
@@ -9249,11 +8976,11 @@ var TemplateEngine = /*#__PURE__*/function () {
                 };
 
                 // Add price information if available
-                if (product.min_price !== undefined && product.max_price !== undefined) {
-                  includeItemData.include_item_price = "".concat(product.min_price || 0, " - ").concat(product.max_price || 0);
-                  product.price = "".concat(product.min_price || 0, " - ").concat(product.max_price || 0);
+                if (product.min_price_total !== undefined && product.max_price_total !== undefined) {
+                  includeItemData.include_item_total_price = _utils__WEBPACK_IMPORTED_MODULE_4__.format.formatPrice(product.min_price_total) + ' - ' + _utils__WEBPACK_IMPORTED_MODULE_4__.format.formatPrice(product.max_price_total);
+                  product.total_price = _utils__WEBPACK_IMPORTED_MODULE_4__.format.formatPrice(product.min_price_total) + ' - ' + _utils__WEBPACK_IMPORTED_MODULE_4__.format.formatPrice(product.max_price_total);
                 }
-                console.log("include item data:: ", includeItemData);
+                console.log("include item product:: ", product);
                 // Create the item from template
                 var includeFragment = _this2.create('include-item-template', includeItemData);
                 var includeNameElement = includeFragment.querySelector('.include-item-name');
@@ -9262,7 +8989,7 @@ var TemplateEngine = /*#__PURE__*/function () {
                 }
                 var includePriceElement = includeFragment.querySelector('.include-item-total-price');
                 if (includePriceElement) {
-                  includePriceElement.textContent = product.price || 'test';
+                  includePriceElement.textContent = product.total_price || '';
                 }
                 includesItems.appendChild(includeFragment);
               }
@@ -10541,6 +10268,19 @@ function checkTemplateContent(templateId) {
 
 /***/ }),
 
+/***/ "./src/js/index.js":
+/*!*************************!*\
+  !*** ./src/js/index.js ***!
+  \*************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _frontend_index__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./frontend/index */ "./src/js/frontend/index.js");
+
+console.log('Product Estimator Frontend initialized');
+
+/***/ }),
+
 /***/ "./src/templates/components/estimate-item.html":
 /*!*****************************************************!*\
   !*** ./src/templates/components/estimate-item.html ***!
@@ -10552,7 +10292,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="estimate-item-template"> <div class="estimate-section collapsed" data-estimate-id=""> <div class="estimate-header"> <h3 class="estimate-name"> <div class="price-graph-container"> <div class="price-range-title"> <span class="price-title name"></span> <span class="room-price min_total max_total"></span> </div> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> </h3> <button class="remove-estimate" data-estimate-id="" title="Delete Estimate"> <span class="dashicons dashicons-trash"></span> </button> </div> <div class="estimate-content"> <div id="rooms"> <div class="room-header"> <h4>Rooms</h4> <button class="add-room" data-estimate="">Add New Room</button> </div> <div class="rooms-container"></div> </div> </div> <div class="estimate-actions"> <ul> <li> <a class="print-estimate" data-estimate-id="" title="Print Estimate"> <span class="dashicons dashicons-pdf"></span> Print estimate </a> </li> <li> <a class="request-contact-estimate" data-estimate-id="" title="Request contact from store"> <span class="dashicons dashicons-businessperson"></span> Request contact from store </a> </li> <li> <a class="request-a-copy" data-estimate-id="" title="Request a copy"> <span class="dashicons dashicons-email"></span> Request a copy </a> </li> </ul> </div> </div> </template> `;
+var code = `<template id="estimate-item-template"> <div class="estimate-section collapsed" data-estimate-id=""> <div class="estimate-header"> <h3 class="estimate-name"> <div class="price-graph-container"> <div class="price-range-title"> <span class="price-title name"></span> <span class="estimate-price min_total max_total"></span> </div> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> </h3> <button class="remove-estimate" data-estimate-id="" title="Delete Estimate"> <span class="dashicons dashicons-trash"></span> </button> </div> <div class="estimate-content"> <div id="rooms"> <div class="room-header"> <h4>Rooms</h4> <button class="add-room" data-estimate="">Add New Room</button> </div> <div class="rooms-container"></div> </div> </div> <div class="estimate-actions"> <ul> <li> <a class="print-estimate" data-estimate-id="" title="Print Estimate"> <span class="dashicons dashicons-pdf"></span> Print estimate </a> </li> <li> <a class="request-contact-estimate" data-estimate-id="" title="Request contact from store"> <span class="dashicons dashicons-businessperson"></span> Request contact from store </a> </li> <li> <a class="request-a-copy" data-estimate-id="" title="Request a copy"> <span class="dashicons dashicons-email"></span> Request a copy </a> </li> </ul> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -10605,7 +10345,7 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `\`\`\`html <template id="product-item-template"> <div class="product-item" data-product-index=""> <div class="product-wrapper"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="Product" class="product-thumbnail"> <div class="product-details-wrapper"> <div class="product-details"> <div class="price-graph-container"> <div class="price-range-title"> <span class="price-title"></span> <span class="price-dimensions"></span> <span class="room-price"></span> </div> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> <button class="remove-product" data-estimate-id="" data-room-id="" data-product-index=""> <span class="dashicons dashicons-trash"></span> </button> </div> </div> </div> <button class="product-includes-toggle expanded"> <span>Product Includes</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="includes-container visible"> <div class="product-includes"> <div class="product-includes-items"></div> </div> </div> <button class="product-notes-toggle expanded"> <span>Product Notes</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="notes-container visible"> <div class="product-notes"> <div class="product-notes-items"></div> </div> </div> </div> </template> \`\`\` `;
+var code = `\`\`\`html <template id="product-item-template"> <div class="product-item" data-product-index=""> <div class="product-wrapper"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="Product" class="product-thumbnail"> <div class="product-details-wrapper"> <div class="product-details"> <div class="price-graph-container"> <div class="price-range-title"> <span class="price-title"></span> <span class="price-dimensions"></span> <span class="product-price"></span> </div> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> <button class="remove-product" data-estimate-id="" data-room-id="" data-product-index=""> <span class="dashicons dashicons-trash"></span> </button> </div> </div> </div> <button class="product-includes-toggle expanded"> <span>Product Includes</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="includes-container visible"> <div class="product-includes"> <div class="product-includes-items"></div> </div> </div> <button class="product-notes-toggle expanded"> <span>Product Notes</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="notes-container visible"> <div class="product-notes"> <div class="product-notes-items"></div> </div> </div> </div> </template> \`\`\` `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -10789,6 +10529,38 @@ module.exports = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEA
 /******/ 	__webpack_require__.m = __webpack_modules__;
 /******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/chunk loaded */
+/******/ 	(() => {
+/******/ 		var deferred = [];
+/******/ 		__webpack_require__.O = (result, chunkIds, fn, priority) => {
+/******/ 			if(chunkIds) {
+/******/ 				priority = priority || 0;
+/******/ 				for(var i = deferred.length; i > 0 && deferred[i - 1][2] > priority; i--) deferred[i] = deferred[i - 1];
+/******/ 				deferred[i] = [chunkIds, fn, priority];
+/******/ 				return;
+/******/ 			}
+/******/ 			var notFulfilled = Infinity;
+/******/ 			for (var i = 0; i < deferred.length; i++) {
+/******/ 				var [chunkIds, fn, priority] = deferred[i];
+/******/ 				var fulfilled = true;
+/******/ 				for (var j = 0; j < chunkIds.length; j++) {
+/******/ 					if ((priority & 1 === 0 || notFulfilled >= priority) && Object.keys(__webpack_require__.O).every((key) => (__webpack_require__.O[key](chunkIds[j])))) {
+/******/ 						chunkIds.splice(j--, 1);
+/******/ 					} else {
+/******/ 						fulfilled = false;
+/******/ 						if(priority < notFulfilled) notFulfilled = priority;
+/******/ 					}
+/******/ 				}
+/******/ 				if(fulfilled) {
+/******/ 					deferred.splice(i--, 1)
+/******/ 					var r = fn();
+/******/ 					if (r !== undefined) result = r;
+/******/ 				}
+/******/ 			}
+/******/ 			return result;
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/define property getters */
 /******/ 	(() => {
 /******/ 		// define getter functions for harmony exports
@@ -10838,24 +10610,46 @@ module.exports = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEA
 /******/ 		
 /******/ 		// no HMR manifest
 /******/ 		
-/******/ 		// no on chunks loaded
+/******/ 		__webpack_require__.O.j = (chunkId) => (installedChunks[chunkId] === 0);
 /******/ 		
-/******/ 		// no jsonp function
+/******/ 		// install a JSONP callback for chunk loading
+/******/ 		var webpackJsonpCallback = (parentChunkLoadingFunction, data) => {
+/******/ 			var [chunkIds, moreModules, runtime] = data;
+/******/ 			// add "moreModules" to the modules object,
+/******/ 			// then flag all "chunkIds" as loaded and fire callback
+/******/ 			var moduleId, chunkId, i = 0;
+/******/ 			if(chunkIds.some((id) => (installedChunks[id] !== 0))) {
+/******/ 				for(moduleId in moreModules) {
+/******/ 					if(__webpack_require__.o(moreModules, moduleId)) {
+/******/ 						__webpack_require__.m[moduleId] = moreModules[moduleId];
+/******/ 					}
+/******/ 				}
+/******/ 				if(runtime) var result = runtime(__webpack_require__);
+/******/ 			}
+/******/ 			if(parentChunkLoadingFunction) parentChunkLoadingFunction(data);
+/******/ 			for(;i < chunkIds.length; i++) {
+/******/ 				chunkId = chunkIds[i];
+/******/ 				if(__webpack_require__.o(installedChunks, chunkId) && installedChunks[chunkId]) {
+/******/ 					installedChunks[chunkId][0]();
+/******/ 				}
+/******/ 				installedChunks[chunkId] = 0;
+/******/ 			}
+/******/ 			return __webpack_require__.O(result);
+/******/ 		}
+/******/ 		
+/******/ 		var chunkLoadingGlobal = self["webpackChunkproduct_estimator"] = self["webpackChunkproduct_estimator"] || [];
+/******/ 		chunkLoadingGlobal.forEach(webpackJsonpCallback.bind(null, 0));
+/******/ 		chunkLoadingGlobal.push = webpackJsonpCallback.bind(null, chunkLoadingGlobal.push.bind(chunkLoadingGlobal));
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
-(() => {
-/*!*************************!*\
-  !*** ./src/js/index.js ***!
-  \*************************/
-__webpack_require__.r(__webpack_exports__);
-/* harmony import */ var _frontend_index__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./frontend/index */ "./src/js/frontend/index.js");
-
-console.log('Product Estimator Frontend initialized');
-})();
-
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module depends on other loaded chunks and execution need to be delayed
+/******/ 	var __webpack_exports__ = __webpack_require__.O(undefined, ["common"], () => (__webpack_require__("./src/js/index.js")))
+/******/ 	__webpack_exports__ = __webpack_require__.O(__webpack_exports__);
+/******/ 	
 /******/ })()
 ;
 //# sourceMappingURL=product-estimator.bundle.js.map

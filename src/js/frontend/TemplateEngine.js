@@ -3,6 +3,7 @@
  *
  * Manages HTML templates for the Product Estimator plugin.
  */
+import { format } from '@utils';
 
 class TemplateEngine {
   /**
@@ -192,10 +193,17 @@ class TemplateEngine {
     }
 
     // Handle price display
-    if (data.min_price !== undefined && data.max_price !== undefined) {
-      const priceElements = element.querySelectorAll('.room-price, .price');
+    if (data.min_total !== undefined && data.max_total !== undefined) {
+      const priceElements = element.querySelectorAll('.estimate-price');
       priceElements.forEach(el => {
-        el.textContent = `${data.min_price || 0} - ${data.max_price || 0}`;
+        el.textContent = `${format.formatPrice(data.min_total)} - ${format.formatPrice(data.max_total)}`;
+      });
+    }
+
+    if (data.min_price_total !== undefined && data.max_price_total !== undefined) {
+      const priceElements = element.querySelectorAll('.product-price');
+      priceElements.forEach(el => {
+        el.textContent = `${format.formatPrice(data.min_price_total)} - ${format.formatPrice(data.max_price_total)}`;
       });
     }
 
@@ -226,8 +234,7 @@ class TemplateEngine {
       }
     });
 
-
-// Handle common product data patterns - UPDATED FOR PRODUCT INCLUDES
+    // Handle common product data patterns - UPDATED FOR PRODUCT INCLUDES
     if (data.additional_products) {
       const includesContainer = element.querySelector('.includes-container');
       const includesItems = element.querySelector('.product-includes-items');
@@ -261,14 +268,14 @@ class TemplateEngine {
               };
 
               // Add price information if available
-              if (product.min_price !== undefined && product.max_price !== undefined) {
-                includeItemData.include_item_price =
-                  `${product.min_price || 0} - ${product.max_price || 0}`;
-              product.price =  `${product.min_price || 0} - ${product.max_price || 0}`;
+              if (product.min_price_total !== undefined && product.max_price_total !== undefined) {
+                includeItemData.include_item_total_price =
+                  format.formatPrice(product.min_price_total) + ' - ' + format.formatPrice(product.max_price_total);
+              product.total_price =  format.formatPrice(product.min_price_total) + ' - ' + format.formatPrice(product.max_price_total);
 
               }
 
-              console.log("include item data:: ", includeItemData);
+              console.log("include item product:: ", product);
               // Create the item from template
               const includeFragment = this.create('include-item-template', includeItemData);
 
@@ -279,7 +286,7 @@ class TemplateEngine {
 
               const includePriceElement = includeFragment.querySelector('.include-item-total-price');
               if (includePriceElement) {
-                includePriceElement.textContent = product.price || 'test';
+                includePriceElement.textContent = product.total_price || '';
               }
 
               includesItems.appendChild(includeFragment);

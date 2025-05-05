@@ -343,6 +343,11 @@ class ModalManager {
    * @param {number|string|null} productId - Product ID or null for list view
    * @param {boolean} forceListView - Whether to force showing the list view
    */
+  /**
+   * Open the modal with template-based rendering
+   * @param {number|string|null} productId - Product ID or null for list view
+   * @param {boolean} forceListView - Whether to force showing the list view
+   */
   openModal(productId = null, forceListView = false) {
     console.log('MODAL OPEN CALLED WITH:', {
       productId: productId,
@@ -357,23 +362,20 @@ class ModalManager {
       return;
     }
 
-    // Always ensure we have a reference to the estimates list container
-    // Select it from the DOM every time the modal is opened
-    const formContainer = this.modal.querySelector('.product-estimator-modal-form-container');
-    if (!formContainer) {
-      console.error('Form container not found in modal');
-      this.showError('Modal structure missing. Please contact support.');
-      return;
+    // Reset any previous modal state (hides all view wrappers)
+    this.resetModalState();
+
+    // Store product ID
+    this.currentProductId = productId;
+
+    // Set data attribute on modal
+    if (productId) {
+      this.modal.dataset.productId = productId;
+    } else {
+      delete this.modal.dataset.productId;
     }
 
-    this.estimatesList = formContainer.querySelector('#estimates');
-    if (!this.estimatesList) {
-      console.error('[ModalManager] Critical: #estimates div not found in form container!');
-      this.showError('Modal structure incomplete. Please contact support.');
-      return; // Stop execution if the container is missing
-    }
-
-    // Show loading state
+    // Always show loader at the start of openModal
     this.showLoading();
 
     // Make sure modal is visible
@@ -383,47 +385,22 @@ class ModalManager {
     document.body.classList.add('modal-open');
     this.isOpen = true;
 
-    // === NEW: Hide all potential dynamic view wrappers ===
-    // Find all direct children of formContainer that are view wrappers and hide them
-    // Assuming your view wrappers have IDs like #estimates, #estimate-selection-wrapper, etc.
-    const viewWrappers = formContainer.querySelectorAll('#estimates, #estimate-selection-wrapper, #room-selection-form-wrapper, #new-estimate-form-wrapper, #new-room-form-wrapper');
-    viewWrappers.forEach(wrapper => {
-      if (wrapper) wrapper.style.display = 'none';
-    });
-    // === END NEW ===
-
-
-    // Reset any previous modal state (this function also hides elements,
-    // ensure it doesn't conflict with the new hiding logic above)
-    // Consider if resetModalState is still needed or how it should be adjusted.
-    // This might need to be called AFTER determining which view to show.
-    // this.resetModalState(); // Maybe call this later or adjust its logic
-
-
-    // Store product ID
-    this.currentProductId = productId;
-    if (productId) {
-      this.modal.dataset.productId = productId;
-    } else {
-      delete this.modal.dataset.productId;
+    // Get the form container for content (where view wrappers reside)
+    const formContainer = this.modal.querySelector('.product-estimator-modal-form-container');
+    if (!formContainer) {
+      console.error('Form container not found in modal');
+      this.hideLoading(); // Hide loading on error
+      this.showError('Modal structure missing. Please contact support.');
+      return;
     }
+
+    // Note: Clearing formContainer.innerHTML is removed as view wrappers are persistent.
+    // resetModalState() now handles hiding them.
 
 
     // DETERMINE WHICH FLOW TO USE
     if (productId && !forceListView) {
       console.log('STARTING PRODUCT FLOW with product ID:', productId);
-
-      // Show the estimate selection wrapper
-      const estimateSelectionWrapper = formContainer.querySelector('#estimate-selection-wrapper');
-      if (estimateSelectionWrapper) {
-        estimateSelectionWrapper.style.display = 'block';
-      } else {
-        console.error('Estimate selection wrapper not found!');
-        this.showError('Modal structure incomplete. Please contact support.');
-        this.hideLoading();
-        return;
-      }
-
 
       // Check if estimates exist using DataService
       this.dataService.checkEstimatesExist()
@@ -431,79 +408,113 @@ class ModalManager {
           console.log('Has estimates check result:', hasEstimates);
 
           if (hasEstimates) {
-            // Show estimate selection form within the wrapper
+            // Estimates exist, show estimate selection view
+            console.log('Estimates found, showing estimate selection.');
+            // Ensure estimate selection wrapper is visible
+            const estimateSelectionWrapper = formContainer.querySelector('#estimate-selection-wrapper');
+            if (estimateSelectionWrapper) {
+              this.forceElementVisibility(estimateSelectionWrapper); // Use force visibility
+            } else {
+              console.error('Estimate selection wrapper not found in template!');
+              this.showError('Modal structure incomplete. Please contact support.');
+              this.hideLoading();
+              return;
+            }
+
             // Load or show the estimate selection form content
-            const estimateSelectionForm = estimateSelectionWrapper.querySelector('#estimate-selection-form-wrapper'); // Select within the wrapper
+            // This part might still involve AJAX to load the form *content* if it's not in the template
+            // Or it might just involve populating a dropdown in an existing template.
+            // Assuming estimate-selection-form-wrapper is also in the template and we just populate/show its content.
+            const estimateSelectionForm = estimateSelectionWrapper.querySelector('#estimate-selection-form-wrapper');
             if (estimateSelectionForm) {
-              estimateSelectionForm.style.display = 'block';
-              // Load form content if needed, then bind events
+              this.forceElementVisibility(estimateSelectionForm); // Use force visibility
+
+              // If the form content itself needs loading via AJAX (e.g., not in initial template)
               if (!estimateSelectionForm.querySelector('form')) {
-                this.loadEstimateSelectionForm().then(() => {
+                console.log('Estimate selection form content not found, loading via AJAX.');
+                this.loadEstimateSelectionForm().then(() => { // This is an AJAX call
                   this.loadEstimatesData(); // Load data for dropdown
-                  this.hideLoading();
+                  this.hideLoading(); // Hide loading after AJAX and data load
                 }).catch(error => {
-                  console.error('Error loading estimate selection form:', error);
-                  this.showError('Error loading form. Please try again.');
+                  console.error('Error loading estimate selection form content:', error);
+                  this.showError('Error loading selection form. Please try again.');
                   this.hideLoading();
                 });
               } else {
-                // Form already loaded, just load data for dropdown and hide loading
-                this.loadEstimatesData();
-                this.hideLoading();
+                console.log('Estimate selection form content found, populating dropdown.');
+                // Form content exists, just load data and bind events
+                this.loadEstimatesData(); // Load data for dropdown
+                this.bindEstimateSelectionFormEvents(); // Bind events to existing form
+                this.hideLoading(); // Hide loading after data load
               }
 
             } else {
-              console.error('Estimate selection form wrapper not found!');
+              console.error('Estimate selection form wrapper not found in template!');
               this.showError('Modal structure incomplete. Please contact support.');
               this.hideLoading();
             }
+
+            // Original code had hideLoading() here, but moved into the .then/catch blocks above
 
 
           } else {
-            // No estimates, show new estimate form wrapper
-            const newEstimateFormWrapper = formContainer.querySelector('#new-estimate-form-wrapper');
-            if (newEstimateFormWrapper) {
-              newEstimateFormWrapper.style.display = 'block';
-              // Load form content if needed, then bind events
-              if (!newEstimateFormWrapper.querySelector('form')) {
-                this.loadNewEstimateForm().finally(() => {
-                  this.hideLoading();
-                });
-              } else {
-                this.hideLoading();
-              }
-            } else {
-              console.error('New estimate form wrapper not found!');
-              this.showError('Modal structure incomplete. Please contact support.');
-              this.hideLoading();
+            // No estimates, show new estimate form
+            console.log('No estimates found, showing new estimate form.');
+
+            // Check if template exists before calling showNewEstimateForm
+            if (!TemplateEngine.getTemplate('new-estimate-form-template')) {
+              console.error('Template not found: new-estimate-form-template');
+              this.showError('Template not found. Please refresh and try again.');
+              this.hideLoading(); // Hide loading on error
+              return;
             }
+
+            // --- MODIFICATION START ---
+            // Replace the call to loadNewEstimateForm with showNewEstimateForm
+            // Original: this.loadNewEstimateForm().finally(() => { this.hideLoading(); });
+
+            // NEW: Call showNewEstimateForm which now handles template rendering and binding
+            this.showNewEstimateForm();
+            // Note: showNewEstimateForm now manages its own loading state.
+            // The hideLoading() that was previously here is no longer needed.
+            // --- MODIFICATION END ---
+
           }
         })
         .catch(error => {
           console.error('Error checking estimates:', error);
-          this.showError('Error checking estimates. Please try again.');
-          this.hideLoading();
+          if (formContainer) { // Ensure formContainer exists before showing message
+            TemplateEngine.showMessage('Error checking estimates. Please try again.', 'error', formContainer);
+          }
+          this.hideLoading(); // Hide loading on error checking estimates
         });
     } else {
       // LIST VIEW FLOW: No product ID or forcing list view
       console.log('STARTING LIST VIEW FLOW');
 
-      // Make sure the estimates list container is visible
+      // Ensure estimates list container is visible (it's in the template)
       if (this.estimatesList) {
-        this.estimatesList.style.display = 'block';
+        this.forceElementVisibility(this.estimatesList); // Use force visibility
+      } else {
+        console.error('Estimates list container not found in template!');
+        this.showError('Modal structure incomplete. Please contact support.');
+        this.hideLoading(); // Hide loading on error
+        return;
       }
 
 
-      // Now that we have the container, we can bind events to it
-      // These bindings should target elements *within* the estimatesList
-      this.bindProductRemovalEvents();
-      this.bindRoomRemovalEvents();
-      this.bindEstimateListEventHandlers(); // Ensure add room button is bound
-      this.bindEstimateRemovalEvents();
+      // Bind event handlers to the estimates list container (for delegation)
+      // These should handle clicks on add room, etc.
+      this.bindEstimateListEventHandlers(); // Example: Add Room button
+
+      // --- Ensure direct binding for estimate removal happens after load ---
+      // This was moved to loadEstimatesList previously, which is correct.
+      // Keep this here for the general estimates list events like Add Room.
+      // --- End ensure ---
 
 
-
-      // Get estimates from localStorage and render them
+      // Load and render the estimates list content (this involves rendering items using templates)
+      // loadEstimatesList will call bindDirectEstimateRemovalEvents internally now.
       this.loadEstimatesList()
         .catch(error => {
           console.error('Error loading estimates list:', error);
@@ -515,11 +526,13 @@ class ModalManager {
           }
         })
         .finally(() => {
-          this.hideLoading();
+          this.hideLoading(); // Ensure loading is hidden after loading estimates list
         });
     }
+    // Note: Any hideLoading() calls here at the end of openModal are likely redundant
+    // as hideLoading() should be called in the .finally() of async operations
+    // or at the end of synchronous rendering flows (like in showNewEstimateForm).
   }
-
   /**
    * Show estimate selection with force visibility
    */
@@ -912,6 +925,87 @@ class ModalManager {
       console.log('>>> Direct estimate removal events bound successfully.');
     } else {
       console.log('>>> No remove estimate buttons found for direct binding.');
+    }
+  }
+
+  // ModalManager.js
+
+  /**
+   * Bind events to the new estimate form element
+   * @param {HTMLFormElement} formElement - The form element to bind events to
+   * @param {string|null} productId - The current product ID, if applicable (for data attribute)
+   */
+  bindNewEstimateFormEvents(formElement, productId = null) {
+    if (!formElement) {
+      console.error('Cannot bind events - new estimate form element not provided');
+      return;
+    }
+
+    console.log('Binding events to new estimate form:', formElement);
+
+    // Set product ID as data attribute on the form if needed
+    if (productId !== null && productId !== undefined) {
+      formElement.dataset.productId = productId;
+      console.log('Set product ID on new estimate form:', productId);
+    } else {
+      // Ensure it's removed if no product ID
+      delete formElement.dataset.productId;
+      console.log('Removed product ID from new estimate form dataset.');
+    }
+
+
+    // Remove any existing submit handler to prevent duplicates
+    // Store handler reference directly on the form element
+    if (formElement._submitHandler) {
+      formElement.removeEventListener('submit', formElement._submitHandler);
+    }
+
+    // Bind submit event
+    formElement._submitHandler = (e) => {
+      e.preventDefault(); // Prevent default form submission
+      console.log('New estimate form submitted via template');
+      this.handleNewEstimateSubmission(formElement); // Call the submission handler
+    };
+    formElement.addEventListener('submit', formElement._submitHandler);
+    console.log('New estimate form submit event bound.');
+
+
+    // Bind cancel button
+    const cancelButton = formElement.querySelector('.cancel-btn');
+    if (cancelButton) {
+      // Remove existing handler if any, store handler directly on button
+      if (cancelButton._clickHandler) {
+        cancelButton.removeEventListener('click', cancelButton._clickHandler);
+      }
+
+      cancelButton._clickHandler = () => {
+        console.log('New estimate form cancel button clicked');
+        this.cancelForm('estimate'); // Call the cancel handler
+      };
+      cancelButton.addEventListener('click', cancelButton._clickHandler);
+      console.log('New estimate form cancel button bound.');
+
+    } else {
+      console.warn('Cancel button not found in new estimate form.');
+    }
+
+    // Initialize customer details manager if available and form is loaded
+    // Pass the form or its container to the init method if it expects a context
+    if (window.productEstimator && window.productEstimator.core &&
+      window.productEstimator.core.customerDetailsManager) {
+      // Slight delay to ensure DOM is fully updated after insertion before initializing customer details
+      setTimeout(() => {
+        // Check if the init method accepts a form element or container as context
+        if (typeof window.productEstimator.core.customerDetailsManager.init === 'function') {
+          window.productEstimator.core.customerDetailsManager.init(this.newEstimateForm); // Pass the container
+          console.log('CustomerDetailsManager init called for new estimate form.');
+        } else {
+          console.warn('CustomerDetailsManager init method does not accept a form element argument.');
+          // Call init without argument if it expects to find elements itself
+          window.productEstimator.core.customerDetailsManager.init();
+          console.log('CustomerDetailsManager init called without form element for new estimate form.');
+        }
+      }, 50); // Small delay
     }
   }
 
@@ -1682,32 +1776,70 @@ class ModalManager {
   }
 
   /**
-   * Show new estimate form with correct loading indicator handling
+   * Show new estimate form using template rendering
    */
   showNewEstimateForm() {
+    console.log('Showing new estimate form using template');
+
+    // Hide other views that might be visible
+    // Assuming these wrappers are persistent in the PHP template
     if (this.estimatesList) this.estimatesList.style.display = 'none';
     if (this.estimateSelection) this.estimateSelection.style.display = 'none';
+    if (this.roomSelectionForm) this.roomSelectionForm.style.display = 'none';
 
-    // Force visibility of the form
+
+    // Ensure the form wrapper element exists in the DOM (it should be in your PHP template)
+    if (!this.newEstimateForm) {
+      console.error('New estimate form wrapper (#new-estimate-form-wrapper) not found in modal template!');
+      this.showError('Modal structure incomplete. Cannot show new estimate form.');
+      this.hideLoading(); // Ensure loading is hidden on error
+      return;
+    }
+
+    // Force visibility of the form wrapper element
     this.forceElementVisibility(this.newEstimateForm);
 
-    // Check if form content needs to be loaded
-    if (!this.newEstimateForm.querySelector('form')) {
-      this.loadNewEstimateForm()
-        .finally(() => {
-          // Always hide loading when form is ready
-          this.hideLoading();
+    // Show loading state briefly while template is inserted and events are bound
+    this.showLoading();
 
-          // Add this: Ensure cancel button is properly bound
-          this.bindCancelButton(this.newEstimateForm, 'estimate');
-        });
-    } else {
-      // Form already exists, just make sure loading is hidden and cancel button is bound
+
+    // --- NEW: Insert form content using TemplateEngine ---
+    // Clear any existing content inside the wrapper before inserting the new template
+    // This prevents multiple forms from appearing if the button is clicked repeatedly
+    this.newEstimateForm.innerHTML = '';
+
+    try {
+      // Use the TemplateEngine to create and insert the form HTML from the template
+      // Insert it into the predefined #new-estimate-form-wrapper element
+      TemplateEngine.insert('new-estimate-form-template', {}, this.newEstimateForm); // The second argument {} can be used to pass data if needed
+
+      console.log('New estimate form template inserted into wrapper.');
+
+      // Get a reference to the actual <form> element that was just inserted
+      const formElement = this.newEstimateForm.querySelector('form#new-estimate-form');
+
+      if (formElement) {
+        // Bind events to the newly inserted form element
+        // Pass the currentProductId if you need to set it on the form's data attribute
+        this.bindNewEstimateFormEvents(formElement, this.currentProductId);
+
+        console.log('Called bindNewEstimateFormEvents for the new form.');
+      } else {
+        console.error('Form element with ID #new-estimate-form not found inside #new-estimate-form-wrapper after template insertion!');
+        this.showError('Error rendering form template. Please try again.');
+      }
+
+    } catch (error) {
+      console.error('Error inserting new estimate form template:', error);
+      this.showError('Error loading form template. Please try again.');
+    } finally {
+      // Hide loading after the template insertion and binding attempt
       this.hideLoading();
-
-      // Add this: Ensure cancel button is properly bound
-      this.bindCancelButton(this.newEstimateForm, 'estimate');
     }
+    // --- END NEW ---
+
+    // Remove the old check for querySelector('form') and the loadNewEstimateForm call entirely.
+    // The logic above replaces it.
   }
 
   bindCancelButton(formContainer, formType) {
@@ -1736,71 +1868,6 @@ class ModalManager {
     }
   }
 
-  /**
-   * Load new estimate form via AJAX with improved loading handling
-   * @returns {Promise} Promise that resolves when form is loaded
-   */
-  loadNewEstimateForm() {
-    return new Promise((resolve, reject) => {
-      // Show loading
-      this.showLoading();
-
-      // Load form via AJAX
-      jQuery.ajax({
-        url: productEstimatorVars.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'get_new_estimate_form',
-          nonce: productEstimatorVars.nonce
-        },
-        success: (response) => {
-          if (response.success && response.data.html) {
-            this.newEstimateForm.innerHTML = response.data.html;
-
-            if (window.productEstimator && window.productEstimator.core &&
-              window.productEstimator.core.customerDetailsManager) {
-              // Slight delay to ensure DOM is updated
-              setTimeout(() => {
-                window.productEstimator.core.customerDetailsManager.init();
-              }, 100);
-            }
-
-            // Bind form events
-            const form = this.newEstimateForm.querySelector('form');
-            if (form) {
-              form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleNewEstimateSubmission(form);
-              });
-
-              const cancelButton = form.querySelector('.cancel-btn');
-              if (cancelButton) {
-                cancelButton.addEventListener('click', () => {
-                  this.cancelForm('estimate');
-                });
-              }
-            }
-
-
-            // Dispatch a custom event that modal content has been loaded
-            document.dispatchEvent(new CustomEvent('product_estimator_modal_loaded'));
-
-            resolve(response.data.html);
-          } else {
-            reject(new Error('Failed to load new estimate form'));
-          }
-        },
-        error: (error) => {
-          console.error('Error loading new estimate form:', error);
-          reject(error);
-        },
-        complete: () => {
-          // Hide loading indicator when AJAX completes, regardless of success or error
-          this.hideLoading();
-        }
-      });
-    });
-  }
 
   /**
    * Show new room form
@@ -1838,75 +1905,6 @@ class ModalManager {
         form.dataset.estimateId = estimateId;
       }
     }
-  }
-
-  /**
-   * Load new room form via AJAX
-   * @param {string} estimateId - Estimate ID
-   * @returns {Promise} Promise that resolves when form is loaded
-   */
-  loadNewRoomForm(estimateId) {
-    return new Promise((resolve, reject) => {
-      // Show loading
-      this.showLoading();
-
-      // Load form via AJAX
-      jQuery.ajax({
-        url: productEstimatorVars.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'get_new_room_form',
-          nonce: productEstimatorVars.nonce
-        },
-        success: (response) => {
-          if (response.success && response.data.html) {
-            // Insert form HTML
-            this.newRoomForm.innerHTML = response.data.html;
-
-            // HERE IS WHERE YOU ADD THE EVENT BINDING CODE:
-            const form = this.newRoomForm.querySelector('form');
-            if (form) {
-              // Set estimate ID on the form
-              form.dataset.estimateId = estimateId;
-
-              // Remove any existing event handlers
-              if (this._newRoomFormSubmitHandler) {
-                form.removeEventListener('submit', this._newRoomFormSubmitHandler);
-              }
-
-              // Create new handler that PREVENTS DEFAULT
-              this._newRoomFormSubmitHandler = (e) => {
-                e.preventDefault(); // This is crucial to prevent page reload
-                console.log('New room form submitted');
-                this.handleNewRoomSubmission(form);
-              };
-
-              // Bind the handler
-              form.addEventListener('submit', this._newRoomFormSubmitHandler);
-
-              // Also bind cancel button
-              const cancelButton = form.querySelector('.cancel-btn');
-              if (cancelButton) {
-                cancelButton.addEventListener('click', () => {
-                  this.cancelForm('room');
-                });
-              }
-            }
-
-            resolve(response.data.html);
-          } else {
-            reject(new Error('Failed to load new room form'));
-          }
-        },
-        error: (error) => {
-          console.error('Error loading new room form:', error);
-          reject(error);
-        },
-        complete: () => {
-          this.hideLoading();
-        }
-      });
-    });
   }
 
   bindEstimateListEventHandlers() {

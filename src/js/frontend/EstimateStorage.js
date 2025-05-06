@@ -211,7 +211,7 @@ export function removeRoom(estimateId, roomId) {
  * @param {string} estimateId - Estimate ID
  * @param {string} roomId - Room ID
  * @param {Object} productData - Product data to add
- * @returns {boolean} Success or failure
+ * @returns {boolean} Success or failure (returns false if product already exists)
  */
 export function addProductToRoom(estimateId, roomId, productData) {
   const storedData = loadEstimateData();
@@ -229,10 +229,17 @@ export function addProductToRoom(estimateId, roomId, productData) {
     room.products = [];
   }
 
+  // Check if product with the same ID already exists in the room
+  const existingProduct = room.products.find(product => product.id === productData.id);
+  if (existingProduct) {
+    console.warn(`Product with ID ${productData.id} already exists in room ${roomId}. Aborting local storage add.`);
+    return false; // Indicate failure because product already exists
+  }
+
   room.products.push(productData);
   saveEstimateData(storedData);
 
-  return true;
+  return true; // Indicate success
 }
 
 /**

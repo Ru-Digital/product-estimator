@@ -343,11 +343,6 @@ class ModalManager {
    * @param {number|string|null} productId - Product ID or null for list view
    * @param {boolean} forceListView - Whether to force showing the list view
    */
-  /**
-   * Open the modal with template-based rendering
-   * @param {number|string|null} productId - Product ID or null for list view
-   * @param {boolean} forceListView - Whether to force showing the list view
-   */
   openModal(productId = null, forceListView = false) {
     console.log('MODAL OPEN CALLED WITH:', {
       productId: productId,
@@ -394,10 +389,6 @@ class ModalManager {
       return;
     }
 
-    // Note: Clearing formContainer.innerHTML is removed as view wrappers are persistent.
-    // resetModalState() now handles hiding them.
-
-
     // DETERMINE WHICH FLOW TO USE
     if (productId && !forceListView) {
       console.log('STARTING PRODUCT FLOW with product ID:', productId);
@@ -410,52 +401,68 @@ class ModalManager {
           if (hasEstimates) {
             // Estimates exist, show estimate selection view
             console.log('Estimates found, showing estimate selection.');
+
             // Ensure estimate selection wrapper is visible
             const estimateSelectionWrapper = formContainer.querySelector('#estimate-selection-wrapper');
             if (estimateSelectionWrapper) {
               this.forceElementVisibility(estimateSelectionWrapper); // Use force visibility
-            } else {
-              console.error('Estimate selection wrapper not found in template!');
-              this.showError('Modal structure incomplete. Please contact support.');
-              this.hideLoading();
-              return;
-            }
 
-            // Load or show the estimate selection form content
-            // This part might still involve AJAX to load the form *content* if it's not in the template
-            // Or it might just involve populating a dropdown in an existing template.
-            // Assuming estimate-selection-form-wrapper is also in the template and we just populate/show its content.
-            const estimateSelectionForm = estimateSelectionWrapper.querySelector('#estimate-selection-form-wrapper');
-            if (estimateSelectionForm) {
-              this.forceElementVisibility(estimateSelectionForm); // Use force visibility
+              // --- MODIFIED CODE START ---
+              // Insert the estimate selection template content into the wrapper
+              try {
+                // Clear existing content first in case it was loaded before
+                estimateSelectionWrapper.innerHTML = '';
+                TemplateEngine.insert('estimate-selection-template', {}, estimateSelectionWrapper);
+                console.log('Estimate selection template inserted into wrapper.');
 
-              // If the form content itself needs loading via AJAX (e.g., not in initial template)
-              if (!estimateSelectionForm.querySelector('form')) {
-                console.log('Estimate selection form content not found, loading via AJAX.');
-                this.loadEstimateSelectionForm().then(() => { // This is an AJAX call
-                  this.loadEstimatesData(); // Load data for dropdown
-                  this.hideLoading(); // Hide loading after AJAX and data load
-                }).catch(error => {
-                  console.error('Error loading estimate selection form content:', error);
-                  this.showError('Error loading selection form. Please try again.');
-                  this.hideLoading();
-                });
+                // *** FIX: Update the instance property to the newly inserted element ***
+                this.estimateSelectionForm = estimateSelectionWrapper.querySelector('#estimate-selection-form-wrapper');
+                // *** END FIX ***
+
+              } catch (templateError) {
+                console.error('Error inserting estimate selection template:', templateError);
+                this.showError('Error loading selection form template. Please try again.');
+                this.hideLoading();
+                return; // Stop execution if template insertion fails
+              }
+              // --- MODIFIED CODE END ---
+
+              // Now that this.estimateSelectionForm is updated, safely proceed
+              if (this.estimateSelectionForm) {
+                this.forceElementVisibility(this.estimateSelectionForm); // Ensure the form wrapper itself is visible
+
+                // Assuming the template insertion includes the actual <form> element,
+                // we can proceed directly to loading data and binding events.
+                // If the form content itself is loaded via a separate AJAX call *after* the wrapper template,
+                // you would keep the check `if (!this.estimateSelectionForm.querySelector('form'))` and the AJAX logic here.
+                // Based on the template structure, it seems the <form> is included in estimate-selection.html.
+
+                const estimateSelectionFormElement = this.estimateSelectionForm.querySelector('form');
+                if (estimateSelectionFormElement) {
+                  console.log('Estimate selection form element found after template insertion, populating dropdown and binding events.');
+                  this.loadEstimatesData(); // This function now uses the updated this.estimateSelectionForm
+                  this.bindEstimateSelectionFormEvents(); // This function now uses the updated this.estimateSelectionForm
+                  // hideLoading() is now called within loadEstimatesData's finally() block
+                } else {
+                  console.error('Form element (#estimate-selection-form) not found inside the template after insertion!');
+                  this.showError('Error rendering form template. Please try again.');
+                  this.hideLoading(); // Ensure loading is hidden on error
+                }
+
+
               } else {
-                console.log('Estimate selection form content found, populating dropdown.');
-                // Form content exists, just load data and bind events
-                this.loadEstimatesData(); // Load data for dropdown
-                this.bindEstimateSelectionFormEvents(); // Bind events to existing form
-                this.hideLoading(); // Hide loading after data load
+                // This error is less likely now that template insertion is handled, but keep as a fallback
+                console.error('Estimate selection form wrapper not found in template AFTER INSERTION!');
+                this.showError('Modal structure incomplete. Please contact support.');
+                this.hideLoading(); // Ensure loading is hidden on error
               }
 
             } else {
-              console.error('Estimate selection form wrapper not found in template!');
+              console.error('Estimate selection wrapper not found in template!');
               this.showError('Modal structure incomplete. Please contact support.');
-              this.hideLoading();
+              this.hideLoading(); // Ensure loading is hidden on error
+              return;
             }
-
-            // Original code had hideLoading() here, but moved into the .then/catch blocks above
-
 
           } else {
             // No estimates, show new estimate form
@@ -469,16 +476,9 @@ class ModalManager {
               return;
             }
 
-            // --- MODIFICATION START ---
-            // Replace the call to loadNewEstimateForm with showNewEstimateForm
-            // Original: this.loadNewEstimateForm().finally(() => { this.hideLoading(); });
-
-            // NEW: Call showNewEstimateForm which now handles template rendering and binding
             this.showNewEstimateForm();
             // Note: showNewEstimateForm now manages its own loading state.
             // The hideLoading() that was previously here is no longer needed.
-            // --- MODIFICATION END ---
-
           }
         })
         .catch(error => {
@@ -502,19 +502,10 @@ class ModalManager {
         return;
       }
 
-
       // Bind event handlers to the estimates list container (for delegation)
-      // These should handle clicks on add room, etc.
-      this.bindEstimateListEventHandlers(); // Example: Add Room button
+      this.bindEstimateListEventHandlers();
 
-      // --- Ensure direct binding for estimate removal happens after load ---
-      // This was moved to loadEstimatesList previously, which is correct.
-      // Keep this here for the general estimates list events like Add Room.
-      // --- End ensure ---
-
-
-      // Load and render the estimates list content (this involves rendering items using templates)
-      // loadEstimatesList will call bindDirectEstimateRemovalEvents internally now.
+      // Load and render the estimates list content
       this.loadEstimatesList()
         .catch(error => {
           console.error('Error loading estimates list:', error);
@@ -529,9 +520,7 @@ class ModalManager {
           this.hideLoading(); // Ensure loading is hidden after loading estimates list
         });
     }
-    // Note: Any hideLoading() calls here at the end of openModal are likely redundant
-    // as hideLoading() should be called in the .finally() of async operations
-    // or at the end of synchronous rendering flows (like in showNewEstimateForm).
+    // Any hideLoading() here at the end of openModal are likely redundant
   }
 
   /**
@@ -1230,40 +1219,125 @@ class ModalManager {
 
     console.log(`Adding suggested product ${productId} to room ${roomId} in estimate ${estimateId} via DataService`);
 
-    // Use DataService to make the AJAX request
+    // Use DataService to make the AJAX request (which now attempts local storage first)
     this.dataService.addProductToRoom(roomId, productId, estimateId)
-      .then(response => {
-        console.log('Add suggested product response from DataService:', response);
+      .then(localResult => {
+        // This .then() block is executed if the DataService.addProductToRoom promise resolves,
+        // which happens immediately after the local storage attempt (successful or not due to simple errors).
+        // It will NOT be executed if the promise is rejected (e.g., for duplicate products).
 
-        // Refresh the estimates list to show the updated room
-        return this.loadEstimatesList(roomId, estimateId)
-          .then(() => {
-            // Auto-expand the room accordion after refreshing
-            setTimeout(() => {
-              const roomAccordion = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-              if (roomAccordion) {
-                const header = roomAccordion.querySelector('.accordion-header');
-                if (header && !header.classList.contains('active')) {
-                  header.click();
+        console.log('Add suggested product local storage attempt result:', localResult);
+
+        // Check if the local storage operation was successful
+        if (localResult.success) {
+          console.log('Local storage add successful. Refreshing list.');
+
+          // Refresh the estimates list to show the updated room
+          return this.loadEstimatesList(roomId, estimateId)
+            .then(() => {
+              // Auto-expand the room accordion after refreshing
+              setTimeout(() => {
+                const roomAccordion = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+                if (roomAccordion) {
+                  const header = roomAccordion.querySelector('.accordion-header');
+                  if (header && !header.classList.contains('active')) {
+                    header.click();
+                  }
                 }
-              }
-            }, 300);
+              }, 300);
 
-            // Show success message
-            this.showMessage('Product added successfully!', 'success');
-          });
+              // Show success message
+              this.showMessage('Product added successfully!', 'success');
+            });
+        } else {
+          // If local storage add was not successful (e.g., localStorage full, or product data fetch failed)
+          // Handle this failure - show an error message based on the localResult.error
+          console.error('Error during local storage add:', localResult.error);
+          this.showError(localResult.error.message || 'Failed to add product locally. Please try again.');
+          // We do not proceed to refresh the list if local storage failed.
+        }
       })
       .catch(error => {
-        // Handle error response from DataService
+        // This .catch() block is executed if DataService.addProductToRoom promise rejects.
+        // This is where we handle errors like duplicate products detected *before* local storage.
+
         console.error('Error adding suggested product via DataService:', error);
 
         // Check if this is a duplicate product error (assuming DataService adds this property)
         if (error.data?.duplicate) {
           console.log('Duplicate suggested product detected by DataService:', error.data);
-          this.showMessage(error.data.message || 'This product already exists in this room.', 'error');
-          // The room is likely already open, so no need to refresh or expand
+
+          // Hide selection forms if they are visible (relevant for handleRoomSelection primarily, but safe here)
+          if (this.estimateSelection) this.estimateSelection.style.display = 'none';
+          if (this.roomSelectionForm) this.roomSelectionForm.style.display = 'none';
+
+
+          // Clear the product ID from the modal after handling
+          delete this.modal.dataset.productId;
+          this.currentProductId = null;
+
+          const duplicateEstimateId = error.data.estimate_id;
+          const duplicateRoomId = error.data.room_id;
+
+          // Show specific error message
+          this.showError(error.data.message || 'This product already exists in the selected room.');
+
+          // Load the estimates and expand the specific room where the product already exists
+          this.loadEstimatesList(duplicateRoomId, duplicateEstimateId)
+            .then(() => {
+              console.log('Estimates list refreshed to show duplicate product location');
+              setTimeout(() => {
+                // Find and expand the estimate containing the room
+                const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${duplicateEstimateId}"]`);
+                if (estimateSection) {
+                  // Remove collapsed class
+                  estimateSection.classList.remove('collapsed');
+                  // Show content
+                  const estimateContent = estimateSection.querySelector('.estimate-content');
+                  if (estimateContent) {
+                    if (typeof jQuery !== 'undefined') {
+                      jQuery(estimateContent).slideDown(200);
+                    } else {
+                      estimateContent.style.display = 'block';
+                    }
+                  }
+                }
+
+                // Find and expand the room accordion
+                const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${duplicateRoomId}"]`);
+                if (roomElement) {
+                  const header = roomElement.querySelector('.accordion-header');
+                  if (header) {
+                    // Add active class
+                    header.classList.add('active');
+
+                    // Show room content
+                    const content = roomElement.querySelector('.accordion-content');
+                    if (content) {
+                      if (typeof jQuery !== 'undefined') {
+                        jQuery(content).slideDown(300, function() {
+                          // Scroll to room after animation completes
+                          roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        });
+                      } else {
+                        content.style.display = 'block';
+                        roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }
+                    }
+                  } else {
+                    // Room is already expanded, just scroll to it
+                    roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }
+              }, 300); // Small delay to allow DOM updates
+
+            })
+            .catch(error => {
+              console.error('Error refreshing estimates list:', error);
+            });
+
         } else {
-          // Handle other errors
+          // Handle other errors (e.g., network errors during the initial product data fetch)
           this.showError(error.message || 'Error adding product. Please try again.');
         }
       })
@@ -1279,6 +1353,7 @@ class ModalManager {
         this.hideLoading();
       });
   }
+
 
   bindSuggestedProductButtons() {
     console.log('Binding suggested product buttons');
@@ -2134,76 +2209,138 @@ class ModalManager {
    * Update handleEstimateSelection to bind room selection form events
    */
   handleEstimateSelection(form) {
-    const estimateId = form.querySelector('#estimate-dropdown').value;
-    const productId = this.currentProductId;
+    // Get the selected estimate ID from the dropdown
+    const estimateDropdown = form.querySelector('#estimate-dropdown');
+    const estimateId = String(estimateDropdown ? estimateDropdown.value || '' : '').trim();
 
+    // Get the current product ID from the modal state
+    const productId = String(this.currentProductId || '').trim();
+
+    // Validate that an estimate was selected
     if (!estimateId) {
-      this.showError('Please select an estimate');
+      this.showError('Please select an estimate to continue.');
       return;
     }
 
+    // Show the loading indicator
     this.showLoading();
 
-    // Get rooms for the selected estimate
+    // Use the DataService to get rooms for the selected estimate
     this.dataService.getRoomsForEstimate(estimateId, productId)
       .then(response => {
-        // Hide estimate selection form
-        this.estimateSelectionForm.style.display = 'none';
+        // Hide the estimate selection form wrapper
+        if (this.estimateSelectionForm) {
+          this.estimateSelectionForm.style.display = 'none';
+        } else {
+          console.warn('Estimate selection form wrapper not found when trying to hide it.');
+        }
 
-        // If the estimate has rooms, show room selection form
-        if (response.has_rooms) {
-          // Populate room dropdown
-          const roomDropdown = document.getElementById('room-dropdown');
-          if (roomDropdown) {
-            roomDropdown.innerHTML = '';
-            roomDropdown.appendChild(new Option('-- Select a Room --', ''));
 
-            response.rooms.forEach(room => {
-              roomDropdown.appendChild(new Option(
-                `${room.name} (${room.dimensions})`,
-                room.id
-              ));
-            });
+        // *** ADD setTimeout HERE to allow DOM to update after template insertion ***
+        // A 0ms delay is often enough to defer the task until the current call stack is clear
+        setTimeout(() => {
 
-            // Store estimate ID with the form
-            this.roomSelectionForm.dataset.estimateId = estimateId;
+          // Ensure the room selection form wrapper element exists
+          const roomSelectionWrapper = this.modal.querySelector('#room-selection-form-wrapper'); // Query the main modal for the wrapper
+          if (!roomSelectionWrapper) {
+            console.error('Room selection form wrapper not found in modal template!');
+            this.showError('Modal structure incomplete. Cannot proceed.');
+            this.hideLoading(); // Hide loading on error
+            return;
+          }
 
-            // Also set the data-estimate attribute on the Add New Room button
-            const addNewRoomButton = document.getElementById('add-new-room-from-selection');
-            if (addNewRoomButton) {
-              addNewRoomButton.dataset.estimate = estimateId;
-            }
+          // Update the instance property to ensure it's correct
+          this.roomSelectionForm = roomSelectionWrapper; // *** Update the instance property ***
 
-            // Show room selection form with force visibility
+
+          // If the estimate has rooms (based on the response from DataService)
+          if (response.has_rooms) {
+            console.log('Estimate has rooms, showing room selection form.');
+
+            // Force visibility of the room selection form wrapper
             this.forceElementVisibility(this.roomSelectionForm);
 
-            // Important: Bind the room selection form events
-            this.bindRoomSelectionFormEvents();
+            // Populate the room dropdown - query *within* the correct wrapper element
+            const roomDropdown = this.roomSelectionForm.querySelector('#room-dropdown');
+
+            if (roomDropdown) {
+              // Clear existing options and add a default option
+              roomDropdown.innerHTML = '';
+              const defaultOption = document.createElement('option');
+              defaultOption.value = '';
+              defaultOption.textContent = productEstimatorVars.i18n.select_room || '-- Select a Room --';
+              roomDropdown.appendChild(defaultOption);
+
+              // Add room options from the response data
+              if (Array.isArray(response.rooms)) {
+                response.rooms.forEach(room => {
+                  if (room && room.id !== undefined && room.name !== undefined && room.dimensions !== undefined) {
+                    const option = document.createElement('option');
+                    option.value = room.id;
+                    option.textContent = `${room.name} (${room.dimensions})`; // Use the formatted dimensions
+                    roomDropdown.appendChild(option);
+                  } else {
+                    console.warn('Skipping invalid room data received:', room);
+                  }
+                });
+                console.log(`Populated room dropdown with ${response.rooms.length} rooms.`);
+              } else {
+                console.warn('Received non-array data for rooms:', response.rooms);
+              }
+
+
+              // Store the estimate ID on the room selection form wrapper for later use (e.g., adding a new room)
+              this.roomSelectionForm.dataset.estimateId = estimateId;
+
+              // Find the "Add New Room" button within the room selection form wrapper
+              const addNewRoomButton = this.roomSelectionForm.querySelector('#add-new-room-from-selection');
+              if (addNewRoomButton) {
+                // Set the data-estimate-id on the button if your logic requires it there too
+                addNewRoomButton.dataset.estimateId = estimateId;
+                console.log('Set estimate ID on Add New Room button:', estimateId);
+              } else {
+                console.warn('Add New Room button not found in room selection form.');
+              }
+
+
+              // Important: Bind the form events to the room selection form
+              // This function will now correctly find the form inside the wrapper
+              this.bindRoomSelectionFormEvents();
+
+              // Hide loading is handled in the .finally block
+              // Ensure no double hideLoading calls if bindEvents or populate finishes quickly
+              // this.hideLoading();
+
+
+            } else {
+              console.error('Room dropdown element (#room-dropdown) not found inside the room selection form wrapper!');
+              this.showError('Modal structure incomplete. Cannot show room selection form.');
+              // Hide loading immediately as there's nothing else to do in this path
+              this.hideLoading();
+            }
+
           } else {
-            this.loadRoomSelectionForm(estimateId)
-              .then(() => {
-                this.roomSelectionForm.dataset.estimateId = estimateId;
-                this.forceElementVisibility(this.roomSelectionForm);
-                // Bind events after loading
-                this.bindRoomSelectionFormEvents();
-              })
-              .catch(error => {
-                this.log('Error loading room selection form:', error);
-                this.showError('Error loading room selection form. Please try again.');
-              });
+            // No rooms found for this estimate, proceed directly to showing the new room form
+            console.log('No rooms found for this estimate, showing new room form.');
+
+            // Pass the estimateId and productId to the showNewRoomForm function
+            // showNewRoomForm handles showing the correct wrapper and setting data attributes
+            this.showNewRoomForm(estimateId, productId);
+            // hideLoading() is handled within showNewRoomForm's finally block
           }
-        } else {
-          // No rooms, show new room form
-          this.newRoomForm.dataset.estimateId = estimateId;
-          this.newRoomForm.dataset.productId = productId;
-          this.forceElementVisibility(this.newRoomForm);
-        }
+
+        }, 0); // A 0ms delay is usually sufficient
+
       })
       .catch(error => {
-        this.log('Error getting rooms:', error);
-        this.showError('Error getting rooms. Please try again.');
+        // Handle errors from getRoomsForEstimate
+        this.log('Error getting rooms for estimate:', error);
+        this.showError(error.message || 'Error loading rooms. Please try again.');
       })
       .finally(() => {
+        // Ensure loading is hidden after the entire process (both success and error paths)
+        // This finally block will execute after the .then() or .catch() completes.
+        // If hideLoading is called inside the setTimeout paths, this will simply be redundant, which is fine.
         this.hideLoading();
       });
   }
@@ -2363,40 +2500,59 @@ class ModalManager {
 
     this.showLoading();
 
-    // Make the AJAX request using DataService
+    // Make the AJAX request using DataService (which now attempts local storage first)
     this.dataService.addProductToRoom(roomId, productId, estimateId)
-      .then(response => {
-        console.log('Add product response:', response);
+      .then(localResult => {
+        // This .then() block is executed if the DataService.addProductToRoom promise resolves,
+        // which happens immediately after the local storage attempt (successful or not due to simple errors).
+        // It will NOT be executed if the promise is rejected (e.g., for duplicate products).
 
-        // Hide selection forms
-        this.estimateSelection.style.display = 'none';
-        this.roomSelectionForm.style.display = 'none';
+        console.log('Room selection add product local storage attempt result:', localResult);
 
-        // Clear the product ID from the modal after successful addition
-        delete this.modal.dataset.productId;
-        this.currentProductId = null;
+        // Check if the local storage operation was successful
+        if (localResult.success) {
+          console.log('Local storage add successful. Refreshing list.');
 
-        // Get the estimate and room IDs from the response
-        const responseEstimateId = response.estimate_id || estimateId;
-        const responseRoomId = response.room_id || roomId; // Use the original roomId if response doesn't provide one
+          // Hide selection forms
+          this.estimateSelection.style.display = 'none';
+          this.roomSelectionForm.style.display = 'none';
 
-        console.log(`Product added to estimate ${responseEstimateId}, room ${responseRoomId}`);
+          // Clear the product ID from the modal after successful addition
+          delete this.modal.dataset.productId;
+          this.currentProductId = null;
 
-        // Refresh the estimates list to show the updated room
-        this.loadEstimatesList(responseRoomId, responseEstimateId)
-          .then(() => {
-            // Show success message
-            this.showMessage('Product added successfully!', 'success');
-          })
-          .catch(error => {
-            console.error('Error refreshing estimates list:', error);
-            this.showError('Error refreshing estimates list. Please try again.');
-          });
+          // Get the estimate and room IDs from the response (use localResult as source of truth after local add)
+          const responseEstimateId = localResult.estimateId || estimateId;
+          const responseRoomId = localResult.roomId || roomId;
+
+          console.log(`Product added to estimate ${responseEstimateId}, room ${responseRoomId} (based on local storage)`);
+
+          // Refresh the estimates list to show the updated room
+          this.loadEstimatesList(responseRoomId, responseEstimateId)
+            .then(() => {
+              // Show success message
+              this.showMessage('Product added successfully!', 'success');
+            })
+            .catch(error => {
+              console.error('Error refreshing estimates list:', error);
+              this.showError('Error refreshing estimates list. Please try again.');
+            });
+        } else {
+          // If local storage add was not successful (e.g., localStorage full, or product data fetch failed)
+          // Handle this failure - show an error message based on the localResult.error
+          console.error('Error during local storage add:', localResult.error);
+          this.showError(localResult.error.message || 'Failed to add product locally. Please try again.');
+          // We do not proceed to refresh the list if local storage failed.
+        }
       })
       .catch(error => {
+        // This .catch() block is executed if DataService.addProductToRoom promise rejects.
+        // This is where we handle errors like duplicate products detected *before* local storage.
+        console.error('Error adding product from room selection via DataService:', error);
+
         // Check if this is a duplicate product error (assuming DataService adds this property)
         if (error.data?.duplicate) {
-          console.log('Duplicate product detected:', error.data);
+          console.log('Duplicate product detected from room selection by DataService:', error.data);
 
           // Hide selection forms
           this.estimateSelection.style.display = 'none';
@@ -2467,7 +2623,7 @@ class ModalManager {
               console.error('Error refreshing estimates list:', error);
             });
         } else {
-          // Handle regular error response
+          // Handle regular error response (e.g., network errors during the initial product data fetch)
           const errorMessage = error.message || 'Error adding product to room. Please try again.';
           this.showError(errorMessage);
           console.error('DataService error:', error);

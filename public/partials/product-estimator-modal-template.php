@@ -35,10 +35,10 @@ if (!defined('WPINC')) {
 
         <?php
 
-        echo "<pre>";
+//        echo "<pre>";
 //        unset($_SESSION['product_estimator']);
-        print_r($_SESSION['product_estimator']);
-        echo "</pre>";
+//        print_r($_SESSION['product_estimator']);
+//        echo "</pre>";
         ?>
     </div>
 </div>

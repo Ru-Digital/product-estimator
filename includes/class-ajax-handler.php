@@ -2080,12 +2080,9 @@ class AjaxHandler {
     }
 
     /**
-     * Add these methods to the existing AjaxHandler class in class-ajax-handler.php
-     */
-
-    /**
      * Handle getting similar products for display in the estimator
      * This method should be added to the AjaxHandler class
+     * MODIFIED to use product_estimator_calculate_total_price_with_additions
      */
     public function get_similar_products() {
         // Verify nonce
@@ -2093,29 +2090,129 @@ class AjaxHandler {
 
         // Get parameters
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
-        $limit = isset($_POST['limit']) ? intval($_POST['limit']) : 5;
+        $limit = isset($_POST['limit']) ? intval($_POST['limit']) : 5; // Default limit
 
         if (!$product_id) {
             wp_send_json_error(['message' => __('Invalid product ID', 'product-estimator')]);
             return;
         }
 
-
         try {
             // Initialize the Similar Products module
+            // Ensure the class is loaded
+            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\SimilarProductsFrontend')) {
+                $similar_products_frontend_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-similar-products-frontend.php';
+                if (file_exists($similar_products_frontend_path)) {
+                    require_once $similar_products_frontend_path;
+                } else {
+                    error_log('SimilarProductsFrontend class file not found at expected path: ' . $similar_products_frontend_path);
+                    wp_send_json_error(['message' => __('Similar Products module not available.', 'product-estimator')]);
+                    return;
+                }
+            }
             $similar_products_module = new SimilarProductsFrontend(
                 'product-estimator',
                 PRODUCT_ESTIMATOR_VERSION
             );
 
-            // Get similar products
-            $similar_products = $similar_products_module->get_similar_products_for_display($product_id, $limit);
+            // Get similar product IDs based on attributes
+            $similar_product_ids = $similar_products_module->find_similar_products($product_id);
+
+            if (empty($similar_product_ids)) {
+                wp_send_json_success([
+                    'products' => [],
+                    'source_product_id' => $product_id,
+                    'message' => __('No similar products found.', 'product-estimator')
+                ]);
+                return;
+            }
+
+            $similar_products_data = [];
+            $count = 0;
+
+            // Ensure the pricing helper function is available
+            if (!function_exists('product_estimator_calculate_total_price_with_additions')) {
+                error_log('product_estimator_calculate_total_price_with_additions function not available.');
+                wp_send_json_error(['message' => __('Pricing helper function not available.', 'product-estimator')]);
+                return;
+            }
+
+            // Get room area if available in the request (though not strictly needed for similar products list,
+            // the pricing function expects it. We'll use a default of 1 if not provided).
+            // A better approach would be to pass room_area from the frontend if needed for accurate pricing.
+            $room_area = isset($_POST['room_area']) ? floatval($_POST['room_area']) : 1;
+
+
+            foreach ($similar_product_ids as $similar_id) {
+                // Skip the original product
+                if (intval($similar_id) === intval($product_id)) {
+                    continue;
+                }
+
+                // Get product object
+                $product = wc_get_product($similar_id);
+                if (!$product) {
+                    continue;
+                }
+
+                // Check if estimator is enabled for this product (or its variations)
+                if (!\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($similar_id)) {
+                    // If not enabled for the main product, check if it's a variable product
+                    // and if any variation has the estimator enabled.
+                    if ($product->is_type('variable')) {
+                        $variations = $product->get_available_variations();
+                        $variation_found = false;
+                        foreach ($variations as $variation) {
+                            if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation['variation_id'])) {
+                                // Use the variation ID for pricing and data
+                                $similar_id = $variation['variation_id'];
+                                $product = wc_get_product($similar_id); // Get the variation product object
+                                if ($product) {
+                                    $variation_found = true;
+                                    break; // Found an enabled variation, use this one
+                                }
+                            }
+                        }
+                        if (!$variation_found) {
+                            continue; // Skip if no enabled variation found
+                        }
+                    } else {
+                        continue; // Skip if estimator is not enabled and it's not a variable product
+                    }
+                }
+
+
+                // Calculate total price including additions using the helper function
+                $price_data = product_estimator_calculate_total_price_with_additions(
+                    $similar_id,
+                    $room_area // Pass room area
+                );
+
+                // Prepare data for the frontend
+                $similar_products_data[] = array(
+                    'id' => intval($similar_id),
+                    'name' => $product->get_name(),
+                    // Use the calculated total price range
+                    'min_price_total' => $price_data['min_total'],
+                    'max_price_total' => $price_data['max_total'],
+                    'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail') ?: '', // Get thumbnail URL, fallback to empty string
+                    'pricing_method' => $price_data['breakdown'][0]['pricing_method'] ?? 'sqm' // Get pricing method from main product in breakdown
+                );
+
+                $count++;
+                if ($count >= $limit) {
+                    break; // Limit the number of results
+                }
+            }
 
             wp_send_json_success([
-                'products' => $similar_products,
-                'source_product_id' => $product_id
+                'products' => $similar_products_data,
+                'source_product_id' => $product_id,
+                'message' => sprintf(__('%d similar products found.', 'product-estimator'), count($similar_products_data))
             ]);
         } catch (\Exception $e) {
+            error_log('Exception in get_similar_products: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
             wp_send_json_error([
                 'message' => __('Error retrieving similar products', 'product-estimator'),
                 'error' => $e->getMessage()

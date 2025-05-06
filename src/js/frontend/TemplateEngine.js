@@ -211,6 +211,34 @@ class TemplateEngine {
           }
         });
 
+        // --- ADDED: Specific handling for similar item template classes ---
+        if (key === 'name') {
+          const nameElements = element.querySelectorAll('.suggestion-name');
+          nameElements.forEach(el => { el.textContent = value; });
+        }
+        // The backend is sending min_price_total and max_price_total for the price range
+        if (key === 'min_price_total' || key === 'max_price_total') {
+          // We handle the price range display below, so no action needed here for individual min/max keys
+        }
+        if (key === 'image') {
+          const imgElements = element.querySelectorAll('img.similar-product-thumbnail');
+          imgElements.forEach(img => {
+            img.src = value || 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='; // Fallback to a transparent pixel
+            img.alt = data.name || 'Similar Product Image';
+            // Show image and hide no-image placeholder if image exists
+            const noImagePlaceholder = img.closest('.suggestion-image')?.querySelector('.no-image');
+            if (value && value.trim() !== '') {
+              img.style.display = ''; // Show image
+              if(noImagePlaceholder) noImagePlaceholder.style.display = 'none'; // Hide placeholder
+            } else {
+              img.style.display = 'none'; // Hide image
+              if(noImagePlaceholder) noImagePlaceholder.style.display = ''; // Show placeholder
+            }
+          });
+        }
+        // --- END ADDED ---
+
+
         // Also set data attributes
         const dataElements = element.querySelectorAll(`[data-${key}]`);
         dataElements.forEach(dataElement => {
@@ -289,7 +317,7 @@ class TemplateEngine {
       }
     }
 
-    // Enhanced image handling
+    // Enhanced image handling (general, might overlap with similar item specific handling)
     if (data.image) {
       const imgElements = element.querySelectorAll('img.product-thumbnail, img.product-img');
       imgElements.forEach(img => {
@@ -298,7 +326,7 @@ class TemplateEngine {
       });
     }
 
-    // Handle price display
+    // Handle price display (general, might overlap with similar item specific handling)
     if (data.min_total !== undefined && data.max_total !== undefined) {
       const priceElements = element.querySelectorAll('.estimate-price');
       priceElements.forEach(el => {
@@ -313,7 +341,21 @@ class TemplateEngine {
       });
     }
 
-    // Enhanced name display for products
+    // --- ADDED: Specific handling for similar item price range ---
+    if (data.min_price_total !== undefined && data.max_price_total !== undefined) {
+      const priceElements = element.querySelectorAll('.suggestion-price');
+      priceElements.forEach(el => {
+        if (data.min_price_total === data.max_price_total) {
+          el.textContent = typeof format !== 'undefined' && format.formatPrice ? format.formatPrice(data.min_price_total) : data.min_price_total;
+        } else {
+          el.textContent = `${typeof format !== 'undefined' && format.formatPrice ? format.formatPrice(data.min_price_total) : data.min_price_total} - ${typeof format !== 'undefined' && format.formatPrice ? format.formatPrice(data.max_price_total) : data.max_price_total}`;
+        }
+      });
+    }
+    // --- END ADDED ---
+
+
+    // Enhanced name display for products (general, might overlap with similar item specific handling)
     if (data.name) {
       const nameElements = element.querySelectorAll('.price-title, .product-name');
       nameElements.forEach(el => {
@@ -377,7 +419,7 @@ class TemplateEngine {
               if (product.min_price_total !== undefined && product.max_price_total !== undefined) {
                 includeItemData.include_item_total_price =
                   format.formatPrice(product.min_price_total) + ' - ' + format.formatPrice(product.max_price_total);
-              product.total_price =  format.formatPrice(product.min_price_total) + ' - ' + format.formatPrice(product.max_price_total);
+                product.total_price =  format.formatPrice(product.min_price_total) + ' - ' + format.formatPrice(product.max_price_total);
 
               }
 
@@ -469,7 +511,28 @@ class TemplateEngine {
         }
       }
     }
+
+    // --- ADDED: Explicitly set data-replace-product-id on the replace button ---
+    if (data.replace_product_id !== undefined) {
+      const replaceButton = element.querySelector('.replace-product-in-room');
+      if (replaceButton) {
+        replaceButton.dataset.replaceProductId = data.replace_product_id;
+        console.log(`TemplateEngine: Set data-replace-product-id on button to: ${data.replace_product_id}`);
+      }
+    }
+    // --- END ADDED ---
+
+    // --- ADDED: Explicitly set data-pricing-method on the replace button ---
+    if (data.pricing_method !== undefined) {
+      const replaceButton = element.querySelector('.replace-product-in-room');
+      if (replaceButton) {
+        replaceButton.dataset.pricingMethod = data.pricing_method;
+        console.log(`TemplateEngine: Set data-pricing-method on button to: ${data.pricing_method}`);
+      }
+    }
+    // --- END ADDED ---
   }
+
 
 
   /**

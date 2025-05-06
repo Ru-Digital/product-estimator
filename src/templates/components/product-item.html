@@ -1,6 +1,5 @@
-```html
 <template id="product-item-template">
-  <div class="product-item" data-product-index="">
+  <div class="product-item" data-product-index="" data-product-id="">
     <div class="product-wrapper">
       <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Product" class="product-thumbnail">
       <div class="product-details-wrapper">
@@ -54,7 +53,7 @@
       <span>Similar Products</span>
       <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span>
     </button>
-    <div class="similar-products-container" style="display: none;">
+    <div class="similar-products-container" style="display: none;" data-product-id="">
       <div class="product-similar-products">
         <div class="suggestions-carousel similar-products-carousel">
           <div class="suggestions-nav prev" aria-label="Previous">
@@ -70,4 +69,3 @@
     </div>
   </div>
 </template>
-```

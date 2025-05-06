@@ -40,10 +40,14 @@
   display: none; /* Hidden by default */
   overflow: hidden;
   transition: max-height 0.3s ease;
+
 }
 
 .similar-products-container.visible {
   display: block;
+  box-sizing: border-box;
+  width: 100%;
+
 }
 
 /* The "Includes" section should always be visible */
@@ -345,7 +349,7 @@
   background: white !important;
   border: 1px solid #ddd !important;
   border-radius: 50% !important;
-  display: flex !important;
+  display: flex;
   align-items: center !important;
   justify-content: center !important;
 }

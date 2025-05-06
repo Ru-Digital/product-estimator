@@ -214,92 +214,53 @@ class ProductDetailsToggle {
   /**
    * Prepare the DOM for similar products toggle
    */
+  /**
+   * Prepare the DOM for similar products toggle
+   * REMOVED logic that unconditionally showed the container.
+   * Visibility is now solely controlled by ModalManager based on data.
+   */
   prepareProductsToggle() {
-    // Find all product items
     const productItems = document.querySelectorAll(this.config.selectors.productItem);
     this.log(`Found ${productItems.length} product items to process for similar products toggle`);
 
     productItems.forEach(productItem => {
-      // Skip if already processed for products toggle
       if (productItem.classList.contains('products-toggle-processed')) {
         return;
       }
 
-      // Find similar products section
       const similarProductsSection = productItem.querySelector(this.config.selectors.similarProducts);
-
-      // Check if product has similar products to toggle
       if (!similarProductsSection) {
-        this.log('No similar products section found for product item, skipping', productItem);
-        return; // No similar products to toggle
+        // Mark as processed even if no section found, to prevent re-checking
+        productItem.classList.add('products-toggle-processed');
+        return;
       }
 
-      this.log('Found similar products section, processing', similarProductsSection);
-
-      // Mark the product item as having similar products
+      // Only mark as having similar products if the container exists
+      // ModalManager will hide toggle/container later if data is empty
       productItem.classList.add('has-similar-products');
 
-      // Check if container already exists
       let similarProductsContainer = productItem.querySelector(this.config.selectors.similarProductsContainer);
+      let toggleButton = productItem.querySelector(this.config.selectors.productToggleButton); // Assuming this selects the correct button
 
-      // If no container exists but there is a similar products section, we need to create one
-      if (!similarProductsContainer) {
-        this.log('Creating new similar products container');
-        // Create a container to wrap similar products
-        similarProductsContainer = document.createElement('div');
-        similarProductsContainer.className = 'similar-products-container visible'; // Add visible class
+      // --- START REMOVAL / COMMENT ---
+      // // Initially show the similar products container (expanded by default) <<-- REMOVE THIS LOGIC
+      // if (similarProductsContainer) {
+      //     similarProductsContainer.style.display = 'block';
+      //     similarProductsContainer.classList.add('visible');
+      // }
+      // if (toggleButton) {
+      //     toggleButton.classList.add('expanded');
+      //     // ... (optional icon update) ...
+      // }
+      // --- END REMOVAL / COMMENT ---
 
-        // Move similar products into the container (if not already in one)
-        if (similarProductsSection.parentNode !== similarProductsContainer) {
-          // Clone the node to prevent reference issues
-          const clonedSection = similarProductsSection.cloneNode(true);
-          similarProductsContainer.appendChild(clonedSection);
 
-          // Remove the original from DOM
-          similarProductsSection.parentNode.removeChild(similarProductsSection);
-        }
-
-        // Add the container to the product item
-        productItem.appendChild(similarProductsContainer);
-      }
-
-      // Add toggle button if not already present
-      let toggleButton = productItem.querySelector(this.config.selectors.productToggleButton);
-      if (!toggleButton) {
-        this.log('Adding similar products toggle button to product item');
-        toggleButton = document.createElement('button');
-
-        // Mark as expanded by default and use the proper class for the arrow
-        toggleButton.className = 'product-details-toggle expanded';
-        toggleButton.setAttribute('data-toggle-type', 'similar-products');
-
-        // Use the hideProducts text (since it's expanded) and arrow-up icon
-        toggleButton.innerHTML = `
-        ${this.config.i18n.hideProducts}
-        <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
-      `;
-
-        // Insert button before the similar products container
-        productItem.insertBefore(toggleButton, similarProductsContainer);
-      } else {
-        // Make sure existing button has the correct state
-        toggleButton.classList.add('expanded');
-        const iconElement = toggleButton.querySelector('.toggle-icon');
-        if (iconElement) {
-          iconElement.classList.remove('dashicons-arrow-down-alt2');
-          iconElement.classList.add('dashicons-arrow-up-alt2');
-        }
-      }
-
-      // Initially show the similar products container (expanded by default)
-      similarProductsContainer.style.display = 'block';
-      similarProductsContainer.classList.add('visible');
-
-      // Mark as processed to avoid duplicating
+      // Mark as processed
       productItem.classList.add('products-toggle-processed');
-      this.log('Product item processed for similar products toggle');
+      this.log('Product item processed for similar products toggle (visibility managed elsewhere).');
     });
   }
+
 
   /**
    * Prepare the DOM for notes toggle

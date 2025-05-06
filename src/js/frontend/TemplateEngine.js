@@ -41,6 +41,8 @@ class TemplateEngine {
           this.templateElements[id] = templateElement;
           console.log(`[TemplateEngine.init] Template element found in HTML for ID: "${id}"`); // Added context
         } else {
+          console.error(`[TemplateEngine.init] UNEXPECTED: templateElement was null/undefined for ID: "${id}". Creating nested template. Original HTML likely already contained a <template> tag.`);
+
           // Create a new template element if the HTML string didn't contain <template> tags
           const newTemplate = document.createElement('template');
           newTemplate.id = id; // Set the ID on the template element itself
@@ -135,26 +137,65 @@ class TemplateEngine {
    * @returns {DocumentFragment} The populated template content
    */
   create(templateId, data = {}) {
-    const template = this.getTemplate(templateId); //
+    const template = this.getTemplate(templateId); // Retrieve the <template> element
 
     if (!template) {
-      console.error(`[TemplateEngine.create] Cannot create element. Template not found: "${templateId}"`); // Added context
+      console.error(`[TemplateEngine.create] Cannot create element. Template element not found for ID: "${templateId}"`);
       return document.createDocumentFragment(); // Return empty fragment gracefully
     }
+
+    // --- START: Add Detailed Debug Logs Here ---
+    console.log(`[DEBUG][TemplateEngine.create] Found template element for "${templateId}":`, template);
+    // Check if the template element itself has content if .content property seems problematic
+    console.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" direct innerHTML (first 200 chars):`, template.innerHTML.substring(0, 200));
+
+    if (template.content) {
+      console.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" has .content property:`, template.content);
+      console.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" .content.childNodes count:`, template.content.childNodes.length);
+
+      // Log the node type and content of the first few children to see what's inside
+      const childNodes = template.content.childNodes;
+      for(let i=0; i < Math.min(childNodes.length, 3); i++) { // Log first 3 nodes
+        const node = childNodes[i];
+        // Check if textContent exists and has trim method before calling trim()
+        const nodeTextContent = node.textContent ? node.textContent.trim().substring(0,50) : '[No textContent]';
+        console.log(`[DEBUG][TemplateEngine.create] Node[${i}] type: ${node.nodeType}, name: ${node.nodeName}, text: ${nodeTextContent}...`);
+      }
+
+      const firstElement = template.content.firstElementChild;
+      console.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" .content.firstElementChild:`, firstElement);
+    } else {
+      console.error(`[DEBUG][TemplateEngine.create] CRITICAL: Template "${templateId}" DOES NOT HAVE a .content property!`);
+    }
+    // --- END: Add Detailed Debug Logs Here ---
+
 
     // Clone the template content (returns a DocumentFragment)
     // Use try-catch for cloning errors
     let clone;
     try {
-      clone = template.content.cloneNode(true); //
+      // Check if content exists before cloning
+      if (!template.content) {
+        console.error(`[TemplateEngine.create] Cannot clone template content for ID: "${templateId}" - .content is missing.`);
+        return document.createDocumentFragment(); // Return empty fragment
+      }
+
+      clone = template.content.cloneNode(true); // Clone the actual content
+
       if (!clone) {
-        console.error(`[TemplateEngine.create] Failed to clone template content for ID: "${templateId}". cloneNode returned null.`); // Added context
+        console.error(`[TemplateEngine.create] Failed to clone template content for ID: "${templateId}". cloneNode returned null/undefined.`); // Updated log message
         return document.createDocumentFragment(); // Return empty fragment if cloning fails
       }
       console.log(`[TemplateEngine.create] Cloned template content for "${templateId}". Result is a DocumentFragment.`); // Added context
 
+      // --- START: Log Cloned Fragment Structure ---
+      const tempDiv = document.createElement('div');
+      tempDiv.appendChild(clone.cloneNode(true)); // Append a clone of the clone to inspect without consuming it
+      console.log(`[DEBUG][TemplateEngine.create] Cloned fragment structure for "${templateId}" (first 200 chars): ${tempDiv.innerHTML.substring(0, 200)}...`);
+      // --- END: Log Cloned Fragment Structure ---
+
     } catch (error) {
-      console.error(`[TemplateEngine.create] Error cloning template content for ID "${templateId}":`, error); // Added context
+      console.error(`[TemplateEngine.create] Error during template.content.cloneNode(true) for ID "${templateId}":`, error); // Updated log message
       return document.createDocumentFragment(); // Return empty fragment on cloning error
     }
 
@@ -170,7 +211,7 @@ class TemplateEngine {
     }
 
 
-    // *** Add this logging block to check the fragment content before returning ***
+    // *** Logging block to check the fragment content before returning (from your existing code) ***
     if (templateId === 'room-item-template') {
       // Query selector on a DocumentFragment works as expected
       const productListCheck = clone.querySelector('.product-list');
@@ -178,7 +219,7 @@ class TemplateEngine {
       if (!productListCheck) {
         console.error(`[TemplateEngine.create] CRITICAL: .product-list not found in "${templateId}" fragment before returning. This fragment will not render products correctly.`); // Critical error if missing
         // Optionally log the fragment's innerHTML for inspection (can be verbose)
-        // const tempDiv = document.createElement('div'); tempDiv.appendChild(clone.cloneNode(true)); console.log('Fragment innerHTML:', tempDiv.innerHTML);
+        // const tempDivForCheck = document.createElement('div'); tempDivForCheck.appendChild(clone.cloneNode(true)); console.log('Fragment innerHTML for check:', tempDivForCheck.innerHTML);
       }
     }
     // *** End logging block ***

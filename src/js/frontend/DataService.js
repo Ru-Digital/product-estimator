@@ -963,13 +963,21 @@ class DataService {
       estimate_id: estimateId,
       room_id: roomId,
       // Stringify the roomProducts array to send it in the POST data
+      // The backend must be designed to receive and parse this JSON string.
       room_products: JSON.stringify(roomProducts)
     };
 
     return this.request('get_suggested_products', requestData)
       .then(data => {
-        this.cache.suggestedProducts[cacheKey] = data.suggestions;
-        return data.suggestions;
+        // Assuming the backend returns an object with a 'suggestions' key containing the array
+        if (data && Array.isArray(data.suggestions)) {
+          this.cache.suggestedProducts[cacheKey] = data.suggestions;
+          return data.suggestions;
+        } else {
+          console.warn('DataService: get_suggested_products did not return expected data structure (expected { suggestions: [...] })', data);
+          // Return an empty array or throw an error if the response format is unexpected
+          return [];
+        }
       })
       .catch(error => {
         console.error('DataService: Error fetching suggestions:', error);
@@ -978,7 +986,6 @@ class DataService {
         throw error; // Re-throw the error to be handled by ModalManager
       });
   }
-
 
 
   /**

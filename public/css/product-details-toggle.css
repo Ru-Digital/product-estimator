@@ -277,8 +277,8 @@
 .product-suggestions,
 .suggestions-container,
 .suggestions-carousel {
-  display: block !important;
-  visibility: visible !important;
+  /*display: block !important;*/
+  /*visibility: visible !important;*/
   overflow: visible !important;
 }
 

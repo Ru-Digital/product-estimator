@@ -729,7 +729,7 @@ class ModalManager {
 
         console.log('[ModalManager.loadEstimatesList] Loaded estimate data from LocalStorage:', estimateData);
 
-        this.estimatesList.innerHTML = '';
+        this.estimatesList.innerHTML = ''; // Clear existing content
 
         if (Object.keys(estimates).length === 0) {
           console.log('[ModalManager.loadEstimatesList] No estimates found, showing empty template.');
@@ -755,6 +755,7 @@ class ModalManager {
                 default_markup: estimate.default_markup || 0
               }, this.estimatesList);
 
+              // Find the estimate section element that was just inserted
               const estimateSection = this.estimatesList.querySelector(
                 `.estimate-section[data-estimate-id="${estimateId}"]`
               );
@@ -819,26 +820,37 @@ class ModalManager {
                       // Find the suggestions container within the room element
                       const suggestionsContainer = roomElement ? roomElement.querySelector('.product-suggestions .suggestions-container') : null;
                       const suggestionsWrapper = roomElement ? roomElement.querySelector('.suggestions-container-wrapper') : null;
+                      const suggestionsSection = roomElement ? roomElement.querySelector('.product-suggestions') : null; // Get the entire suggestions section
+
 
                       // Get the room products array directly from the loaded estimateData
+                      // This is the list of products currently in the room, used to get suggestions
                       const roomProducts = room.products || [];
 
-                      if (suggestionsContainer && suggestionsWrapper) {
+                      // Check if suggestionsSection and containers exist before proceeding
+                      if (suggestionsSection && suggestionsContainer && suggestionsWrapper) {
                         console.log(`[ModalManager.loadEstimatesList] Found suggestions container for room ${roomId}. Fetching suggestions...`);
 
                         // Display a temporary loading message or spinner
                         suggestionsContainer.innerHTML = '<div class="loading-text">Loading suggestions...</div>'; // You could use a template here
 
+                        // Initially hide the suggestions section
+                        suggestionsSection.style.display = 'none'; // Hide while loading/fetching
+
                         // Fetch suggestions using DataService, passing the room products array
+                        // This call will trigger the backend to return suggestions *excluding* products already in roomProducts
                         this.dataService.getSuggestedProducts(estimateId, roomId, roomProducts)
                           .then(suggestions => {
                             console.log(`[ModalManager.loadEstimatesList] Fetched ${suggestions.length} suggestions for room ${roomId}. Rendering...`);
+                            console.log('[ModalManager.loadEstimatesList] Suggestions data received:', suggestions); // Log the suggestions data
                             suggestionsContainer.innerHTML = ''; // Clear loading state
 
                             if (suggestions && suggestions.length > 0) {
-                              // Ensure the suggestions section is visible if it was hidden
-                              const suggestionsSection = roomElement.querySelector('.product-suggestions');
-                              if(suggestionsSection) suggestionsSection.style.display = 'block';
+                              // If suggestions are returned, show the entire suggestions section
+                              suggestionsSection.style.display = 'block'; // Show the section
+                              // Ensure carousel nav is visible
+                              const carouselNav = roomElement.querySelectorAll('.suggestions-nav');
+                              carouselNav.forEach(nav => nav.style.display = ''); // Or 'block' or 'flex' as appropriate
 
 
                               // Use TemplateEngine to render each suggestion item
@@ -852,6 +864,8 @@ class ModalManager {
                                 const suggestionElement = TemplateEngine.create('suggestion-item-template', suggestionData);
                                 if (suggestionElement) {
                                   suggestionsContainer.appendChild(suggestionElement);
+                                } else {
+                                  console.warn('[ModalManager.loadEstimatesList] Failed to create suggestion element from template for suggestion:', suggestion); // Added log
                                 }
                               });
                               console.log(`[ModalManager.loadEstimatesList] Rendered ${suggestions.length} suggestion items for room ${roomId}.`);
@@ -866,33 +880,43 @@ class ModalManager {
                                 if (carouselWrapper.carouselInstance) {
                                   carouselWrapper.carouselInstance.destroy();
                                 }
-                                new SuggestionsCarousel(carouselWrapper);
+                                new SuggestionsCarousel(carouselWrapper); // Create a new instance
                               } else {
                                 console.warn(`[ModalManager.loadEstimatesList] Suggestions carousel wrapper not found for room ${roomId}. Cannot initialize carousel.`);
                               }
 
 
                             } else {
-                              // Hide the entire suggestions section if no suggestions are returned
-                              const suggestionsSection = roomElement.querySelector('.product-suggestions');
-                              if(suggestionsSection) suggestionsSection.style.display = 'none';
-
-                              console.log(`[ModalManager.loadEstimatesList] No suggestions found for room ${roomId}. Hiding suggestions section.`);
-                              // Hide the carousel navigation if no suggestions
+                              // If no suggestions are returned, the section remains hidden
+                              console.log(`[ModalManager.loadEstimatesList] No suggestions found for room ${roomId}. Suggestions section remains hidden.`);
+                              suggestionsSection.style.display = 'none'; // Explicitly hide if no suggestions
+                              // Hide carousel nav
                               const carouselNav = roomElement.querySelectorAll('.suggestions-nav');
                               carouselNav.forEach(nav => nav.style.display = 'none');
+                              // Destroy existing carousel instance if any
+                              if (carouselWrapper.carouselInstance) {
+                                carouselWrapper.carouselInstance.destroy();
+                                carouselWrapper.carouselInstance = null; // Clear reference
+                              }
                             }
                           })
                           .catch(error => {
                             console.error(`[ModalManager.loadEstimatesList] Error fetching suggestions for room ${roomId}:`, error);
                             // Display an error message in the suggestions container
                             suggestionsContainer.innerHTML = '<p class="error-message">Error loading suggestions.</p>';
-                            // Hide the carousel navigation on error
+                            // Ensure the entire suggestions section remains hidden on error as well
+                            suggestionsSection.style.display = 'none';
+                            // Hide carousel nav on error
                             const carouselNav = roomElement.querySelectorAll('.suggestions-nav');
                             carouselNav.forEach(nav => nav.style.display = 'none');
+                            // Destroy existing carousel instance if any
+                            if (carouselWrapper.carouselInstance) {
+                              carouselWrapper.carouselInstance.destroy();
+                              carouselWrapper.carouselInstance = null; // Clear reference
+                            }
                           });
                       } else {
-                        console.warn(`[ModalManager.loadEstimatesList] Suggestions container (.product-suggestions .suggestions-container) or wrapper (.suggestions-container-wrapper) not found for room ${roomId}. Cannot load suggestions.`);
+                        console.warn(`[ModalManager.loadEstimatesList] Suggestions container (.product-suggestions .suggestions-container), wrapper (.suggestions-container-wrapper), or section (.product-suggestions) not found for room ${roomId}. Cannot load suggestions.`);
                       }
                       // --- SUGGESTION LOADING AND RENDERING END ---
 
@@ -921,13 +945,14 @@ class ModalManager {
           this.initializeEstimateAccordions(expandRoomId, expandEstimateId); // Pass IDs here
           this.initializeAccordions(expandRoomId, expandEstimateId); // Pass IDs here
 
+          // Re-bind all necessary event handlers after the list is re-rendered
           this.bindProductRemovalEvents();
           this.bindRoomRemovalEvents();
-          this.bindEstimateListEventHandlers();
-          this.bindDirectEstimateRemovalEvents();
-          this.bindReplaceProductButtons();
-          this.bindSuggestedProductButtons();
-          this.bindSuggestionsToggle(); // Bind the new suggestions toggle
+          this.bindEstimateListEventHandlers(); // For "Add Room" buttons
+          this.bindDirectEstimateRemovalEvents(); // For "Remove Estimate" buttons
+          this.bindReplaceProductButtons(); // For "Upgrade" buttons
+          this.bindSuggestedProductButtons(); // For "Add Suggestion" buttons
+          this.bindSuggestionsToggle(); // Bind the suggestions toggle
 
 
           // Initial carousel initialization is still needed for any carousels
@@ -949,7 +974,7 @@ class ModalManager {
           console.log('[ModalManager.loadEstimatesList] Loading complete.');
 
           resolve(this.estimatesList.innerHTML);
-        }, 150);
+        }, 150); // Small delay to allow DOM updates
 
       } catch (error) {
         console.error('[ModalManager.loadEstimatesList] Error during rendering process:', error);
@@ -960,6 +985,7 @@ class ModalManager {
       }
     });
   }
+
 
 
 
@@ -1100,6 +1126,7 @@ class ModalManager {
 
   /**
    * Handle product removal
+   * MODIFIED to call updateRoomSuggestions if products still exist after removal.
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    * @param {number} productIndex - Product index
@@ -1148,7 +1175,13 @@ class ModalManager {
           if (suggestions) {
             suggestions.style.display = 'none';
           }
+        } else {
+          // *** MODIFIED: If products still exist, re-check for suggestions asynchronously ***
+          console.log(`Products still exist in room ${roomId}. Checking for updated suggestions.`);
+          this.updateRoomSuggestions(estimateId, roomId, roomElement);
+          // *** END MODIFIED ***
         }
+
 
         // Update the room's total price if needed
         if (response.room_totals) {
@@ -1171,6 +1204,7 @@ class ModalManager {
         this.hideLoading();
       });
   }
+
 
 
   /**
@@ -1233,8 +1267,11 @@ class ModalManager {
   }
 
   /**
-   * Handle adding a suggested product to a room
+   * Handle adding a suggested product to a room.
    * Moves the AJAX request to the DataService for consistency.
+   * Calls updateRoomSuggestions after successful add and list reload.
+   * Removes the suggestion item from the DOM after successful local add.
+   * Includes logging to help debug the add process.
    *
    * @param {string|number} productId - Product ID
    * @param {string|number} estimateId - Estimate ID
@@ -1242,46 +1279,118 @@ class ModalManager {
    * @param {HTMLElement} buttonElement - The button element that triggered the action
    */
   handleAddSuggestedProduct(productId, estimateId, roomId, buttonElement) {
-    this.showLoading();
+    console.log('[ModalManager.handleAddSuggestedProduct] Function called with:', { productId, estimateId, roomId, buttonElement }); // Added log
+    this.showLoading(); // Show loading indicator
 
+    // Disable button and show loading state
     if (buttonElement) {
       buttonElement.disabled = true;
       buttonElement.classList.add('loading');
-      buttonElement.innerHTML = '<span class="loading-dots">Adding...</span>';
+      buttonElement.innerHTML = '<span class="loading-dots">Adding...</span>'; // Use loading text/spinner
     }
 
     console.log(`[ModalManager.handleAddSuggestedProduct] Adding suggested product ${productId} to room ${roomId} in estimate ${estimateId} via DataService`);
 
+    // Use DataService to add the product (handles local storage and async server request)
     this.dataService.addProductToRoom(roomId, productId, estimateId)
       .then(localResult => {
-        console.log('[ModalManager.handleAddSuggestedProduct] Add suggested product local storage attempt result:', localResult);
+        console.log('[ModalManager.handleAddSuggestedProduct] DataService.addProductToRoom local storage attempt result:', localResult); // Log the result from DataService
 
         if (localResult.success) {
-          console.log('[ModalManager.handleAddSuggestedProduct] Local storage add successful. Refreshing list.');
+          console.log('[ModalManager.handleAddSuggestedProduct] Local storage add successful.');
 
-          // --- KEY LINE FOR EXPANSION ---
-          // Call loadEstimatesList with the room and estimate IDs to expand
-          return this.loadEstimatesList(roomId, estimateId)
+          // --- NEW: Remove the suggestion item from the DOM ---
+          // Find the closest ancestor element with the class 'suggestion-item' from the clicked button
+          const suggestionItemElement = buttonElement ? buttonElement.closest('.suggestion-item') : null;
+          if (suggestionItemElement) {
+            console.log('[ModalManager.handleAddSuggestedProduct] Removing suggestion item from DOM:', suggestionItemElement); // Added log
+            // Remove the element from the document
+            suggestionItemElement.remove();
+
+            // Check if the carousel needs to be updated/re-initialized after removal
+            const carouselContainer = suggestionItemElement.closest('.suggestions-carousel');
+            if (carouselContainer && carouselContainer.carouselInstance) {
+              console.log('[ModalManager.handleAddSuggestedProduct] Reinitializing carousel after item removal.'); // Added log
+              // Destroy existing instance if any and create a new one
+              carouselContainer.carouselInstance.destroy();
+              // Create a new instance of SuggestionsCarousel for the container
+              carouselContainer.carouselInstance = new SuggestionsCarousel(carouselContainer);
+            }
+          } else {
+            console.warn('[ModalManager.handleAddSuggestedProduct] Could not find suggestion item element to remove.'); // Added log
+          }
+          // --- END NEW ---
+
+
+          // Hide selection forms if they are visible (only applicable in product flow)
+          if (this.estimateSelection) this.estimateSelection.style.display = 'none';
+          if (this.roomSelectionForm) this.roomSelectionForm.style.display = 'none';
+
+          // Clear product ID from modal state as we've completed the product flow
+          delete this.modal.dataset.productId;
+          this.currentProductId = null;
+
+          // Use the estimate_id and room_id from the localResult if available, fallback to original IDs
+          const responseEstimateId = localResult.estimate_id || estimateId;
+          const responseRoomId = localResult.room_id || roomId;
+
+          console.log(`[ModalManager.handleAddSuggestedProduct] Product added to estimate ${responseEstimateId}, room ${responseRoomId} (based on local storage). Refreshing list.`); // Added log
+
+          // --- KEY LINE FOR EXPANSION AND REFRESH ---
+          // Call loadEstimatesList with the room and estimate IDs to expand the relevant section
+          // This will re-render the room and its product list, including the newly added product.
+          // It will also re-fetch and re-render suggestions for that room,
+          // which should no longer include the product that was just added.
+          return this.loadEstimatesList(responseRoomId, responseEstimateId)
             .then(() => {
+              console.log('[ModalManager.handleAddSuggestedProduct] Estimates list refreshed.'); // Added log
+
+              // *** MODIFIED: After list reloads and room is expanded, update suggestions for *this* room ***
+              // Find the newly loaded room element in the DOM using the response IDs
+              const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${responseRoomId}"][data-estimate-id="${responseEstimateId}"]`);
+              if (roomElement) {
+                console.log('[ModalManager.handleAddSuggestedProduct] List reloaded. Triggering suggestion update for room:', responseRoomId); // Added log
+                // Pass the room element, estimate ID, and room ID to the update function
+                this.updateRoomSuggestions(responseEstimateId, responseRoomId, roomElement);
+              } else {
+                console.warn('[ModalManager.handleAddSuggestedProduct] Could not find room element after list reload to update suggestions.'); // Added log
+              }
+              // *** END MODIFIED ***
+
               // Show success message after the list is loaded and expanded
               this.showMessage('Product added successfully!', 'success');
             });
           // --- END KEY LINE ---
 
         } else {
-          console.error('[ModalManager.handleAddSuggestedProduct] Error during local storage add:', localResult.error);
+          // Handle cases where local storage add failed (e.g., duplicate product)
+          console.error('[ModalManager.handleAddSuggestedProduct] Error during local storage add:', localResult.error); // Added log
+          // Show error message based on the error provided by DataService
           this.showError(localResult.error.message || 'Failed to add product locally. Please try again.');
+
+          // If it's a duplicate, navigate to the room where the product already exists
+          if (localResult.error?.data?.duplicate) {
+            const duplicateEstimateId = localResult.error.data.estimate_id;
+            const duplicateRoomId = localResult.error.data.room_id;
+            console.log(`[ModalManager.handleAddSuggestedProduct] Duplicate detected, navigating to estimate ${duplicateEstimateId}, room ${duplicateRoomId}`); // Added log
+            this.loadEstimatesList(duplicateRoomId, duplicateEstimateId); // Expand the room with the duplicate
+          }
         }
       })
       .catch(error => {
-        console.error('[ModalManager.handleAddSuggestedProduct] Error adding suggested product via DataService:', error);
+        // This catch block handles errors from the DataService.addProductToRoom promise itself
+        // (e.g., error during the initial fetch for comprehensive product data, or the DataService promise rejection)
+        console.error('[ModalManager.handleAddSuggestedProduct] Error adding suggested product via DataService promise rejection:', error); // Added log
 
+        // Check if the error has the duplicate flag from DataService
         if (error.data?.duplicate) {
-          console.log('[ModalManager.handleAddSuggestedProduct] Duplicate suggested product detected by DataService:', error.data);
+          console.log('[ModalManager.handleAddSuggestedProduct] Duplicate suggested product detected by DataService promise rejection:', error.data); // Added log
 
+          // Hide selection forms if they are visible
           if (this.estimateSelection) this.estimateSelection.style.display = 'none';
           if (this.roomSelectionForm) this.roomSelectionForm.style.display = 'none';
 
+          // Clear product ID from modal state
           delete this.modal.dataset.productId;
           this.currentProductId = null;
 
@@ -1294,79 +1403,246 @@ class ModalManager {
           // Call loadEstimatesList with the duplicate room and estimate IDs to show where it exists
           this.loadEstimatesList(duplicateRoomId, duplicateEstimateId)
             .then(() => {
-              console.log('[ModalManager.handleAddSuggestedProduct] Estimates list refreshed to show duplicate product location');
+              console.log('[ModalManager.handleAddSuggestedProduct] Estimates list refreshed to show duplicate product location'); // Added log
+              // No need to update suggestions here, as the room already contains the product.
             })
             .catch(error => {
-              console.error('[ModalManager.handleAddSuggestedProduct] Error refreshing estimates list:', error);
+              console.error('[ModalManager.handleAddSuggestedProduct] Error refreshing estimates list:', error); // Added log
             });
           // --- END KEY LINE ---
 
         } else {
+          // Handle other types of errors from the DataService promise
           this.showError(error.message || 'Error adding product. Please try again.');
         }
       })
       .finally(() => {
+        // Ensure button state is reset and loading is hidden
         if (buttonElement) {
           buttonElement.disabled = false;
           buttonElement.classList.remove('loading');
-          buttonElement.textContent = 'Add';
+          buttonElement.textContent = 'Add'; // Reset button text
         }
-        this.hideLoading();
+        this.hideLoading(); // Hide loading indicator
       });
   }
 
 
 
+
+
+
+
+
+
+  /**
+   * Binds click events to the suggested product buttons within each room.
+   * This controls the action of adding a suggested product to a room.
+   * Includes logging to help debug click events and data attributes.
+   */
   bindSuggestedProductButtons() {
-    console.log('Binding suggested product buttons');
+    console.log('[ModalManager.bindSuggestedProductButtons] Binding suggested product buttons'); // Added log
 
     // Find all suggestion buttons in the modal
-    const suggestionButtons = this.modal.querySelectorAll('.add-suggestion-to-room');
+    // Use event delegation by querying within the main estimates list container
+    // We will bind the handler to the estimatesList container and use event delegation
+    // to catch clicks on buttons with the class 'add-suggestion-to-room'.
+    const estimatesListContainer = this.modal.querySelector('#estimates');
 
-    if (suggestionButtons.length) {
-      console.log(`Found ${suggestionButtons.length} suggestion buttons to bind`);
+    if (!estimatesListContainer) {
+      console.error('[ModalManager.bindSuggestedProductButtons] Estimates list container (#estimates) not found. Cannot bind suggestion button events.');
+      return;
+    }
 
-      // Loop through each button and bind click event
-      suggestionButtons.forEach(button => {
-        // Remove any existing handlers to prevent duplicates
-        // Store handler reference directly on the button element for easy removal
-        if (button._suggestionButtonHandler) {
-          button.removeEventListener('click', button._suggestionButtonHandler);
+    // Remove any existing event listener on the estimatesList container for this handler
+    // This prevents duplicate bindings if loadEstimatesList is called multiple times
+    if (estimatesListContainer._suggestionButtonHandler) {
+      estimatesListContainer.removeEventListener('click', estimatesListContainer._suggestionButtonHandler);
+    }
+
+    // Create a single handler function and store a reference to it
+    // Store the handler directly on the container element
+    estimatesListContainer._suggestionButtonHandler = (e) => {
+      const button = e.target.closest('.add-suggestion-to-room'); // Find the clicked button using closest()
+
+      if (button) { // Check if a button with the class was actually clicked
+        console.log('[ModalManager.bindSuggestedProductButtons] Click handler triggered for button:', button); // Added log
+        e.preventDefault(); // Prevent default button action
+        e.stopPropagation(); // Prevent the click from propagating to parent elements (like accordion headers)
+
+        // Get data attributes directly from the clicked button element's dataset
+        const productId = button.dataset.productId;
+        const estimateId = button.dataset.estimateId;
+        const roomId = button.dataset.roomId;
+
+        console.log('[ModalManager.bindSuggestedProductButtons] Data attributes read:', {
+          productId,
+          estimateId,
+          roomId
+        }); // Added log
+
+        // Handle adding the suggested product if all required data attributes are present
+        if (productId && estimateId && roomId) {
+          console.log('[ModalManager.bindSuggestedProductButtons] Data attributes are valid, calling handleAddSuggestedProduct'); // Added log
+          this.handleAddSuggestedProduct(productId, estimateId, roomId, button);
+        } else {
+          console.error('[ModalManager.bindSuggestedProductButtons] Missing required data attributes for adding suggested product on button:', button); // Added log
+          // Optionally provide user feedback here
+          this.showError('Cannot add product: Missing required information.');
         }
+      }
+    };
 
-        // Create and store new handler directly on button element
-        button._suggestionButtonHandler = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
+    // Add the event listener to the estimates list container using the stored handler
+    estimatesListContainer.addEventListener('click', estimatesListContainer._suggestionButtonHandler);
+    console.log('[ModalManager.bindSuggestedProductButtons] Suggestion button click event handler bound to #estimates element.'); // Added log
 
-          // Get data attributes
-          const productId = button.dataset.productId;
-          const estimateId = button.dataset.estimateId;
-          const roomId =button.dataset.roomId;
-
-          console.log('Add suggestion button clicked:', {
-            productId,
-            estimateId,
-            roomId
-          });
-
-          // Handle adding the suggested product
-          if (productId && estimateId && roomId) {
-            this.handleAddSuggestedProduct(productId, estimateId, roomId, button);
-          } else {
-            console.error('Missing required data attributes for adding suggested product');
-          }
-        };
-
-        // Add click event listener
-        button.addEventListener('click', button._suggestionButtonHandler);
-      });
-
-      console.log('Suggestion buttons bound successfully');
+    // Initial check for buttons that might already be in the DOM on load
+    const initialButtons = estimatesListContainer.querySelectorAll('.add-suggestion-to-room');
+    if (initialButtons.length > 0) {
+      console.log(`[ModalManager.bindSuggestedProductButtons] Found ${initialButtons.length} suggestion buttons initially in the DOM.`); // Added log
     } else {
-      console.log('No suggestion buttons found to bind');
+      console.log('[ModalManager.bindSuggestedProductButtons] No suggestion buttons found initially in the DOM.'); // Added log
     }
   }
+
+
+
+  /**
+   * Asynchronously fetches and updates the suggested products for a specific room.
+   * Hides the suggestions section if no suggestions are returned.
+   * Includes logging to help debug the suggestion fetching and rendering process.
+   *
+   * @param {string} estimateId - Estimate ID
+   * @param {string} roomId - Room ID
+   * @param {HTMLElement} roomElement - The DOM element for the room
+   */
+  updateRoomSuggestions(estimateId, roomId, roomElement) {
+    console.log(`[ModalManager.updateRoomSuggestions] Updating suggestions for room ${roomId} in estimate ${estimateId}`); // Added log
+
+    if (!roomElement) {
+      console.error('[ModalManager.updateRoomSuggestions] Room element not provided.'); // Added log
+      return;
+    }
+
+    // Find the necessary elements within the room element
+    const suggestionsSection = roomElement.querySelector('.product-suggestions');
+    const suggestionsContainer = roomElement.querySelector('.product-suggestions .suggestions-container');
+    const suggestionsWrapper = roomElement.querySelector('.suggestions-container-wrapper');
+    const carouselWrapper = roomElement.querySelector('.suggestions-carousel');
+    const carouselNav = roomElement.querySelectorAll('.suggestions-nav'); // Get navigation elements
+
+    if (!suggestionsSection || !suggestionsContainer || !suggestionsWrapper || !carouselWrapper) {
+      console.warn('[ModalManager.updateRoomSuggestions] Required suggestion elements not found in room element.', {
+        suggestionsSection: !!suggestionsSection,
+        suggestionsContainer: !!suggestionsContainer,
+        suggestionsWrapper: !!suggestionsWrapper,
+        carouselWrapper: !!carouselWrapper
+      }); // Added log with element checks
+      return; // Cannot update suggestions if elements are missing
+    }
+
+    // Load estimate data to get the current list of products in the room
+    // This is crucial because the DataService needs the current products to filter suggestions
+    const estimateData = this.loadEstimateData();
+    const roomData = estimateData.estimates?.[estimateId]?.rooms?.[roomId];
+    const roomProducts = roomData?.products || [];
+
+    console.log(`[ModalManager.updateRoomSuggestions] Room ${roomId} has ${roomProducts.length} products.`, roomProducts); // Added log
+
+    // If there are no products in the room, hide suggestions immediately
+    if (roomProducts.length === 0) {
+      console.log(`[ModalManager.updateRoomSuggestions] Room ${roomId} has no products. Hiding suggestions section.`); // Added log
+      suggestionsSection.style.display = 'none';
+      suggestionsContainer.innerHTML = ''; // Clear old suggestions
+      carouselNav.forEach(nav => nav.style.display = 'none'); // Hide nav
+      // Destroy existing carousel instance if any
+      if (carouselWrapper.carouselInstance) {
+        carouselWrapper.carouselInstance.destroy();
+        carouselWrapper.carouselInstance = null; // Clear reference
+      }
+      return; // No products, no suggestions to fetch
+    }
+
+
+    // Show loading state in the suggestions container
+    suggestionsContainer.innerHTML = '<div class="loading-text">Loading suggestions...</div>';
+    suggestionsSection.style.display = 'block'; // Ensure section is visible while loading
+
+    // Fetch suggestions using DataService, passing the current list of room products
+    this.dataService.getSuggestedProducts(estimateId, roomId, roomProducts)
+      .then(suggestions => {
+        console.log(`[ModalManager.updateRoomSuggestions] Fetched ${suggestions.length} suggestions for room ${roomId}. Rendering...`); // Added log
+        console.log('[ModalManager.updateRoomSuggestions] Suggestions data received:', suggestions); // Log the suggestions data
+        suggestionsContainer.innerHTML = ''; // Clear loading state
+
+        if (suggestions && suggestions.length > 0) {
+          console.log('[ModalManager.updateRoomSuggestions] Suggestions found, showing section and rendering items.'); // Added log
+          // Show the entire suggestions section if it was hidden
+          suggestionsSection.style.display = 'block';
+          // Ensure carousel nav is visible
+          carouselNav.forEach(nav => nav.style.display = ''); // Or 'block' or 'flex' as appropriate
+
+
+          // Use TemplateEngine to render each suggestion item
+          suggestions.forEach(suggestion => {
+            console.log('[ModalManager.updateRoomSuggestions] Rendering suggestion item:', suggestion); // Log each suggestion item being rendered
+            // Ensure suggestion data includes necessary IDs for the button
+            const suggestionData = {
+              ...suggestion,
+              estimate_id: estimateId,
+              room_id: roomId // Pass the room ID to the suggestion item template
+            };
+            const suggestionElement = TemplateEngine.create('suggestion-item-template', suggestionData);
+            if (suggestionElement) {
+              suggestionsContainer.appendChild(suggestionElement);
+            } else {
+              console.warn('[ModalManager.updateRoomSuggestions] Failed to create suggestion element from template for suggestion:', suggestion); // Added log
+            }
+          });
+          console.log(`[ModalManager.updateRoomSuggestions] Rendered ${suggestions.length} suggestion items.`); // Added log
+
+          // Initialize the carousel for this specific room's suggestions container
+          console.log(`[ModalManager.updateRoomSuggestions] Initializing carousel for room ${roomId}.`); // Added log
+          // Destroy existing instance if any and create a new one
+          if (carouselWrapper.carouselInstance) {
+            carouselWrapper.carouselInstance.destroy();
+          }
+          carouselWrapper.carouselInstance = new SuggestionsCarousel(carouselWrapper); // Store instance
+
+        } else {
+          console.log(`[ModalManager.updateRoomSuggestions] No suggestions found. Hiding suggestions section.`); // Added log
+          // If no suggestions are returned, hide the entire suggestions section
+          suggestionsSection.style.display = 'none';
+          suggestionsContainer.innerHTML = ''; // Clear any old suggestions
+          // Hide carousel nav
+          carouselNav.forEach(nav => nav.style.display = 'none');
+          // Destroy existing carousel instance if any
+          if (carouselWrapper.carouselInstance) {
+            carouselWrapper.carouselInstance.destroy();
+            carouselWrapper.carouselInstance = null; // Clear reference
+          }
+        }
+      })
+      .catch(error => {
+        console.error(`[ModalManager.updateRoomSuggestions] Error fetching suggestions:`, error); // Added log
+        // Display an error message in the suggestions container
+        suggestionsContainer.innerHTML = '<p class="error-message">Error loading suggestions.</p>';
+        // Hide the suggestions section on error
+        suggestionsSection.style.display = 'none';
+        // Hide carousel nav on error
+        carouselNav.forEach(nav => nav.style.display = 'none');
+        // Destroy existing carousel instance if any
+        if (carouselWrapper.carouselInstance) {
+          carouselWrapper.carouselInstance.destroy();
+          carouselWrapper.carouselInstance = null; // Clear reference
+        }
+      });
+  }
+
+
+
+
 
   /**
    * Binds click events to the suggestions toggle button within each room.
@@ -2372,6 +2648,7 @@ class ModalManager {
 
   /**
    * Handle room selection form submission with multi-estimate support
+   * MODIFIED to call updateRoomSuggestions after successful add and list reload.
    * @param {HTMLFormElement} form - The submitted form
    */
   handleRoomSelection(form) {
@@ -2413,8 +2690,8 @@ class ModalManager {
           delete this.modal.dataset.productId;
           this.currentProductId = null;
 
-          const responseEstimateId = localResult.estimateId || estimateId;
-          const responseRoomId = localResult.roomId || roomId;
+          const responseEstimateId = localResult.estimate_id || estimateId; // Corrected to use localResult.estimate_id
+          const responseRoomId = localResult.room_id || roomId; // Corrected to use localResult.room_id
 
           console.log(`[ModalManager.handleRoomSelection] Product added to estimate ${responseEstimateId}, room ${responseRoomId} (based on local storage)`);
 
@@ -2422,6 +2699,18 @@ class ModalManager {
           // Call loadEstimatesList with the room and estimate IDs to expand
           this.loadEstimatesList(responseRoomId, responseEstimateId)
             .then(() => {
+              // *** MODIFIED: After list reloads and room is expanded, update suggestions for *this* room ***
+              // Find the newly loaded room element in the DOM
+              const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${responseRoomId}"][data-estimate-id="${responseEstimateId}"]`);
+              if (roomElement) {
+                console.log('[ModalManager.handleRoomSelection] List reloaded. Triggering suggestion update for room:', responseRoomId);
+                // Pass the room element, estimate ID, and room ID to the update function
+                this.updateRoomSuggestions(responseEstimateId, responseRoomId, roomElement);
+              } else {
+                console.warn('[ModalManager.handleRoomSelection] Could not find room element after list reload to update suggestions.');
+              }
+              // *** END MODIFIED ***
+
               // Show success message after the list is loaded and expanded
               this.showMessage('Product added successfully!', 'success');
             })
@@ -2458,6 +2747,7 @@ class ModalManager {
           this.loadEstimatesList(duplicateRoomId, duplicateEstimateId)
             .then(() => {
               console.log('[ModalManager.handleRoomSelection] Estimates list refreshed to show duplicate product location');
+              // No need to update suggestions here, as the room already contains the product.
             })
             .catch(error => {
               console.error('[ModalManager.handleRoomSelection] Error refreshing estimates list:', error);
@@ -2474,6 +2764,7 @@ class ModalManager {
         this.hideLoading();
       });
   }
+
 
 
 
@@ -2552,6 +2843,7 @@ class ModalManager {
 
   /**
    * Handle new room form submission with multi-estimate support
+   * MODIFIED to call updateRoomSuggestions after successful add and list reload.
    * @param {HTMLFormElement} form - The submitted form
    * @param {Event} event - The form submission event
    */
@@ -2613,6 +2905,18 @@ class ModalManager {
           .then(() => {
             // Show success message after the list is loaded and expanded
             this.showMessage('Room added successfully!', 'success');
+
+            // *** MODIFIED: After list reloads and room is expanded, update suggestions for *this* room ***
+            // Find the newly loaded room element in the DOM
+            const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${responseRoomId}"][data-estimate-id="${responseEstimateId}"]`);
+            if (roomElement) {
+              console.log('[ModalManager.handleNewRoomSubmission] List reloaded. Triggering suggestion update for room:', responseRoomId);
+              // Pass the room element, estimate ID, and room ID to the update function
+              this.updateRoomSuggestions(responseEstimateId, responseRoomId, roomElement);
+            } else {
+              console.warn('[ModalManager.handleNewRoomSubmission] Could not find room element after list reload to update suggestions.');
+            }
+            // *** END MODIFIED ***
           })
           .catch(error => {
             console.error('[ModalManager.handleNewRoomSubmission] Error refreshing estimates list:', error);
@@ -2629,6 +2933,7 @@ class ModalManager {
         this.hideLoading();
       });
   }
+
 
 
 

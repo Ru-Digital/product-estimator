@@ -6,7 +6,8 @@ namespace RuDigital\ProductEstimator\Includes\Frontend;
  * This lightweight class provides only what's needed for the frontend
  * without loading admin dependencies
  */
-class ProductAdditionsFrontend extends FrontendBase {
+class ProductAdditionsFrontend extends FrontendBase
+{
 
     /**
      * Initialize the class and set its properties.
@@ -15,7 +16,8 @@ class ProductAdditionsFrontend extends FrontendBase {
      * @param string $version The version of this plugin.
      * @since    1.0.5
      */
-    public function __construct($plugin_name, $version) {
+    public function __construct($plugin_name, $version)
+    {
         parent::__construct($plugin_name, $version);
     }
 
@@ -23,12 +25,13 @@ class ProductAdditionsFrontend extends FrontendBase {
     /**
      * Get auto-add products for specific categories
      *
+     * @param int $category_id Category ID
+     * @return   array Array of product IDs
      * @since    1.1.0
      * @access   public
-     * @param    int $category_id Category ID
-     * @return   array Array of product IDs
      */
-    public function get_auto_add_products_for_category($category_id) {
+    public function get_auto_add_products_for_category($category_id)
+    {
         // Get all relations
         $relations = get_option('product_estimator_product_additions', array());
         $product_ids = array();
@@ -59,12 +62,13 @@ class ProductAdditionsFrontend extends FrontendBase {
     /**
      * Get auto-add notes for specific categories
      *
+     * @param int $category_id Category ID
+     * @return   array Array of note texts
      * @since    1.1.0
      * @access   public
-     * @param    int $category_id Category ID
-     * @return   array Array of note texts
      */
-    public function get_auto_add_notes_for_category($category_id) {
+    public function get_auto_add_notes_for_category($category_id)
+    {
         // Get all relations
         $relations = get_option('product_estimator_product_additions', array());
         $notes = array();
@@ -96,12 +100,13 @@ class ProductAdditionsFrontend extends FrontendBase {
     /**
      * Get suggested products for a specific category
      *
+     * @param int $category_id Category ID
+     * @return   array Array of product IDs
      * @since    1.1.0
      * @access   public
-     * @param    int $category_id Category ID
-     * @return   array Array of product IDs
      */
-    public function get_suggested_products_for_category($category_id) {
+    public function get_suggested_products_for_category($category_id)
+    {
         // Get all relations
         $relations = get_option('product_estimator_product_additions', array());
         $suggested_categories = array();
@@ -151,63 +156,67 @@ class ProductAdditionsFrontend extends FrontendBase {
         return $products;
     }
 
+
     /**
-     * Generate product suggestions based on room contents
+     * Generate product suggestions based on room contents.
+     * This version iterates through products in the room and uses the parent product ID
+     * for variations when getting categories for suggestion lookup.
      *
+     * @param array $room_products Array of products in the room (passed from frontend)
+     * @return   array Array of suggested product IDs (raw IDs before formatting)
      * @since    1.1.0
      * @access   public
-     * @param    array $room_products Array of products in the room
-     * @return   array Array of suggested products
      */
-    public function get_suggestions_for_room($room_products) {
+    public function get_suggestions_for_room($room_products)
+    {
         if (empty($room_products) || !is_array($room_products)) {
             return array();
         }
 
-        $product_categories = array();
-        $suggested_products = array();
+        $raw_suggested_product_ids = array();
 
-        // Get product categories for all products in the room
+        // Iterate through each product in the room
         foreach ($room_products as $product) {
-            if (isset($product['id']) && $product['id'] > 0) {
-                $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
-                if (is_array($categories)) {
-                    $product_categories = array_merge($product_categories, $categories);
+            // Skip notes or products without IDs
+            if (isset($product['type']) && $product['type'] === 'note') {
+                continue;
+            }
+            if (!isset($product['id']) || empty($product['id'])) {
+                continue;
+            }
+
+            // Get the product object to check for variation parent
+            $product_obj = wc_get_product($product['id']);
+            $product_id_for_categories = $product['id']; // Default to product ID
+
+            if ($product_obj && $product_obj->is_type('variation')) {
+                // Use the parent product ID for getting categories if it's a variation
+                $parent_id = $product_obj->get_parent_id();
+                if ($parent_id) {
+                    $product_id_for_categories = $parent_id;
+                }
+            }
+
+            // Get product categories using the determined product ID (parent or own)
+            $categories = wp_get_post_terms($product_id_for_categories, 'product_cat', array('fields' => 'ids'));
+
+            if (!empty($categories) && !is_wp_error($categories)) {
+                // Check each category for suggestions
+                foreach ($categories as $category_id) {
+                    // Get suggested products for this category using the manager's helper method
+                    $category_suggestions = $this->get_suggested_products_for_category($category_id);
+                    if (!empty($category_suggestions)) {
+                        // Add each suggested product ID to the raw list
+                        $raw_suggested_product_ids = array_merge($raw_suggested_product_ids, $category_suggestions);
+                    }
                 }
             }
         }
 
-        // Remove duplicates
-        $product_categories = array_unique($product_categories);
+        // Remove duplicates from the raw list of suggested product IDs
+        $unique_raw_suggestions = array_unique($raw_suggested_product_ids);
 
-        // Get suggested products for each category
-        foreach ($product_categories as $category_id) {
-            $category_suggested_products = $this->get_suggested_products_for_category($category_id);
-            if (!empty($category_suggested_products)) {
-                $suggested_products = array_merge($suggested_products, $category_suggested_products);
-            }
-        }
-
-        // Remove duplicates and limit to 6 suggestions
-        $suggested_products = array_unique($suggested_products);
-        $suggested_products = array_slice($suggested_products, 0, 6);
-
-        // Format the suggested products
-        $formatted_suggestions = array();
-        foreach ($suggested_products as $product_id) {
-            $product = wc_get_product($product_id);
-            if ($product) {
-                $formatted_suggestions[] = array(
-                    'id' => $product_id,
-                    'name' => $product->get_name(),
-                    'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
-                    'price' => $product->get_price(),
-                    'formatted_price' => wc_price($product->get_price()),
-                    'permalink' => get_permalink($product_id)
-                );
-            }
-        }
-
-        return $formatted_suggestions;
+        // Return the unique raw suggested product IDs
+        return $unique_raw_suggestions;
     }
 }

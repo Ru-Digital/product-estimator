@@ -937,28 +937,49 @@ class DataService {
 
   /**
    * Get suggested products for a room
+   * Now accepts roomProducts array to send to the backend.
    * @param {string|number} estimateId - Estimate ID
    * @param {string|number} roomId - Room ID
+   * @param {Array} roomProducts - Array of product objects currently in the room
    * @param {boolean} bypassCache - Whether to bypass the cache
    * @returns {Promise<Array>} Array of suggested products
    */
-  getSuggestedProducts(estimateId, roomId, bypassCache = false) {
+  getSuggestedProducts(estimateId, roomId, roomProducts = [], bypassCache = false) {
     const cacheKey = `estimate_${estimateId}_room_${roomId}`;
 
+    // Check cache first for efficiency within the same session
+    // Note: Cache is still based on estimate and room ID, not the specific products passed.
+    // If suggestion logic is highly sensitive to exact product list changes,
+    // you might need a more complex cache key or bypass cache more often.
     if (!bypassCache && this.cache.suggestedProducts[cacheKey]) {
       this.log(`Returning cached suggestions for room ${roomId}`);
       return Promise.resolve(this.cache.suggestedProducts[cacheKey]);
     }
 
-    return this.request('get_suggested_products', {
+    console.log('Fetching suggestions from backend, passing room products:', roomProducts);
+
+    // Prepare data to send to the backend
+    const requestData = {
       estimate_id: estimateId,
-      room_id: roomId
-    })
+      room_id: roomId,
+      // Stringify the roomProducts array to send it in the POST data
+      room_products: JSON.stringify(roomProducts)
+    };
+
+    return this.request('get_suggested_products', requestData)
       .then(data => {
         this.cache.suggestedProducts[cacheKey] = data.suggestions;
         return data.suggestions;
+      })
+      .catch(error => {
+        console.error('DataService: Error fetching suggestions:', error);
+        // Clear cache for this room on error, as the cached data might be stale or indicate a problem
+        delete this.cache.suggestedProducts[cacheKey];
+        throw error; // Re-throw the error to be handled by ModalManager
       });
   }
+
+
 
   /**
    * Get the variation estimator content

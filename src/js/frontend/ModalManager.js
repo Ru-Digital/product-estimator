@@ -5,7 +5,7 @@
  * This is the single source of truth for modal operations.
  */
 import ConfirmationDialog from './ConfirmationDialog';
-import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
+import { SuggestionsCarousel } from './SuggestionsCarousel';
 import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails} from "./CustomerStorage";
 import { loadEstimateData, saveEstimate, saveEstimateData, clearEstimateData, addEstimate, removeEstimate } from "./EstimateStorage";
 import TemplateEngine from './TemplateEngine';
@@ -708,12 +708,6 @@ class ModalManager {
    * @param {string|null} expandEstimateId - Optional estimate ID containing the room
    * @returns {Promise} Promise that resolves when the list is loaded
    */
-  /**
-   * Load the estimates list with improved multi-estimate expansion
-   * @param {string|null} expandRoomId - Optional room ID to expand after loading
-   * @param {string|null} expandEstimateId - Optional estimate ID containing the room
-   * @returns {Promise} Promise that resolves when the list is loaded
-   */
   loadEstimatesList(expandRoomId = null, expandEstimateId = null) {
     console.log('[ModalManager.loadEstimatesList] Function started', { expandRoomId, expandEstimateId });
 
@@ -729,10 +723,11 @@ class ModalManager {
       this.estimatesList.style.display = 'block';
 
       try {
+        // Load estimate data from LocalStorage
         const estimateData = this.loadEstimateData();
         const estimates = estimateData.estimates || {};
 
-        console.log('[ModalManager.loadEstimatesList] Loaded estimate data:', estimateData);
+        console.log('[ModalManager.loadEstimatesList] Loaded estimate data from LocalStorage:', estimateData);
 
         this.estimatesList.innerHTML = '';
 
@@ -819,6 +814,89 @@ class ModalManager {
                       } else {
                         console.error(`[ModalManager.loadEstimatesList] v .product-list container not found within room element for room ${roomId}. Cannot render products.`);
                       }
+
+                      // --- SUGGESTION LOADING AND RENDERING START ---
+                      // Find the suggestions container within the room element
+                      const suggestionsContainer = roomElement ? roomElement.querySelector('.product-suggestions .suggestions-container') : null;
+                      const suggestionsWrapper = roomElement ? roomElement.querySelector('.suggestions-container-wrapper') : null;
+
+                      // Get the room products array directly from the loaded estimateData
+                      const roomProducts = room.products || [];
+
+                      if (suggestionsContainer && suggestionsWrapper) {
+                        console.log(`[ModalManager.loadEstimatesList] Found suggestions container for room ${roomId}. Fetching suggestions...`);
+
+                        // Display a temporary loading message or spinner
+                        suggestionsContainer.innerHTML = '<div class="loading-text">Loading suggestions...</div>'; // You could use a template here
+
+                        // Fetch suggestions using DataService, passing the room products array
+                        this.dataService.getSuggestedProducts(estimateId, roomId, roomProducts)
+                          .then(suggestions => {
+                            console.log(`[ModalManager.loadEstimatesList] Fetched ${suggestions.length} suggestions for room ${roomId}. Rendering...`);
+                            suggestionsContainer.innerHTML = ''; // Clear loading state
+
+                            if (suggestions && suggestions.length > 0) {
+                              // Ensure the suggestions section is visible if it was hidden
+                              const suggestionsSection = roomElement.querySelector('.product-suggestions');
+                              if(suggestionsSection) suggestionsSection.style.display = 'block';
+
+
+                              // Use TemplateEngine to render each suggestion item
+                              suggestions.forEach(suggestion => {
+                                // Ensure suggestion data includes necessary IDs for the button
+                                const suggestionData = {
+                                  ...suggestion,
+                                  estimate_id: estimateId,
+                                  room_id: roomId // Pass the room ID to the suggestion item template
+                                };
+                                const suggestionElement = TemplateEngine.create('suggestion-item-template', suggestionData);
+                                if (suggestionElement) {
+                                  suggestionsContainer.appendChild(suggestionElement);
+                                }
+                              });
+                              console.log(`[ModalManager.loadEstimatesList] Rendered ${suggestions.length} suggestion items for room ${roomId}.`);
+
+                              // Initialize the carousel for this specific room's suggestions container
+                              // This needs to happen after the items are added to the DOM
+                              // We need to find the carousel wrapper element
+                              const carouselWrapper = roomElement.querySelector('.suggestions-carousel');
+                              if(carouselWrapper) {
+                                console.log(`[ModalManager.loadEstimatesList] Initializing carousel for room ${roomId}.`);
+                                // Destroy existing instance if any and create a new one
+                                if (carouselWrapper.carouselInstance) {
+                                  carouselWrapper.carouselInstance.destroy();
+                                }
+                                new SuggestionsCarousel(carouselWrapper);
+                              } else {
+                                console.warn(`[ModalManager.loadEstimatesList] Suggestions carousel wrapper not found for room ${roomId}. Cannot initialize carousel.`);
+                              }
+
+
+                            } else {
+                              // Hide the entire suggestions section if no suggestions are returned
+                              const suggestionsSection = roomElement.querySelector('.product-suggestions');
+                              if(suggestionsSection) suggestionsSection.style.display = 'none';
+
+                              console.log(`[ModalManager.loadEstimatesList] No suggestions found for room ${roomId}. Hiding suggestions section.`);
+                              // Hide the carousel navigation if no suggestions
+                              const carouselNav = roomElement.querySelectorAll('.suggestions-nav');
+                              carouselNav.forEach(nav => nav.style.display = 'none');
+                            }
+                          })
+                          .catch(error => {
+                            console.error(`[ModalManager.loadEstimatesList] Error fetching suggestions for room ${roomId}:`, error);
+                            // Display an error message in the suggestions container
+                            suggestionsContainer.innerHTML = '<p class="error-message">Error loading suggestions.</p>';
+                            // Hide the carousel navigation on error
+                            const carouselNav = roomElement.querySelectorAll('.suggestions-nav');
+                            carouselNav.forEach(nav => nav.style.display = 'none');
+                          });
+                      } else {
+                        console.warn(`[ModalManager.loadEstimatesList] Suggestions container (.product-suggestions .suggestions-container) or wrapper (.suggestions-container-wrapper) not found for room ${roomId}. Cannot load suggestions.`);
+                      }
+                      // --- SUGGESTION LOADING AND RENDERING END ---
+
+
                     });
                   } else { // If roomsContainer exists but no rooms
                     console.log(`[ModalManager.loadEstimatesList] Estimate ${estimateId} has no rooms, showing empty template.`);
@@ -849,8 +927,17 @@ class ModalManager {
           this.bindDirectEstimateRemovalEvents();
           this.bindReplaceProductButtons();
           this.bindSuggestedProductButtons();
+          this.bindSuggestionsToggle(); // Bind the new suggestions toggle
 
-          this.initializeCarousels();
+
+          // Initial carousel initialization is still needed for any carousels
+          // that might be visible initially (e.g., if an accordion is expanded by default)
+          // However, the main suggestion carousels are now initialized AFTER their content is loaded per room.
+          // We might remove this general call or adjust initSuggestionsCarousels
+          // to only initialize carousels that haven't been initialized yet.
+          // For now, keep it, but rely on the per-room initialization for suggestions.
+          // this.initializeCarousels(); // This might be redundant or need adjustment now
+
 
           if (window.productEstimator && window.productEstimator.detailsToggle) {
             window.productEstimator.detailsToggle.setup();
@@ -873,6 +960,9 @@ class ModalManager {
       }
     });
   }
+
+
+
 
   /**
    * Bind estimate removal events directly to buttons after rendering.
@@ -1277,6 +1367,103 @@ class ModalManager {
       console.log('No suggestion buttons found to bind');
     }
   }
+
+  /**
+   * Binds click events to the suggestions toggle button within each room.
+   * This controls the visibility of the suggestions carousel.
+   */
+  bindSuggestionsToggle() {
+    console.log('[ModalManager] Binding suggestions toggle buttons');
+
+    // Use event delegation on the main estimates list container
+    if (!this.estimatesList) {
+      console.warn('[ModalManager] Estimates list container not available for binding suggestions toggle.');
+      return;
+    }
+
+    // Remove any existing handler to prevent duplicates
+    if (this._suggestionsToggleHandler) {
+      this.estimatesList.removeEventListener('click', this._suggestionsToggleHandler);
+    }
+
+    // Create and store the new handler
+    this._suggestionsToggleHandler = (e) => {
+      const toggleButton = e.target.closest('.product-suggestions-toggle');
+
+      if (toggleButton) {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent this click from triggering the main room accordion
+
+        console.log('[ModalManager] Suggestions toggle button clicked.');
+
+        const suggestionsSection = toggleButton.closest('.product-suggestions');
+        const suggestionsWrapper = suggestionsSection ? suggestionsSection.querySelector('.suggestions-container-wrapper') : null;
+        const toggleIcon = toggleButton.querySelector('.toggle-icon');
+
+        if (suggestionsWrapper) {
+          // Toggle the 'expanded' class on the button
+          toggleButton.classList.toggle('expanded');
+
+          // Toggle the icon class
+          if (toggleIcon) {
+            toggleIcon.classList.toggle('dashicons-arrow-down-alt2');
+            toggleIcon.classList.toggle('dashicons-arrow-up-alt2');
+          }
+
+
+          // Toggle the visibility of the suggestions wrapper with animation
+          if (window.getComputedStyle(suggestionsWrapper).display === 'none' || !suggestionsWrapper.classList.contains('visible')) {
+            console.log('[ModalManager] Expanding suggestions section.');
+            suggestionsWrapper.classList.add('visible');
+            if (typeof jQuery !== 'undefined') {
+              jQuery(suggestionsWrapper).slideDown(200, () => {
+                // Initialize carousels after slideDown completes
+                const carousels = suggestionsWrapper.querySelectorAll('.suggestions-carousel');
+                if (carousels.length) {
+                  console.log('[ModalManager] Initializing carousels in suggestions section after toggle.');
+                  carousels.forEach(container => {
+                    if (container.carouselInstance) {
+                      container.carouselInstance.destroy();
+                    }
+                    new SuggestionsCarousel(container);
+                  });
+                }
+              });
+            } else {
+              suggestionsWrapper.style.display = 'block';
+              // Initialize carousels after setting display block
+              const carousels = suggestionsWrapper.querySelectorAll('.suggestions-carousel');
+              if (carousels.length) {
+                console.log('[ModalManager] Initializing carousels in suggestions section after toggle.');
+                carousels.forEach(container => {
+                  if (container.carouselInstance) {
+                    container.carouselInstance.destroy();
+                  }
+                  new SuggestionsCarousel(container);
+                });
+              }
+            }
+          } else {
+            console.log('[ModalManager] Collapsing suggestions section.');
+            suggestionsWrapper.classList.remove('visible');
+            if (typeof jQuery !== 'undefined') {
+              jQuery(suggestionsWrapper).slideUp(200);
+            } else {
+              suggestionsWrapper.style.display = 'none';
+            }
+          }
+        } else {
+          console.warn('[ModalManager] Suggestions container wrapper not found for toggling.');
+        }
+      }
+    };
+
+    // Add the new handler using event delegation
+    this.estimatesList.addEventListener('click', this._suggestionsToggleHandler);
+    console.log('[ModalManager] Suggestions toggle events bound to #estimates element.');
+  }
+
+
   /**
    * Handle room removal
    * @param {string} estimateId - Estimate ID
@@ -2823,7 +3010,20 @@ class ModalManager {
       const $content = $header.closest('.accordion-item').find('.accordion-content');
       if ($content.length) {
         if ($header.hasClass('active')) {
-          $content.slideDown(200);
+          $content.slideDown(200, function() {
+            // Initialize carousels after slideDown animation completes
+            const carousels = $content.find('.suggestions-carousel');
+            if (carousels.length) {
+              console.log(`[ModalManager.initializeJQueryAccordions] Initializing carousels in opened accordion via slideDown callback.`);
+              carousels.each(function() {
+                const container = this;
+                if (container.carouselInstance) {
+                  container.carouselInstance.destroy();
+                }
+                new SuggestionsCarousel(container);
+              });
+            }
+          });
         } else {
           $content.slideUp(200);
         }
@@ -2865,6 +3065,19 @@ class ModalManager {
               $content.slideDown(300, function() {
                 // Scroll to room after animation completes
                 $roomElement[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Initialize carousels after slideDown animation completes
+                const carousels = $content.find('.suggestions-carousel');
+                if (carousels.length) {
+                  console.log(`[ModalManager.initializeJQueryAccordions] Initializing carousels in auto-opened room via slideDown callback.`);
+                  carousels.each(function() {
+                    const container = this;
+                    if (container.carouselInstance) {
+                      container.carouselInstance.destroy();
+                    }
+                    new SuggestionsCarousel(container);
+                  });
+                }
               });
             }
 
@@ -2879,6 +3092,7 @@ class ModalManager {
       }, 300); // Longer delay for more reliability
     }
   }
+
 
 
   /**

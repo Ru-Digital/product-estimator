@@ -450,7 +450,8 @@ class DataService {
    * Create a new estimate
    * @param {FormData|Object|string} formData - Form data
    * @param {number|null} productId - Optional product ID
-   * @returns {Promise<Object>} New estimate data
+   * @returns {Promise<Object>} A promise that resolves immediately with the client-side estimate ID.
+   * The server-side creation is handled asynchronously.
    */
   addNewEstimate(formData, productId = null) {
     let requestData = {
@@ -465,26 +466,51 @@ class DataService {
 
     const existingData = loadEstimateData();
     const existingEstimates = existingData.estimates || {};
-    const nextSequentialId = Object.keys(existingEstimates).length; // Use the count of existing estimates as the next ID
+    // Use the count of existing estimates as the next sequential ID for local storage
+    const nextSequentialId = Object.keys(existingEstimates).length;
 
     // Create a basic estimate object for local storage with the sequential ID
     const clientSideEstimateData = {
-      id: String(nextSequentialId), // Ensure ID is a string for consistency with potential server IDs
+      id: String(nextSequentialId), // Ensure ID is a string for consistency
       name: estimateName,
       rooms: {}, // Start with an empty rooms object
       // Add any other default properties needed for a new estimate client-side
     };
 
+    // Add the estimate to local storage immediately
     const clientSideEstimateId = addEstimate(clientSideEstimateData);
     this.log(`Client-side estimate saved to localStorage with sequential ID: ${clientSideEstimateId}`);
 
-
-    return this.request('add_new_estimate', requestData)
-      .then(data => {
-        // Invalidate caches since we modified data
+    // Make the AJAX request to the server asynchronously
+    this.request('add_new_estimate', requestData)
+      .then(serverData => {
+        console.log('DataService: Server-side estimate creation successful:', serverData);
+        // Invalidate caches since we modified data on the server
         this.invalidateCache();
-        return data;
+
+        // You might want to update the client-side estimate with the server-assigned ID
+        // if the server returns one and it's different from the sequential client-side ID.
+        // Example: if (serverData.estimate_id && serverData.estimate_id !== clientSideEstimateId) {
+        //   updateEstimateIdInStorage(clientSideEstimateId, serverData.estimate_id);
+        // }
+
+        // Trigger an event that ModalManager (or other parts of the app) can listen to
+        // to know that the server-side creation is complete.
+        // Example: EventBus.emit('estimateCreatedOnServer', { clientSideId: clientSideEstimateId, serverData: serverData });
+
+      })
+      .catch(serverError => {
+        console.error('DataService: Server-side estimate creation failed:', serverError);
+        // Handle server-side error asynchronously, e.g., show a notification to the user.
+        // You might also want to consider removing the locally created estimate if the server creation failed.
+        // Example: removeEstimateFromStorage(clientSideEstimateId);
+        // Example: ModalManager.showError('Failed to save estimate on server.');
       });
+
+    // Return a new Promise that resolves immediately with the client-side estimate ID.
+    // The ModalManager will use the resolution of this promise to proceed with the next step
+    // based on the locally added estimate.
+    return Promise.resolve({ estimate_id: clientSideEstimateId });
   }
 
   /**

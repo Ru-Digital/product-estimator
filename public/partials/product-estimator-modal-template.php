@@ -32,5 +32,13 @@ if (!defined('WPINC')) {
             <div class="loading-spinner"></div>
             <div class="loading-text"><?php esc_html_e('Loading...', 'product-estimator'); ?></div>
         </div>
+
+        <?php
+
+        echo "<pre>";
+//        unset($_SESSION['product_estimator']);
+        print_r($_SESSION['product_estimator']);
+        echo "</pre>";
+        ?>
     </div>
 </div>

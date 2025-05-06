@@ -533,6 +533,71 @@ class ModalManager {
     // as hideLoading() should be called in the .finally() of async operations
     // or at the end of synchronous rendering flows (like in showNewEstimateForm).
   }
+
+  /**
+   * Bind events to the new room form element
+   * @param {HTMLFormElement} formElement - The form element to bind events to
+   * @param {string} estimateId - The estimate ID for the new room
+   * @param {string|null} productId - The current product ID, if applicable
+   */
+  bindNewRoomFormEvents(formElement, estimateId, productId = null) {
+    if (!formElement) {
+      console.error('Cannot bind events - new room form element not provided');
+      return;
+    }
+
+    console.log('Binding events to new room form:', formElement);
+
+    // Set data attributes on the form
+    formElement.dataset.estimateId = estimateId;
+    console.log('Set estimate ID on new room form:', estimateId);
+
+    if (productId !== null && productId !== undefined) {
+      formElement.dataset.productId = productId;
+      console.log('Set product ID on new room form:', productId);
+    } else {
+      delete formElement.dataset.productId;
+      console.log('Removed product ID from new room form dataset.');
+    }
+
+
+    // Remove any existing submit handler to prevent duplicates
+    if (formElement._submitHandler) {
+      formElement.removeEventListener('submit', formElement._submitHandler);
+    }
+
+    // Bind submit event
+    formElement._submitHandler = (e) => {
+      e.preventDefault(); // Prevent default form submission
+      console.log('New room form submitted via template');
+      this.handleNewRoomSubmission(formElement, e); // Pass the event object
+    };
+    formElement.addEventListener('submit', formElement._submitHandler);
+    console.log('New room form submit event bound.');
+
+
+    // Bind cancel button
+    const cancelButton = formElement.querySelector('.cancel-btn');
+    if (cancelButton) {
+      // Remove existing handler if any, store handler directly on button
+      if (cancelButton._clickHandler) {
+        cancelButton.removeEventListener('click', cancelButton._clickHandler);
+      }
+
+      cancelButton._clickHandler = () => {
+        console.log('New room form cancel button clicked');
+        this.cancelForm('room'); // Call the cancel handler
+      };
+      cancelButton.addEventListener('click', cancelButton._clickHandler);
+      console.log('New room form cancel button bound.');
+
+    } else {
+      console.warn('Cancel button not found in new room form.');
+    }
+  }
+
+
+
   /**
    * Show estimate selection with force visibility
    */
@@ -1870,40 +1935,66 @@ class ModalManager {
 
 
   /**
-   * Show new room form
-   * @param {string} estimateId - Estimate ID
+   * Show new room form using template rendering
+   * @param {string} estimateId - Estimate ID for the new room
+   * @param {string|null} productId - Optional product ID if adding a product to this new room
    */
-  showNewRoomForm(estimateId) {
-    console.log('Showing new room form for estimate:', estimateId);
-
-    // Store the estimate ID with the form
-    if (this.newRoomForm) {
-      this.newRoomForm.dataset.estimateId = estimateId;
-
-      // Also set it on the form element directly for redundancy
-      const form = this.newRoomForm.querySelector('form');
-      if (form) {
-        form.dataset.estimateId = estimateId;
-      }
-    }
+  showNewRoomForm(estimateId, productId = null) {
+    console.log('Showing new room form using template for estimate:', estimateId, 'with product:', productId);
 
     // Hide other views
     if (this.estimatesList) this.estimatesList.style.display = 'none';
     if (this.estimateSelection) this.estimateSelection.style.display = 'none';
     if (this.roomSelectionForm) this.roomSelectionForm.style.display = 'none';
+    if (this.newEstimateForm) this.newEstimateForm.style.display = 'none'; // Ensure new estimate form is hidden
 
-    // Force visibility of the form
+
+    // Ensure the form wrapper element exists in the DOM (it should be in your PHP template)
+    if (!this.newRoomForm) {
+      console.error('New room form wrapper (#new-room-form-wrapper) not found in modal template!');
+      this.showError('Modal structure incomplete. Cannot show new room form.');
+      this.hideLoading(); // Ensure loading is hidden on error
+      return;
+    }
+
+    // Force visibility of the form wrapper element
     this.forceElementVisibility(this.newRoomForm);
 
-    // Check if form content needs to be loaded
-    if (!this.newRoomForm.querySelector('form')) {
-      this.loadNewRoomForm(estimateId);
-    } else {
-      // Form already exists, make sure it has the right estimate ID
-      const form = this.newRoomForm.querySelector('form');
-      if (form) {
-        form.dataset.estimateId = estimateId;
+    // Show loading state briefly while template is inserted and events are bound
+    this.showLoading();
+
+    // Clear any existing content inside the wrapper before inserting the new template
+    this.newRoomForm.innerHTML = '';
+
+    try {
+      // Use the TemplateEngine to create and insert the form HTML from the template
+      // Pass estimateId and productId to the template data if needed for initial values or data attributes
+      TemplateEngine.insert('new-room-form-template', {
+        estimate_id: estimateId,
+        product_id: productId
+      }, this.newRoomForm);
+
+      console.log('New room form template inserted into wrapper.');
+
+      // Get a reference to the actual <form> element that was just inserted
+      const formElement = this.newRoomForm.querySelector('form#new-room-form');
+
+      if (formElement) {
+        // Bind events to the newly inserted form element
+        this.bindNewRoomFormEvents(formElement, estimateId, productId);
+
+        console.log('Called bindNewRoomFormEvents for the new room form.');
+      } else {
+        console.error('Form element with ID #new-room-form not found inside #new-room-form-wrapper after template insertion!');
+        this.showError('Error rendering form template. Please try again.');
       }
+
+    } catch (error) {
+      console.error('Error inserting new room form template:', error);
+      this.showError('Error loading form template. Please try again.');
+    } finally {
+      // Hide loading after the template insertion and binding attempt
+      this.hideLoading();
     }
   }
 
@@ -1926,13 +2017,19 @@ class ModalManager {
         e.stopPropagation();
 
         // Get estimate ID from data attribute
-        const estimateId = addRoomButton.dataset.estimate;
+        const estimateId = addRoomButton.dataset.estimateId;
         console.log('Add room button clicked for estimate:', estimateId);
 
-        if (estimateId) {
-          this.showNewRoomForm(estimateId);
+        // Get product ID if available (e.g., from modal dataset if we are in product flow)
+        const productId = this.currentProductId; // Use the stored currentProductId
+
+        if (estimateId !== null && estimateId !== undefined && estimateId !== '') {
+          // --- END MODIFIED CHECK ---
+          // Call the modified showNewRoomForm
+          this.showNewRoomForm(estimateId, productId);
         } else {
           console.error('No estimate ID found for add room button');
+          this.showError('Cannot add room: Missing estimate ID.'); // Show error to user
         }
       }
     };
@@ -1943,6 +2040,9 @@ class ModalManager {
   }
 
 
+  /**
+   * Bind room selection form events
+   */
   /**
    * Bind room selection form events
    */
@@ -1979,17 +2079,18 @@ class ModalManager {
     form.addEventListener('submit', this._roomFormSubmitHandler);
 
     // Also bind the back button
-    const backButton = form.querySelector('.back-btn');
+    const backButton = form.querySelector('.cancel-btn'); // Assuming cancel-btn is also the back button
     if (backButton) {
       if (this._backButtonHandler) {
         backButton.removeEventListener('click', this._backButtonHandler);
       }
 
       this._backButtonHandler = () => {
-        console.log('Back button clicked');
+        console.log('Back button clicked in room selection form');
+        // Go back to estimate selection view
         this.forceElementVisibility(this.estimateSelectionForm);
         this.forceElementVisibility(this.estimateSelection);
-        this.roomSelectionForm.style.display = 'none';
+        this.roomSelectionForm.style.display = 'none'; // Hide the room selection form
       };
 
       backButton.addEventListener('click', this._backButtonHandler);
@@ -2003,19 +2104,25 @@ class ModalManager {
       }
 
       this._addNewRoomHandler = () => {
-        console.log('Add new room button clicked in form');
+        console.log('Add new room button clicked in room selection form');
+        // Get the estimate ID from the room selection form's data attribute
         const estimateId = this.roomSelectionForm.dataset.estimateId;
-        console.log('Estimate ID for new room:', estimateId);
+        // Get the product ID from the modal's data attribute
+        const productId = this.currentProductId;
+
+        console.log('Estimate ID for new room:', estimateId, 'Product ID:', productId);
 
         if (estimateId) {
-          this.showNewRoomForm(estimateId);
+          // Call the modified showNewRoomForm
+          this.showNewRoomForm(estimateId, productId);
         } else {
-          console.error('No estimate ID found for new room');
+          console.error('No estimate ID found for add new room button in room selection form');
+          this.showError('Cannot add room: Missing estimate ID.'); // Show error to user
         }
       };
 
       addRoomButton.addEventListener('click', this._addNewRoomHandler);
-      console.log('Add new room button handler bound');
+      console.log('Add new room button handler bound in room selection form');
     } else {
       console.warn('Add new room button not found in room selection form');
     }
@@ -2229,7 +2336,7 @@ class ModalManager {
     // Ensure all form values are strings to avoid type issues
     const roomDropdown = form.querySelector('#room-dropdown');
     const roomId = String(roomDropdown ? roomDropdown.value || '' : '').trim(); // Get roomId from dropdown
-    const productId = String(this.currentProductId || '').trim();
+    const productId = String(this.currentProductId || '').trim(); // Get product ID from modal state
 
     // Get the estimate ID from the form's data attribute
     const estimateId = String(this.roomSelectionForm.dataset.estimateId || '').trim();
@@ -2271,7 +2378,7 @@ class ModalManager {
 
         // Get the estimate and room IDs from the response
         const responseEstimateId = response.estimate_id || estimateId;
-        const responseRoomId = response.room_id || roomId;
+        const responseRoomId = response.room_id || roomId; // Use the original roomId if response doesn't provide one
 
         console.log(`Product added to estimate ${responseEstimateId}, room ${responseRoomId}`);
 
@@ -2312,7 +2419,7 @@ class ModalManager {
               setTimeout(() => {
                 // Find and expand the estimate containing the room
                 const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${duplicateEstimateId}"]`);
-                if (estimateSection && estimateSection.classList.contains('collapsed')) {
+                if (estimateSection) {
                   // Remove collapsed class
                   estimateSection.classList.remove('collapsed');
                   // Show content
@@ -2326,11 +2433,12 @@ class ModalManager {
                   }
                 }
 
+
                 // Find and expand the room accordion
                 const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${duplicateRoomId}"]`);
                 if (roomElement) {
                   const header = roomElement.querySelector('.accordion-header');
-                  if (header && !header.classList.contains('active')) {
+                  if (header) {
                     // Add active class
                     header.classList.add('active');
 
@@ -2340,7 +2448,7 @@ class ModalManager {
                       if (typeof jQuery !== 'undefined') {
                         jQuery(content).slideDown(300, function() {
                           // Scroll to room after animation completes
-                          roomElement[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         });
                       } else {
                         content.style.display = 'block';
@@ -2352,7 +2460,8 @@ class ModalManager {
                     roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }
                 }
-              }, 300); // Wa
+              }, 300); // Small delay to allow DOM updates
+
             })
             .catch(error => {
               console.error('Error refreshing estimates list:', error);
@@ -2368,6 +2477,8 @@ class ModalManager {
         this.hideLoading();
       });
   }
+
+
   /**
    * Handle new estimate form submission with improved loader handling
    * @param {HTMLFormElement} form - The submitted form
@@ -2411,27 +2522,17 @@ class ModalManager {
           // THIS IS THE KEY PART - we need to properly pass the new estimate ID
           const newEstimateId = response.estimate_id;
 
-          console.log('Setting new room form with estimate ID:', newEstimateId);
+          console.log('New estimate created in product flow, showing new room form for estimate ID:', newEstimateId, 'with product ID:', productId);
 
-          // Set on container element
-          this.newRoomForm.dataset.estimateId = newEstimateId;
+          // Call the modified showNewRoomForm
+          this.showNewRoomForm(newEstimateId, productId); // Pass both IDs
 
-          // Also ensure it's set on the actual form element
-          const roomForm = this.newRoomForm.querySelector('form');
-          if (roomForm) {
-            roomForm.dataset.estimateId = newEstimateId;
-            console.log('Form dataset updated:', roomForm.dataset);
-          } else {
-            console.error('Could not find room form element');
-          }
+          // Note: showNewRoomForm now handles setting data attributes and visibility
+          // The hideLoading() that was previously here is no longer needed.
 
-          this.newRoomForm.dataset.productId = productId;
-          this.forceElementVisibility(this.newRoomForm);
-
-          // Important - hide the loading indicator when showing the new form
-          this.hideLoading();
         } else {
           // Just refresh the estimates list
+          console.log('New estimate created in general flow, refreshing estimates list.');
           this.loadEstimatesList()
             .catch(error => {
               this.log('Error refreshing estimates list:', error);
@@ -2582,15 +2683,39 @@ class ModalManager {
         // Hide the new room form
         if (this.newRoomForm) {
           this.newRoomForm.style.display = 'none';
+          // Clear data attributes when hidden
+          this.newRoomForm.removeAttribute('data-estimate-id');
+          this.newRoomForm.removeAttribute('data-product-id');
+          const form = this.newRoomForm.querySelector('form');
+          if(form) {
+            form.removeAttribute('data-estimate-id');
+            form.removeAttribute('data-product-id');
+          }
         }
 
-        // If we have a product ID and came from room selection
-        if (this.currentProductId && this.roomSelectionForm.dataset.estimateId) {
-          // Return to room selection (we were adding a new room during product addition)
+
+        // Determine where to go back to
+        // If we came from room selection (product flow)
+        if (this.currentProductId && this.roomSelectionForm && this.roomSelectionForm.dataset.estimateId) {
+          console.log('Canceling room form, returning to room selection.');
           this.forceElementVisibility(this.roomSelectionForm);
+          // Assuming estimateSelection is the parent wrapper that needs to be visible too
+          if (this.estimateSelection) {
+            this.forceElementVisibility(this.estimateSelection);
+          }
+
+        } else if (this.currentProductId && this.estimateSelection && this.estimateSelection.dataset.estimateId) {
+          // If we came from estimate selection (product flow, but no rooms existed)
+          console.log('Canceling room form, returning to estimate selection (no rooms existed).');
           this.forceElementVisibility(this.estimateSelection);
+          // Ensure estimate selection form is also visible if it's a separate element
+          if (this.estimateSelectionForm) {
+            this.forceElementVisibility(this.estimateSelectionForm);
+          }
+
         } else {
           // Regular flow (no product being added), return to estimates list
+          console.log('Canceling room form, returning to estimates list.');
           this.forceElementVisibility(this.estimatesList);
         }
         break;
@@ -2602,6 +2727,7 @@ class ModalManager {
         break;
     }
   }
+
 
   /**
    * Initialize estimate accordions with support for auto-expanding specific estimates

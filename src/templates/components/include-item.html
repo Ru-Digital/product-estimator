@@ -1,11 +1,15 @@
 <template id="include-item-template">
-  <div class="include-item">
+  <div class="include-item" data-product-id="">
     <span class="product-includes-icon">
         <span class="dashicons dashicons-plus-alt"></span>
     </span>
-    <div class="include-item-name"></div>
+    <div class="include-item-name product-name"></div>
     <div class="include-item-prices">
-      <div class="include-item-total-price"> </div>
+      <div class="include-item-total-price product-price"> </div>
+    </div>
+    <div class="product-upgrades-container" style="display: none;">
+      <div class="product-upgrades-list">
+      </div>
     </div>
   </div>
 </template>

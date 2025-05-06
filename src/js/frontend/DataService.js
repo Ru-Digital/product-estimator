@@ -1109,6 +1109,54 @@ class DataService {
       });
   }
 
+  /**
+   * Get available upgrades for a product.
+   * @param {string|number} productId - The ID of the product to get upgrades for.
+   * @param {string|number} estimateId - The ID of the current estimate.
+   * @param {string|number} roomId - The ID of the room the product is in.
+   * @param {number} roomArea - The area of the room.
+   * @param {string} upgradeType - The type of upgrade (e.g., 'main', 'additional').
+   * @param {boolean} bypassCache - Whether to bypass the cache.
+   * @returns {Promise<Array>} - A promise resolving to an array of upgrade options.
+   */
+  getProductUpgrades(productId, estimateId, roomId, roomArea, upgradeType, bypassCache = false) {
+    console.log(`[DataService.getProductUpgrades] DEBUG: Called with productId: ${productId}, estimateId: ${estimateId}, roomId: ${roomId}, roomArea: ${roomArea}, upgradeType: ${upgradeType}, bypassCache: ${bypassCache}`);
+    const cacheKey = `upgrades_${productId}_${estimateId}_${roomId}_${upgradeType}`;
+
+    // Initialize this.cache.productUpgrades if it's undefined
+    this.cache.productUpgrades = this.cache.productUpgrades || {};
+
+    if (!bypassCache && this.cache.productUpgrades[cacheKey]) {
+      console.log(`[DataService.getProductUpgrades] DEBUG: Returning cached upgrades for product ${productId}.`);
+      return Promise.resolve(this.cache.productUpgrades[cacheKey]);
+    }
+
+    console.log(`[DataService.getProductUpgrades] DEBUG: Fetching product upgrades from server for product ${productId}. Calling this.request('get_product_upgrades', ...).`);
+    return this.request('get_product_upgrades', {
+      product_id: productId,
+      estimate_id: estimateId,
+      room_id: roomId,
+      room_area: roomArea,
+      upgrade_type: upgradeType,
+    })
+      .then(data => {
+        console.log(`[DataService.getProductUpgrades] DEBUG: Response from this.request for 'get_product_upgrades':`, data);
+        if (data && Array.isArray(data.upgrades)) {
+          this.cache.productUpgrades[cacheKey] = data.upgrades;
+          return data.upgrades;
+        } else {
+          console.warn('[DataService.getProductUpgrades] DEBUG: get_product_upgrades did not return expected data structure.', data);
+          return [];
+        }
+      })
+      .catch(error => {
+        console.error('[DataService.getProductUpgrades] DEBUG: Error fetching product upgrades:', error);
+        // this.cache.productUpgrades is already initialized
+        delete this.cache.productUpgrades[cacheKey];
+        throw error;
+      });
+  }
+
 
   /**
    * Get the variation estimator content

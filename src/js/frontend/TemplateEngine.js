@@ -19,40 +19,76 @@ class TemplateEngine {
    * Initialize template engine by gathering all templates
    * @returns {TemplateEngine} This instance for chaining
    */
-// In TemplateEngine.js - init method
   init() {
-    if (this.initialized) return this;
+    if (this.initialized) {
+      console.log('[TemplateEngine.init] Already initialized.'); // Added context
+      return this;
+    }
 
-    console.log('Initializing TemplateEngine with templates', Object.keys(this.templates));
+    console.log('[TemplateEngine.init] Initializing TemplateEngine. Templates to process:', Object.keys(this.templates)); // Added context
 
     // Create template elements from registered HTML
     Object.entries(this.templates).forEach(([id, html]) => {
-      // Create a temporary div to hold the HTML
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
+      try { // Added try-catch for parsing errors per template
+        // Create a temporary div to hold the HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
 
-      // Extract the template content
-      const templateElement = tempDiv.querySelector('template');
-      if (templateElement) {
-        this.templateElements[id] = templateElement;
-        console.log(`Template found in HTML: ${id}`);
-      } else {
-        // Create a new template element
-        const newTemplate = document.createElement('template');
-        newTemplate.id = id;
-        newTemplate.innerHTML = html;
-        this.templateElements[id] = newTemplate;
-        console.log(`Created new template element: ${id}`);
+        // Extract the template content
+        const templateElement = tempDiv.querySelector('template');
+
+        if (templateElement) {
+          this.templateElements[id] = templateElement;
+          console.log(`[TemplateEngine.init] Template element found in HTML for ID: "${id}"`); // Added context
+        } else {
+          // Create a new template element if the HTML string didn't contain <template> tags
+          const newTemplate = document.createElement('template');
+          newTemplate.id = id; // Set the ID on the template element itself
+          newTemplate.innerHTML = html; // Put the raw HTML inside the template tag
+          this.templateElements[id] = newTemplate;
+          console.log(`[TemplateEngine.init] Created new template element for ID: "${id}" (HTML was likely raw, not wrapped in <template>)`); // Added context
+        }
+
+        // *** Add this logging block to check template element content ***
+        if (this.templateElements[id]) {
+          const contentToCheck = this.templateElements[id].content || this.templateElements[id]; // Check .content first, then the element itself
+
+          console.log(`[TemplateEngine.init] TemplateElement for "${id}" created. Inner HTML starts with:`, (contentToCheck?.innerHTML || 'No innerHTML or content').substring(0, 200) + '...'); // Added context
+
+          // Specifically check if the room template contains .product-list
+          if (id === 'room-item-template') {
+            // Use a temporary div to query the content/innerHTML safely
+            const queryTempDiv = document.createElement('div');
+            if (contentToCheck?.innerHTML) {
+              queryTempDiv.innerHTML = contentToCheck.innerHTML;
+            } else {
+              // If no innerHTML (e.g., just text nodes or complex structure), append children
+              Array.from(contentToCheck?.childNodes || []).forEach(node => queryTempDiv.appendChild(node.cloneNode(true)));
+            }
+            console.log(`[TemplateEngine.init] Checking "${id}" content for .product-list:`, queryTempDiv.querySelector('.product-list') ? 'Found' : 'Not Found'); // Added context
+            if (!queryTempDiv.querySelector('.product-list')) {
+              console.error(`[TemplateEngine.init] CRITICAL: .product-list not found in "${id}" template element content after creation.`); // Critical error if missing
+            }
+          }
+        } else {
+          console.error(`[TemplateEngine.init] Failed to assign template element for ID: "${id}"`); // Added context
+        }
+        // *** End logging block ***
+
+      } catch (error) {
+        console.error(`[TemplateEngine.init] Error processing template HTML for ID "${id}":`, error); // Added context
+        // Decide how to handle templates that fail to parse - maybe skip them?
       }
     });
 
-    console.log(`TemplateEngine initialized with ${Object.keys(this.templateElements).length} templates`);
+    console.log(`[TemplateEngine.init] TemplateEngine initialized with ${Object.keys(this.templateElements).length} template elements`); // Added context
     this.initialized = true;
 
-    this.verifyTemplates();
+    // this.verifyTemplates(); // Your existing verification method is fine
 
     return this;
   }
+
   /**
    * Register a template with the engine
    * @param {string} id - Template ID
@@ -60,10 +96,17 @@ class TemplateEngine {
    * @returns {TemplateEngine} This instance for chaining
    */
   registerTemplate(id, html) {
+    if (typeof html !== 'string' || html.trim() === '') {
+      console.warn(`[TemplateEngine.registerTemplate] Cannot register empty or non-string HTML for template "${id}".`); // Added context
+      // Optionally throw an error or return early
+      return this;
+    }
     this.templates[id] = html;
-    this.initialized = false; // Mark as needing reinitialization
+    this.initialized = false; // Mark as needing reinitialization when a new template is added
+    console.log(`[TemplateEngine.registerTemplate] Registered template "${id}". HTML starts with:`, html.substring(0, 200) + '...'); // Add this log
     return this;
   }
+
 
   /**
    * Get a template by ID
@@ -71,31 +114,77 @@ class TemplateEngine {
    * @returns {HTMLTemplateElement|null} Template element or null if not found
    */
   getTemplate(id) {
-    if (!this.initialized) this.init();
-    return this.templateElements[id] || null;
+    // Ensure initialization happens if needed
+    if (!this.initialized) {
+      console.warn('[TemplateEngine.getTemplate] TemplateEngine not initialized yet. Calling init().'); // Added context
+      this.init();
+    }
+    // Check if template element exists after ensuring initialization
+    const template = this.templateElements[id] || null;
+    if (!template) {
+      console.error(`[TemplateEngine.getTemplate] Template element not found for ID: "${id}".`); // Added context
+    }
+    return template;
   }
 
   /**
    * Create an element from a template and populate it with data
+   * This method returns a DocumentFragment
    * @param {string} templateId - Template ID
    * @param {Object} data - Data to populate the template with
    * @returns {DocumentFragment} The populated template content
    */
   create(templateId, data = {}) {
-    const template = this.getTemplate(templateId);
+    const template = this.getTemplate(templateId); //
 
     if (!template) {
-      console.error(`Template not found: ${templateId}`);
-      return document.createDocumentFragment();
+      console.error(`[TemplateEngine.create] Cannot create element. Template not found: "${templateId}"`); // Added context
+      return document.createDocumentFragment(); // Return empty fragment gracefully
     }
 
-    // Clone the template content
-    const clone = template.content.cloneNode(true);
+    // Clone the template content (returns a DocumentFragment)
+    // Use try-catch for cloning errors
+    let clone;
+    try {
+      clone = template.content.cloneNode(true); //
+      if (!clone) {
+        console.error(`[TemplateEngine.create] Failed to clone template content for ID: "${templateId}". cloneNode returned null.`); // Added context
+        return document.createDocumentFragment(); // Return empty fragment if cloning fails
+      }
+      console.log(`[TemplateEngine.create] Cloned template content for "${templateId}". Result is a DocumentFragment.`); // Added context
+
+    } catch (error) {
+      console.error(`[TemplateEngine.create] Error cloning template content for ID "${templateId}":`, error); // Added context
+      return document.createDocumentFragment(); // Return empty fragment on cloning error
+    }
+
 
     // Populate the template with data
-    this.populateElement(clone, data);
+    try { // Added try-catch for population errors
+      this.populateElement(clone, data); //
+      console.log(`[TemplateEngine.create] Populated fragment for "${templateId}".`); // Added context
+    } catch (error) {
+      console.error(`[TemplateEngine.create] Error populating fragment for ID "${templateId}":`, error); // Added context
+      // Decide if you want to return the partially populated clone or an empty fragment on error
+      // For now, we'll proceed with the potentially incomplete clone.
+    }
 
-    return clone;
+
+    // *** Add this logging block to check the fragment content before returning ***
+    if (templateId === 'room-item-template') {
+      // Query selector on a DocumentFragment works as expected
+      const productListCheck = clone.querySelector('.product-list');
+      console.log(`[TemplateEngine.create] Created fragment for "${templateId}". Checking for .product-list before returning:`, productListCheck ? 'Found' : 'Not Found'); // Add this log
+      if (!productListCheck) {
+        console.error(`[TemplateEngine.create] CRITICAL: .product-list not found in "${templateId}" fragment before returning. This fragment will not render products correctly.`); // Critical error if missing
+        // Optionally log the fragment's innerHTML for inspection (can be verbose)
+        // const tempDiv = document.createElement('div'); tempDiv.appendChild(clone.cloneNode(true)); console.log('Fragment innerHTML:', tempDiv.innerHTML);
+      }
+    }
+    // *** End logging block ***
+
+
+    return clone; // Return the populated DocumentFragment
   }
 
   /**
@@ -382,47 +471,86 @@ class TemplateEngine {
     }
   }
 
+
   /**
    * Create and insert an element into the DOM
    * @param {string} templateId - Template ID
    * @param {Object} data - Data to populate with
    * @param {Element|string} container - Container element or selector
    * @param {string} position - Insert position ('append', 'prepend', 'before', 'after', 'replace')
-   * @returns {Element} The inserted element
+   * @returns {Element|DocumentFragment|null} The inserted element(s) or null if container not found
    */
   insert(templateId, data, container, position = 'append') {
-    const element = this.create(templateId, data);
+    const element = this.create(templateId, data); // element is a DocumentFragment
 
     if (typeof container === 'string') {
       container = document.querySelector(container);
     }
 
     if (!container) {
-      console.error(`Container not found for template: ${templateId}`);
+      console.error(`[TemplateEngine.insert] Container not found for template: "${templateId}"`); // Added context
+      // It might be useful to return the fragment even if the container isn't found,
+      // in case the caller wants to handle appending it elsewhere.
+      // Or just return null to indicate insertion failed. Let's return null for clarity of failure.
       return null;
     }
 
-    switch (position) {
-      case 'prepend':
-        container.prepend(element);
-        break;
-      case 'before':
-        container.parentNode.insertBefore(element, container);
-        break;
-      case 'after':
-        container.parentNode.insertBefore(element, container.nextSibling);
-        break;
-      case 'replace':
-        container.parentNode.replaceChild(element, container);
-        break;
-      case 'append':
-      default:
-        container.appendChild(element);
-        break;
-    }
+    try { // Added try-catch for insertion errors
+      switch (position) {
+        case 'prepend':
+          container.prepend(element); // element is a DocumentFragment
+          break;
+        case 'before':
+          // When inserting a fragment before/after, insert the fragment itself
+          container.parentNode.insertBefore(element, container); // element is a DocumentFragment
+          break;
+        case 'after':
+          // When inserting a fragment before/after, insert the fragment itself
+          container.parentNode.insertBefore(element, container.nextSibling); // element is a DocumentFragment
+          break;
+        case 'replace':
+          // To replace, we need the content of the fragment, not the fragment itself
+          // This might need adjustment depending on expected behavior.
+          // Standard replaceChild takes a node. Replacing with a fragment's content means looping.
+          console.warn(`[TemplateEngine.insert] "replace" position used for template "${templateId}". Replacing container with fragment's children.`); // Added context
+          const fragmentChildren = Array.from(element.childNodes); // Get children before fragment is consumed
+          container.parentNode.replaceChild(element, container); // This inserts the fragment, effectively replacing the container with its children
+          // Note: The original container is replaced by the fragment. If you need a reference to the new element,
+          // this becomes complex as a fragment can have multiple top-level children.
+          // Returning the fragment itself might be the most reliable if the caller expects multiple nodes.
+          break;
+        case 'append':
+        default:
+          container.appendChild(element); // element is a DocumentFragment
+          break;
+      }
+      console.log(`[TemplateEngine.insert] Inserted template "${templateId}" into container. Position: ${position}`); // Added context
 
-    return element;
+      // When appending/prepending a fragment, its children are moved.
+      // If the template content is guaranteed to have a single top-level element
+      // (like <div class="accordion-item">...</div> for room-item-template),
+      // we might try to find and return that specific element for the caller's convenience.
+      // However, returning the fragment or null on failure is safer if templates can be varied.
+      // Given loadEstimatesList expects roomElement to be the .accordion-item, let's find it.
+      if (templateId === 'room-item-template' && position === 'append' && container) {
+        // Find the element *within the container* that matches the top-level element of the template
+        // This requires querying the container after the fragment is appended.
+        // This is a potential point of failure if the query is too fast or the structure is unexpected.
+        // For now, let's rely on the caller (loadEstimatesList) to query for the specific element after insert.
+        // Returning the fragment itself is the standard DocumentFragment behavior return.
+        return element; // Return the fragment
+      }
+
+
+      return element; // Return the fragment that was inserted (its children are now in the DOM)
+
+
+    } catch (error) {
+      console.error(`[TemplateEngine.insert] Error inserting template "${templateId}" into container. Position: ${position}`, error); // Added context
+      return null; // Return null on insertion error
+    }
   }
+
 
   /**
    * Show a message in the modal

@@ -180,31 +180,6 @@ class DataService {
   }
 
   /**
-   * Update getEstimatesList method to bind the Create Estimate button
-   * after loading the list
-   */
-  getEstimatesList(bypassCache = false) {
-    if (!bypassCache && this.cache.estimatesList) {
-      this.log('Returning cached estimates list');
-
-      // Even when using cache, we need to bind the button
-      setTimeout(() => this.bindCreateEstimateButton(), 100);
-
-      return Promise.resolve(this.cache.estimatesList);
-    }
-
-    return this.request('get_estimates_list')
-      .then(data => {
-        this.cache.estimatesList = data.html;
-
-        // After loading new content, bind the button
-        setTimeout(() => this.bindCreateEstimateButton(), 100);
-
-        return data.html;
-      });
-  }
-
-  /**
    * Get all estimates data for dropdowns by reading from localStorage.
    * Note: This function now relies on localStorage for its data source.
    * @param {boolean} bypassCache - Whether to bypass the cache (still respects cache for efficiency)
@@ -788,32 +763,82 @@ class DataService {
    * @param {string|number} estimateId - Estimate ID
    * @param {string|number} roomId - Room ID
    * @param {number} productIndex - Product index
-   * @returns {Promise<Object>} Result data
+   * @returns {Promise<Object>} A promise that resolves immediately after the local storage removal attempt.
    */
   removeProductFromRoom(estimateId, roomId, productIndex) {
+    console.log('DataService: Attempting to remove product from room (localStorage first)', {
+      estimateId: estimateId,
+      roomId: roomId,
+      productIndex: productIndex
+    });
 
+    let localStorageSuccess = false;
+    let localStorageError = null;
 
+    // Perform local storage removal immediately
     try {
-      const success = removeProductFromRoomStorage(estimateId, roomId, productIndex);
-      if (success) {
+      localStorageSuccess = removeProductFromRoomStorage(estimateId, roomId, productIndex); // Use the imported function
+      if (localStorageSuccess) {
         this.log(`Product at index ${productIndex} successfully removed from room ${roomId} in localStorage.`);
       } else {
         console.warn(`Product at index ${productIndex} not found in room ${roomId} in localStorage during removal attempt.`);
+        localStorageError = new Error('Product not found in local storage.'); // Set a specific error for local failure
       }
     } catch (e) {
       console.error(`Error removing product at index ${productIndex} from room ${roomId} in localStorage:`, e);
+      localStorageError = e; // Capture the error
+      localStorageSuccess = false; // Ensure success is false on error
     }
 
-    return this.request('remove_product_from_room', {
+    // === Make the asynchronous server request AFTER the local storage attempt ===
+    // This promise chain is separate and does not affect the return value of this function.
+    const serverRequestPromise = this.request('remove_product_from_room', {
       estimate_id: estimateId,
       room_id: roomId,
       product_index: productIndex
-    })
-      .then(data => {
-        // Invalidate caches since we modified data
-        this.invalidateCache();
-        return data;
+    });
+
+    serverRequestPromise
+      .then(serverData => {
+        console.log('DataService: Asynchronous server-side product removal successful:', serverData);
+        // Handle server-side success (e.g., invalidate relevant caches, log)
+        this.invalidateCache(); // Invalidate caches as server state might have changed
+
+        // You might want to compare/reconcile local storage with server data here if needed,
+        // or trigger further UI updates based on server response, if any.
+
+      })
+      .catch(serverError => {
+        console.error('DataService: Asynchronous server-side product removal failed:', serverError);
+        // Handle actual server-side error asynchronously (e.g., show a non-blocking notification to the user)
+        // Note: The main promise has already resolved by this point.
       });
+
+    // === Return a promise that resolves immediately with the local storage result ===
+    // The consumer (ModalManager) will use the resolution/rejection of *this* promise
+    // to update the UI based on the local storage state.
+    if (localStorageSuccess) {
+      // If local storage was successful, resolve immediately.
+      // Include any data that the ModalManager might need to update the UI based on the local change.
+      // For product removal, the success itself is the key, potentially with updated local totals if calculated immediately.
+      // For simplicity, we'll just indicate success here.
+      const updatedData = loadEstimateData(); // Load data again to get updated totals after removal
+      const estimate = updatedData.estimates ? updatedData.estimates[estimateId] : null;
+      const room = estimate && estimate.rooms ? estimate.rooms[roomId] : null;
+
+
+      return Promise.resolve({
+        success: true,
+        estimateId: estimateId,
+        roomId: roomId,
+        productIndex: productIndex,
+        estimate_totals: estimate?.totals || { min_total: 0, max_total: 0 },
+        room_totals: room?.totals || { min_total: 0, max_total: 0 }
+      });
+    } else {
+      // If local storage failed (e.g., product not found locally), reject immediately.
+      return Promise.reject(localStorageError || new Error('Failed to remove product from local storage.'));
+    }
   }
 
   /**

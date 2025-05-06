@@ -24,6 +24,8 @@ import estimateSelectionTemplate from '@templates/forms/estimate-selection.html'
 
 // Import UI templates
 import estimatesEmptyTemplate from '@templates/ui/estimates-empty.html';
+import roomsEmptyTemplate from '@templates/ui/rooms-empty.html';
+import productsEmptyTemplate from '@templates/ui/products-empty.html';
 import modalMessagesTemplate from '@templates/ui/modal-messages.html';
 
 // Create a map of all templates
@@ -39,6 +41,8 @@ const templates = {
   'room-selection-form-template': roomSelectionFormTemplate,
   'estimate-selection-template': estimateSelectionTemplate,
   'estimates-empty-template': estimatesEmptyTemplate,
+  'rooms-empty-template': roomsEmptyTemplate,
+  'products-empty-template': productsEmptyTemplate,
   'modal-messages-template': modalMessagesTemplate
 };
 

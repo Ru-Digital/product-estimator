@@ -14,7 +14,9 @@ import estimateItemTemplate from '@templates/components/estimate-item.html';
 import suggestionItemTemplate from '@templates/components/suggestion-item.html';
 import noteItemTemplate from '@templates/components/note-item.html';
 import includeItemTemplate from '@templates/components/include-item.html';
-import similarItemTemplate from '@templates/components/similar-item.html'; // Correct import name
+import similarItemTemplate from '@templates/components/similar-item.html';
+import productUpgradeItemTemplate from '@templates/components/product-upgrade-item.html';
+
 
 
 // Import form templates
@@ -36,8 +38,9 @@ const templates = {
   'estimate-item-template': estimateItemTemplate,
   'suggestion-item-template': suggestionItemTemplate,
   'note-item-template': noteItemTemplate,
-  'include-item-template': includeItemTemplate, // Add this line
-  'similar-product-item-template': similarItemTemplate, // Corrected ID and variable name
+  'include-item-template': includeItemTemplate,
+  'similar-product-item-template': similarItemTemplate,
+  'product-upgrade-item-template': productUpgradeItemTemplate,
   'new-estimate-form-template': newEstimateFormTemplate,
   'new-room-form-template': newRoomFormTemplate,
   'room-selection-form-template': roomSelectionFormTemplate,

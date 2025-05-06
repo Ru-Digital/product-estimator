@@ -518,7 +518,7 @@ class DataService {
    * @param {FormData|Object|string} formData - Form data
    * @param {string|number} estimateId - Estimate ID
    * @param {number|null} productId - Optional product ID
-   * @returns {Promise<Object>} New room data
+   * @returns {Promise<Object>} A promise that resolves immediately with the client-side room data.
    */
   addNewRoom(formData, estimateId, productId = null) {
     console.log('DataService: Adding new room', {
@@ -531,8 +531,28 @@ class DataService {
     const existingData = loadEstimateData();
     const estimate = existingData.estimates ? existingData.estimates[estimateId] : null;
 
+    // Ensure the estimate exists before attempting to add a room locally
+    if (!estimate) {
+      console.error(`DataService: Cannot add room - Estimate with ID ${estimateId} not found in local storage.`);
+      // Make the server request anyway, it might succeed if local storage is out of sync
+      // but reject this promise immediately to signal local failure.
+      const requestDataOnLocalFailure = {
+        form_data: this.formatFormData(formData),
+        estimate_id: estimateId
+      };
+      if (productId) {
+        requestDataOnLocalFailure.product_id = productId;
+      }
 
-    let clientSideRoomId = String(Object.keys(estimate.rooms).length);
+      this.request('add_new_room', requestDataOnLocalFailure)
+        .then(serverData => console.log('DataService: Server add_new_room succeeded despite local estimate not found:', serverData))
+        .catch(serverError => console.error('DataService: Server add_new_room failed after local estimate not found:', serverError));
+
+      return Promise.reject(new Error(`Estimate with ID ${estimateId} not found in local storage.`));
+    }
+
+
+    let clientSideRoomId = String(Object.keys(estimate.rooms).length); // Use the count of existing rooms as the sequential ID for local storage
 
     const roomWidth = parseFloat(formData instanceof FormData ? formData.get('room_width') : formData.room_width) || 0;
     const roomLength = parseFloat(formData instanceof FormData ? formData.get('room_length') : formData.room_length) || 0;
@@ -551,25 +571,42 @@ class DataService {
     addRoom(estimateId, newRoomData);
     this.log(`Room ID ${newRoomData.id} added to localStorage for estimate ${estimateId}`);
 
+    // If a product ID is provided, add it to the newly created room in local storage
     if (productId) {
-      // Create a minimal product data object with just the ID
-      // In a real scenario, you might fetch more details here if needed for local display
-      const minimalProductData = {
-        id: String(productId), // Ensure product ID is a string for consistency
-        // Add other minimal properties if necessary for local display, e.g., name: 'Product ' + productId
-      };
-      try {
-        // Use the addProductToRoom function from EstimateStorage to add the product to the newly added room
-        const success = addProductToRoomStorage(estimateId, clientSideRoomId, minimalProductData);
-        if (success) {
-          this.log(`Product ID ${productId} successfully added to room ${clientSideRoomId} in localStorage.`);
-        } else {
-          console.warn(`Failed to add product ID ${productId} to room ${clientSideRoomId} in localStorage.`);
-        }
-      } catch (e) {
-        console.error(`Error adding product ID ${productId} to room ${clientSideRoomId} in localStorage:`, e);
-      }
+      // Fetch comprehensive data for the product for local storage immediately
+      this.request('get_product_data_for_storage', {
+        product_id: productId,
+        room_width: roomWidth, // Pass dimensions to the new endpoint
+        room_length: roomLength // Pass dimensions to the new endpoint
+      })
+        .then(productDataResponse => {
+          console.log('DataService: Fetched comprehensive product data for storage (for new room product):', productDataResponse);
+
+          if (!productDataResponse.product_data) {
+            console.warn('Failed to get comprehensive product data for local storage for new room product.');
+            return; // Continue without adding product to local storage if data fetch fails
+          }
+
+          const comprehensiveProductData = productDataResponse.product_data;
+
+          try {
+            // Use the addProductToRoom function from EstimateStorage to add the product to the newly added room
+            const success = addProductToRoomStorage(estimateId, clientSideRoomId, comprehensiveProductData);
+            if (success) {
+              this.log(`Product ID ${productId} successfully added to new room ${clientSideRoomId} in localStorage.`);
+            } else {
+              console.warn(`Failed to add product ID ${productId} to new room ${clientSideRoomId} in localStorage.`);
+            }
+          } catch (e) {
+            console.error(`Error adding product ID ${productId} to new room ${clientSideRoomId} in localStorage:`, e);
+          }
+        })
+        .catch(error => {
+          console.error('DataService: Error fetching comprehensive product data for storage (for new room product):', error);
+          // Continue even if fetching data for local storage fails
+        });
     }
+
 
     let requestData = {
       form_data: this.formatFormData(formData),
@@ -580,20 +617,38 @@ class DataService {
       requestData.product_id = productId;
     }
 
-    // Use the generic request method for the AJAX call
-    return this.request('add_new_room', requestData)
+    // Use the generic request method for the AJAX call - handle asynchronously
+    const serverRequestPromise = this.request('add_new_room', requestData)
       .then(data => {
         // Log success for debugging
-        console.log('DataService: Room added successfully', data);
+        console.log('DataService: Room added successfully (server response)', data);
 
-        // Invalidate caches since we modified data
+        // Invalidate caches since we modified data on the server
         this.invalidateCache();
-        return data;
+
+        // You might want to update the client-side room with the server-assigned ID
+        // if the server returns one and it's different from the sequential client-side ID.
+        // Example: if (data.room_id && data.room_id !== clientSideRoomId) {
+        //   updateRoomIdInStorage(estimateId, clientSideRoomId, data.room_id);
+        // }
+
+        // If a product was added along with the room, you might need to update
+        // the client-side product data with server-assigned details if necessary.
+
+        return data; // Return the server response data
+
       })
       .catch(error => {
-        console.error('DataService: Error adding room', error);
+        console.error('DataService: Error adding room (server response)', error);
+        // Handle server-side error asynchronously, e.g., show a notification to the user.
+        // You might also want to consider removing the locally created room if the server creation failed.
+        // Example: removeRoomFromStorage(estimateId, clientSideRoomId);
         throw error; // Re-throw to allow handling upstream
       });
+
+    // Return a promise that resolves immediately with the client-side room data.
+    // ModalManager will use this to update the UI based on the local change.
+    return Promise.resolve({ room_id: clientSideRoomId, estimate_id: estimateId, ...newRoomData });
   }
 
   /**
@@ -633,7 +688,7 @@ class DataService {
    * Remove a room from an estimate
    * @param {string|number} estimateId - Estimate ID
    * @param {string|number} roomId - Room ID
-   * @returns {Promise<Object>} Result data
+   * @returns {Promise<Object>} A promise that resolves immediately after the local storage removal attempt.
    */
   removeRoom(estimateId, roomId) {
     console.log('DataService: Removing room', {
@@ -641,6 +696,7 @@ class DataService {
       roomId: roomId
     });
 
+    // Perform local storage removal immediately
     try {
       const success = removeRoomFromStorage(estimateId, roomId);
       if (success) {
@@ -652,24 +708,31 @@ class DataService {
       console.error(`Error removing room ID ${roomId} from localStorage:`, e);
     }
 
+
     // Force string conversion for consistency
     const requestData = {
       estimate_id: String(estimateId),
       room_id: String(roomId)
     };
 
-    return this.request('remove_room', requestData)
-      .then(data => {
-        console.log('DataService: Room removed successfully', data);
-
-        // Invalidate caches since we modified data
+    // Make the AJAX request to the server asynchronously
+    const serverRequestPromise = this.request('remove_room', requestData)
+      .then(serverData => {
+        console.log('DataService: Server-side room removal successful:', serverData);
+        // Invalidate caches since we modified data on the server
         this.invalidateCache();
-        return data;
+        // You might update local state further based on server response if needed
       })
-      .catch(error => {
-        console.error('DataService: Error removing room', error);
-        throw error;
+      .catch(serverError => {
+        console.error('DataService: Server-side room removal failed:', serverError);
+        // Handle server error asynchronously, e.g., notify user.
+        // You might need to add the room back to local storage if the server removal failed.
       });
+
+    // Return a promise that resolves immediately after the local removal attempt.
+    // ModalManager will use this to update the UI based on the local change.
+    // Note: This promise does NOT wait for the server response.
+    return Promise.resolve({ success: true }); // Assuming local removal attempt was made
   }
 
   /**
@@ -680,6 +743,7 @@ class DataService {
   removeEstimate(estimateId) {
     console.log(`DataService: Removing estimate ${estimateId}`);
 
+    // Perform local storage removal immediately
     try {
       const success = removeEstimateFromStorage(estimateId);
       if (success) {
@@ -691,20 +755,28 @@ class DataService {
       console.error(`Error removing estimate ID ${estimateId} from localStorage:`, e);
     }
 
-    return this.request('remove_estimate', {
+    // Make the AJAX request to the server asynchronously
+    this.request('remove_estimate', {
       estimate_id: estimateId
     })
-      .then(data => {
+      .then(serverData => {
+        console.log(`DataService: Server-side estimate removal successful: ${estimateId}`, serverData);
         // Invalidate caches since we modified data
         this.invalidateCache();
-        console.log(`DataService: Successfully removed estimate ${estimateId}`);
-        return data;
+        // You might update local state further based on server response if needed
       })
-      .catch(error => {
-        console.error(`DataService: Error removing estimate ${estimateId}`, error);
-        throw error; // Make sure to re-throw so the error propagates
+      .catch(serverError => {
+        console.error(`DataService: Server-side estimate removal failed: ${estimateId}`, serverError);
+        // Handle server error asynchronously, e.g., notify user.
+        // You might need to add the estimate back to local storage if the server removal failed.
       });
+
+    // Return a promise that resolves immediately after the local removal attempt.
+    // ModalManager will use this to update the UI based on the local change.
+    // Note: This promise does NOT wait for the server response.
+    return Promise.resolve({ success: true }); // Assuming local removal attempt was made
   }
+
 
   /**
    * Get suggested products for a room

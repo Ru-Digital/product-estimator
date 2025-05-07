@@ -710,6 +710,7 @@ class ModalManager {
    * MODIFIED: Correctly retrieves inserted product element using lastElementChild.
    * Ensures similarProductsLoaded flag is set if element is found.
    * Ensures toggle button state is synchronised with container visibility.
+   * FIXED: Added a null check for 'suggestions' before accessing 'suggestions.length'.
    * @param {string|null} expandRoomId - Optional room ID to expand after loading
    * @param {string|null} expandEstimateId - Optional estimate ID containing the room
    * @returns {Promise} Promise that resolves when the list is loaded
@@ -946,7 +947,6 @@ class ModalManager {
                       }
 
                       // --- SUGGESTION LOADING AND RENDERING START ---
-                      // ... (rest of your existing code for suggestions) ...
                       const suggestionsSection = roomElement ? roomElement.querySelector('.product-suggestions') : null;
                       const suggestionsContainer = roomElement ? roomElement.querySelector('.product-suggestions .suggestions-container') : null;
                       const suggestionsCarouselWrapper = roomElement ? roomElement.querySelector('.product-suggestions .suggestions-carousel') : null;
@@ -959,9 +959,14 @@ class ModalManager {
 
                         this.dataService.getSuggestedProducts(estimateId, roomId, roomProductsArray)
                           .then(suggestions => {
-                            console.log(`[ModalManager.loadEstimatesList] Fetched ${suggestions.length} suggestions for room ${roomId}.`);
+                            // ***** SOLUTION START *****
+                            // Check if suggestions is null or undefined before accessing length
+                            const suggestionsLength = suggestions ? suggestions.length : 0;
+                            console.log(`[ModalManager.loadEstimatesList] Fetched ${suggestionsLength} suggestions for room ${roomId}.`);
+                            // ***** SOLUTION END *****
+
                             suggestionsContainer.innerHTML = ''; // Clear loading/old
-                            if (suggestions && suggestions.length > 0) {
+                            if (suggestions && suggestions.length > 0) { // Check suggestions itself, then length
                               suggestionsSection.style.display = 'block'; // Show section
                               const carouselNav = suggestionsCarouselWrapper.querySelectorAll('.suggestions-nav');
                               carouselNav.forEach(nav => nav.style.display = ''); // Show nav
@@ -1059,6 +1064,7 @@ class ModalManager {
       }
     }); // End Promise
   }
+
 
   /**
    * Binds click events to the similar products toggle button within each product item.
@@ -1281,63 +1287,78 @@ class ModalManager {
   /**
    * Handle product removal
    * MODIFIED to call updateRoomSuggestions if products still exist after removal.
+   * MODIFIED to insert 'products-empty-template' if the room becomes empty of products.
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    * @param {number} productIndex - Product index
+   * @param {number} productId - Product Id
    */
-  handleProductRemoval(estimateId, roomId, productIndex) {
+  handleProductRemoval(estimateId, roomId, productIndex, productId) {
     this.showLoading();
 
-    console.log(`Removing product at index ${productIndex} from room ${roomId} in estimate ${estimateId}`);
+    console.log(`[ModalManager.handleProductRemoval] Removing product at index ${productIndex} from room ${roomId} in estimate ${estimateId}`);
 
     // Find the room element
     const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
 
     if (!roomElement) {
-      console.warn(`Could not find room element for room ID ${roomId} and estimate ID ${estimateId}`);
+      console.warn(`[ModalManager.handleProductRemoval] Could not find room element for room ID ${roomId} and estimate ID ${estimateId}`);
       this.showError('Room element not found. Please refresh and try again.');
       this.hideLoading();
       return;
     }
 
-    const productElement = roomElement.querySelector(`.product-item[data-product-index="${productIndex}"]`);
+    const productElement = roomElement.querySelector(`.product-item[data-product-id="${productId}"]`);
 
     if (!productElement) {
-      console.warn(`Could not find product element with index ${productIndex} in the DOM`);
+      console.warn(`[ModalManager.handleProductRemoval] Could not find product element with id ${productId} in the DOM`);
       this.showError('Product element not found. Please refresh and try again.');
       this.hideLoading();
       return;
     }
 
     // Use DataService to make the AJAX request
-    this.dataService.removeProductFromRoom(estimateId, roomId, productIndex)
+    this.dataService.removeProductFromRoom(estimateId, roomId, productIndex, productId)
       .then(response => {
-        console.log('Product removal successful:', response);
+        console.log('[ModalManager.handleProductRemoval] Product removal successful:', response);
 
-        // Get parent container before removing element
-        const productList = productElement.parentElement;
+        // Get parent container (the product list) before removing the product element
+        const productListContainer = productElement.parentElement;
 
-        // Remove the element from the DOM
+        // Remove the product element from the DOM
         productElement.remove();
 
         // Check if this was the last product in the room
-        if (productList && productList.children.length === 0) {
-          console.log('Last product in room removed, updating room UI');
+        if (productListContainer && productListContainer.children.length === 0) {
+          console.log('[ModalManager.handleProductRemoval] Last product in room removed, updating room UI. Inserting products-empty-template.');
 
-          // If room is now empty, hide suggestions and similar products sections
+          // Insert the 'products-empty-template' into the now empty product list container
+          if (TemplateEngine && typeof TemplateEngine.insert === 'function') {
+            TemplateEngine.insert('products-empty-template', {}, productListContainer);
+          } else {
+            console.error('[ModalManager.handleProductRemoval] TemplateEngine or TemplateEngine.insert is not available.');
+          }
+
+          // If room is now empty of products, also hide suggestions section
           const suggestions = roomElement.querySelector('.product-suggestions');
           if (suggestions) {
             suggestions.style.display = 'none';
+            // Clear any existing suggestions content and destroy carousel if any
+            const suggestionsContainer = suggestions.querySelector('.suggestions-container');
+            if (suggestionsContainer) suggestionsContainer.innerHTML = '';
+            const carouselWrapper = suggestions.querySelector('.suggestions-carousel');
+            if (carouselWrapper && carouselWrapper.carouselInstance) {
+              carouselWrapper.carouselInstance.destroy();
+              carouselWrapper.carouselInstance = null;
+            }
           }
-          const similarProducts = roomElement.querySelector('.product-similar-products');
-          if (similarProducts) {
-            similarProducts.style.display = 'none';
-          }
+          // Similar products are part of the product-item, so they are removed with the product.
+          // No specific action needed here for similar products container of the room itself.
+
         } else {
-          // *** MODIFIED: If products still exist, re-check for suggestions asynchronously ***
-          console.log(`Products still exist in room ${roomId}. Checking for updated suggestions.`);
+          // Products still exist in the room, update suggestions for the room
+          console.log(`[ModalManager.handleProductRemoval] Products still exist in room ${roomId}. Checking for updated suggestions.`);
           this.updateRoomSuggestions(estimateId, roomId, roomElement);
-          // *** END MODIFIED ***
         }
 
 
@@ -1355,7 +1376,7 @@ class ModalManager {
         this.showMessage('Product removed successfully', 'success');
       })
       .catch(error => {
-        console.error('Error removing product:', error);
+        console.error('[ModalManager.handleProductRemoval] Error removing product:', error);
         this.showError(error.message || 'Error removing product. Please try again.');
       })
       .finally(() => {
@@ -2008,6 +2029,7 @@ class ModalManager {
         const estimateId = removeButton.dataset.estimateId;
         const roomId = removeButton.dataset.roomId;
         const productIndex = removeButton.dataset.productIndex;
+        const productId = removeButton.dataset.productId;
 
         console.log('Remove product button clicked:', {
           estimateId,
@@ -2018,7 +2040,7 @@ class ModalManager {
 
         if (estimateId && roomId && productIndex !== undefined) {
           // Confirm before removing
-          this.confirmDelete('product', estimateId, roomId, productIndex);
+          this.confirmDelete('product', estimateId, roomId, productIndex, productId);
         } else {
           console.error('Missing data attributes for product removal:', {
             estimateId,
@@ -2078,9 +2100,10 @@ class ModalManager {
    * @param {string} type - Item type ('product', 'room', or 'estimate')
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID (for room or product deletion)
+   * @param {string|null} elementId - Element ID (for product deletion, can be null)
    * @param {string} productIndex - Product index (for product deletion only)
    */
-  confirmDelete(type, estimateId, roomId, productIndex) {
+  confirmDelete(type, estimateId, roomId, productIndex, elementId = null) {
     // Get text from localized strings if available
     const i18n = window.productEstimatorVars?.i18n || {};
     const dialogTitles = i18n.dialog_titles || {};
@@ -2134,7 +2157,7 @@ class ModalManager {
               this.handleRoomRemoval(estimateId, roomId);
               break;
             case 'product':
-              this.handleProductRemoval(estimateId, roomId, productIndex);
+              this.handleProductRemoval(estimateId, roomId, productIndex, elementId);
               break;
           }
         },

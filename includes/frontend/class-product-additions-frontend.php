@@ -167,11 +167,15 @@ class ProductAdditionsFrontend extends FrontendBase
      * @since    1.1.0
      * @access   public
      */
-    public function get_suggestions_for_room($room_products)
+    public function get_suggestions_for_room($room_products, $room_area = null)
     {
         if (empty($room_products) || !is_array($room_products)) {
             return array();
         }
+
+        $room_products = array_unique($room_products);
+
+
 
         $raw_suggested_product_ids = array();
 
@@ -189,13 +193,7 @@ class ProductAdditionsFrontend extends FrontendBase
             $product_obj = wc_get_product($product['id']);
             $product_id_for_categories = $product['id']; // Default to product ID
 
-            if ($product_obj && $product_obj->is_type('variation')) {
-                // Use the parent product ID for getting categories if it's a variation
-                $parent_id = $product_obj->get_parent_id();
-                if ($parent_id) {
-                    $product_id_for_categories = $parent_id;
-                }
-            }
+            $product_id_for_categories  = ($product_obj->get_parent_id()) ? $product_obj->get_parent_id() : $product['id'];
 
             // Get product categories using the determined product ID (parent or own)
             $categories = wp_get_post_terms($product_id_for_categories, 'product_cat', array('fields' => 'ids'));
@@ -213,10 +211,48 @@ class ProductAdditionsFrontend extends FrontendBase
             }
         }
 
+        $room_products_ids = array_column($room_products, 'id');
+
+        $raw_suggested_product_ids = array_diff($raw_suggested_product_ids, $room_products_ids);
         // Remove duplicates from the raw list of suggested product IDs
         $unique_raw_suggestions = array_unique($raw_suggested_product_ids);
 
+        // If we need to add [MARKUP] do here.
+        $markup = null;
+        $product_suggestions = [];
+        foreach($unique_raw_suggestions as $raw_suggestion_id) {
+
+            $suggested_product = wc_get_product($raw_suggestion_id);
+            if($suggested_product) {
+                $price_data = product_estimator_calculate_total_price_with_additions($raw_suggestion_id, $room_area, $markup);
+                $pricing_method = 'sqm'; // Default method
+                $pricing_rules = get_option('product_estimator_pricing_rules', []);
+                $product_categories = wp_get_post_terms($raw_suggestion_id, 'product_cat', ['fields' => 'ids']);
+
+                foreach ($pricing_rules as $rule) {
+                    if (isset($rule['categories']) && is_array($rule['categories']) && !empty(array_intersect($product_categories, $rule['categories']))) {
+                        $pricing_method = isset($rule['pricing_method']) ? $rule['pricing_method'] : 'sqm';
+                        break;
+                    }
+                }
+
+                $price_breakdown = $price_data['breakdown'];
+                $has_auto_add = count($price_breakdown) > 1;
+
+                // Add to suggestions array - using product ID as key to avoid duplicates
+                $product_suggestions[intval($raw_suggestion_id)] = [
+                    'id' => intval($raw_suggestion_id),
+                    'name' => $suggested_product->get_name(),
+                    'image' => wp_get_attachment_image_url($suggested_product->get_image_id(), [300, 300]) ?: '',
+                    'min_price_total' => $price_data['min_total'], // Use total prices here
+                    'max_price_total' => $price_data['max_total'], // Use total prices here
+                    'pricing_method' => $pricing_method, // Keep pricing method for display logic
+                    'has_auto_add' => $has_auto_add // Indicate if it has auto-add products
+                ];
+            }
+        }
+
         // Return the unique raw suggested product IDs
-        return $unique_raw_suggestions;
+        return $product_suggestions;
     }
 }

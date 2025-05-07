@@ -185,6 +185,37 @@ export function getSuggestionsForRoom(estimateId, roomId) {
 }
 
 /**
+ * Add suggestions to a room in localStorage
+ * @param {array} suggestedProducts - Suggested Products Array to set
+ * @param {string} estimateId - Estimate ID
+ * @param {string} roomId - Room ID
+ * @returns {Array|null} Array of suggestion products added to room or null
+ */
+export function addSuggestionsToRoom(suggestedProducts, estimateId, roomId) {
+  const storedData = loadEstimateData(); //
+
+  if (!storedData.estimates ||
+    !storedData.estimates[estimateId] ||
+    !storedData.estimates[estimateId].rooms ||
+    !storedData.estimates[estimateId].rooms[roomId]) { //
+    return null; //
+  }
+
+  const room = storedData.estimates[estimateId].rooms[roomId];
+
+  // Ensure suggestedProducts is an array
+  if (!Array.isArray(suggestedProducts)) {
+    console.error('Error: suggestedProducts must be an array.');
+    return null;
+  }
+
+  room.product_suggestions = suggestedProducts;
+  saveEstimateData(storedData);
+
+  return room.product_suggestions;
+}
+
+/**
  * Remove a room from an estimate in localStorage
  * @param {string} estimateId - Estimate ID
  * @param {string} roomId - Room ID to remove
@@ -206,13 +237,6 @@ export function removeRoom(estimateId, roomId) {
   return true;
 }
 
-/**
- * Add a product to a room in an estimate in localStorage
- * @param {string} estimateId - Estimate ID
- * @param {string} roomId - Room ID
- * @param {Object} productData - Product data to add
- * @returns {boolean} Success or failure (returns false if product already exists)
- */
 export function addProductToRoom(estimateId, roomId, productData) {
   const storedData = loadEstimateData();
 
@@ -220,52 +244,74 @@ export function addProductToRoom(estimateId, roomId, productData) {
     !storedData.estimates[estimateId] ||
     !storedData.estimates[estimateId].rooms ||
     !storedData.estimates[estimateId].rooms[roomId]) {
+    console.error(`EstimateStorage: Estimate or Room not found. E: ${estimateId}, R: ${roomId}`);
     return false;
   }
 
   const room = storedData.estimates[estimateId].rooms[roomId];
 
-  if (!room.products) {
+  // Ensure room.products array exists
+  if (!Array.isArray(room.products)) {
     room.products = [];
   }
+  // Ensure room.product_suggestions array exists (important for DataService flow)
+  if (!Array.isArray(room.product_suggestions)) {
+    room.product_suggestions = [];
+  }
 
-  // Check if product with the same ID already exists in the room
+  // Check if product with the same ID already exists in the room's products array
   const existingProduct = room.products.find(product => product.id === productData.id);
   if (existingProduct) {
-    console.warn(`Product with ID ${productData.id} already exists in room ${roomId}. Aborting local storage add.`);
+    console.warn(`EstimateStorage: Product with ID ${productData.id} already exists in room ${roomId}. Aborting add to room.products.`);
     return false; // Indicate failure because product already exists
   }
 
+  // ** CORRECTED LINE: Add to room.products **
   room.products.push(productData);
   saveEstimateData(storedData);
 
+  console.log(`EstimateStorage: Product ${productData.id} added to room ${roomId}. products:`, room.products);
   return true; // Indicate success
 }
 
+// EstimateStorage.js - Replace the existing function with this
 /**
- * Remove a product from a room in localStorage
+ * Remove a product from a room in localStorage based on Product ID.
  * @param {string} estimateId - Estimate ID
  * @param {string} roomId - Room ID
- * @param {number} productIndex - Index of the product in the products array
+ * @param {number} productIndex - Index (Received but not used for removal logic)
+ * @param {string|number} productId - ProductId of the product to remove. This is used for localStorage removal.
  * @returns {boolean} Success or failure
  */
-export function removeProductFromRoom(estimateId, roomId, productIndex) {
+export function removeProductFromRoom(estimateId, roomId, productIndex, productId) {
   const storedData = loadEstimateData();
 
+  // Check if the basic path and products array exist.
   if (!storedData.estimates ||
     !storedData.estimates[estimateId] ||
     !storedData.estimates[estimateId].rooms ||
     !storedData.estimates[estimateId].rooms[roomId] ||
-    !storedData.estimates[estimateId].rooms[roomId].products ||
-    !storedData.estimates[estimateId].rooms[roomId].products[productIndex]) {
+    !Array.isArray(storedData.estimates[estimateId].rooms[roomId].products)) {
+    console.warn('[EstimateStorage.removeProductFromRoom] Attempted to remove product: Path to products array is invalid or products array is missing.', { estimateId, roomId, receivedProductId: productId });
     return false;
   }
 
-  // Remove the product at the specified index
-  storedData.estimates[estimateId].rooms[roomId].products.splice(productIndex, 1);
-  saveEstimateData(storedData);
+  const productsInRoom = storedData.estimates[estimateId].rooms[roomId].products;
 
-  return true;
+  // Find the index of the product to remove using productId.
+  // Comparing as strings for safety (e.g., '6677' === String(6677)).
+  const actualProductIndexToRemove = productsInRoom.findIndex(product => String(product.id) === String(productId));
+
+  if (actualProductIndexToRemove === -1) {
+    console.warn(`[EstimateStorage.removeProductFromRoom] Product with ID '<span class="math-inline">\{productId\}' not found in room '</span>{roomId}' for estimate '${estimateId}'. Cannot remove.`);
+    return false; // Product not found by ID
+  }
+
+  // Remove the product at the found index
+  productsInRoom.splice(actualProductIndexToRemove, 1);
+  saveEstimateData(storedData);
+  console.log(`[EstimateStorage.removeProductFromRoom] Product with ID '<span class="math-inline">\{productId\}' successfully removed from localStorage for room '</span>{roomId}', estimate '${estimateId}'.`);
+  return true; // Successfully removed by ID
 }
 
 /**
@@ -440,5 +486,6 @@ export default {
   updateCustomerDetails,
   getEstimates,
   replaceProductInRoom,
-  getSuggestionsForRoom
+  getSuggestionsForRoom,
+  addSuggestionsToRoom
 };

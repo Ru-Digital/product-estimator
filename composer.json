@@ -36,13 +36,6 @@
             "RuDigital\\ProductEstimator\\Includes\\": "includes/"
         },
         "classmap": [
-            "includes/frontend/class-shortcodes.php",
-            "includes/frontend/class-script-handler.php",
-            "includes/integration/class-netsuite-integration.php",
-            "includes/integration/class-woocommerce-integration.php",
-            "includes/admin/class-product-estimator-settings.php",
-            "includes/admin/class-product-estimator-admin.php",
-            "includes/admin/settings/interface-settings-module.php",
             "includes/class-activator.php",
             "includes/class-product-estimator.php",
             "includes/class-i18n.php",
@@ -53,19 +46,37 @@
             "includes/class-ajax-handler.php",
             "includes/class-customer-details.php",
             "includes/class-estimate-handler.php",
-            "includes/traits/trait-estimate-db-handler.php",
-            "includes/models/class-estimate-model.php",
             "includes/class-pdf-route-handler.php",
             "includes/frontend/class-frontend-base.php",
+            "includes/frontend/class-shortcodes.php",
+            "includes/frontend/class-script-handler.php",
             "includes/frontend/class-similar-products-frontend.php",
             "includes/frontend/class-product-additions-frontend.php",
             "includes/frontend/class-product-upgrades-frontend.php",
             "includes/frontend/class-labels-frontend.php",
-            "includes/utilities/class-pdf-generator.php"
+            "includes/integration/class-netsuite-integration.php",
+            "includes/integration/class-woocommerce-integration.php",
+            "includes/models/class-estimate-model.php",
+            "includes/traits/trait-estimate-db-handler.php",
+            "includes/utilities/class-pdf-generator.php",
+            "includes/admin/class-product-estimator-admin.php",
+            "includes/admin/class-admin-script-handler.php",
+            "includes/admin/class-settings-manager.php",
+            "includes/admin/class-customer-estimates-admin.php",
+            "includes/admin/class-customer-estimates-list-table.php",
+            "includes/admin/class-csv-export-handler.php",
+            "includes/admin/settings/interface-settings-module.php",
+            "includes/admin/settings/class-settings-module-base.php",
+            "includes/admin/settings/class-general-settings-module.php",
+            "includes/admin/settings/class-pricing-rules-settings-module.php",
+            "includes/admin/settings/class-netsuite-settings-module.php",
+            "includes/admin/settings/class-product-additions-settings-module.php",
+            "includes/admin/settings/class-similar-products-settings-module.php",
+            "includes/admin/settings/class-notification-settings-module.php",
+            "includes/admin/settings/class-product-upgrades-settings-module.php",
+            "includes/admin/settings/class-labels-settings-module.php"
         ],
-        "files": [
-            "includes/functions.php"
-        ]
+        "files": []
     },
     "autoload-dev": {
         "psr-4": {

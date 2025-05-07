@@ -1,164 +1,208 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes\Traits;
 
+use RuDigital\ProductEstimator\Includes\SessionHandler; // Add use statement
+
 /**
  * Trait for handling estimate database ID references.
  *
  * Provides methods for checking if estimates are stored in the database
  * and handling database ID lookups efficiently.
+ * MODIFIED: Uses SessionHandler for session interactions.
  *
  * @since      1.0.0
+ * @since      x.x.x Updated for lazy session loading via SessionHandler
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/traits
  */
 trait EstimateDbHandler {
 
     /**
-     * Check if an estimate has a valid database ID
+     * Get the SessionHandler instance.
+     * Helper method within the trait for convenience.
      *
-     * @param array|string $estimate The estimate data or estimate ID
-     * @return bool Whether the estimate has a valid database ID
+     * @return SessionHandler
      */
-    protected function hasValidDbId($estimate) {
-        // If we received an estimate ID instead of estimate array
-        if (is_string($estimate) || is_numeric($estimate)) {
-            $session_estimate_id = (string)$estimate;
-
-            // Access session data directly
-            if (isset($_SESSION['product_estimator']['estimates'][$session_estimate_id])) {
-                $estimate = $_SESSION['product_estimator']['estimates'][$session_estimate_id];
-            } else {
-                return false;
-            }
+    private function getSessionHandler(): SessionHandler {
+        // If the class using the trait has a 'session' property that's an instance of SessionHandler, use it.
+        // This provides flexibility if the consuming class manages the instance.
+        if (property_exists($this, 'session') && $this->session instanceof SessionHandler) {
+            return $this->session;
         }
-
-        return isset($estimate['db_id']) && !empty($estimate['db_id']);
+        // Otherwise, get the singleton instance directly.
+        return SessionHandler::getInstance();
     }
 
     /**
-     * Check if a database ID exists in the database
+     * Helper to get estimate data safely using SessionHandler.
      *
-     * @param int $db_id The database ID to check
-     * @return bool Whether the ID exists in the database
+     * @param array|string|int $estimate_ref Estimate data array or session estimate ID.
+     * @param string|int|null $session_estimate_id_out If input is an ID, this will hold the ID.
+     * @return array|null The estimate data array or null if not found/session fails.
      */
-    protected function dbIdExists($db_id) {
+    private function resolveEstimateData($estimate_ref, &$session_estimate_id_out = null): ?array {
+        $session = $this->getSessionHandler();
+        $estimate_data = null;
+
+        if (is_array($estimate_ref)) {
+            $estimate_data = $estimate_ref;
+            // Try to determine the session ID if db_id is present
+            if (isset($estimate_data['db_id']) && !empty($estimate_data['db_id'])) {
+                $found = $session->getEstimateSessionByDbId($estimate_data['db_id']);
+                if ($found) {
+                    $session_estimate_id_out = $found['id'];
+                }
+            } elseif (isset($estimate_ref['session_id_for_trait'])) {
+                // Allow passing session ID within the array if needed, though less common
+                $session_estimate_id_out = (string)$estimate_ref['session_id_for_trait'];
+            }
+        } elseif (is_string($estimate_ref) || is_numeric($estimate_ref)) {
+            $session_estimate_id = (string)$estimate_ref;
+            $estimate_data = $session->getEstimate($session_estimate_id); // Fetches using SessionHandler
+            $session_estimate_id_out = $session_estimate_id;
+        }
+
+        return $estimate_data;
+    }
+
+
+    /**
+     * Check if an estimate has a valid database ID stored within its data.
+     *
+     * @param array|string|int $estimate_ref The estimate data array or session estimate ID.
+     * @return bool Whether the estimate data contains a valid 'db_id'.
+     */
+    protected function hasValidDbId($estimate_ref): bool {
+        $estimate_data = $this->resolveEstimateData($estimate_ref);
+        // Check if data was resolved and contains a non-empty db_id
+        return $estimate_data !== null && isset($estimate_data['db_id']) && !empty($estimate_data['db_id']);
+    }
+
+    /**
+     * Check if a database ID exists in the database estimates table.
+     * (No session interaction needed here)
+     *
+     * @param int $db_id The database ID to check.
+     * @return bool Whether the ID exists in the database.
+     */
+    protected function dbIdExists(int $db_id): bool {
+        // Ensure db_id is valid before querying
+        if ($db_id <= 0) {
+            return false;
+        }
+
         global $wpdb;
         $table_name = $wpdb->prefix . 'product_estimator_estimates';
 
-        $exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table_name WHERE id = %d",
-            $db_id
-        ));
+        // Prepare the query safely
+        $query = $wpdb->prepare("SELECT COUNT(*) FROM `{$table_name}` WHERE `id` = %d", $db_id);
+        $count = $wpdb->get_var($query);
 
-        return $exists > 0;
+        // Check for errors
+        if ($wpdb->last_error) {
+            error_log("WPDB Error in dbIdExists: " . $wpdb->last_error);
+            return false; // Treat database errors as 'not exists' for safety
+        }
+
+        return $count > 0;
     }
 
     /**
-     * Check if an estimate is stored in the database
+     * Check if an estimate is stored in the database (has db_id and that ID exists in DB).
      *
-     * @param mixed $estimate The estimate data or estimate ID
-     * @return bool Whether the estimate is stored
+     * @param array|string|int $estimate_ref The estimate data array or session estimate ID.
+     * @return bool Whether the estimate is considered stored in the database.
      */
-    public function isEstimateStored($estimate) {
-        // First check if the estimate has a db_id
-        if (!$this->hasValidDbId($estimate)) {
+    public function isEstimateStored($estimate_ref): bool {
+        $estimate_data = $this->resolveEstimateData($estimate_ref);
+
+        // If no estimate data found or no db_id, it's not stored
+        if ($estimate_data === null || !isset($estimate_data['db_id']) || empty($estimate_data['db_id'])) {
             return false;
         }
 
-        // If it's a string or numeric (estimate ID), get the actual estimate data
-        if (is_string($estimate) || is_numeric($estimate)) {
-            $session_estimate_id = (string)$estimate;
-            if (isset($_SESSION['product_estimator']['estimates'][$session_estimate_id])) {
-                $estimate = $_SESSION['product_estimator']['estimates'][$session_estimate_id];
-            } else {
-                return false;
-            }
-        }
-
-        // Verify the ID exists in the database
-        return $this->dbIdExists((int)$estimate['db_id']);
+        // Verify the stored db_id actually exists in the database table
+        return $this->dbIdExists((int)$estimate_data['db_id']);
     }
 
     /**
-     * Get the database ID for an estimate
+     * Get the database ID for an estimate from its data.
      *
-     * @param mixed $estimate The estimate data or estimate ID
-     * @return int|null The database ID or null if not stored
+     * @param array|string|int $estimate_ref The estimate data array or session estimate ID.
+     * @return int|null The database ID or null if not set or not stored.
      */
-    public function getEstimateDbId($estimate) {
-        if ($this->isEstimateStored($estimate)) {
-            // If it's a string or numeric (estimate ID), get the actual estimate data
-            if (is_string($estimate) || is_numeric($estimate)) {
-                $session_estimate_id = (string)$estimate;
-                $estimate = $_SESSION['product_estimator']['estimates'][$session_estimate_id];
-            }
+    public function getEstimateDbId($estimate_ref): ?int {
+        $estimate_data = $this->resolveEstimateData($estimate_ref);
 
-            return (int)$estimate['db_id'];
+        // Check if data exists and has a valid db_id
+        if ($estimate_data !== null && isset($estimate_data['db_id']) && !empty($estimate_data['db_id'])) {
+            // Optionally, you could add a check here using isEstimateStored if you want to be absolutely sure
+            // if ($this->isEstimateStored($estimate_data)) { ... }
+            return (int)$estimate_data['db_id'];
         }
 
-        return null;
+        return null; // Return null if no valid db_id found
     }
 
     /**
-     * Store or update an estimate in the database
-     * Fixed version to handle potential errors better
+     * Store or update an estimate in the database.
+     * Also updates the db_id in the session estimate data via SessionHandler.
      *
-     * @param string $session_estimate_id The session estimate ID
-     * @param array $customer_details Customer details array
-     * @param string $notes Additional notes
-     * @return int|false The database ID of the stored/updated estimate or false on failure
+     * @param string|int $session_estimate_id The session estimate ID.
+     * @param array $customer_details Customer details array (optional).
+     * @param string $notes Additional notes (optional).
+     * @return int|false The database ID of the stored/updated estimate or false on failure.
      */
-    private function storeOrUpdateEstimate($session_estimate_id, $customer_details = [], $notes = '') {
-        // Validate session_estimate_id
+    protected function storeOrUpdateEstimate($session_estimate_id, array $customer_details = [], string $notes = '') {
+        // Validate session_estimate_id (allow '0')
         if (!isset($session_estimate_id) || $session_estimate_id === '') {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('storeOrUpdateEstimate called with empty session_estimate_id');
-            }
+            error_log('Product Estimator (EstimateDbHandler): storeOrUpdateEstimate called with empty session_estimate_id');
             return false;
         }
+        $session_estimate_id = (string)$session_estimate_id; // Ensure string type
+
+        $session = $this->getSessionHandler();
 
         try {
-            // Get the estimate from session
-            $estimate = $this->session->getEstimate($session_estimate_id);
+            // Get the estimate data from session using the handler
+            $estimate = $session->getEstimate($session_estimate_id);
 
             if (!$estimate) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Cannot find estimate with ID: {$session_estimate_id} in session");
-                    error_log("Available estimate IDs: " . implode(', ', array_keys($this->session->getEstimates())));
-                }
+                error_log("Product Estimator (EstimateDbHandler): Cannot find estimate with session ID '{$session_estimate_id}' in session via SessionHandler.");
+                // Optionally log available IDs for debugging: error_log("Available estimate IDs: " . implode(', ', array_keys($session->getEstimates())));
                 return false;
             }
 
-            // Add customer details to the estimate if provided
+            // Update customer details in the local $estimate array if provided
             if (!empty($customer_details)) {
                 $estimate['customer_details'] = $customer_details;
             }
+            // Update notes if provided
+            if (!empty($notes)) {
+                $estimate['notes'] = $notes; // Assuming 'notes' is a key in your estimate structure
+            }
 
-            // Initialize database table name
+
             global $wpdb;
             $table_name = $wpdb->prefix . 'product_estimator_estimates';
 
-            // Check if this estimate is already stored using the trait's method
-            $db_id = $this->getEstimateDbId($estimate);
+            // Check if this estimate is already stored (has a valid db_id in its data)
+            $db_id = $this->getEstimateDbId($estimate); // Use the method which checks $estimate['db_id']
 
-            // Prepare common data for insert/update
+            // Prepare common data for insert/update, ensuring keys exist
             $data = [
-                'name' => isset($estimate['customer_details']['name']) ?
-                    sanitize_text_field($estimate['customer_details']['name']) : '',
-                'email' => isset($estimate['customer_details']['email']) ?
-                    sanitize_email($estimate['customer_details']['email']) : '',
-                'phone_number' => isset($estimate['customer_details']['phone']) ?
-                    sanitize_text_field($estimate['customer_details']['phone']) : '',
-                'postcode' => isset($estimate['customer_details']['postcode']) ?
-                    sanitize_text_field($estimate['customer_details']['postcode']) : '',
-                'total_min' => isset($estimate['min_total']) ? floatval($estimate['min_total']) : 0,
-                'total_max' => isset($estimate['max_total']) ? floatval($estimate['max_total']) : 0,
-                'markup' => isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0,
-                'estimate_data' => json_encode($estimate),
-                'notes' => $notes
+                'name'           => isset($estimate['customer_details']['name']) ? sanitize_text_field($estimate['customer_details']['name']) : ($estimate['name'] ?? ''), // Fallback to estimate name if customer name missing
+                'email'          => isset($estimate['customer_details']['email']) ? sanitize_email($estimate['customer_details']['email']) : '',
+                'phone_number'   => isset($estimate['customer_details']['phone']) ? sanitize_text_field($estimate['customer_details']['phone']) : '',
+                'postcode'       => isset($estimate['customer_details']['postcode']) ? sanitize_text_field($estimate['customer_details']['postcode']) : '',
+                'total_min'      => isset($estimate['min_total']) ? floatval($estimate['min_total']) : 0,
+                'total_max'      => isset($estimate['max_total']) ? floatval($estimate['max_total']) : 0,
+                'markup'         => isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0,
+                'estimate_data'  => json_encode($estimate), // Encode the potentially modified $estimate array
+                'notes'          => $notes // Use the passed-in notes
             ];
 
-            // Common format definitions
+            // Define corresponding formats for $wpdb->prepare
             $formats = [
                 '%s', // name
                 '%s', // email
@@ -167,39 +211,42 @@ trait EstimateDbHandler {
                 '%f', // total_min
                 '%f', // total_max
                 '%f', // markup
-                '%s', // estimate_data
+                '%s', // estimate_data (JSON string)
                 '%s'  // notes
             ];
 
-            if ($db_id) {
-                // Update existing record
-                $data['updated_at'] = current_time('mysql');
-                $formats[] = '%s'; // updated_at
+            $saved_db_id = false;
+
+            if ($db_id && $this->dbIdExists($db_id)) { // Check if db_id is valid and exists
+                // --- UPDATE existing record ---
+                $data['updated_at'] = current_time('mysql'); // Add/update timestamp
+                $formats[] = '%s'; // Add format for updated_at
 
                 $result = $wpdb->update(
                     $table_name,
-                    $data,
-                    ['id' => $db_id],
-                    $formats,
-                    ['%d'] // id
+                    $data,              // Data to update
+                    ['id' => $db_id],   // WHERE clause
+                    $formats,           // Format for data
+                    ['%d']              // Format for WHERE clause
                 );
 
                 if ($result === false) {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('Database error updating estimate: ' . $wpdb->last_error);
-                    }
-                    throw new \Exception('Database error updating estimate: ' . $wpdb->last_error);
+                    // Database update failed
+                    error_log("Product Estimator (EstimateDbHandler): Database error updating estimate ID {$db_id}. Error: " . $wpdb->last_error);
+                    throw new \Exception('Database error updating estimate.'); // Throw exception on failure
+                }
+                $saved_db_id = $db_id; // Use the existing db_id
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("Product Estimator (EstimateDbHandler): Successfully updated estimate DB ID {$db_id}.");
                 }
 
-                // Return the existing DB ID
-                return $db_id;
             } else {
-                // Insert new record
+                // --- INSERT new record ---
                 $data['created_at'] = current_time('mysql');
-                $data['status'] = 'saved';
+                $data['status'] = 'saved'; // Set initial status
 
-                $formats[] = '%s'; // created_at
-                $formats[] = '%s'; // status
+                $formats[] = '%s'; // format for created_at
+                $formats[] = '%s'; // format for status
 
                 $result = $wpdb->insert(
                     $table_name,
@@ -208,122 +255,134 @@ trait EstimateDbHandler {
                 );
 
                 if ($result === false) {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('Database error inserting estimate: ' . $wpdb->last_error);
-                    }
-                    throw new \Exception('Database error inserting estimate: ' . $wpdb->last_error);
+                    // Database insert failed
+                    error_log("Product Estimator (EstimateDbHandler): Database error inserting new estimate. Error: " . $wpdb->last_error);
+                    throw new \Exception('Database error inserting estimate.'); // Throw exception on failure
                 }
 
-                $new_db_id = $wpdb->insert_id;
+                $new_db_id = $wpdb->insert_id; // Get the newly inserted ID
+                $saved_db_id = $new_db_id;
 
-                // Update the session data with the new DB ID
-                $this->setEstimateDbId($session_estimate_id, $new_db_id);
-
-                return $new_db_id;
+                // --- IMPORTANT: Update the session data with the new DB ID ---
+                // Add the new db_id to the local $estimate array
+                $estimate['db_id'] = $new_db_id;
+                // Save the estimate array (which now includes the db_id) back to the session
+                if (!$session->updateEstimateData($session_estimate_id, $estimate)) {
+                    // Log an error if updating the session failed, but don't necessarily fail the whole operation
+                    error_log("Product Estimator (EstimateDbHandler): Failed to update session with new DB ID {$new_db_id} for session estimate {$session_estimate_id}.");
+                } else {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log("Product Estimator (EstimateDbHandler): Successfully inserted estimate, new DB ID {$new_db_id}. Updated session.");
+                    }
+                }
             }
+
+            return $saved_db_id; // Return the DB ID (either existing or new)
+
         } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Exception in storeOrUpdateEstimate: ' . $e->getMessage());
-                error_log('Stack trace: ' . $e->getTraceAsString());
-            }
-            return false;
+            error_log('Product Estimator (EstimateDbHandler) Exception in storeOrUpdateEstimate: ' . $e->getMessage());
+            // Optionally log stack trace if WP_DEBUG is on
+            // if (defined('WP_DEBUG') && WP_DEBUG) { error_log('Stack trace: ' . $e->getTraceAsString()); }
+            return false; // Return false on any exception
         }
     }
 
-
     /**
-     * Find a session estimate ID by database ID
+     * Find a session estimate ID by database ID using SessionHandler.
      *
-     * @param int $db_id The database ID to find
-     * @return string|null The session estimate ID or null if not found
+     * @param int $db_id The database ID to find.
+     * @return string|null The session estimate ID or null if not found.
      */
-    public function findSessionEstimateIdByDbId($db_id) {
-        if (!isset($_SESSION['product_estimator']['estimates']) ||
-            !is_array($_SESSION['product_estimator']['estimates'])) {
-            return null;
-        }
-
-        foreach ($_SESSION['product_estimator']['estimates'] as $session_id => $estimate) {
-            if (isset($estimate['db_id']) && (int)$estimate['db_id'] === (int)$db_id) {
-                return $session_id;
-            }
-        }
-
-        return null;
+    public function findSessionEstimateIdByDbId(int $db_id): ?string {
+        $session = $this->getSessionHandler();
+        $found = $session->getEstimateSessionByDbId($db_id); // Use SessionHandler method
+        return $found ? $found['id'] : null;
     }
 
     /**
-     * Ensure an estimate is loaded in session from database if not already there
+     * Ensure an estimate is loaded in session from database if not already there.
      *
-     * @param int $db_id The database ID to load
-     * @return string|null The session estimate ID or null on failure
+     * @param int $db_id The database ID to load.
+     * @return string|null The session estimate ID or null on failure.
      */
-    public function ensureEstimateInSession($db_id) {
-        // First check if this db_id already exists in session
+    public function ensureEstimateInSession(int $db_id): ?string {
+        // Check if this db_id already exists in session using the updated method
         $session_id = $this->findSessionEstimateIdByDbId($db_id);
 
         if ($session_id !== null) {
-            // Already in session
-            return $session_id;
+            return $session_id; // Already in session
         }
 
-        // Load from database
-        $estimate_data = $this->getEstimateFromDb($db_id);
+        // Load estimate data from the database
+        $estimate_data = $this->getEstimateFromDb($db_id); // Uses trait's DB method
 
         if (!$estimate_data) {
-            return null;
+            error_log("Product Estimator (EstimateDbHandler): Failed to load estimate DB ID {$db_id} from database.");
+            return null; // Failed to load from DB
         }
 
-        // Add to session
-        if (method_exists($this, 'addEstimate')) {
-            // If this trait is used in SessionHandler
-            $session_id = $this->addEstimate($estimate_data);
-            return $session_id;
-        } elseif (isset($this->session) && method_exists($this->session, 'addEstimate')) {
-            // If it's used in another class with session property
-            $session_id = $this->session->addEstimate($estimate_data);
-            return $session_id;
+        // Add the loaded estimate data to the session using SessionHandler
+        $session = $this->getSessionHandler();
+        $new_session_id = $session->addEstimate($estimate_data); // addEstimate handles ensureSessionStarted
+
+        if ($new_session_id === false) {
+            error_log("Product Estimator (EstimateDbHandler): Failed to add loaded estimate DB ID {$db_id} to session via SessionHandler.");
+            return null; // Failed to add to session
         }
 
-        return null;
+        return $new_session_id; // Return the new session ID
     }
 
     /**
-     * Set or update the database ID in the session data
+     * Set or update the database ID in the session data for a specific estimate.
+     * DEPRECATED in trait - Use SessionHandler->updateEstimateData instead.
+     * Kept for backward compatibility reference, but should not be used directly if possible.
      *
-     * @param string $session_estimate_id The session estimate ID
-     * @param int $db_id The database ID to set
-     * @return bool Whether the operation was successful
+     * @deprecated Use SessionHandler->updateEstimateData() by passing the full estimate array with the updated db_id.
+     * @param string $session_estimate_id The session estimate ID.
+     * @param int $db_id The database ID to set.
+     * @return bool Whether the operation was successful.
      */
     public function setEstimateDbId(string $session_estimate_id, int $db_id): bool {
-        // Make sure session is started
-        if (!isset($_SESSION['product_estimator']['estimates'][$session_estimate_id])) {
-            return false;
+        error_log("Product Estimator Deprecation Notice: EstimateDbHandler::setEstimateDbId is deprecated. Use SessionHandler::updateEstimateData instead.");
+        $session = $this->getSessionHandler();
+        $estimate = $session->getEstimate($session_estimate_id);
+        if ($estimate) {
+            $estimate['db_id'] = $db_id;
+            return $session->updateEstimateData($session_estimate_id, $estimate);
         }
-
-        // Update the db_id in the session
-        $_SESSION['product_estimator']['estimates'][$session_estimate_id]['db_id'] = $db_id;
-
-        return true;
+        return false;
     }
 
     /**
-     * Get customer email from estimate or session
+     * Get customer email from estimate or session using SessionHandler.
      *
-     * @param array $estimate The estimate data
-     * @return string The customer email or empty string if not found
+     * @param array|null $estimate The estimate data array (optional).
+     * @param string|int|null $session_estimate_id The session estimate ID (used if $estimate is null).
+     * @return string The customer email or empty string if not found.
      */
-    private function get_customer_email($estimate) {
+    private function get_customer_email(?array $estimate = null, $session_estimate_id = null): string {
         $customer_email = '';
 
-        // First check in estimate's customer details
-        if (isset($estimate['customer_details']['email']) && !empty($estimate['customer_details']['email'])) {
+        // If estimate data is provided, check it first
+        if ($estimate !== null && isset($estimate['customer_details']['email']) && !empty($estimate['customer_details']['email'])) {
             $customer_email = sanitize_email($estimate['customer_details']['email']);
-        } else {
-            // If not in estimate, check session's customer details
-            $customer_details = $this->session->getCustomerDetails();
-            if (isset($customer_details['email']) && !empty($customer_details['email'])) {
-                $customer_email = sanitize_email($customer_details['email']);
+        }
+        // If not found in provided estimate OR estimate wasn't provided, check session
+        elseif ($session_estimate_id !== null) {
+            $session = $this->getSessionHandler();
+            $session_estimate = $session->getEstimate($session_estimate_id);
+            if ($session_estimate && isset($session_estimate['customer_details']['email']) && !empty($session_estimate['customer_details']['email'])) {
+                $customer_email = sanitize_email($session_estimate['customer_details']['email']);
+            }
+        }
+
+        // If still not found, check the global customer details in session
+        if (empty($customer_email)) {
+            $session = $this->getSessionHandler(); // Ensure we have the instance
+            $global_customer_details = $session->getCustomerDetails(); // Uses SessionHandler method
+            if ($global_customer_details && isset($global_customer_details['email']) && !empty($global_customer_details['email'])) {
+                $customer_email = sanitize_email($global_customer_details['email']);
             }
         }
 
@@ -331,53 +390,29 @@ trait EstimateDbHandler {
     }
 
     /**
-     * Get estimate data from the database
+     * Get estimate data from the database by ID.
+     * (No session interaction needed here)
      *
-     * @param int $db_id The database ID
-     * @return array|false The estimate data or false if not found
+     * @param int $db_id The database ID.
+     * @return array|null The estimate data array or null if not found/error.
      */
-    public function get_estimate_from_db($db_id) {
-        // First try using the EstimateModel
-        if (isset($this->estimate_model) && method_exists($this->estimate_model, 'get_estimate')) {
-            $estimate_row = $this->estimate_model->get_estimate($db_id);
-
-            if ($estimate_row && isset($estimate_row['estimate_data'])) {
-                if (is_array($estimate_row['estimate_data'])) {
-                    // Data already decoded
-                    $estimate_data = $estimate_row['estimate_data'];
-                } else {
-                    // Data needs to be decoded from JSON
-                    $estimate_data = json_decode($estimate_row['estimate_data'], true);
-                }
-
-                if (is_array($estimate_data)) {
-                    // Make sure the db_id is set in the estimate data for proper display
-                    $estimate_data['db_id'] = $db_id;
-                    return $estimate_data;
-                }
-            }
+    public function getEstimateFromDb(int $db_id): ?array {
+        if ($db_id <= 0) {
+            return null;
         }
 
-        // Fall back to using the trait method if available
-        return $this->getEstimateFromDb($db_id);
-
-    }
-
-    /**
-     * Get an estimate from the database by ID
-     *
-     * @param int $db_id The database ID
-     * @return array|null The estimate data or null if not found
-     */
-    public function getEstimateFromDb($db_id) {
         global $wpdb;
         $table_name = $wpdb->prefix . 'product_estimator_estimates';
 
-        $estimate_row = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM $table_name WHERE id = %d",
-            $db_id
-        ), ARRAY_A);
+        // Prepare query safely
+        $query = $wpdb->prepare("SELECT * FROM `{$table_name}` WHERE `id` = %d", $db_id);
+        $estimate_row = $wpdb->get_row($query, ARRAY_A);
 
+        // Check for errors or no result
+        if ($wpdb->last_error) {
+            error_log("WPDB Error in getEstimateFromDb: " . $wpdb->last_error);
+            return null;
+        }
         if (!$estimate_row) {
             return null;
         }
@@ -386,253 +421,55 @@ trait EstimateDbHandler {
         if (isset($estimate_row['estimate_data'])) {
             $estimate_data = json_decode($estimate_row['estimate_data'], true);
 
-            // Make sure the db_id is set in the decoded data
+            // Check if JSON decoding was successful and resulted in an array
             if (is_array($estimate_data)) {
+                // Ensure the db_id is present in the returned array
                 $estimate_data['db_id'] = $db_id;
                 return $estimate_data;
+            } else {
+                error_log("Product Estimator (EstimateDbHandler): Failed to decode JSON estimate_data for DB ID {$db_id}.");
+                // Optionally return the raw row data or null
+                return null;
             }
-        }
-
-        return null;
-    }
-
-    /**
-     * Handle request copy functionality
-     * Sends an email with the PDF estimate attached
-     */
-    public function request_copy_estimate() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        // Get the estimate ID to store
-        $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
-
-
-
-        // Special handling for estimate_id validation - allow "0" as valid
-        if (!isset($estimate_id) || $estimate_id === '') {
-            wp_send_json_error([
-                'message' => __('Estimate ID is required', 'product-estimator')
-            ]);
-            return;
-        }
-
-        try {
-
-
-
-            // Get the estimate from session
-            $estimate = $this->session->getEstimate($estimate_id);
-
-
-            if (!$estimate) {
-                wp_send_json_error([
-                    'message' => __('Estimate not found', 'product-estimator')
-                ]);
-                return;
-            }
-
-            // Check if customer has a valid email address
-            $customer_email = $this->get_customer_email($estimate);
-
-            // If no email found, return error (the frontend will handle prompting for email)
-            if (empty($customer_email)) {
-                wp_send_json_error([
-                    'message' => __('No customer email found', 'product-estimator'),
-                    'code' => 'no_email'
-                ]);
-                return;
-            }
-
-            // Check notification settings to see if we need to generate a PDF
-            $options = get_option('product_estimator_settings', array());
-            $include_pdf = isset($options['notification_request_copy_include_pdf'])
-                ? (bool)$options['notification_request_copy_include_pdf']
-                : true; // Default to true for backwards compatibility
-
-            $db_id = $this->getEstimateDbId($estimate);
-
-            $estimate_data = $this->get_estimate_from_db($db_id);
-
-            // Only generate PDF if the setting is enabled
-            if ($include_pdf) {
-                // Generate PDF
-
-
-                $pdf_generator = new \RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator();
-                $pdf_content = $pdf_generator->generate_pdf($estimate_data);
-
-                if (empty($pdf_content)) {
-                    $this->output_error('Failed to generate PDF');
-                    return;
-                }
-
-                // Save PDF to a temporary file
-                $tmp_file = sys_get_temp_dir() . '/andersens-estimate-' . $db_id . " - " . uniqid() . '.pdf';
-                file_put_contents($tmp_file, $pdf_content);
-
-                if (!isset($tmp_file)) {
-                    wp_send_json_error([
-                        'message' => __('Error generating PDF for email', 'product-estimator')
-                    ]);
-                    return;
-                }
-            }
-
-            // Send email with or without PDF attachment
-            $pdf_path = $include_pdf ? $tmp_file : '';
-            $email_sent = $this->send_estimate_email($estimate_data, $customer_email, $pdf_path);
-
-            if (!$email_sent) {
-                wp_send_json_error([
-                    'message' => __('Error sending email', 'product-estimator')
-                ]);
-                return;
-            }
-
-
-            wp_send_json_success([
-                'message' => __('Estimate has been emailed to', 'product-estimator') . ' ' . $customer_email,
-                'email' => $customer_email, // Add email to response for confirmation dialog
-                'pdf_included' => $include_pdf // Indicate whether PDF was included
-            ]);
-
-
-            if (file_exists($tmp_file)) {
-                @unlink($tmp_file);
-            }
-
-        } catch (\Exception $e) {
-            $this->log_error('Error in request_copy_estimate', $e);
-            wp_send_json_error([
-                'message' => __('An error occurred while processing your request', 'product-estimator'),
-                'error' => $e->getMessage()
-            ]);
+        } else {
+            error_log("Product Estimator (EstimateDbHandler): 'estimate_data' column missing for DB ID {$db_id}.");
+            return null; // Indicate data is incomplete/missing
         }
     }
 
+    // Note: request_copy_estimate and send_estimate_email methods were removed
+    // as they seemed specific to AjaxHandler/EstimateHandler logic, not generic DB handling.
+    // If they are needed generically, they should also be updated to use SessionHandler.
 
-
+    // --- Logging Helper Methods (No session interaction) ---
 
     /**
-     * Send email with PDF estimate attachment
+     * Log error message and stack trace if WP_DEBUG is enabled.
      *
-     * @param array $estimate The estimate data
-     * @param string $email The recipient email
-     * @param string $pdf_path Path to the PDF file
-     * @return bool Success or failure
+     * @param string $message Error message.
+     * @param \Exception|null $exception Optional Exception object.
+     * @return void
      */
-    private function send_estimate_email($estimate, $email, $pdf_path) {
-        // Get notification settings
-        $options = get_option('product_estimator_settings', array());
-
-        // Get site info for fallbacks
-        $site_name = get_bloginfo('name');
-
-        // Use from_name and from_email from general notification settings, with fallbacks
-        $from_name = isset($options['from_name']) && !empty($options['from_name'])
-            ? $options['from_name']
-            : $site_name;
-
-        $from_email = isset($options['from_email']) && !empty($options['from_email'])
-            ? $options['from_email']
-            : get_option('admin_email');
-
-        // Get notification template for request_copy type
-        $subject_template = isset($options['notification_request_copy_subject']) && !empty($options['notification_request_copy_subject'])
-            ? $options['notification_request_copy_subject']
-            : sprintf(__('%s: Your Requested Estimate', 'product-estimator'), $site_name);
-
-        $content_template = isset($options['notification_request_copy_content']) && !empty($options['notification_request_copy_content'])
-            ? $options['notification_request_copy_content']
-            : sprintf(
-                __("Hello %s,\n\nThank you for your interest in our products. As requested, please find attached your estimate \"%s\".\n\nIf you have any questions or would like to discuss this estimate further, please don't hesitate to contact us.\n\nBest regards,\n%s"),
-                '[customer_name]',
-                '[estimate_name]',
-                $site_name
-            );
-
-        // Check if we should include the PDF attachment
-        $include_pdf = isset($options['notification_request_copy_include_pdf'])
-            ? (bool)$options['notification_request_copy_include_pdf']
-            : true; // Default to true for backwards compatibility
-
-        // Get customer details for template tags
-        $customer_name = isset($estimate['customer_details']['name'])
-            ? $estimate['customer_details']['name']
-            : __('Customer', 'product-estimator');
-
-        $estimate_name = isset($estimate['name'])
-            ? $estimate['name']
-            : __('Untitled Estimate', 'product-estimator');
-
-        // Replace template tags
-        $subject = str_replace(
-            ['[site_name]', '[estimate_name]', '[estimate_id]', '[customer_name]'],
-            [$site_name, $estimate_name, $estimate['db_id'] ?? 'New', $customer_name],
-            $subject_template
-        );
-
-        $body = str_replace(
-            ['[site_name]', '[site_url]', '[estimate_name]', '[estimate_id]', '[customer_name]', '[customer_email]', '[date]'],
-            [$site_name, home_url(), $estimate_name, $estimate['db_id'] ?? 'New', $customer_name, $email, date_i18n(get_option('date_format'))],
-            $content_template
-        );
-
-//        $pdf_url = product_estimator_get_pdf_url($estimate['db_id']);
-//        $body .= "\n\nView your estimate online: " . $pdf_url;
-
-
-        // Properly format line breaks for emails - convert \n to <br> for HTML
-        $body = wpautop($body); // Convert double line breaks to paragraphs
-
-        // Set HTML headers
-        $headers = [
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . $from_name . ' <' . $from_email . '>'
-        ];
-
-        // Attach PDF file only if the setting is enabled and path is provided
-        $attachments = array();
-        if ($include_pdf && !empty($pdf_path) && file_exists($pdf_path)) {
-            $attachments[] = $pdf_path;
-        }
-
-        // Send email
-        $sent = wp_mail($email, $subject, $body, $headers, $attachments);
-
+    private function log_error(string $message, ?\Exception $exception = null): void {
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            $this->log_debug('Sent estimate email to ' . $email . ': ' . ($sent ? 'Success' : 'Failed'));
-            $this->log_debug('Included PDF attachment: ' . ($include_pdf && !empty($pdf_path) ? 'Yes' : 'No'));
-        }
-
-        return $sent;
-    }
-
-    /**
-     * Log error message and stack trace
-     *
-     * @param string $message Error message
-     * @param \Exception $exception Exception object
-     */
-    private function log_error($message, \Exception $exception = null) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log($message);
+            error_log("Product Estimator Error: " . $message);
             if ($exception) {
-                error_log($exception->getMessage());
-                error_log('Stack trace: ' . $exception->getTraceAsString());
+                error_log("Exception Message: " . $exception->getMessage());
+                error_log("Stack trace: " . $exception->getTraceAsString());
             }
         }
     }
 
     /**
-     * Log debug message if debugging is enabled
+     * Log debug message if WP_DEBUG is enabled.
      *
-     * @param string $message Debug message
+     * @param string $message Debug message.
+     * @return void
      */
-    private function log_debug($message) {
+    private function log_debug(string $message): void {
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log($message);
+            error_log("Product Estimator Debug: " . $message);
         }
     }
-}
+
+} // End trait EstimateDbHandler

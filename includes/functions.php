@@ -7,7 +7,7 @@
  */
 
 use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
-use RuDigital\ProductEstimator\Includes\Loader;
+use RuDigital\ProductEstimator\Includes\SessionHandler;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -969,6 +969,44 @@ function product_estimator_get_db_id($estimate_id)
 
     return false;
 }
+
+/**
+ * Get customer email from estimate data or session.
+ *
+ * Prioritizes email within the specific estimate data, then falls back
+ * to the globally stored customer details in the session.
+ *
+ * @param array|null $estimate The estimate data array (optional).
+ * @param string|int|null $session_estimate_id The session estimate ID (used if $estimate is null to fetch from session).
+ * @return string The customer email or empty string if not found.
+ */
+function product_estimator_get_customer_email(?array $estimate = null, $session_estimate_id = null): string {
+    $customer_email = '';
+    $session = SessionHandler::getInstance(); // Get session handler instance
+
+    // 1. Check provided estimate data first
+    if ($estimate !== null && isset($estimate['customer_details']['email']) && !empty($estimate['customer_details']['email'])) {
+        $customer_email = sanitize_email($estimate['customer_details']['email']);
+    }
+    // 2. If not found in provided data OR data wasn't provided, try fetching estimate from session
+    elseif ($session_estimate_id !== null) {
+        $session_estimate = $session->getEstimate($session_estimate_id); // Fetches via SessionHandler
+        if ($session_estimate && isset($session_estimate['customer_details']['email']) && !empty($session_estimate['customer_details']['email'])) {
+            $customer_email = sanitize_email($session_estimate['customer_details']['email']);
+        }
+    }
+
+    // 3. If still not found, check the global customer details stored in session
+    if (empty($customer_email)) {
+        $global_customer_details = $session->getCustomerDetails(); // Uses SessionHandler method
+        if ($global_customer_details && isset($global_customer_details['email']) && !empty($global_customer_details['email'])) {
+            $customer_email = sanitize_email($global_customer_details['email']);
+        }
+    }
+
+    return $customer_email;
+}
+
 
 
 /**

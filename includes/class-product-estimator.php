@@ -103,28 +103,34 @@ class ProductEstimator {
         $this->plugin_name = $plugin_name;
         $this->version = $plugin_version;
 
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-labels-frontend.php';
+        // Initialize components that DON'T necessarily need the session immediately
+        if (class_exists(LabelsFrontend::class)) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-labels-frontend.php';
+            $this->labels_frontend = new LabelsFrontend($this->plugin_name, $this->version);
+        } else {
+            // Handle error: LabelsFrontend class not found
+            error_log("Product Estimator Error: LabelsFrontend class not found.");
+        }
 
-        $this->labels_frontend = new LabelsFrontend($this->plugin_name, $this->version);
-        // Initialize session handler (high priority)
-        $this->session = SessionHandler::getInstance();
-
-        // Initialize admin script handler early if in admin
+        // Initialize admin script handler early if in admin (assuming it doesn't start session)
         if (is_admin()) {
-            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-admin-script-handler.php';
-            $this->admin_script_handler = new AdminScriptHandler($plugin_name, $plugin_version);
-
-            // Make it globally available
-            global $product_estimator_script_handler;
-            $product_estimator_script_handler = $this->admin_script_handler;
+            if (class_exists(AdminScriptHandler::class)) {
+                require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-admin-script-handler.php';
+                $this->admin_script_handler = new AdminScriptHandler($plugin_name, $plugin_version);
+                // Make it globally available if needed elsewhere
+                global $product_estimator_script_handler;
+                $product_estimator_script_handler = $this->admin_script_handler;
+            } else {
+                error_log("Product Estimator Error: AdminScriptHandler class not found.");
+            }
         }
 
         // Make sure this code is actually running
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-pdf-route-handler.php';
-        new PDFRouteHandler($plugin_name, $plugin_version);
+//        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-pdf-route-handler.php';
+//        new PDFRouteHandler($plugin_name, $plugin_version);
 
         // Initialize totals for existing session data
-        $this->session->initializeAllTotals();
+//        $this->session->initializeAllTotals();
 
 
         // Add initialization on 'init' hook (early but not too early)
@@ -229,38 +235,74 @@ class ProductEstimator {
     }
 
     /**
-     * Initialize plugin components
+     * Initialize plugin components that require later hooks or checks.
      */
     public function initialize() {
-        flush_rewrite_rules(true);
+        // Flush rewrite rules only on activation/deactivation or specific admin action, not on every init.
+        // flush_rewrite_rules(true); // REMOVE from here
 
-        // Include the AjaxHandler class file
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-customer-details.php';
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-ajax-handler.php';
-
-        // Include the PDF Route Handler
-        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-pdf-route-handler.php';
-        new \RuDigital\ProductEstimator\Includes\PDFRouteHandler();
-
-        // Initialize AJAX handler
-        $this->ajax_handler = new AjaxHandler();
-
-        // Initialize script handler - this now enqueues scripts on all pages
-        new ScriptHandler($this->plugin_name, $this->version);
-
-        // Initialize shortcodes
-        $shortcodes = new Shortcodes($this->plugin_name, $this->version);
-
-        // Initialize WooCommerce integration if WooCommerce is active - ENSURE SINGLE INSTANCE
-        if ($this->isWooCommerceActive() && !isset($this->wc_integration)) {
-            $this->wc_integration = new WoocommerceIntegration();
+        // Initialize PDF Route Handler (needs init hook for rewrite rules)
+        if (class_exists(PDFRouteHandler::class)) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-pdf-route-handler.php';
+            new PDFRouteHandler(); // No need to pass plugin name/version if constructor doesn't use them
+        } else {
+            error_log("Product Estimator Error: PDFRouteHandler class not found.");
         }
 
-        $this->netsuite_integration = new NetsuiteIntegration();
 
-        // Initialize admin if in admin area
+        // Initialize AJAX handler (already modified for lazy session loading)
+        if (class_exists(AjaxHandler::class)) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-ajax-handler.php';
+            // Include CustomerDetails dependency if AjaxHandler uses it directly
+            if (class_exists(CustomerDetails::class)) {
+                require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-customer-details.php';
+            }
+            $this->ajax_handler = new AjaxHandler();
+        } else {
+            error_log("Product Estimator Error: AjaxHandler class not found.");
+        }
+
+
+        // Initialize script handler (assuming it doesn't start session)
+        if (class_exists(ScriptHandler::class)) {
+            new ScriptHandler($this->plugin_name, $this->version);
+        } else {
+            error_log("Product Estimator Error: ScriptHandler class not found.");
+        }
+
+
+        // Initialize shortcodes (assuming it doesn't start session)
+        if (class_exists(Shortcodes::class)) {
+            $shortcodes = new Shortcodes($this->plugin_name, $this->version);
+        } else {
+            error_log("Product Estimator Error: Shortcodes class not found.");
+        }
+
+
+        // Initialize WooCommerce integration if WC is active (assuming it doesn't start session)
+        if ($this->isWooCommerceActive() && !isset($this->wc_integration)) {
+            if (class_exists(WoocommerceIntegration::class)) {
+                $this->wc_integration = new WoocommerceIntegration();
+            } else {
+                error_log("Product Estimator Error: WoocommerceIntegration class not found.");
+            }
+        }
+
+        // Initialize NetSuite integration (assuming it doesn't start session)
+        if (class_exists(NetsuiteIntegration::class)) {
+            $this->netsuite_integration = new NetsuiteIntegration();
+        } else {
+            error_log("Product Estimator Error: NetsuiteIntegration class not found.");
+        }
+
+
+        // Initialize admin if in admin area (assuming it doesn't start session)
         if (is_admin()) {
-            new ProductEstimatorAdmin($this->plugin_name, $this->version);
+            if (class_exists(ProductEstimatorAdmin::class)) {
+                new ProductEstimatorAdmin($this->plugin_name, $this->version);
+            } else {
+                error_log("Product Estimator Error: ProductEstimatorAdmin class not found.");
+            }
         }
 
         // Set up conditional features after the query is parsed

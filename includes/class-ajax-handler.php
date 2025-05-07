@@ -3100,18 +3100,279 @@ class AjaxHandler {
     }
 
     /**
-     * Forward request_copy_estimate AJAX request to EstimateHandler
+     * Handle AJAX request to email a copy of the estimate to the customer.
+     * Uses SessionHandler and the EstimateDbHandler trait methods.
+     * Calls the global product_estimator_get_customer_email() helper.
      */
     public function request_copy_estimate() {
-        // Check if EstimateHandler is available
-        if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\EstimateHandler')) {
-            $handler = new \RuDigital\ProductEstimator\Includes\EstimateHandler();
-            $handler->request_copy_estimate();
-        } else {
+        // Verify nonce security check
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get the estimate ID from the POST request
+        $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
+
+        // Validate estimate_id (allow '0')
+        if (!isset($estimate_id) || $estimate_id === '') {
             wp_send_json_error([
-                'message' => __('Request Copy functionality is unavailable', 'product-estimator')
+                'message' => __('Estimate ID is required', 'product-estimator')
+            ]);
+            return;
+        }
+        $session_estimate_id = (string)$estimate_id; // Use this for session lookups
+
+        try {
+            // Get SessionHandler instance
+            $session = SessionHandler::getInstance();
+
+            // Get the estimate data from the session
+            $estimate_session_data = $session->getEstimate($session_estimate_id);
+
+            if (!$estimate_session_data) {
+                // Maybe it's only in the DB? Try loading it.
+                // If estimate_id *is* the DB ID (e.g., from admin view)
+                if (ctype_digit($session_estimate_id)) {
+                    $db_id_to_load = intval($session_estimate_id);
+                    // Ensure it's loaded into session (returns session ID or null)
+                    $session_estimate_id = $this->ensureEstimateInSession($db_id_to_load);
+                    if ($session_estimate_id === null) {
+                        wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
+                        return;
+                    }
+                    $estimate_session_data = $session->getEstimate($session_estimate_id);
+                    if (!$estimate_session_data) { // Double check after loading attempt
+                        wp_send_json_error(['message' => __('Estimate could not be loaded into session', 'product-estimator')]);
+                        return;
+                    }
+                } else {
+                    wp_send_json_error(['message' => __('Estimate not found in session', 'product-estimator')]);
+                    return;
+                }
+            }
+
+            // Use the globally defined helper function to get the email
+            // Pass both the estimate data and the session ID for flexibility
+            $customer_email = product_estimator_get_customer_email($estimate_session_data, $session_estimate_id);
+
+            // If no email found, return error code for frontend handling
+            if (empty($customer_email)) {
+                wp_send_json_error([
+                    'message' => __('No customer email found for this estimate.', 'product-estimator'),
+                    'code' => 'no_email' // Frontend can check this code
+                ]);
+                return;
+            }
+
+            // Check notification settings if PDF should be included
+            $options = get_option('product_estimator_settings', array());
+            $include_pdf = isset($options['notification_request_copy_include_pdf'])
+                ? (bool)$options['notification_request_copy_include_pdf']
+                : true; // Default true
+
+            $pdf_path = '';
+            $tmp_file = null;
+            $estimate_data_for_pdf = $estimate_session_data; // Use session data by default
+
+            // If including PDF, ensure estimate is saved and get DB data for PDF generation
+            if ($include_pdf) {
+                $db_id = $this->getEstimateDbId($estimate_session_data); // Use trait method
+
+                // If not saved yet, save it now
+                if (!$db_id) {
+                    $customer_details_for_save = $estimate_session_data['customer_details'] ?? [];
+                    $notes_for_save = $estimate_session_data['notes'] ?? '';
+                    $db_id = $this->storeOrUpdateEstimate($session_estimate_id, $customer_details_for_save, $notes_for_save); // Use trait method
+                }
+
+                if (!$db_id) {
+                    wp_send_json_error(['message' => __('Failed to save estimate before generating PDF.', 'product-estimator')]);
+                    return;
+                }
+
+                // Fetch potentially updated data from DB for the PDF
+                $estimate_data_for_pdf = $this->getEstimateFromDb($db_id); // Use trait method
+                if (!$estimate_data_for_pdf) {
+                    wp_send_json_error(['message' => __('Failed to retrieve estimate data from database for PDF generation.', 'product-estimator')]);
+                    return;
+                }
+
+                // Generate PDF
+                if (!class_exists(PDFGenerator::class)) {
+                    wp_send_json_error(['message' => __('PDF Generation module not available.', 'product-estimator')]);
+                    return;
+                }
+                $pdf_generator = new PDFGenerator();
+                $pdf_content = $pdf_generator->generate_pdf($estimate_data_for_pdf); // Use DB data for PDF
+
+                if (empty($pdf_content)) {
+                    wp_send_json_error(['message' => __('Failed to generate PDF content.', 'product-estimator')]);
+                    return;
+                }
+
+                // Save PDF to a temporary file
+                $tmp_file = sys_get_temp_dir() . '/estimate-' . $db_id . "-" . uniqid() . '.pdf';
+                if (file_put_contents($tmp_file, $pdf_content) === false) {
+                    error_log("Product Estimator: Failed to write temporary PDF file to {$tmp_file}");
+                    wp_send_json_error(['message' => __('Error saving PDF for email attachment.', 'product-estimator')]);
+                    return;
+                }
+                $pdf_path = $tmp_file;
+            }
+
+            // Send email using the private helper method within this class
+            // Pass the data used for the PDF (from DB if generated) or session data if no PDF
+            $email_sent = $this->send_estimate_email($estimate_data_for_pdf, $customer_email, $pdf_path);
+
+            // Clean up temporary PDF file if it was created
+            if ($tmp_file && file_exists($tmp_file)) {
+                @unlink($tmp_file);
+            }
+
+            // Check if email sending was successful
+            if (!$email_sent) {
+                wp_send_json_error(['message' => __('Error sending estimate email.', 'product-estimator')]);
+                return;
+            }
+
+            // Send success response
+            wp_send_json_success([
+                'message' => __('Estimate has been emailed to', 'product-estimator') . ' ' . esc_html($customer_email),
+                'email' => $customer_email, // Return email for confirmation
+                'pdf_included' => ($include_pdf && !empty($pdf_path)) // Confirm if PDF was actually attached
+            ]);
+
+        } catch (\Exception $e) {
+            // Log the detailed error on the server
+            error_log("Product Estimator Error in request_copy_estimate: " . $e->getMessage() . "\nStack Trace:\n" . $e->getTraceAsString());
+            // Send a generic error message to the client
+            wp_send_json_error([
+                'message' => __('An error occurred while processing your request.', 'product-estimator'),
+                // Optionally include error details only if WP_DEBUG is on
+                // 'error_details' => (defined('WP_DEBUG') && WP_DEBUG) ? $e->getMessage() : ''
             ]);
         }
+    }
+
+    /**
+     * Send email with estimate details and optional PDF attachment.
+     * This is a private helper method for request_copy_estimate.
+     *
+     * @param array $estimate The estimate data array (should contain db_id if saved).
+     * @param string $email The recipient email address.
+     * @param string $pdf_path Path to the temporary PDF file (optional).
+     * @return bool True if email was sent successfully, false otherwise.
+     */
+    private function send_estimate_email(array $estimate, string $email, string $pdf_path = ''): bool {
+        // Validate email format
+        if (!is_email($email)) {
+            error_log("Product Estimator (send_estimate_email): Invalid recipient email format: {$email}");
+            return false;
+        }
+
+        // Get notification settings from WordPress options
+        $options = get_option('product_estimator_settings', array());
+
+        // Get site info for fallbacks and template tags
+        $site_name = get_bloginfo('name');
+        $site_url = home_url();
+
+        // Determine From Name and From Email from settings or defaults
+        $from_name = isset($options['from_name']) && !empty($options['from_name'])
+            ? $options['from_name']
+            : $site_name;
+        $from_email = isset($options['from_email']) && !empty($options['from_email']) && is_email($options['from_email'])
+            ? $options['from_email']
+            : get_option('admin_email'); // Fallback to WordPress admin email
+
+        // Get Subject and Content templates for the 'request_copy' type
+        $subject_template = isset($options['notification_request_copy_subject']) && !empty($options['notification_request_copy_subject'])
+            ? $options['notification_request_copy_subject']
+            : sprintf(__('%s: Your Requested Estimate', 'product-estimator'), '[site_name]'); // Default subject
+
+        $content_template = isset($options['notification_request_copy_content']) && !empty($options['notification_request_copy_content'])
+            ? $options['notification_request_copy_content']
+            : sprintf( // Default content
+                __("Hello [customer_name],\n\nThank you for your interest in our products. As requested, please find attached your estimate \"%s\".\n\nIf you have any questions or would like to discuss this estimate further, please don't hesitate to contact us.\n\nBest regards,\n%s", 'product-estimator'),
+                '[estimate_name]',
+                '[site_name]'
+            );
+
+        // Determine if PDF should be included based on settings (redundant check, but safe)
+        $include_pdf = isset($options['notification_request_copy_include_pdf'])
+            ? (bool)$options['notification_request_copy_include_pdf']
+            : true;
+
+        // Prepare data for template tag replacement
+        $customer_name = isset($estimate['customer_details']['name']) && !empty($estimate['customer_details']['name'])
+            ? $estimate['customer_details']['name']
+            : __('Customer', 'product-estimator');
+        $estimate_name = isset($estimate['name']) && !empty($estimate['name'])
+            ? $estimate['name']
+            : __('Untitled Estimate', 'product-estimator');
+        $db_id = isset($estimate['db_id']) ? $estimate['db_id'] : null; // Get DB ID if available
+
+        // Replace template tags in subject and body
+        $subject = str_replace(
+            ['[site_name]', '[estimate_name]', '[estimate_id]', '[customer_name]'],
+            [$site_name, $estimate_name, $db_id ?? __('New', 'product-estimator'), $customer_name],
+            $subject_template
+        );
+
+        $body = str_replace(
+            ['[site_name]', '[site_url]', '[estimate_name]', '[estimate_id]', '[customer_name]', '[customer_email]', '[date]'],
+            [$site_name, $site_url, $estimate_name, $db_id ?? __('New', 'product-estimator'), $customer_name, $email, date_i18n(get_option('date_format'))],
+            $content_template
+        );
+
+        // Add a link to view the estimate online if it has a DB ID
+        if ($db_id) {
+            // Generate the secure public URL (assuming product_estimator_get_pdf_url exists)
+            if (function_exists('product_estimator_get_pdf_url')) {
+                $pdf_public_url = product_estimator_get_pdf_url($db_id, true); // Get customer view URL
+                if (!empty($pdf_public_url)) {
+                    $body .= "\n\n" . sprintf( // Add a line break before the link
+                            __('You can also view your estimate online here: %s', 'product-estimator'),
+                            esc_url($pdf_public_url)
+                        );
+                }
+            }
+        }
+
+        // Format body for HTML email
+        $body_html = wpautop($body); // Use wpautop for paragraph formatting
+
+        // Prepare email headers
+        $headers = [
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . sprintf('%s <%s>', $from_name, $from_email) // Correct From header format
+        ];
+
+        // Prepare attachments array
+        $attachments = [];
+        if ($include_pdf && !empty($pdf_path) && file_exists($pdf_path)) {
+            $attachments[] = $pdf_path; // Add the temporary PDF path
+        }
+
+        // Send the email using WordPress core function
+        $sent = wp_mail($email, $subject, $body_html, $headers, $attachments);
+
+        // Log the result if debugging is enabled
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $log_message = sprintf(
+                'Product Estimator (send_estimate_email): Attempted to send email to %s. Subject: "%s". Status: %s.',
+                $email,
+                $subject,
+                $sent ? 'Success' : 'Failed'
+            );
+            if (!empty($attachments)) {
+                $log_message .= " Included PDF: " . basename($pdf_path);
+            }
+            if (!$sent && $GLOBALS['phpmailer'] instanceof \PHPMailer\PHPMailer\PHPMailer) {
+                $log_message .= " Mailer Error: " . $GLOBALS['phpmailer']->ErrorInfo;
+            }
+            error_log($log_message);
+        }
+
+        return $sent; // Return true if sent, false otherwise
     }
 
 
@@ -3289,6 +3550,8 @@ class AjaxHandler {
             ]);
         }
     }
+
+
 
     /**
      * Send contact request email to store

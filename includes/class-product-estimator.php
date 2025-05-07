@@ -112,19 +112,6 @@ class ProductEstimator {
             error_log("Product Estimator Error: LabelsFrontend class not found.");
         }
 
-        // Initialize admin script handler early if in admin (assuming it doesn't start session)
-        if (is_admin()) {
-            if (class_exists(AdminScriptHandler::class)) {
-                require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-admin-script-handler.php';
-                $this->admin_script_handler = new AdminScriptHandler($plugin_name, $plugin_version);
-                // Make it globally available if needed elsewhere
-                global $product_estimator_script_handler;
-                $product_estimator_script_handler = $this->admin_script_handler;
-            } else {
-                error_log("Product Estimator Error: AdminScriptHandler class not found.");
-            }
-        }
-
         // Make sure this code is actually running
 //        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-pdf-route-handler.php';
 //        new PDFRouteHandler($plugin_name, $plugin_version);
@@ -296,14 +283,36 @@ class ProductEstimator {
         }
 
 
-        // Initialize admin if in admin area (assuming it doesn't start session)
-        if (is_admin()) {
-            if (class_exists(ProductEstimatorAdmin::class)) {
-                new ProductEstimatorAdmin($this->plugin_name, $this->version);
+        if (is_admin() && current_user_can('manage_options')) { // Added current_user_can check
+            // Initialize Admin Script Handler
+            $admin_script_handler_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-admin-script-handler.php';
+            if (file_exists($admin_script_handler_path)) { // Check file existence first
+                require_once $admin_script_handler_path;
+                if (class_exists(AdminScriptHandler::class)) { // Check class existence after require
+                    $this->admin_script_handler = new AdminScriptHandler($this->plugin_name, $this->version);
+                    // Make it globally available if needed elsewhere (consider dependency injection instead)
+                    global $product_estimator_script_handler;
+                    $product_estimator_script_handler = $this->admin_script_handler;
+                } else {
+                    error_log("Product Estimator Error: AdminScriptHandler class definition not found AFTER requiring file.");
+                }
             } else {
-                error_log("Product Estimator Error: ProductEstimatorAdmin class not found.");
+                error_log("Product Estimator Error: AdminScriptHandler class file not found at: " . $admin_script_handler_path);
             }
-        }
+
+            // Initialize Main Admin Class
+            $product_estimator_admin_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/class-product-estimator-admin.php';
+            if (file_exists($product_estimator_admin_path)) { // Check file existence first
+                require_once $product_estimator_admin_path;
+                if (class_exists(ProductEstimatorAdmin::class)) { // Check class existence after require
+                    new ProductEstimatorAdmin($this->plugin_name, $this->version);
+                } else {
+                    error_log("Product Estimator Error: ProductEstimatorAdmin class definition not found AFTER requiring file.");
+                }
+            } else {
+                error_log("Product Estimator Error: ProductEstimatorAdmin class file not found at: " . $product_estimator_admin_path);
+            }
+        }-
 
         // Set up conditional features after the query is parsed
         add_action('wp', array($this, 'setupConditionalFeatures'));

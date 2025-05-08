@@ -5,6 +5,9 @@
  * with additional helpers.
  */
 
+import { createLogger } from '@utils';
+const logger = createLogger('UtilsDom');
+
 /**
  * Create an element with attributes and children
  * @param {string} tag - Element tag name
@@ -105,7 +108,7 @@ export function toggleVisibility(element, show) {
  */
 export function forceElementVisibility(element) {
   if (!element) {
-    console.error('Cannot show null element');
+    logger.error('Cannot show null element');
     return null;
   }
 

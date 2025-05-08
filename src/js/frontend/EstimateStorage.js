@@ -20,14 +20,14 @@ export function loadEstimateData() {
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (storedData) {
       const data = JSON.parse(storedData);
-      console.log("EstimateStorage: loadEstimateData - Data loaded:", data); // Add this log
+      logger.log("loadEstimateData - Data loaded:", data); // Add this log
       return data;
     } else {
       const sessionDetails = sessionStorage.getItem(STORAGE_KEY);
       return sessionDetails ? JSON.parse(sessionDetails) : {};
     }
   } catch (error) {
-    console.error('Error loading estimate data from localStorage:', error);
+    logger.error('Error loading estimate data from localStorage:', error);
     return {};  // Return empty object on error
   }
 }
@@ -40,11 +40,11 @@ export function saveEstimateData(data) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (localStorageError) {
-    console.warn('localStorage not available, using sessionStorage:', localStorageError);
+    logger.warn('localStorage not available, using sessionStorage:', localStorageError);
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (sessionStorageError) {
-      console.error('sessionStorage not available:', sessionStorageError);
+      logger.error('sessionStorage not available:', sessionStorageError);
       // If neither is available, details won't persist, but we can continue
     }
   }
@@ -57,12 +57,12 @@ export function clearEstimateData() {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (localStorageError) {
-    console.warn('localStorage not available:', localStorageError);
+    logger.warn('localStorage not available:', localStorageError);
   }
   try {
     sessionStorage.removeItem(STORAGE_KEY);
   } catch (sessionStorageError) {
-    console.warn('sessionStorage not available:', sessionStorageError);
+    logger.warn('sessionStorage not available:', sessionStorageError);
   }
 }
 
@@ -208,7 +208,7 @@ export function addSuggestionsToRoom(suggestedProducts, estimateId, roomId) {
 
   // Ensure suggestedProducts is an array
   if (!Array.isArray(suggestedProducts)) {
-    console.error('Error: suggestedProducts must be an array.');
+    logger.error('Error: suggestedProducts must be an array.');
     return null;
   }
 
@@ -247,7 +247,7 @@ export function addProductToRoom(estimateId, roomId, productData) {
     !storedData.estimates[estimateId] ||
     !storedData.estimates[estimateId].rooms ||
     !storedData.estimates[estimateId].rooms[roomId]) {
-    console.error(`EstimateStorage: Estimate or Room not found. E: ${estimateId}, R: ${roomId}`);
+    logger.error(`Estimate or Room not found. E: ${estimateId}, R: ${roomId}`);
     return false;
   }
 
@@ -265,7 +265,7 @@ export function addProductToRoom(estimateId, roomId, productData) {
   // Check if product with the same ID already exists in the room's products array
   const existingProduct = room.products.find(product => product.id === productData.id);
   if (existingProduct) {
-    console.warn(`EstimateStorage: Product with ID ${productData.id} already exists in room ${roomId}. Aborting add to room.products.`);
+    logger.warn(` Product with ID ${productData.id} already exists in room ${roomId}. Aborting add to room.products.`);
     return false; // Indicate failure because product already exists
   }
 
@@ -273,7 +273,7 @@ export function addProductToRoom(estimateId, roomId, productData) {
   room.products.push(productData);
   saveEstimateData(storedData);
 
-  console.log(`EstimateStorage: Product ${productData.id} added to room ${roomId}. products:`, room.products);
+  logger.log(` Product ${productData.id} added to room ${roomId}. products:`, room.products);
   return true; // Indicate success
 }
 
@@ -295,7 +295,7 @@ export function removeProductFromRoom(estimateId, roomId, productIndex, productI
     !storedData.estimates[estimateId].rooms ||
     !storedData.estimates[estimateId].rooms[roomId] ||
     !Array.isArray(storedData.estimates[estimateId].rooms[roomId].products)) {
-    console.warn('[EstimateStorage.removeProductFromRoom] Attempted to remove product: Path to products array is invalid or products array is missing.', { estimateId, roomId, receivedProductId: productId });
+    logger.warn('[removeProductFromRoom] Attempted to remove product: Path to products array is invalid or products array is missing.', { estimateId, roomId, receivedProductId: productId });
     return false;
   }
 
@@ -306,14 +306,14 @@ export function removeProductFromRoom(estimateId, roomId, productIndex, productI
   const actualProductIndexToRemove = productsInRoom.findIndex(product => String(product.id) === String(productId));
 
   if (actualProductIndexToRemove === -1) {
-    console.warn(`[EstimateStorage.removeProductFromRoom] Product with ID '<span class="math-inline">\{productId\}' not found in room '</span>{roomId}' for estimate '${estimateId}'. Cannot remove.`);
+    logger.warn(`[removeProductFromRoom] Product with ID '<span class="math-inline">\{productId\}' not found in room '</span>{roomId}' for estimate '${estimateId}'. Cannot remove.`);
     return false; // Product not found by ID
   }
 
   // Remove the product at the found index
   productsInRoom.splice(actualProductIndexToRemove, 1);
   saveEstimateData(storedData);
-  console.log(`[EstimateStorage.removeProductFromRoom] Product with ID '<span class="math-inline">\{productId\}' successfully removed from localStorage for room '</span>{roomId}', estimate '${estimateId}'.`);
+  logger.log(`[removeProductFromRoom] Product with ID '<span class="math-inline">\{productId\}' successfully removed from localStorage for room '</span>{roomId}', estimate '${estimateId}'.`);
   return true; // Successfully removed by ID
 }
 
@@ -359,23 +359,23 @@ export function replaceProductInRoom(estimateId, roomId, oldProductId, newProduc
     !storedData.estimates[estimateId].rooms || // Accessing rooms with estimateId
     !storedData.estimates[estimateId].rooms[roomId]) {
 
-    console.warn("Estimate or room not found in storedData."); // Original log
+    logger.warn("Estimate or room not found in storedData."); // Original log
     return false; // Return false if estimate or room is not found
   }
 
   const room = storedData.estimates[estimateId].rooms[roomId]; // Get the specific room object
-  console.log("Debugging: State of room.products:", room.products, `(Type: ${typeof room.products})`, `(Is Array: ${Array.isArray(room.products)})`);
+  logger.log("Debugging: State of room.products:", room.products, `(Type: ${typeof room.products})`, `(Is Array: ${Array.isArray(room.products)})`);
 
   // Check if the room has a 'products' array
   if (!room.products) {
     return false; // Return false if there are no products in the room
   }
 
-  console.log("Debugging: Value of replaceType before check:", replaceType, `(Type: ${typeof replaceType})`);
+  logger.log("Debugging: Value of replaceType before check:", replaceType, `(Type: ${typeof replaceType})`);
 
   // If replacing an additional product
   if (replaceType === 'additional_products' && parentProductId !== null) { // Ensure parentProductId is available
-    console.log("Starting outer loop for main products..."); // Added log
+    logger.log("Starting outer loop for main products..."); // Added log
 
     let parentProduct = null;
 
@@ -384,14 +384,14 @@ export function replaceProductInRoom(estimateId, roomId, oldProductId, newProduc
       const product = room.products[i];
       if (product.id == parentProductId) {
         parentProduct = product;
-        console.log("Found parent product:", parentProduct);
+        logger.log("Found parent product:", parentProduct);
         break; // Found the parent, no need to continue searching main products
       }
     }
 
     // If the parent product is found and has additional products
     if (parentProduct && parentProduct.additional_products && Array.isArray(parentProduct.additional_products)) {
-      console.log(`Searching additional products for parent product ID: ${parentProductId}`);
+      logger.log(`Searching additional products for parent product ID: ${parentProductId}`);
 
       // Iterate through the additional products associated with this specific parent product
       for (let j = 0; j < parentProduct.additional_products.length; j++) {
@@ -402,7 +402,7 @@ export function replaceProductInRoom(estimateId, roomId, oldProductId, newProduc
         // OR if the oldProductId is present in the additional product's replacement chain (if it exists)
         if (addProduct.id == oldProductId ||
           (addProduct.replacement_chain && addProduct.replacement_chain.includes(oldProductId))) {
-          console.log(`  Match found for oldProductId ${oldProductId} under parent ${parentProductId}! Replacing...`);
+          logger.log(`  Match found for oldProductId ${oldProductId} under parent ${parentProductId}! Replacing...`);
 
           // --- REPLACEMENT CHAIN LOGIC ---
           if (!addProduct.replacement_chain) {
@@ -426,15 +426,15 @@ export function replaceProductInRoom(estimateId, roomId, oldProductId, newProduc
           return true; // Product found and replaced
         }
       }
-      console.warn(`Additional product with oldProductId ${oldProductId} not found under parent product ID ${parentProductId}.`);
+      logger.warn(`Additional product with oldProductId ${oldProductId} not found under parent product ID ${parentProductId}.`);
 
     } else {
-      console.warn(`Parent product with ID ${parentProductId} not found or has no additional products.`);
+      logger.warn(`Parent product with ID ${parentProductId} not found or has no additional products.`);
     }
 
 
 
-    console.warn(`Additional product with oldProductId ${oldProductId} not found in any additional_products array.`); // Log if not found
+    logger.warn(`Additional product with oldProductId ${oldProductId} not found in any additional_products array.`); // Log if not found
 
     // If the loops finish without finding the additional product to replace
     return false;

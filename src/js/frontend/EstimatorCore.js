@@ -10,7 +10,7 @@ import ModalManager from './ModalManager';
 import VariationHandler from './VariationHandler';
 import CustomerDetailsManager from './CustomerDetailsManager';
 
-import { createLogger } from '@utils';
+import { createLogger, closeMainPluginLogGroup } from '@utils'; // Make sure closeMainPluginLogGroup is imported
 const logger = createLogger('EstimatorCore');
 
 class EstimatorCore {
@@ -19,6 +19,9 @@ class EstimatorCore {
    * @param {Object} config - Configuration options
    */
   constructor(config = {}) {
+
+    this.isActive = true;
+
     // Default configuration
     this.config = Object.assign({
       debug: false,
@@ -236,6 +239,19 @@ class EstimatorCore {
       this.eventHandlers[event].forEach(callback => callback(data));
     }
     return this;
+  }
+
+  destroy() {
+    if (!this.isActive) return;
+      logger.log('Plugin destroying...');
+
+    // All logging for this plugin instance is now complete.
+    // You can close the main plugin log group.
+    closeMainPluginLogGroup(); // Explicitly close the main group
+
+    this.isActive = false;
+    // After this, new logs might start a *new* main group if the plugin is re-initialized,
+    // or if other parts of the plugin are still logging (which should ideally be avoided after destroy).
   }
 
 }

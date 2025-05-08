@@ -17,7 +17,8 @@ export { ajax, dom, format, validation };
 // Export all utilities as named exports for backward compatibility
 export const {
   ajaxRequest,
-  debounce,     // Also in format, we prioritize the ajax version
+  // debounce is also in format, you've prioritized the ajax version
+  debounce,
 } = ajax;
 
 export const {
@@ -35,7 +36,6 @@ export const {
 export const {
   formatPrice,
   sanitizeHTML,
-  // debounce is also defined here but we use the one from ajax
 } = format;
 
 export const {
@@ -47,61 +47,111 @@ export const {
   showNotice,
 } = validation;
 
-// Export a helper function for logging with conditional debug flag
+// In index.js
+export function closeMainPluginLogGroup() {
+  if (window.productEstimatorVars?.debug) {
+    console.log('%cAttempting to close main plugin group. Flag is: ' + pluginLogGroupHasStarted, 'color: red');
+    if (pluginLogGroupHasStarted) {
+      console.groupEnd();
+      pluginLogGroupHasStarted = false;
+      console.log('%cMain plugin group closed. Flag set to: ' + pluginLogGroupHasStarted, 'color: purple');
+    } else {
+      console.warn('%cClose called, but logger flag indicates no main group was started or it was already closed.', 'color: orange');
+    }
+  }
+}
+
+let pluginLogGroupHasStarted = false;
+
+function ensureMainPluginLogGroupIsStarted(startCollapsed = true) {
+  // (Keep the version with diagnostic logs from above for testing)
+  if (!pluginLogGroupHasStarted && window.productEstimatorVars?.debug) {
+    if (startCollapsed) {
+      console.groupCollapsed(`[ProductEstimator] Logs`);
+    } else {
+      console.group(`[ProductEstimator] Logs`);
+    }
+    pluginLogGroupHasStarted = true;
+  } else if (window.productEstimatorVars?.debug) {
+  }
+}
+
+// --- MODIFIED STANDALONE LOG FUNCTIONS ---
+// These will now also log within the main plugin group.
+
 export function log(component, ...args) {
   if (window.productEstimatorVars?.debug) {
+    ensureMainPluginLogGroupIsStarted();
     console.log(`[${component}]`, ...args);
   }
 }
 
 export function warn(component, ...args) {
   if (window.productEstimatorVars?.debug) {
+    ensureMainPluginLogGroupIsStarted();
     console.warn(`[${component}]`, ...args);
   }
 }
 
 export function error(component, ...args) {
   if (window.productEstimatorVars?.debug) {
+    ensureMainPluginLogGroupIsStarted(false); // Attempt to expand main group on error
     console.error(`[${component}]`, ...args);
   }
 }
 
+// --- MODIFIED createLogger FUNCTION ---
 /**
- * NEW: Logger Factory Function
- * Creates a logger instance pre-configured with a component name.
- * @param {string} component - The name of the component for log prefixing.
- * @returns {object} An object with log, warn, and error methods.
+ * Logger Factory Function
+ * Creates a logger instance pre-configured with a component name,
+ * and manages logging within the main plugin console group.
+ * @param {string} componentName - The name of the component for log prefixing.
+ * @returns {object} An object with log, warn, error, group, and groupEnd methods.
  */
-export function createLogger(component) {
+export function createLogger(componentName) {
+  const componentLabel = `[${componentName}]`;
+
+  // Option 1: Ensure group is started when logger is created.
+  // if (window.productEstimatorVars?.debug) { // This initial call is fine
+  //   ensureMainPluginLogGroupIsStarted();
+  // }
+
   return {
     log: (...args) => {
       if (window.productEstimatorVars?.debug) {
-        console.log(`[${component}]`, ...args);
+        ensureMainPluginLogGroupIsStarted(); // This ensures it for any log call
+        console.log(componentLabel, ...args);
       }
     },
     warn: (...args) => {
       if (window.productEstimatorVars?.debug) {
-        console.warn(`[${component}]`, ...args);
+        ensureMainPluginLogGroupIsStarted();
+        console.warn(componentLabel, ...args);
       }
     },
     error: (...args) => {
       if (window.productEstimatorVars?.debug) {
-        console.error(`[${component}]`, ...args);
+        ensureMainPluginLogGroupIsStarted(false);
+        console.error(componentLabel, ...args);
       }
     },
-
-    group: (...args) => {
+    group: (groupName = 'Details', collapsed = true) => {
       if (window.productEstimatorVars?.debug) {
-        console.group(`[${component}]`, ...args);
+        ensureMainPluginLogGroupIsStarted();
+        const fullGroupLabel = `${componentLabel} ${groupName}`;
+        if (collapsed) {
+          console.groupCollapsed(fullGroupLabel);
+        } else {
+          console.group(fullGroupLabel);
+        }
       }
     },
-
-    groupEnd: (...args) => {
-      if (window.productEstimatorVars?.debug) {
-        console.groupEnd(`[${component}]`, ...args);
+    groupEnd: () => {
+      if (window.productEstimatorVars?.debug && pluginLogGroupHasStarted) {
+        console.groupEnd();
       }
     },
-  }
+  };
 }
 
 // Export a convenience function to safely access nested properties
@@ -110,7 +160,7 @@ export function get(obj, path, defaultValue = null) {
   let result = obj;
 
   for (const key of keys) {
-    if (result === undefined || result === null) {
+    if (result === undefined || result === null || typeof result !== 'object') { // Added type check for robustnest
       return defaultValue;
     }
     result = result[key];

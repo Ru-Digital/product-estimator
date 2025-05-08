@@ -5,7 +5,7 @@
  * with additional helpers.
  */
 
-import { createLogger } from '@utils';
+import { createLogger } from './logger';
 const logger = createLogger('UtilsDom');
 
 /**

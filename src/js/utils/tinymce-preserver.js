@@ -2,7 +2,7 @@
  * Direct copy of the working setupWpEditors function as a utility
  */
 
-import { createLogger } from '@utils';
+import { createLogger } from './logger';
 const logger = createLogger('UtilsTinyMCEPreserver');
 export function setupTinyMCEHTMLPreservation(editorIds, containerSelector = 'body') {
   const $ = jQuery;

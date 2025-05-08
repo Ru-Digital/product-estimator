@@ -4,8 +4,9 @@
  * Functions for handling AJAX requests and related operations.
  */
 
-import { createLogger } from '@utils';
-const logger = createLogger('UtilsAjax');
+import { createLogger } from './logger'; // Tries to import createLogger directly
+
+const logger = createLogger('UtilsAjax'); // <<< ERROR HAPPENS HERE: createLogger is not a function
 
 /**
  * Handle AJAX request with error handling and consistent response format

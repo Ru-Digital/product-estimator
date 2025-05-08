@@ -54,6 +54,18 @@ export function log(component, ...args) {
   }
 }
 
+export function warn(component, ...args) {
+  if (window.productEstimatorVars?.debug) {
+    console.warn(`[${component}]`, ...args);
+  }
+}
+
+export function error(component, ...args) {
+  if (window.productEstimatorVars?.debug) {
+    console.error(`[${component}]`, ...args);
+  }
+}
+
 // Export a convenience function to safely access nested properties
 export function get(obj, path, defaultValue = null) {
   const keys = path.split('.');

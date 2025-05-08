@@ -30,6 +30,9 @@ import roomsEmptyTemplate from '@templates/ui/rooms-empty.html';
 import productsEmptyTemplate from '@templates/ui/products-empty.html';
 import modalMessagesTemplate from '@templates/ui/modal-messages.html';
 
+import { createLogger } from '@utils';
+const logger = createLogger('TemplateLoader');
+
 // Create a map of all templates
 const templates = {
   'product-item-template': productItemTemplate,
@@ -56,22 +59,22 @@ const templates = {
  */
 // In template-loader.js
 export function initializeTemplates() {
-  console.group('Initializing templates');
+  logger.group('Initializing templates');
 
   // Log all template IDs being registered
-  console.log('Registering templates:', Object.keys(templates));
+  logger.log('Registering templates:', Object.keys(templates));
 
   Object.entries(templates).forEach(([id, html]) => {
     if (!html || html.trim() === '') {
       console.warn(`Template ${id} has empty HTML content!`);
     } else {
-      console.log(`Registering template: ${id} (${html.length} characters)`);
+      logger.log(`Registering template: ${id} (${html.length} characters)`);
       TemplateEngine.registerTemplate(id, html);
     }
   });
 
-  console.log(`Initialized template engine with ${Object.keys(templates).length} templates`);
-  console.groupEnd();
+  logger.log(`Initialized template engine with ${Object.keys(templates).length} templates`);
+  logger.groupEnd();
 
   return TemplateEngine;
 }
@@ -80,12 +83,12 @@ export function initializeTemplates() {
 export function checkTemplateContent(templateId) {
   const template = templates[templateId];
   if (!template) {
-    console.error(`Template not found: ${templateId}`);
+    logger.error(`Template not found: ${templateId}`);
     return false;
   }
 
-  console.log(`Template ${templateId} content (${template.length} characters):`);
-  console.log(template.substring(0, 100) + '...');
+  logger.log(`Template ${templateId} content (${template.length} characters):`);
+  logger.log(template.substring(0, 100) + '...');
   return true;
 }
 

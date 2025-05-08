@@ -8,6 +8,9 @@
 
 const STORAGE_KEY = 'productEstimatorEstimateData';
 
+import { createLogger } from '@utils';
+const logger = createLogger('CustomerStorage');
+
 /**
  * Load session data from localStorage
  * @returns {Object} Estimate data object with estimates, etc.

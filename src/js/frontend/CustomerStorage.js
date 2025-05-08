@@ -6,6 +6,8 @@
  */
 
 const STORAGE_KEY = 'productEstimatorCustomerData';
+import { createLogger } from '@utils';
+const logger = createLogger('CustomerStorage');
 
 /**
  * Load customer details from localStorage with fallback to sessionStorage.
@@ -21,7 +23,7 @@ export function loadCustomerDetails() {
       return sessionDetails ? JSON.parse(sessionDetails) : {};
     }
   } catch (error) {
-    console.error('Error loading customer details:', error);
+    logger.error('Error loading customer details:', error);
     return {}; // Return empty object on error
   }
 }
@@ -34,11 +36,11 @@ export function saveCustomerDetails(details) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(details));
   } catch (localStorageError) {
-    console.warn('localStorage not available, using sessionStorage:', localStorageError);
+    logger.warn('localStorage not available, using sessionStorage:', localStorageError);
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(details));
     } catch (sessionStorageError) {
-      console.error('sessionStorage not available:', sessionStorageError);
+      logger.error('sessionStorage not available:', sessionStorageError);
       // If neither is available, details won't persist, but we can continue
     }
   }
@@ -51,12 +53,12 @@ export function clearCustomerDetails() {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (localStorageError) {
-    console.warn('localStorage not available:', localStorageError);
+    logger.warn('localStorage not available:', localStorageError);
   }
   try {
     sessionStorage.removeItem(STORAGE_KEY);
   } catch (sessionStorageError) {
-    console.warn('sessionStorage not available:', sessionStorageError);
+    logger.warn('sessionStorage not available:', sessionStorageError);
   }
 }
 

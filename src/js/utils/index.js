@@ -66,6 +66,44 @@ export function error(component, ...args) {
   }
 }
 
+/**
+ * NEW: Logger Factory Function
+ * Creates a logger instance pre-configured with a component name.
+ * @param {string} component - The name of the component for log prefixing.
+ * @returns {object} An object with log, warn, and error methods.
+ */
+export function createLogger(component) {
+  return {
+    log: (...args) => {
+      if (window.productEstimatorVars?.debug) {
+        console.log(`[${component}]`, ...args);
+      }
+    },
+    warn: (...args) => {
+      if (window.productEstimatorVars?.debug) {
+        console.warn(`[${component}]`, ...args);
+      }
+    },
+    error: (...args) => {
+      if (window.productEstimatorVars?.debug) {
+        console.error(`[${component}]`, ...args);
+      }
+    },
+
+    group: (...args) => {
+      if (window.productEstimatorVars?.debug) {
+        console.group(`[${component}]`, ...args);
+      }
+    },
+
+    groupEnd: (...args) => {
+      if (window.productEstimatorVars?.debug) {
+        console.groupEnd(`[${component}]`, ...args);
+      }
+    },
+  }
+}
+
 // Export a convenience function to safely access nested properties
 export function get(obj, path, defaultValue = null) {
   const keys = path.split('.');

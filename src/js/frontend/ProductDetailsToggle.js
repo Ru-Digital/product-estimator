@@ -3,7 +3,8 @@
  *
  * Handles the show/hide functionality for both similar products and product notes sections
  */
-
+import { createLogger } from '@utils';
+const logger = createLogger('ProductDetailsToggle');
 class ProductDetailsToggle {
   /**
    * Initialize the toggle functionality
@@ -51,7 +52,7 @@ class ProductDetailsToggle {
    */
   init() {
     if (this.initialized) {
-      this.log('Already initialized, skipping');
+      logger.log('Already initialized, skipping');
       return;
     }
 
@@ -64,7 +65,7 @@ class ProductDetailsToggle {
 
     // Also initialize when modal content changes
     document.addEventListener('product_estimator_modal_loaded', () => {
-      this.log('Modal content loaded, initializing toggles');
+      logger.log('Modal content loaded, initializing toggles');
       this.setup();
     });
 
@@ -73,7 +74,7 @@ class ProductDetailsToggle {
 
     // Mark as initialized
     this.initialized = true;
-    this.log('ProductDetailsToggle initialized');
+    logger.log('ProductDetailsToggle initialized');
   }
 
   /**
@@ -82,7 +83,7 @@ class ProductDetailsToggle {
   prepareSuggestionsToggle() {
     // Find all accordion content elements
     const accordionContents = document.querySelectorAll(this.config.selectors.accordionContent);
-    this.log(`Found ${accordionContents.length} accordion content elements to process for suggestions toggle`);
+    logger.log(`Found ${accordionContents.length} accordion content elements to process for suggestions toggle`);
 
     accordionContents.forEach(accordionContent => {
       // Skip if already processed for suggestions toggle
@@ -95,11 +96,11 @@ class ProductDetailsToggle {
 
       // Check if accordion content has suggestions to toggle
       if (!suggestionsSection) {
-        this.log('No suggestions section found for accordion content, skipping', accordionContent);
+        logger.log('No suggestions section found for accordion content, skipping', accordionContent);
         return; // No suggestions to toggle
       }
 
-      this.log('Found suggestions section, processing', suggestionsSection);
+      logger.log('Found suggestions section, processing', suggestionsSection);
 
       // Mark the accordion content as having suggestions
       accordionContent.classList.add('has-suggestions');
@@ -109,7 +110,7 @@ class ProductDetailsToggle {
 
       // If no container exists but there is a suggestions section, we need to create one
       if (!suggestionsContainer) {
-        this.log('Creating new suggestions container');
+        logger.log('Creating new suggestions container');
         // Create a container to wrap suggestions
         suggestionsContainer = document.createElement('div');
         suggestionsContainer.className = 'suggestions-container visible'; // Initially visible
@@ -131,7 +132,7 @@ class ProductDetailsToggle {
       // Add toggle button if not already present
       let toggleButton = accordionContent.querySelector(this.config.selectors.suggestionsToggleButton);
       if (!toggleButton) {
-        this.log('Adding suggestions toggle button to accordion content');
+        logger.log('Adding suggestions toggle button to accordion content');
         toggleButton = document.createElement('button');
         toggleButton.className = 'product-suggestions-toggle expanded'; // Initially expanded
         toggleButton.setAttribute('data-toggle-type', 'suggestions');
@@ -150,7 +151,7 @@ class ProductDetailsToggle {
 
       // Mark as processed to avoid duplicating
       accordionContent.classList.add('suggestions-toggle-processed');
-      this.log('Accordion content processed for suggestions toggle');
+      logger.log('Accordion content processed for suggestions toggle');
     });
   }
 
@@ -182,21 +183,21 @@ class ProductDetailsToggle {
 
       // If relevant content was added, re-setup toggle functionality
       if (shouldSetup) {
-        this.log('New toggle-related content detected, re-initializing');
+        logger.log('New toggle-related content detected, re-initializing');
         setTimeout(() => this.setup(), 100);
       }
     });
 
     // Start observing the document with the configured parameters
     observer.observe(document.body, { childList: true, subtree: true });
-    this.log('Mutation observer set up');
+    logger.log('Mutation observer set up');
   }
 
   /**
    * Set up toggle functionality
    */
   setup() {
-    this.log('Setting up product details toggles');
+    logger.log('Setting up product details toggles');
 
     // Prepare the DOM structure for all toggle types
     this.prepareProductsToggle();
@@ -221,7 +222,7 @@ class ProductDetailsToggle {
    */
   prepareProductsToggle() {
     const productItems = document.querySelectorAll(this.config.selectors.productItem);
-    this.log(`Found ${productItems.length} product items to process for similar products toggle`);
+    logger.log(`Found ${productItems.length} product items to process for similar products toggle`);
 
     productItems.forEach(productItem => {
       if (productItem.classList.contains('products-toggle-processed')) {
@@ -257,7 +258,7 @@ class ProductDetailsToggle {
 
       // Mark as processed
       productItem.classList.add('products-toggle-processed');
-      this.log('Product item processed for similar products toggle (visibility managed elsewhere).');
+      logger.log('Product item processed for similar products toggle (visibility managed elsewhere).');
     });
   }
 
@@ -272,7 +273,7 @@ class ProductDetailsToggle {
   prepareNotesToggle() {
     // Find all product items
     const productItems = document.querySelectorAll(this.config.selectors.productItem);
-    this.log(`Found ${productItems.length} product items to process for notes toggle`);
+    logger.log(`Found ${productItems.length} product items to process for notes toggle`);
 
     productItems.forEach(productItem => {
       // Skip if already processed for notes toggle
@@ -285,7 +286,7 @@ class ProductDetailsToggle {
 
       // Check if product has notes to toggle
       if (!notesSection) {
-        this.log('No notes section found for product item, skipping', productItem);
+        logger.log('No notes section found for product item, skipping', productItem);
         return; // No notes to toggle
       }
 
@@ -322,7 +323,7 @@ class ProductDetailsToggle {
 
       // Skip if no valid notes found
       if (!hasValidNotes) {
-        this.log('No valid notes found for product, skipping', productItem);
+        logger.log('No valid notes found for product, skipping', productItem);
         productItem.classList.add('notes-toggle-processed'); // Mark as processed anyway
 
         // Hide any existing notes elements
@@ -335,7 +336,7 @@ class ProductDetailsToggle {
         return;
       }
 
-      this.log('Found notes section with content, processing', notesSection);
+      logger.log('Found notes section with content, processing', notesSection);
 
       // Mark the product item as having notes
       productItem.classList.add('has-notes');
@@ -345,7 +346,7 @@ class ProductDetailsToggle {
 
       // If no container exists but there is a notes section, we need to create one
       if (!notesContainer) {
-        this.log('Creating new notes container');
+        logger.log('Creating new notes container');
         // Create a container to wrap notes
         notesContainer = document.createElement('div');
         notesContainer.className = 'notes-container visible'; // Add visible class
@@ -367,7 +368,7 @@ class ProductDetailsToggle {
       // Add toggle button if not already present
       let toggleButton = productItem.querySelector(this.config.selectors.notesToggleButton);
       if (!toggleButton) {
-        this.log('Adding notes toggle button to product item');
+        logger.log('Adding notes toggle button to product item');
         toggleButton = document.createElement('button');
 
         // Mark as expanded by default and use the proper class for the arrow
@@ -398,7 +399,7 @@ class ProductDetailsToggle {
 
       // Mark as processed to avoid duplicating
       productItem.classList.add('notes-toggle-processed');
-      this.log('Product item processed for notes toggle');
+      logger.log('Product item processed for notes toggle');
     });
   }
 
@@ -408,7 +409,7 @@ class ProductDetailsToggle {
   bindEvents() {
     // Bind product toggle buttons
     const productToggleButtons = document.querySelectorAll(this.config.selectors.productToggleButton);
-    this.log(`Found ${productToggleButtons.length} similar products toggle buttons to bind`);
+    logger.log(`Found ${productToggleButtons.length} similar products toggle buttons to bind`);
 
     productToggleButtons.forEach(button => {
       // Skip if already bound
@@ -432,7 +433,7 @@ class ProductDetailsToggle {
 
     // Bind notes toggle buttons
     const notesToggleButtons = document.querySelectorAll(this.config.selectors.notesToggleButton);
-    this.log(`Found ${notesToggleButtons.length} notes toggle buttons to bind`);
+    logger.log(`Found ${notesToggleButtons.length} notes toggle buttons to bind`);
 
     notesToggleButtons.forEach(button => {
       // Skip if already bound
@@ -458,7 +459,7 @@ class ProductDetailsToggle {
 
     // Bind includes toggle buttons
     const includesToggleButtons = document.querySelectorAll(this.config.selectors.includesToggleButton);
-    this.log(`Found ${includesToggleButtons.length} includes toggle buttons to bind`);
+    logger.log(`Found ${includesToggleButtons.length} includes toggle buttons to bind`);
 
     includesToggleButtons.forEach(button => {
       // Skip if already bound
@@ -482,7 +483,7 @@ class ProductDetailsToggle {
 
     // Bind suggestions toggle buttons
     const suggestionsToggleButtons = document.querySelectorAll(this.config.selectors.suggestionsToggleButton);
-    this.log(`Found ${suggestionsToggleButtons.length} suggestions toggle buttons to bind`);
+    logger.log(`Found ${suggestionsToggleButtons.length} suggestions toggle buttons to bind`);
 
     suggestionsToggleButtons.forEach(button => {
       // Skip if already bound
@@ -504,7 +505,7 @@ class ProductDetailsToggle {
       button._toggleBound = true;
     });
 
-    this.log('All toggle events bound');
+    logger.log('All toggle events bound');
   }
 
   // Add a new method to toggle suggestions visibility
@@ -517,7 +518,7 @@ class ProductDetailsToggle {
     const accordionContent = toggleButton.closest(this.config.selectors.accordionContent);
 
     if (!accordionContent) {
-      this.log('Accordion content not found for toggle button');
+      logger.log('Accordion content not found for toggle button');
       return;
     }
 
@@ -525,13 +526,13 @@ class ProductDetailsToggle {
     const suggestionsContainer = accordionContent.querySelector(this.config.selectors.suggestionsContainer);
 
     if (!suggestionsContainer) {
-      this.log('Suggestions container not found');
+      logger.log('Suggestions container not found');
       return;
     }
 
     // Toggle expanded state
     const isExpanded = toggleButton.classList.contains('expanded');
-    this.log(`Suggestions toggle clicked, current expanded state: ${isExpanded}`);
+    logger.log(`Suggestions toggle clicked, current expanded state: ${isExpanded}`);
 
     if (isExpanded) {
       // Hide suggestions
@@ -552,7 +553,7 @@ class ProductDetailsToggle {
         this.config.i18n.showSuggestions
       );
 
-      this.log('Suggestions hidden');
+      logger.log('Suggestions hidden');
     } else {
       // Show suggestions
       suggestionsContainer.classList.add('visible');
@@ -574,7 +575,7 @@ class ProductDetailsToggle {
 
       // Initialize carousels if they exist
       this.initializeCarousels(suggestionsContainer);
-      this.log('Suggestions shown');
+      logger.log('Suggestions shown');
     }
   }
 
@@ -588,7 +589,7 @@ class ProductDetailsToggle {
     const productItem = toggleButton.closest(this.config.selectors.productItem);
 
     if (!productItem) {
-      this.log('Product item not found for toggle button');
+      logger.log('Product item not found for toggle button');
       return;
     }
 
@@ -596,13 +597,13 @@ class ProductDetailsToggle {
     const similarProductsContainer = productItem.querySelector(this.config.selectors.similarProductsContainer);
 
     if (!similarProductsContainer) {
-      this.log('Similar products container not found');
+      logger.log('Similar products container not found');
       return;
     }
 
     // Toggle expanded state
     const isExpanded = toggleButton.classList.contains('expanded');
-    this.log(`Similar products toggle clicked, current expanded state: ${isExpanded}`);
+    logger.log(`Similar products toggle clicked, current expanded state: ${isExpanded}`);
 
     // Get the icon element
     const iconElement = toggleButton.querySelector('.toggle-icon');
@@ -620,7 +621,7 @@ class ProductDetailsToggle {
       }
 
       // Keep the text the same per design requirements
-      this.log('Similar products hidden');
+      logger.log('Similar products hidden');
     } else {
       // Show similar products
       similarProductsContainer.classList.add('visible');
@@ -634,7 +635,7 @@ class ProductDetailsToggle {
       }
 
       // Keep the text the same per design requirements
-      this.log('Similar products shown');
+      logger.log('Similar products shown');
 
       // Initialize carousels if they exist
       this.initializeCarousels(similarProductsContainer);
@@ -650,7 +651,7 @@ class ProductDetailsToggle {
     const productItem = toggleButton.closest(this.config.selectors.productItem);
 
     if (!productItem) {
-      this.log('Product item not found for notes toggle button');
+      logger.log('Product item not found for notes toggle button');
       return;
     }
 
@@ -658,13 +659,13 @@ class ProductDetailsToggle {
     const notesContainer = productItem.querySelector(this.config.selectors.notesContainer);
 
     if (!notesContainer) {
-      this.log('Notes container not found');
+      logger.log('Notes container not found');
       return;
     }
 
     // Toggle expanded state
     const isExpanded = toggleButton.classList.contains('expanded');
-    this.log(`Notes toggle clicked, current expanded state: ${isExpanded}`);
+    logger.log(`Notes toggle clicked, current expanded state: ${isExpanded}`);
 
     // Get the icon element
     const iconElement = toggleButton.querySelector('.toggle-icon');
@@ -682,7 +683,7 @@ class ProductDetailsToggle {
       }
 
       // Keep the text the same per design requirements
-      this.log('Notes hidden');
+      logger.log('Notes hidden');
     } else {
       // Show notes
       notesContainer.classList.add('visible');
@@ -696,7 +697,7 @@ class ProductDetailsToggle {
       }
 
       // Keep the text the same per design requirements
-      this.log('Notes shown');
+      logger.log('Notes shown');
     }
   }
 
@@ -707,13 +708,13 @@ class ProductDetailsToggle {
   initializeCarousels(container) {
     // Check if SuggestionsCarousel initialization function exists
     if (typeof window.initSuggestionsCarousels === 'function') {
-      this.log('Initializing carousels in similar products container');
+      logger.log('Initializing carousels in similar products container');
       window.initSuggestionsCarousels();
     } else if (typeof initSuggestionsCarousels === 'function') {
-      this.log('Using local initSuggestionsCarousels function');
+      logger.log('Using local initSuggestionsCarousels function');
       initSuggestionsCarousels();
     } else {
-      this.log('Carousel initialization function not found', window.initSuggestionsCarousels);
+      logger.log('Carousel initialization function not found', window.initSuggestionsCarousels);
     }
   }
 
@@ -722,7 +723,7 @@ class ProductDetailsToggle {
    */
   initializeAllCarousels() {
     if (typeof window.initSuggestionsCarousels === 'function') {
-      this.log('Initializing all carousels');
+      logger.log('Initializing all carousels');
       window.initSuggestionsCarousels();
     } else if (typeof initSuggestionsCarousels === 'function') {
       initSuggestionsCarousels();
@@ -735,7 +736,7 @@ class ProductDetailsToggle {
   prepareIncludesToggle() {
     // Find all product items
     const productItems = document.querySelectorAll(this.config.selectors.productItem);
-    this.log(`Found ${productItems.length} product items to process for includes toggle`);
+    logger.log(`Found ${productItems.length} product items to process for includes toggle`);
 
     productItems.forEach(productItem => {
       // Skip if already processed for includes toggle
@@ -748,11 +749,11 @@ class ProductDetailsToggle {
 
       // Check if product has includes to toggle
       if (!includesSection) {
-        this.log('No includes section found for product item, skipping', productItem);
+        logger.log('No includes section found for product item, skipping', productItem);
         return; // No includes to toggle
       }
 
-      this.log('Found includes section, processing', includesSection);
+      logger.log('Found includes section, processing', includesSection);
 
       // Mark the product item as having includes
       productItem.classList.add('has-includes');
@@ -762,7 +763,7 @@ class ProductDetailsToggle {
 
       // If no container exists but there is an includes section, we need to create one
       if (!includesContainer) {
-        this.log('Creating new includes container');
+        logger.log('Creating new includes container');
         // Create a container to wrap includes
         includesContainer = document.createElement('div');
         includesContainer.className = 'includes-container visible'; // Add visible class
@@ -784,7 +785,7 @@ class ProductDetailsToggle {
       // Add toggle button if not already present
       let toggleButton = productItem.querySelector('.product-includes-toggle');
       if (!toggleButton) {
-        this.log('Adding includes toggle button to product item');
+        logger.log('Adding includes toggle button to product item');
         toggleButton = document.createElement('button');
 
         // Mark as expanded by default and use the proper class for the arrow
@@ -815,7 +816,7 @@ class ProductDetailsToggle {
 
       // Mark as processed to avoid duplicating
       productItem.classList.add('includes-toggle-processed');
-      this.log('Product item processed for includes toggle');
+      logger.log('Product item processed for includes toggle');
     });
   }
 
@@ -828,7 +829,7 @@ class ProductDetailsToggle {
     const productItem = toggleButton.closest(this.config.selectors.productItem);
 
     if (!productItem) {
-      this.log('Product item not found for includes toggle button');
+      logger.log('Product item not found for includes toggle button');
       return;
     }
 
@@ -836,13 +837,13 @@ class ProductDetailsToggle {
     const includesContainer = productItem.querySelector('.includes-container');
 
     if (!includesContainer) {
-      this.log('Includes container not found');
+      logger.log('Includes container not found');
       return;
     }
 
     // Toggle expanded state
     const isExpanded = toggleButton.classList.contains('expanded');
-    this.log(`Includes toggle clicked, current expanded state: ${isExpanded}`);
+    logger.log(`Includes toggle clicked, current expanded state: ${isExpanded}`);
 
     // Get the icon element
     const iconElement = toggleButton.querySelector('.toggle-icon');
@@ -860,7 +861,7 @@ class ProductDetailsToggle {
       }
 
       // Keep the text the same per design requirements
-      this.log('Includes hidden');
+      logger.log('Includes hidden');
     } else {
       // Show includes
       includesContainer.classList.add('visible');
@@ -874,19 +875,10 @@ class ProductDetailsToggle {
       }
 
       // Keep the text the same per design requirements
-      this.log('Includes shown');
+      logger.log('Includes shown');
     }
   }
 
-  /**
-   * Log debug messages if debug mode is enabled
-   * @param {...any} args - Arguments to log
-   */
-  log(...args) {
-    if (this.config.debug) {
-      // console.log('[ProductDetailsToggle]', ...args);
-    }
-  }
 }
 
 // Create singleton instance

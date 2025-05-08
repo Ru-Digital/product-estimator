@@ -15,6 +15,8 @@ import { initializeTemplates } from './template-loader';
 // Initialize templates first
 const templateEngine = initializeTemplates();
 
+import { createLogger } from '@utils';
+const logger = createLogger('FrontEndIndex');
 
 
 // Global initialization tracker - defined at the top level
@@ -38,24 +40,24 @@ if (!window._setupInitDone) {
  * Initialize the application
  */
 function initApp() {
-  console.log('Product Estimator initialization check...');
+  logger.log('Product Estimator initialization check...');
 
   // Multiple guard checks - check both global flags
   if (window._productEstimatorInitialized) {
-    console.log('Product Estimator already initialized globally, aborting');
+    logger.log('Product Estimator already initialized globally, aborting');
     return;
   }
 
   // Also check for object existence
   if (window.productEstimator && window.productEstimator.initialized) {
-    console.log('Product Estimator initialized property found, aborting');
+    logger.log('Product Estimator initialized property found, aborting');
     window._productEstimatorInitialized = true;
     return;
   }
 
   // Mark as initialized IMMEDIATELY before continuing
   window._productEstimatorInitialized = true;
-  console.log('Product Estimator initializing for the first time...');
+  logger.log('Product Estimator initializing for the first time...');
 
   try {
     // Setup global handlers (only once)
@@ -67,7 +69,7 @@ function initApp() {
       window.productEstimator = window.productEstimator || {};
       window.productEstimator.jQuery = jQuery;
     } else {
-      console.warn('jQuery not detected, some features may not work');
+      logger.warn('jQuery not detected, some features may not work');
     }
 
     // Get debug mode from URL parameter or localStorage
@@ -83,7 +85,7 @@ function initApp() {
       setTimeout(() => initEstimator(debugMode), 500);
     }
   } catch (error) {
-    console.error('Error in Product Estimator initialization:', error);
+    logger.error('Error in Product Estimator initialization:', error);
   }
 }
 
@@ -96,11 +98,11 @@ function initEstimator(debugMode) {
   try {
     // One final check to prevent race conditions
     if (window.productEstimator && window.productEstimator.initialized) {
-      console.log('Product Estimator core already initialized, skipping');
+      logger.log('Product Estimator core already initialized, skipping');
       return;
     }
 
-    console.log('Initializing EstimatorCore...');
+    logger.log('Initializing EstimatorCore...');
 
     // Initialize core with configuration
     // This call creates the EstimatorCore.dataService instance internally
@@ -120,7 +122,7 @@ function initEstimator(debugMode) {
     const dataServiceInstance = window.productEstimator.core.dataService;
 
     if (!dataServiceInstance) {
-      console.error("DataService instance not found on EstimatorCore. Cannot initialize PrintEstimate.");
+      logger.error("[DataService] instance not found on EstimatorCore. Cannot initialize PrintEstimate.");
       // Optionally return or handle this error case
       return;
     }
@@ -137,12 +139,12 @@ function initEstimator(debugMode) {
     // Initialize toggle functionality explicitly
     initializeProductDetailsToggle(debugMode);
 
-    console.log(`Product Estimator initialized${debugMode ? ' (debug mode)' : ''}`);
+    logger.log(`Product Estimator initialized${debugMode ? ' (debug mode)' : ''}`);
 
     // Dispatch an event that initialization is complete
     document.dispatchEvent(new CustomEvent('product_estimator_initialized'));
   } catch (e) {
-    console.error('Error during EstimatorCore initialization:', e);
+    logger.error('Error during EstimatorCore initialization:', e);
   }
 }
 /**
@@ -158,7 +160,7 @@ function initializeProductDetailsToggle(debugMode) {
         setTimeout(() => {
           // Force toggle module to scan for new content
           if (ProductDetailsToggle && typeof ProductDetailsToggle.setup === 'function') {
-            console.log('Accordion clicked, reinitializing product details toggle');
+            logger.log('Accordion clicked, reinitializing product details toggle');
             ProductDetailsToggle.setup();
           }
 
@@ -341,9 +343,9 @@ function initializeProductDetailsToggle(debugMode) {
 
     });
 
-    console.log('ProductDetailsToggle initialization complete');
+    logger.log('[ProductDetailsToggle] initialization complete');
   } catch (error) {
-    console.error('Error initializing ProductDetailsToggle:', error);
+    logger.error('Error initializing ProductDetailsToggle:', error);
   }
 }
 
@@ -358,17 +360,17 @@ let globalHandlersAdded = false;
 function setupGlobalEventHandlers() {
   // Only run once
   if (globalHandlersAdded) {
-    console.log('Global event handlers already added, skipping');
+    logger.log('Global event handlers already added, skipping');
     return;
   }
 
-  console.log('Setting up global event handlers...');
+  logger.log('Setting up global event handlers...');
 
   // Create and store handler reference
   window._productEstimatorCloseHandler = function(e) {
     if (e.target.closest('.product-estimator-modal-close') ||
       e.target.classList.contains('product-estimator-modal-overlay')) {
-      console.log('Global close handler triggered');
+      logger.log('Global close handler triggered');
 
       // Find the modal
       const modal = document.querySelector('#product-estimator-modal');
@@ -391,7 +393,7 @@ function setupGlobalEventHandlers() {
   document.addEventListener('click', window._productEstimatorCloseHandler);
 
   globalHandlersAdded = true;
-  console.log('Global event handlers added');
+  logger.log('Global event handlers added');
 }
 
 /**

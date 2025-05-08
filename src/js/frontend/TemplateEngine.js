@@ -4,6 +4,8 @@
  * Manages HTML templates for the Product Estimator plugin.
  */
 import { format } from '@utils';
+import { createLogger } from '@utils';
+const logger = createLogger('TemplateEngine');
 
 class TemplateEngine {
   /**
@@ -21,11 +23,11 @@ class TemplateEngine {
    */
   init() {
     if (this.initialized) {
-      console.log('[TemplateEngine.init] Already initialized.'); // Added context
+      logger.log('[init] Already initialized.'); // Added context
       return this;
     }
 
-    console.log('[TemplateEngine.init] Initializing TemplateEngine. Templates to process:', Object.keys(this.templates)); // Added context
+    logger.log('[init] Initializing TemplateEngine. Templates to process:', Object.keys(this.templates)); // Added context
 
     // Create template elements from registered HTML
     Object.entries(this.templates).forEach(([id, html]) => {
@@ -39,23 +41,23 @@ class TemplateEngine {
 
         if (templateElement) {
           this.templateElements[id] = templateElement;
-          console.log(`[TemplateEngine.init] Template element found in HTML for ID: "${id}"`); // Added context
+          logger.log(`[init] Template element found in HTML for ID: "${id}"`); // Added context
         } else {
-          console.error(`[TemplateEngine.init] UNEXPECTED: templateElement was null/undefined for ID: "${id}". Creating nested template. Original HTML likely already contained a <template> tag.`);
+          logger.error(`[init] UNEXPECTED: templateElement was null/undefined for ID: "${id}". Creating nested template. Original HTML likely already contained a <template> tag.`);
 
           // Create a new template element if the HTML string didn't contain <template> tags
           const newTemplate = document.createElement('template');
           newTemplate.id = id; // Set the ID on the template element itself
           newTemplate.innerHTML = html; // Put the raw HTML inside the template tag
           this.templateElements[id] = newTemplate;
-          console.log(`[TemplateEngine.init] Created new template element for ID: "${id}" (HTML was likely raw, not wrapped in <template>)`); // Added context
+          logger.log(`[init] Created new template element for ID: "${id}" (HTML was likely raw, not wrapped in <template>)`); // Added context
         }
 
         // *** Add this logging block to check template element content ***
         if (this.templateElements[id]) {
           const contentToCheck = this.templateElements[id].content || this.templateElements[id]; // Check .content first, then the element itself
 
-          console.log(`[TemplateEngine.init] TemplateElement for "${id}" created. Inner HTML starts with:`, (contentToCheck?.innerHTML || 'No innerHTML or content').substring(0, 200) + '...'); // Added context
+          logger.log(`[init] TemplateElement for "${id}" created. Inner HTML starts with:`, (contentToCheck?.innerHTML || 'No innerHTML or content').substring(0, 200) + '...'); // Added context
 
           // Specifically check if the room template contains .product-list
           if (id === 'room-item-template') {
@@ -67,23 +69,23 @@ class TemplateEngine {
               // If no innerHTML (e.g., just text nodes or complex structure), append children
               Array.from(contentToCheck?.childNodes || []).forEach(node => queryTempDiv.appendChild(node.cloneNode(true)));
             }
-            console.log(`[TemplateEngine.init] Checking "${id}" content for .product-list:`, queryTempDiv.querySelector('.product-list') ? 'Found' : 'Not Found'); // Added context
+            logger.log(`[init] Checking "${id}" content for .product-list:`, queryTempDiv.querySelector('.product-list') ? 'Found' : 'Not Found'); // Added context
             if (!queryTempDiv.querySelector('.product-list')) {
-              console.error(`[TemplateEngine.init] CRITICAL: .product-list not found in "${id}" template element content after creation.`); // Critical error if missing
+              logger.error(`[init] CRITICAL: .product-list not found in "${id}" template element content after creation.`); // Critical error if missing
             }
           }
         } else {
-          console.error(`[TemplateEngine.init] Failed to assign template element for ID: "${id}"`); // Added context
+          logger.error(`[init] Failed to assign template element for ID: "${id}"`); // Added context
         }
         // *** End logging block ***
 
       } catch (error) {
-        console.error(`[TemplateEngine.init] Error processing template HTML for ID "${id}":`, error); // Added context
+        logger.error(`[init] Error processing template HTML for ID "${id}":`, error); // Added context
         // Decide how to handle templates that fail to parse - maybe skip them?
       }
     });
 
-    console.log(`[TemplateEngine.init] TemplateEngine initialized with ${Object.keys(this.templateElements).length} template elements`); // Added context
+    logger.log(`[init] TemplateEngine initialized with ${Object.keys(this.templateElements).length} template elements`); // Added context
     this.initialized = true;
 
     // this.verifyTemplates(); // Your existing verification method is fine
@@ -99,13 +101,13 @@ class TemplateEngine {
    */
   registerTemplate(id, html) {
     if (typeof html !== 'string' || html.trim() === '') {
-      console.warn(`[TemplateEngine.registerTemplate] Cannot register empty or non-string HTML for template "${id}".`); // Added context
+      logger.warn(`[registerTemplate] Cannot register empty or non-string HTML for template "${id}".`); // Added context
       // Optionally throw an error or return early
       return this;
     }
     this.templates[id] = html;
     this.initialized = false; // Mark as needing reinitialization when a new template is added
-    console.log(`[TemplateEngine.registerTemplate] Registered template "${id}". HTML starts with:`, html.substring(0, 200) + '...'); // Add this log
+    logger.log(`[registerTemplate] Registered template "${id}". HTML starts with:`, html.substring(0, 200) + '...'); // Add this log
     return this;
   }
 
@@ -118,13 +120,13 @@ class TemplateEngine {
   getTemplate(id) {
     // Ensure initialization happens if needed
     if (!this.initialized) {
-      console.warn('[TemplateEngine.getTemplate] TemplateEngine not initialized yet. Calling init().'); // Added context
+      logger.warn('[getTemplate] TemplateEngine not initialized yet. Calling init().'); // Added context
       this.init();
     }
     // Check if template element exists after ensuring initialization
     const template = this.templateElements[id] || null;
     if (!template) {
-      console.error(`[TemplateEngine.getTemplate] Template element not found for ID: "${id}".`); // Added context
+      logger.error(`[getTemplate] Template element not found for ID: "${id}".`); // Added context
     }
     return template;
   }
@@ -140,18 +142,18 @@ class TemplateEngine {
     const template = this.getTemplate(templateId); // Retrieve the <template> element
 
     if (!template) {
-      console.error(`[TemplateEngine.create] Cannot create element. Template element not found for ID: "${templateId}"`);
+      logger.error(`[create] Cannot create element. Template element not found for ID: "${templateId}"`);
       return document.createDocumentFragment(); // Return empty fragment gracefully
     }
 
     // --- START: Add Detailed Debug Logs Here ---
-    console.log(`[DEBUG][TemplateEngine.create] Found template element for "${templateId}":`, template);
+    logger.log(`[DEBUG][TemplateEngine.create] Found template element for "${templateId}":`, template);
     // Check if the template element itself has content if .content property seems problematic
-    console.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" direct innerHTML (first 200 chars):`, template.innerHTML.substring(0, 200));
+    logger.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" direct innerHTML (first 200 chars):`, template.innerHTML.substring(0, 200));
 
     if (template.content) {
-      console.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" has .content property:`, template.content);
-      console.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" .content.childNodes count:`, template.content.childNodes.length);
+      logger.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" has .content property:`, template.content);
+      logger.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" .content.childNodes count:`, template.content.childNodes.length);
 
       // Log the node type and content of the first few children to see what's inside
       const childNodes = template.content.childNodes;
@@ -159,13 +161,13 @@ class TemplateEngine {
         const node = childNodes[i];
         // Check if textContent exists and has trim method before calling trim()
         const nodeTextContent = node.textContent ? node.textContent.trim().substring(0,50) : '[No textContent]';
-        console.log(`[DEBUG][TemplateEngine.create] Node[${i}] type: ${node.nodeType}, name: ${node.nodeName}, text: ${nodeTextContent}...`);
+        logger.log(`[DEBUG][TemplateEngine.create] Node[${i}] type: ${node.nodeType}, name: ${node.nodeName}, text: ${nodeTextContent}...`);
       }
 
       const firstElement = template.content.firstElementChild;
-      console.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" .content.firstElementChild:`, firstElement);
+      logger.log(`[DEBUG][TemplateEngine.create] Template "${templateId}" .content.firstElementChild:`, firstElement);
     } else {
-      console.error(`[DEBUG][TemplateEngine.create] CRITICAL: Template "${templateId}" DOES NOT HAVE a .content property!`);
+      logger.error(`[DEBUG][TemplateEngine.create] CRITICAL: Template "${templateId}" DOES NOT HAVE a .content property!`);
     }
     // --- END: Add Detailed Debug Logs Here ---
 
@@ -176,26 +178,26 @@ class TemplateEngine {
     try {
       // Check if content exists before cloning
       if (!template.content) {
-        console.error(`[TemplateEngine.create] Cannot clone template content for ID: "${templateId}" - .content is missing.`);
+        logger.error(`[create] Cannot clone template content for ID: "${templateId}" - .content is missing.`);
         return document.createDocumentFragment(); // Return empty fragment
       }
 
       clone = template.content.cloneNode(true); // Clone the actual content
 
       if (!clone) {
-        console.error(`[TemplateEngine.create] Failed to clone template content for ID: "${templateId}". cloneNode returned null/undefined.`); // Updated log message
+        logger.error(`[create] Failed to clone template content for ID: "${templateId}". cloneNode returned null/undefined.`); // Updated log message
         return document.createDocumentFragment(); // Return empty fragment if cloning fails
       }
-      console.log(`[TemplateEngine.create] Cloned template content for "${templateId}". Result is a DocumentFragment.`); // Added context
+      logger.log(`[create] Cloned template content for "${templateId}". Result is a DocumentFragment.`); // Added context
 
       // --- START: Log Cloned Fragment Structure ---
       const tempDiv = document.createElement('div');
       tempDiv.appendChild(clone.cloneNode(true)); // Append a clone of the clone to inspect without consuming it
-      console.log(`[DEBUG][TemplateEngine.create] Cloned fragment structure for "${templateId}" (first 200 chars): ${tempDiv.innerHTML.substring(0, 200)}...`);
+      logger.log(`[DEBUG][TemplateEngine.create] Cloned fragment structure for "${templateId}" (first 200 chars): ${tempDiv.innerHTML.substring(0, 200)}...`);
       // --- END: Log Cloned Fragment Structure ---
 
     } catch (error) {
-      console.error(`[TemplateEngine.create] Error during template.content.cloneNode(true) for ID "${templateId}":`, error); // Updated log message
+      logger.error(`[create] Error during template.content.cloneNode(true) for ID "${templateId}":`, error); // Updated log message
       return document.createDocumentFragment(); // Return empty fragment on cloning error
     }
 
@@ -203,9 +205,9 @@ class TemplateEngine {
     // Populate the template with data
     try { // Added try-catch for population errors
       this.populateElement(clone, data); //
-      console.log(`[TemplateEngine.create] Populated fragment for "${templateId}".`); // Added context
+      logger.log(`[create] Populated fragment for "${templateId}".`); // Added context
     } catch (error) {
-      console.error(`[TemplateEngine.create] Error populating fragment for ID "${templateId}":`, error); // Added context
+      logger.error(`[create] Error populating fragment for ID "${templateId}":`, error); // Added context
       // Decide if you want to return the partially populated clone or an empty fragment on error
       // For now, we'll proceed with the potentially incomplete clone.
     }
@@ -215,11 +217,11 @@ class TemplateEngine {
     if (templateId === 'room-item-template') {
       // Query selector on a DocumentFragment works as expected
       const productListCheck = clone.querySelector('.product-list');
-      console.log(`[TemplateEngine.create] Created fragment for "${templateId}". Checking for .product-list before returning:`, productListCheck ? 'Found' : 'Not Found'); // Add this log
+      logger.log(`[create] Created fragment for "${templateId}". Checking for .product-list before returning:`, productListCheck ? 'Found' : 'Not Found'); // Add this log
       if (!productListCheck) {
-        console.error(`[TemplateEngine.create] CRITICAL: .product-list not found in "${templateId}" fragment before returning. This fragment will not render products correctly.`); // Critical error if missing
+        logger.error(`[create] CRITICAL: .product-list not found in "${templateId}" fragment before returning. This fragment will not render products correctly.`); // Critical error if missing
         // Optionally log the fragment's innerHTML for inspection (can be verbose)
-        // const tempDivForCheck = document.createElement('div'); tempDivForCheck.appendChild(clone.cloneNode(true)); console.log('Fragment innerHTML for check:', tempDivForCheck.innerHTML);
+        // const tempDivForCheck = document.createElement('div'); tempDivForCheck.appendChild(clone.cloneNode(true)); logger.log('Fragment innerHTML for check:', tempDivForCheck.innerHTML);
       }
     }
     // *** End logging block ***
@@ -301,7 +303,7 @@ class TemplateEngine {
         if (data.room_id !== undefined) button.dataset.roomId = data.room_id;
 
         // Debug log to verify attributes
-        console.log(`Setting removal button data attributes: estimate=${data.estimate_id}, room=${data.room_id}, product=${data.product_index}`);
+        logger.log(`Setting removal button data attributes: estimate=${data.estimate_id}, room=${data.room_id}, product=${data.product_index}`);
       });
     }
 
@@ -464,7 +466,7 @@ class TemplateEngine {
 
               }
 
-              console.log("include item product:: ", product);
+              logger.log("include item product:: ", product);
               // Create the item from template
               const includeFragment = this.create('include-item-template', includeItemData);
 
@@ -558,7 +560,7 @@ class TemplateEngine {
       const replaceButton = element.querySelector('.replace-product-in-room');
       if (replaceButton) {
         replaceButton.dataset.replaceProductId = data.replace_product_id;
-        console.log(`TemplateEngine: Set data-replace-product-id on button to: ${data.replace_product_id}`);
+        logger.log(`TemplateEngine: Set data-replace-product-id on button to: ${data.replace_product_id}`);
       }
     }
     // --- END ADDED ---
@@ -568,7 +570,7 @@ class TemplateEngine {
       const replaceButton = element.querySelector('.replace-product-in-room');
       if (replaceButton) {
         replaceButton.dataset.pricingMethod = data.pricing_method;
-        console.log(`TemplateEngine: Set data-pricing-method on button to: ${data.pricing_method}`);
+        logger.log(`TemplateEngine: Set data-pricing-method on button to: ${data.pricing_method}`);
       }
     }
     // --- END ADDED ---
@@ -592,7 +594,7 @@ class TemplateEngine {
     }
 
     if (!container) {
-      console.error(`[TemplateEngine.insert] Container not found for template: "${templateId}"`); // Added context
+      logger.error(`[insert] Container not found for template: "${templateId}"`); // Added context
       // It might be useful to return the fragment even if the container isn't found,
       // in case the caller wants to handle appending it elsewhere.
       // Or just return null to indicate insertion failed. Let's return null for clarity of failure.
@@ -616,7 +618,7 @@ class TemplateEngine {
           // To replace, we need the content of the fragment, not the fragment itself
           // This might need adjustment depending on expected behavior.
           // Standard replaceChild takes a node. Replacing with a fragment's content means looping.
-          console.warn(`[TemplateEngine.insert] "replace" position used for template "${templateId}". Replacing container with fragment's children.`); // Added context
+          logger.warn(`[insert] "replace" position used for template "${templateId}". Replacing container with fragment's children.`); // Added context
           const fragmentChildren = Array.from(element.childNodes); // Get children before fragment is consumed
           container.parentNode.replaceChild(element, container); // This inserts the fragment, effectively replacing the container with its children
           // Note: The original container is replaced by the fragment. If you need a reference to the new element,
@@ -628,7 +630,7 @@ class TemplateEngine {
           container.appendChild(element); // element is a DocumentFragment
           break;
       }
-      console.log(`[TemplateEngine.insert] Inserted template "${templateId}" into container. Position: ${position}`); // Added context
+      logger.log(`[insert] Inserted template "${templateId}" into container. Position: ${position}`); // Added context
 
       // When appending/prepending a fragment, its children are moved.
       // If the template content is guaranteed to have a single top-level element
@@ -650,7 +652,7 @@ class TemplateEngine {
 
 
     } catch (error) {
-      console.error(`[TemplateEngine.insert] Error inserting template "${templateId}" into container. Position: ${position}`, error); // Added context
+      logger.error(`[insert] Error inserting template "${templateId}" into container. Position: ${position}`, error); // Added context
       return null; // Return null on insertion error
     }
   }
@@ -719,27 +721,27 @@ class TemplateEngine {
 
   // Add this method to TemplateEngine class
   debugTemplates() {
-    console.group('TemplateEngine Debug');
-    console.log('Registered template IDs:', Object.keys(this.templates));
-    console.log('Template elements:', Object.keys(this.templateElements));
+    logger.group('TemplateEngine Debug');
+    logger.log('Registered template IDs:', Object.keys(this.templates));
+    logger.log('Template elements:', Object.keys(this.templateElements));
 
     // Check each template
     Object.entries(this.templateElements).forEach(([id, template]) => {
-      console.log(`Template ${id}:`, template);
+      logger.log(`Template ${id}:`, template);
 
       // Check template content
       if (template.content) {
-        console.log(`- Has content: ${template.content.childNodes.length} child nodes`);
+        logger.log(`- Has content: ${template.content.childNodes.length} child nodes`);
       } else {
-        console.warn(`- No content for template ${id}`);
+        logger.warn(`- No content for template ${id}`);
       }
     });
 
-    console.groupEnd();
+    logger.groupEnd();
   }
 
    debugNoteData(element, data) {
-    console.log('Note data processing:', {
+    logger.log('Note data processing:', {
       hasNotes: !!(data.additional_notes && Array.isArray(data.additional_notes)),
       notesCount: data.additional_notes ? data.additional_notes.length : 0,
       notesContainer: element.querySelector('.notes-container') ? 'found' : 'missing',
@@ -751,26 +753,26 @@ class TemplateEngine {
 
   // Add to TemplateEngine.js
   verifyTemplates() {
-    console.group('Template Verification');
+    logger.group('Template Verification');
 
-    console.log('Registered templates:', Object.keys(this.templates));
-    console.log('Template elements:', Object.keys(this.templateElements));
+    logger.log('Registered templates:', Object.keys(this.templates));
+    logger.log('Template elements:', Object.keys(this.templateElements));
 
     // Check note template specifically
     if (this.templates['note-item-template']) {
-      console.log('Note template HTML:', this.templates['note-item-template'].substring(0, 100) + '...');
+      logger.log('Note template HTML:', this.templates['note-item-template'].substring(0, 100) + '...');
     } else {
-      console.warn('Note template not registered!');
+      logger.warn('Note template not registered!');
     }
 
     // Check if template element exists
     if (this.templateElements['note-item-template']) {
-      console.log('Note template element exists');
+      logger.log('Note template element exists');
     } else {
-      console.warn('Note template element not created!');
+      logger.warn('Note template element not created!');
     }
 
-    console.groupEnd();
+    logger.groupEnd();
   }
 
 }

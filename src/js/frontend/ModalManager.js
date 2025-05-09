@@ -217,11 +217,6 @@ class ModalManager {
     if (carouselContainers.length > 0) {
       logger.log(`Found ${carouselContainers.length} carousel containers in modal`);
 
-      // Count each type for better debugging
-      const suggestionCarousels = this.modal.querySelectorAll('.product-suggestions .suggestions-carousel').length;
-      const similarProductCarousels = this.modal.querySelectorAll('.product-similar-products .suggestions-carousel').length;
-
-      logger.log(`Carousel types: ${suggestionCarousels} suggestion carousels, ${similarProductCarousels} similar product carousels`);
 
       // Initialize all carousels
       initSuggestionsCarousels();
@@ -855,7 +850,7 @@ class ModalManager {
                                     try {
                                       TemplateEngine.insert('similar-product-item-template', similarProductData, similarProductsListInProductItem);
                                       logger.log(`[DEBUG] Successfully inserted template for similar product ID ${similarProduct.id}`);
-                                    } catch(templateInsertError) {
+                                    } catch (templateInsertError) {
                                       logger.error(`[DEBUG] Error inserting similar-product-item-template for similar product ID ${similarProduct.id}:`, templateInsertError);
                                     }
                                   });
@@ -942,76 +937,82 @@ class ModalManager {
                         // This else corresponds to: if (productListContainer)
                         logger.error(`[loadEstimatesList] .product-list container not found for room ${roomId}. Cannot render products.`);
                         const roomContent = roomElement ? roomElement.querySelector('.accordion-content') : null;
-                        if(roomContent) {
+                        if (roomContent) {
                           TemplateEngine.insert('products-empty-template', {}, roomContent);
                         }
                       }
 
-                      // --- SUGGESTION LOADING AND RENDERING START ---
-                      const suggestionsSection = roomElement ? roomElement.querySelector('.product-suggestions') : null;
-                      const suggestionsContainer = roomElement ? roomElement.querySelector('.product-suggestions .suggestions-container') : null;
-                      const suggestionsCarouselWrapper = roomElement ? roomElement.querySelector('.product-suggestions .suggestions-carousel') : null;
+                      if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
 
-                      const roomProductsArray = room.products || [];
-                      if (suggestionsSection && suggestionsContainer && suggestionsCarouselWrapper) {
-                        logger.log(`[loadEstimatesList] Found suggestions container for room ${roomId}. Fetching suggestions...`);
-                        suggestionsContainer.innerHTML = '<div class="loading-text">Loading suggestions...</div>';
-                        suggestionsSection.style.display = 'none'; // Hide until suggestions are loaded
+                        // --- SUGGESTION LOADING AND RENDERING START ---
+                        const suggestionsSection = roomElement ? roomElement.querySelector('.product-suggestions') : null;
+                        const suggestionsContainer = roomElement ? roomElement.querySelector('.product-suggestions .suggestions-container') : null;
+                        const suggestionsCarouselWrapper = roomElement ? roomElement.querySelector('.product-suggestions .suggestions-carousel') : null;
 
-                        this.dataService.getSuggestedProducts(estimateId, roomId, roomProductsArray)
-                          .then(suggestions => {
-                            // ***** SOLUTION START *****
-                            // Check if suggestions is null or undefined before accessing length
-                            const suggestionsLength = suggestions ? suggestions.length : 0;
-                            logger.log(`[loadEstimatesList] Fetched ${suggestionsLength} suggestions for room ${roomId}.`);
-                            // ***** SOLUTION END *****
+                        const roomProductsArray = room.products || [];
+                        if (suggestionsSection && suggestionsContainer && suggestionsCarouselWrapper) {
+                          logger.log(`[loadEstimatesList] Found suggestions container for room ${roomId}. Fetching suggestions...`);
+                          suggestionsContainer.innerHTML = '<div class="loading-text">Loading suggestions...</div>';
+                          suggestionsSection.style.display = 'none'; // Hide until suggestions are loaded
 
-                            suggestionsContainer.innerHTML = ''; // Clear loading/old
-                            if (suggestions && suggestions.length > 0) { // Check suggestions itself, then length
-                              suggestionsSection.style.display = 'block'; // Show section
-                              const carouselNav = suggestionsCarouselWrapper.querySelectorAll('.suggestions-nav');
-                              carouselNav.forEach(nav => nav.style.display = ''); // Show nav
+                          this.dataService.getSuggestedProducts(estimateId, roomId, roomProductsArray)
+                            .then(suggestions => {
+                              // ***** SOLUTION START *****
+                              // Check if suggestions is null or undefined before accessing length
+                              const suggestionsLength = suggestions ? suggestions.length : 0;
+                              logger.log(`[loadEstimatesList] Fetched ${suggestionsLength} suggestions for room ${roomId}.`);
+                              // ***** SOLUTION END *****
 
-                              suggestions.forEach(suggestion => {
-                                const suggestionData = { ...suggestion, estimate_id: estimateId, room_id: roomId };
-                                TemplateEngine.insert('suggestion-item-template', suggestionData, suggestionsContainer);
-                              });
-                              // Initialize carousel
-                              if (suggestionsCarouselWrapper.carouselInstance) {
-                                suggestionsCarouselWrapper.carouselInstance.destroy();
-                              }
-                              // Ensure SuggestionsCarousel is defined before calling new
-                              if (typeof SuggestionsCarousel !== 'undefined') {
-                                new SuggestionsCarousel(suggestionsCarouselWrapper);
+                              suggestionsContainer.innerHTML = ''; // Clear loading/old
+                              if (suggestions && suggestions.length > 0) { // Check suggestions itself, then length
+                                suggestionsSection.style.display = 'block'; // Show section
+                                const carouselNav = suggestionsCarouselWrapper.querySelectorAll('.suggestions-nav');
+                                carouselNav.forEach(nav => nav.style.display = ''); // Show nav
+
+                                suggestions.forEach(suggestion => {
+                                  const suggestionData = {
+                                    ...suggestion,
+                                    estimate_id: estimateId,
+                                    room_id: roomId
+                                  };
+                                  TemplateEngine.insert('suggestion-item-template', suggestionData, suggestionsContainer);
+                                });
+                                // Initialize carousel
+                                if (suggestionsCarouselWrapper.carouselInstance) {
+                                  suggestionsCarouselWrapper.carouselInstance.destroy();
+                                }
+                                // Ensure SuggestionsCarousel is defined before calling new
+                                if (typeof SuggestionsCarousel !== 'undefined') {
+                                  new SuggestionsCarousel(suggestionsCarouselWrapper);
+                                } else {
+                                  logger.error("SuggestionsCarousel class is not defined/imported.");
+                                }
                               } else {
-                                logger.error("SuggestionsCarousel class is not defined/imported.");
+                                suggestionsSection.style.display = 'none'; // Keep hidden if no suggestions
+                                const carouselNav = suggestionsCarouselWrapper.querySelectorAll('.suggestions-nav');
+                                carouselNav.forEach(nav => nav.style.display = 'none'); // Hide nav
+                                if (suggestionsCarouselWrapper.carouselInstance) {
+                                  suggestionsCarouselWrapper.carouselInstance.destroy();
+                                  suggestionsCarouselWrapper.carouselInstance = null;
+                                }
                               }
-                            } else {
-                              suggestionsSection.style.display = 'none'; // Keep hidden if no suggestions
+                            })
+                            .catch(error => {
+                              logger.error(`[loadEstimatesList] Error fetching suggestions for room ${roomId}:`, error);
+                              suggestionsContainer.innerHTML = '<p class="error-message">Error loading suggestions.</p>';
+                              suggestionsSection.style.display = 'none'; // Hide on error
                               const carouselNav = suggestionsCarouselWrapper.querySelectorAll('.suggestions-nav');
                               carouselNav.forEach(nav => nav.style.display = 'none'); // Hide nav
                               if (suggestionsCarouselWrapper.carouselInstance) {
                                 suggestionsCarouselWrapper.carouselInstance.destroy();
-                                suggestionsCarouselWrapper.carouselInstance = null;
+                                suggestionsCarouselWrapper.carouselInstance = null; // Clear reference
                               }
-                            }
-                          })
-                          .catch(error => {
-                            logger.error(`[loadEstimatesList] Error fetching suggestions for room ${roomId}:`, error);
-                            suggestionsContainer.innerHTML = '<p class="error-message">Error loading suggestions.</p>';
-                            suggestionsSection.style.display = 'none'; // Hide on error
-                            const carouselNav = suggestionsCarouselWrapper.querySelectorAll('.suggestions-nav');
-                            carouselNav.forEach(nav => nav.style.display = 'none'); // Hide nav
-                            if (suggestionsCarouselWrapper.carouselInstance) {
-                              suggestionsCarouselWrapper.carouselInstance.destroy();
-                              suggestionsCarouselWrapper.carouselInstance = null; // Clear reference
-                            }
-                          });
-                      } else {
-                        logger.warn(`[loadEstimatesList] Suggestions elements not found for room ${roomId}.`);
-                      }
+                            });
+                        } else {
+                          logger.warn(`[loadEstimatesList] Suggestions elements not found for room ${roomId}.`);
+                        }
                       // --- SUGGESTION LOADING AND RENDERING END ---
-
+                    }
                     }); // End of room loop
                   } else {
                     logger.log(`[loadEstimatesList] Estimate ${estimateId} has no rooms, showing empty template.`);
@@ -1041,8 +1042,10 @@ class ModalManager {
           this.bindEstimateListEventHandlers();
           this.bindDirectEstimateRemovalEvents();
           this.bindReplaceProductButtons();
-          this.bindSuggestedProductButtons();
-          this.bindSuggestionsToggle();
+          if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
+            this.bindSuggestedProductButtons();
+            this.bindSuggestionsToggle();
+          }
           this.bindSimilarProductsToggle();
 
           // Setup details toggle if available
@@ -1339,6 +1342,7 @@ class ModalManager {
           } else {
             logger.error('[handleProductRemoval] TemplateEngine or TemplateEngine.insert is not available.');
           }
+          if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
 
           // If room is now empty of products, also hide suggestions section
           const suggestions = roomElement.querySelector('.product-suggestions');
@@ -1353,13 +1357,17 @@ class ModalManager {
               carouselWrapper.carouselInstance = null;
             }
           }
+        }
           // Similar products are part of the product-item, so they are removed with the product.
           // No specific action needed here for similar products container of the room itself.
 
         } else {
           // Products still exist in the room, update suggestions for the room
           logger.log(`[handleProductRemoval] Products still exist in room ${roomId}. Checking for updated suggestions.`);
-          this.updateRoomSuggestions(estimateId, roomId, roomElement);
+          if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
+
+            this.updateRoomSuggestions(estimateId, roomId, roomElement);
+          }
         }
 
 
@@ -1459,7 +1467,10 @@ class ModalManager {
    * @param {HTMLElement} buttonElement - The button element that triggered the action
    */
   handleAddSuggestedProduct(productId, estimateId, roomId, buttonElement) {
-    logger.log('[handleAddSuggestedProduct] Function called with:', { productId, estimateId, roomId, buttonElement }); // Added log
+    if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+      return this.loadEstimatesList(roomId, estimateId);
+    }
+      logger.log('[handleAddSuggestedProduct] Function called with:', { productId, estimateId, roomId, buttonElement }); // Added log
     this.showLoading(); // Show loading indicator
 
     // Disable button and show loading state
@@ -1614,7 +1625,10 @@ class ModalManager {
    * Includes logging to help debug click events and data attributes.
    */
   bindSuggestedProductButtons() {
-    logger.log('[bindSuggestedProductButtons] Binding suggested product buttons'); // Added log
+    if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+      return;
+    }
+      logger.log('[bindSuggestedProductButtons] Binding suggested product buttons'); // Added log
 
     // Find all suggestion buttons in the modal
     // Use event delegation by querying within the main estimates list container
@@ -1691,7 +1705,11 @@ class ModalManager {
    * @param {HTMLElement} roomElement - The DOM element for the room
    */
   updateRoomSuggestions(estimateId, roomId, roomElement) {
-    logger.log(`[updateRoomSuggestions] Updating suggestions for room ${roomId} in estimate ${estimateId}`); // Added log
+    if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+      logger.log(`[updateRoomSuggestions] Suggested products feature is disabled. Skipping update for room ${roomId}.`);
+      return;
+    }
+      logger.log(`[updateRoomSuggestions] Updating suggestions for room ${roomId} in estimate ${estimateId}`); // Added log
 
     if (!roomElement) {
       logger.error('[updateRoomSuggestions] Room element not provided.'); // Added log
@@ -3077,13 +3095,16 @@ class ModalManager {
 
             // *** MODIFIED: After list reloads and room is expanded, update suggestions for *this* room ***
             // Find the newly loaded room element in the DOM
-            const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${responseRoomId}"][data-estimate-id="${responseEstimateId}"]`);
-            if (roomElement) {
-              logger.log('[handleNewRoomSubmission] List reloaded. Triggering suggestion update for room:', responseRoomId);
-              // Pass the room element, estimate ID, and room ID to the update function
-              this.updateRoomSuggestions(responseEstimateId, responseRoomId, roomElement);
-            } else {
-              logger.warn('[handleNewRoomSubmission] Could not find room element after list reload to update suggestions.');
+            if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+              const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${responseRoomId}"][data-estimate-id="${responseEstimateId}"]`);
+
+              if (roomElement) {
+                logger.log('[handleNewRoomSubmission] List reloaded. Triggering suggestion update for room:', responseRoomId);
+                // Pass the room element, estimate ID, and room ID to the update function
+                this.updateRoomSuggestions(responseEstimateId, responseRoomId, roomElement);
+              } else {
+                logger.warn('[handleNewRoomSubmission] Could not find room element after list reload to update suggestions.');
+              }
             }
             // *** END MODIFIED ***
           })
@@ -3285,11 +3306,14 @@ class ModalManager {
             // Content is visible, initialize carousels and load similar products
             setTimeout(() => {
               // Initialize Suggestions Carousels (runs concurrently with similar product loading)
-              const suggestionCarousels = content.querySelectorAll('.product-suggestions .suggestions-carousel');
-              if (suggestionCarousels.length) {
-                logger.log(`Found ${suggestionCarousels.length} suggestion carousels in opened accordion`);
-                if (typeof initSuggestionsCarousels === 'function') {
-                  initSuggestionsCarousels();
+              if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+
+                const suggestionCarousels = content.querySelectorAll('.product-suggestions .suggestions-carousel');
+                if (suggestionCarousels.length) {
+                  logger.log(`Found ${suggestionCarousels.length} suggestion carousels in opened accordion`);
+                  if (typeof initSuggestionsCarousels === 'function') {
+                    initSuggestionsCarousels();
+                  }
                 }
               }
 
@@ -3414,11 +3438,14 @@ class ModalManager {
                   }
 
                   // Initialize Suggestions Carousels after slideDown
-                  const suggestionCarousels = content.querySelectorAll('.product-suggestions .suggestions-carousel');
-                  if (suggestionCarousels.length) {
-                    logger.log(`Found ${suggestionCarousels.length} suggestion carousels in auto-opened accordion after slideDown.`);
-                    if (typeof initSuggestionsCarousels === 'function') {
-                      initSuggestionsCarousels();
+                  if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+
+                    const suggestionCarousels = content.querySelectorAll('.product-suggestions .suggestions-carousel');
+                    if (suggestionCarousels.length) {
+                      logger.log(`Found ${suggestionCarousels.length} suggestion carousels in auto-opened accordion after slideDown.`);
+                      if (typeof initSuggestionsCarousels === 'function') {
+                        initSuggestionsCarousels();
+                      }
                     }
                   }
 

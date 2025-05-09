@@ -175,6 +175,10 @@ export function addRoom(estimateId, roomData) {
  * @returns {Array|null} Array of suggestion products or null if not found
  */
 export function getSuggestionsForRoom(estimateId, roomId) {
+  if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
+    logger.log(`[getSuggestionsforRoom] Suggestions feature is disabled. Returning null for room ${roomId}.`);
+    return Promise.resolve(null); // Or Promise.resolve([])
+  }
   const storedData = loadEstimateData();
 
   if (!storedData.estimates ||
@@ -195,6 +199,10 @@ export function getSuggestionsForRoom(estimateId, roomId) {
  * @returns {Array|null} Array of suggestion products added to room or null
  */
 export function addSuggestionsToRoom(suggestedProducts, estimateId, roomId) {
+  if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
+    logger.log(`[addSuggestiontoRoom] Suggestions feature is disabled. Returning null for room ${roomId}.`);
+    return Promise.resolve(null); // Or Promise.resolve([])
+  }
   const storedData = loadEstimateData(); //
 
   if (!storedData.estimates ||

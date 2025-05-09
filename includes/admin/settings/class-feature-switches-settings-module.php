@@ -15,12 +15,7 @@ use RuDigital\ProductEstimator\Includes\Admin\Settings\SettingsModuleBase;
  */
 class FeatureSwitchesSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
-    public function __construct($plugin_name, $version)
-    {
-        parent::__construct($plugin_name, $version);
-        $this->option_name = 'product_estimator_feature_switches';
-
-    }
+    protected $option_name = 'product_estimator_feature_switches';
 
     /**
      * Set the tab and section details for this module.
@@ -126,7 +121,7 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      * @param    array    $args    Field arguments.
      */
     public function render_field_callback($args) {
-        $this->render_field($args);
+        $this->render_field($args, $this->option_name);
     }
 
     /**
@@ -195,11 +190,9 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
             'featureSwitches',
             array(
                 'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('product_estimator_feature_switches_nonce'),
+                'nonce' => wp_create_nonce('product_estimator_settings_nonce'),
                 'tab_id' => $this->tab_id,
-                'i18n' => array(
-
-                )
+                'i18n' => array()
             )
         );
     }

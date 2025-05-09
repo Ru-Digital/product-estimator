@@ -1033,6 +1033,39 @@ if (!function_exists('product_estimator')) {
     }
 }
 
+// In includes/functions.php
+if ( ! function_exists( 'product_estimator_features' ) ) {
+    /**
+     * Retrieves the global instance of the runtime FeatureSwitches service.
+     *
+     * This function provides a convenient way to access the feature switches
+     * from anywhere in the plugin (admin or frontend). It relies on the main
+     * ProductEstimator class having initialized the FeatureSwitches instance
+     * and stored it in $GLOBALS['g_pe_features'].
+     *
+     * @since X.Y.Z (Version you add this helper)
+     * @return \RuDigital\ProductEstimator\Includes\FeatureSwitches|null The FeatureSwitches instance if available, otherwise null.
+     */
+    function product_estimator_features() {
+        if ( isset( $GLOBALS['g_pe_features'] ) && is_object( $GLOBALS['g_pe_features'] ) ) {
+            // Ensure it's the correct class instance, if you want to be extra safe (optional)
+            // if ($GLOBALS['g_pe_features'] instanceof \RuDigital\ProductEstimator\Includes\FeatureSwitches) {}
+            return $GLOBALS['g_pe_features'];
+        }
+
+        // Optional: Log if called when the global instance isn't set.
+        // This might indicate that it's called too early or initialization failed.
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            if ( ! isset( $GLOBALS['g_pe_features'] ) ) {
+                // error_log( 'Product Estimator: product_estimator_features() called, but $GLOBALS[\'g_pe_features\'] is not set.' );
+            } elseif ( ! is_object( $GLOBALS['g_pe_features'] ) ) {
+                // error_log( 'Product Estimator: product_estimator_features() called, but $GLOBALS[\'g_pe_features\'] is not an object.' );
+            }
+        }
+        return null;
+    }
+}
+
 if (!function_exists('product_estimator_admin_script_handler')) {
     /**
      * Get the Admin Script Handler instance

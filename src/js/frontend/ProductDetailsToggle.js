@@ -81,7 +81,10 @@ class ProductDetailsToggle {
    * Prepare the DOM for suggested products toggle
    */
   prepareSuggestionsToggle() {
-    // Find all accordion content elements
+    if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+      return;
+    }
+      // Find all accordion content elements
     const accordionContents = document.querySelectorAll(this.config.selectors.accordionContent);
     logger.log(`Found ${accordionContents.length} accordion content elements to process for suggestions toggle`);
 
@@ -481,29 +484,32 @@ class ProductDetailsToggle {
       button._toggleBound = true;
     });
 
-    // Bind suggestions toggle buttons
-    const suggestionsToggleButtons = document.querySelectorAll(this.config.selectors.suggestionsToggleButton);
-    logger.log(`Found ${suggestionsToggleButtons.length} suggestions toggle buttons to bind`);
+    if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
 
-    suggestionsToggleButtons.forEach(button => {
-      // Skip if already bound
-      if (button._toggleBound) {
-        return;
-      }
+      // Bind suggestions toggle buttons
+      const suggestionsToggleButtons = document.querySelectorAll(this.config.selectors.suggestionsToggleButton);
+      logger.log(`Found ${suggestionsToggleButtons.length} suggestions toggle buttons to bind`);
 
-      // Store reference to handler for potential removal
-      button._toggleHandler = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.toggleSuggestions(button);
-      };
+      suggestionsToggleButtons.forEach(button => {
+        // Skip if already bound
+        if (button._toggleBound) {
+          return;
+        }
 
-      // Add event listener
-      button.addEventListener('click', button._toggleHandler);
+        // Store reference to handler for potential removal
+        button._toggleHandler = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.toggleSuggestions(button);
+        };
 
-      // Mark as bound to avoid duplicate handlers
-      button._toggleBound = true;
-    });
+        // Add event listener
+        button.addEventListener('click', button._toggleHandler);
+
+        // Mark as bound to avoid duplicate handlers
+        button._toggleBound = true;
+      });
+    }
 
     logger.log('All toggle events bound');
   }

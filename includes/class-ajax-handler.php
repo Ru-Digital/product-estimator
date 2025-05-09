@@ -19,7 +19,16 @@ class AjaxHandler {
      */
     public function __construct() {
         try {
-            // Ensure session is started
+            $features = product_estimator_features(); // Get feature flags
+            if ($features->suggested_products_enabled) {
+                add_action('wp_ajax_fetch_suggestions_for_modified_room', array($this, 'handle_fetch_suggestions_for_modified_room'));
+                add_action('wp_ajax_nopriv_fetch_suggestions_for_modified_room', array($this, 'handle_fetch_suggestions_for_modified_room'));
+
+                add_action('wp_ajax_get_suggested_products', array($this, 'generateSuggestions'));
+                add_action('wp_ajax_nopriv_get_suggested_products', array($this, 'generateSuggestions'));
+            }
+
+                // Ensure session is started
 //            $this->session = SessionHandler::getInstance();
 
             // Register AJAX handlers
@@ -79,8 +88,7 @@ class AjaxHandler {
             add_action('wp_ajax_get_similar_products', array($this, 'get_similar_products'));
             add_action('wp_ajax_nopriv_get_similar_products', array($this, 'get_similar_products'));
 
-            add_action('wp_ajax_get_suggested_products', array($this, 'generateSuggestions'));
-            add_action('wp_ajax_nopriv_get_suggested_products', array($this, 'generateSuggestions'));
+
 
             add_action('wp_ajax_update_customer_details', array($this, 'updateCustomerDetails'));
             add_action('wp_ajax_nopriv_update_customer_details', array($this, 'updateCustomerDetails'));
@@ -119,12 +127,6 @@ class AjaxHandler {
 
             add_action('wp_ajax_get_product_data_for_storage', array($this, 'get_product_data_for_storage'));
             add_action('wp_ajax_nopriv_get_product_data_for_storage', array($this, 'get_product_data_for_storage'));
-
-            add_action('wp_ajax_fetch_suggestions_for_modified_room', array($this, 'handle_fetch_suggestions_for_modified_room'));
-            add_action('wp_ajax_nopriv_fetch_suggestions_for_modified_room', array($this, 'handle_fetch_suggestions_for_modified_room'));
-
-
-
 
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -321,29 +323,44 @@ class AjaxHandler {
                 // Generate room suggestions.
                 // $room_products_ids_for_suggestions is already an array of product IDs.
                 // Format it for get_suggestions_for_room which expects an array of items, each with an 'id' key.
-                $current_room_contents_for_suggestions_formatted = [];
-                foreach ($room_products_ids_for_suggestions as $pid) {
-                    $current_room_contents_for_suggestions_formatted[] = ['id' => intval($pid)];
-                }
 
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('AJAX get_product_data_for_storage: Calling get_suggestions_for_room with formatted items: ' . print_r($current_room_contents_for_suggestions_formatted, true) . ' for room_area ' . $room_area);
-                }
+                $features = product_estimator_features(); // Get feature flags
 
-                $raw_suggestions = $product_additions_manager->get_suggestions_for_room($current_room_contents_for_suggestions_formatted, $room_area);
-
-                // **MODIFIED PART**
-                if (is_array($raw_suggestions)) {
-                    // Ensure the suggestions are a numerically indexed array for JSON
-                    $product_data['room_suggested_products'] = array_values($raw_suggestions);
+                if ($features->suggested_products_enabled) {
                     if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('AJAX get_product_data_for_storage: Suggestions returned (and re-indexed): ' . print_r($product_data['room_suggested_products'], true));
+                        error_log('AJAX get_product_data_for_storage: Suggested products ENABLED. Generating suggestions.');
+                    }
+                    // Format $room_products_ids_for_suggestions_context for get_suggestions_for_room
+                    // which expects an array of items, each with an 'id' key.
+                    $current_room_contents_for_suggestions_formatted = [];
+                    foreach ($room_products_ids_for_suggestions as $pid) {
+                        $current_room_contents_for_suggestions_formatted[] = ['id' => intval($pid)];
+                    }
+
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('AJAX get_product_data_for_storage: Calling get_suggestions_for_room with formatted items: ' . print_r($current_room_contents_for_suggestions_formatted, true) . ' for room_area ' . $room_area);
+                    }
+
+                    $raw_suggestions = $product_additions_manager->get_suggestions_for_room($current_room_contents_for_suggestions_formatted, $room_area);
+
+                    if (is_array($raw_suggestions)) {
+                        // Ensure the suggestions are a numerically indexed array for JSON
+                        $product_data['room_suggested_products'] = array_values($raw_suggestions);
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log('AJAX get_product_data_for_storage: Suggestions returned (and re-indexed): ' . print_r($product_data['room_suggested_products'], true));
+                        }
+                    } else {
+                        // If $raw_suggestions is not an array, default to an empty array.
+                        $product_data['room_suggested_products'] = [];
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log('AJAX get_product_data_for_storage: get_suggestions_for_room did not return an array. Value: ' . print_r($raw_suggestions, true) . '. Defaulting to empty array for room_suggested_products.');
+                        }
                     }
                 } else {
-                    // If $raw_suggestions is not an array (e.g., false or null from the method), default to an empty array.
+                    // If suggested_products_enabled is false, ensure room_suggested_products is an empty array.
                     $product_data['room_suggested_products'] = [];
                     if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('AJAX get_product_data_for_storage: get_suggestions_for_room did not return an array. Value: ' . print_r($raw_suggestions, true) . '. Defaulting to empty array for room_suggested_products.');
+                        error_log('AJAX get_product_data_for_storage: Suggested products DISABLED. Setting room_suggested_products to empty array.');
                     }
                 }
                 // **END MODIFIED PART**
@@ -384,10 +401,16 @@ class AjaxHandler {
      */
     public function handle_fetch_suggestions_for_modified_room() {
         check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('--- handle_fetch_suggestions_for_modified_room AJAX START ---');
-            error_log('Raw $_POST data: ' . print_r($_POST, true));
+        $features = product_estimator_features(); // Get feature flags
+        $estimate_id_input = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : null;
+        $room_id_input = isset($_POST['room_id']) ? sanitize_text_field($_POST['room_id']) : null;
+        if (!$features->suggested_products_enabled) {
+            wp_send_json_success([
+                'suggestions' => [],
+                'estimate_id' => $estimate_id_input,
+                'room_id' => $room_id_input,
+                'message' => sprintf(__('Suggestions are disabled.', 'product-estimator'))
+            ]);
         }
 
         $estimate_id_input = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : null;
@@ -450,9 +473,6 @@ class AjaxHandler {
 
             $raw_suggestions = $product_additions_manager->get_suggestions_for_room($products_for_suggestion_engine, $room_area);
             $suggestions = array_values($raw_suggestions);
-
-
-        #TODO UPDATE localStorage Products key to be the product ID, then modify Add / Delete and Replace functions
 
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('handle_fetch_suggestions_for_modified_room: Sending success with ' . count($suggestions) . ' suggestions.');
@@ -1223,7 +1243,7 @@ class AjaxHandler {
                     'length' => $room_length
                 ],
                 // Include suggestions in the response if available
-                'has_suggestions' => isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'])
+                'has_suggestions' => false
             ]);
 
         } catch (Exception $e) {
@@ -1633,6 +1653,18 @@ class AjaxHandler {
     public function generateSuggestions() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
+        $estimate_id = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : null;
+        $room_id = isset($_POST['room_id']) ? sanitize_text_field($_POST['room_id']) : null;
+        $features = product_estimator_features(); // Get feature flags
+
+        if (!$features->suggested_products_enabled) {
+            wp_send_json_success([
+                'suggestions' => [],
+                'estimate_id' => $estimate_id,
+                'room_id' => $room_id,
+                'message' => sprintf(__('Suggestions are disabled.', 'product-estimator'))
+            ]);
+        }
 
         // --- ENHANCED LOGGING START ---
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -1643,8 +1675,7 @@ class AjaxHandler {
         // --- ENHANCED LOGGING END ---
 
         // Get estimate_id, room_id, and room_products from POST data
-        $estimate_id = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : null;
-        $room_id = isset($_POST['room_id']) ? sanitize_text_field($_POST['room_id']) : null;
+
         $room_products_json = isset($_POST['room_products']) ? stripslashes($_POST['room_products']) : '[]'; // Get JSON string, default to empty array JSON
 
         // Decode the JSON string into a PHP array

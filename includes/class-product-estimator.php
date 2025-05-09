@@ -12,7 +12,7 @@ use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
 use RuDigital\ProductEstimator\Includes\Loader;
 use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
 use RuDigital\ProductEstimator\Includes\Admin\AdminScriptHandler;
-use RuDigital\ProductEstimator\Includes\EstimateHandler;
+use RuDigital\ProductEstimator\Includes\FeatureSwitches;
 
 
 /**
@@ -24,6 +24,7 @@ use RuDigital\ProductEstimator\Includes\EstimateHandler;
  * @package    RuDigital\ProductEstimator
  */
 class ProductEstimator {
+
     /**
      * The loader that's responsible for maintaining and registering all hooks that power
      * the plugin.
@@ -47,13 +48,6 @@ class ProductEstimator {
      * @var string
      */
     private $plugin_name;
-
-    /**
-     * Session handler
-     *
-     * @var SessionHandler
-     */
-    private $session;
 
     /**
      * AJAX handler
@@ -90,6 +84,13 @@ class ProductEstimator {
      */
     private $labels_frontend;
 
+    /**
+     * Feature Switches
+     *
+     * @var FeatureSwitches
+     */
+    private $feature_switches;
+
 
 
     /**
@@ -102,6 +103,9 @@ class ProductEstimator {
     public function __construct($plugin_name, $plugin_version) {
         $this->plugin_name = $plugin_name;
         $this->version = $plugin_version;
+
+        $this->initialize_feature_switches_and_set_global();
+
 
         // Initialize components that DON'T necessarily need the session immediately
         if (class_exists(LabelsFrontend::class)) {
@@ -129,6 +133,24 @@ class ProductEstimator {
         // Move footer content to the wp_footer hook
         add_action('wp_footer', array($this, 'addModalToFooter'), 30);
     }
+
+    private function initialize_feature_switches_and_set_global() { // Or your chosen method name
+        // **This is the crucial part:**
+        // Define the list of keys that are considered feature switches.
+        // This list MUST match the keys managed by your admin-only FeatureSwitchesSettingsModule.
+
+
+        if (class_exists('RuDigital\ProductEstimator\Includes\FeatureSwitches')) {
+            // FeatureSwitches::get_instance() is now parameterless
+            $features_instance = \RuDigital\ProductEstimator\Includes\FeatureSwitches::get_instance();
+
+            $this->feature_switches = $features_instance;
+            $GLOBALS['g_pe_features'] = $features_instance;
+        } else {
+            // ... error logging ...
+        }
+    }
+
 
     /**
      * Load template files and register them with WordPress

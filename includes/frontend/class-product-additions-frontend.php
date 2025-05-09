@@ -107,6 +107,12 @@ class ProductAdditionsFrontend extends FrontendBase
      */
     public function get_suggested_products_for_category($category_id)
     {
+        $features = product_estimator_features(); // Get feature flags
+
+        if (!$features->suggested_products_enabled) {
+            return [];
+        }
+
         // Get all relations
         $relations = get_option('product_estimator_product_additions', array());
         $suggested_categories = array();
@@ -169,6 +175,11 @@ class ProductAdditionsFrontend extends FrontendBase
      */
     public function get_suggestions_for_room($room_products, $room_area = null)
     {
+        $features = product_estimator_features(); // Get feature flags
+
+        if (!$features->suggested_products_enabled) {
+            return [];
+        }
         if (empty($room_products) || !is_array($room_products)) {
             return array();
         }

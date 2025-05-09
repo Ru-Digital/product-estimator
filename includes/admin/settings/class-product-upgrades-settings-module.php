@@ -19,7 +19,7 @@ class ProductUpgradesSettingsModule extends SettingsModuleBase implements Settin
      * @access   private
      * @var      string $option_name Option name for settings
      */
-    private $option_name = 'product_estimator_product_upgrades';
+    protected $option_name = 'product_estimator_product_upgrades';
 
     /**
      * Initialize the class and set its properties.

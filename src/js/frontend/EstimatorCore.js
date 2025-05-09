@@ -32,6 +32,7 @@ class EstimatorCore {
       },
       autoInit: true,
       i18n: window.productEstimatorVars?.i18n || {} // Get i18n from global vars on init
+
     }, config);
 
     // Module references

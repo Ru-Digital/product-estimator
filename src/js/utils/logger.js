@@ -71,18 +71,27 @@ export function createLogger(componentName) {
       if (window.productEstimatorVars?.debug) {
         ensureMainPluginLogGroupIsStarted(); // This ensures it for any log call
         console.log(componentLabel, ...args);
+        if (window.debug && window.debug.trace) {
+          console.trace();
+        }
       }
     },
     warn: (...args) => {
       if (window.productEstimatorVars?.debug) {
         ensureMainPluginLogGroupIsStarted();
         console.warn(componentLabel, ...args);
+        if (window.debug && window.debug.trace) {
+          console.trace();
+        }
       }
     },
     error: (...args) => {
       if (window.productEstimatorVars?.debug) {
         ensureMainPluginLogGroupIsStarted(false);
         console.error(componentLabel, ...args);
+        if (window.debug && window.debug.trace) {
+          console.trace();
+        }
       }
     },
     group: (groupName = 'Details', collapsed = true) => {

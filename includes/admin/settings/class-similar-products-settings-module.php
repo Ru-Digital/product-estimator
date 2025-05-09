@@ -20,7 +20,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
      * @access   private
      * @var      string $option_name Option name for settings
      */
-    private $option_name = 'product_estimator_similar_products';
+    protected $option_name = 'product_estimator_similar_products';
 
     /**
      * Initialize the class and set its properties.

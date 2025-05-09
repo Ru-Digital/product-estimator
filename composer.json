@@ -37,6 +37,7 @@
         },
         "classmap": [
             "includes/class-activator.php",
+            "includes/class-feature-switches.php",
             "includes/class-product-estimator.php",
             "includes/class-i18n.php",
             "includes/class-deactivator.php",
@@ -66,6 +67,7 @@
             "includes/admin/class-customer-estimates-list-table.php",
             "includes/admin/class-csv-export-handler.php",
             "includes/admin/settings/interface-settings-module.php",
+            "includes/admin/settings/class-feature-switches-settings-module.php",
             "includes/admin/settings/class-settings-module-base.php",
             "includes/admin/settings/class-general-settings-module.php",
             "includes/admin/settings/class-pricing-rules-settings-module.php",

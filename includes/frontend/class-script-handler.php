@@ -161,6 +161,24 @@ class ScriptHandler {
         // Create a fresh nonce for AJAX requests - ensure this name matches what's used in AjaxHandler.php
         $nonce = wp_create_nonce('product_estimator_nonce');
 
+        // Get feature switches
+        $raw_feature_switches = get_option('product_estimator_feature_switches', []); // This will be [ "suggested_products_enabled" => 1 ]
+        $processed_feature_switches = [];
+
+        if (is_array($raw_feature_switches)) {
+            foreach ($raw_feature_switches as $key => $value) {
+                // For "suggested_products_enabled", $key is "suggested_products_enabled" and $value is 1
+                if ($value === '1' || $value === 1 || $value === true) { // 1 === 1 is true
+                    $processed_feature_switches[$key] = true; // So, $processed_feature_switches["suggested_products_enabled"] becomes true
+                } elseif ($value === '0' || $value === 0 || $value === false) {
+                    $processed_feature_switches[$key] = false;
+                } else {
+                    $processed_feature_switches[$key] = $value;
+                }
+            }
+        }
+
+
         // Localize the script with your data
         wp_localize_script(
             $this->plugin_name,
@@ -171,7 +189,8 @@ class ScriptHandler {
                 'is_admin' => current_user_can('manage_options'),
                 'plugin_url' => PRODUCT_ESTIMATOR_PLUGIN_URL,
                 'estimator_url' => home_url('/estimator/'),
-                'debug' => defined('WP_DEBUG') && WP_DEBUG, // Pass debug mode to JS
+                'debug' => defined('WP_DEBUG') && WP_DEBUG, // Pass debug mode to JS,
+                'featureSwitches' => $processed_feature_switches, // <-- Add this line
                 'i18n' => array(
                     'loading' => __('Loading...', 'product-estimator'),
                     'error' => __('Error loading content. Please try again.', 'product-estimator'),

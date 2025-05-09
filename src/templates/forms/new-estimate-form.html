@@ -1,0 +1,24 @@
+<template id="new-estimate-form-template">
+  <div id="new-estimate-form-wrapper">
+    <h2>Create New Estimate</h2>
+    <form id="new-estimate-form" method="post" data-has-email="false">
+      <div class="form-group">
+        <label for="estimate-name">Estimate Name</label>
+        <input type="text" id="estimate-name" name="estimate_name" placeholder="e.g. Home Renovation" required>
+      </div>
+
+      <div class="customer-details-section">
+        <h4>Your Details</h4>
+        <div class="form-group">
+          <label for="customer-postcode">Postcode</label>
+          <input type="text" id="customer-postcode" name="customer_postcode" placeholder="Your postcode" required>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" class="submit-btn">Create Estimate</button>
+        <button type="button" class="cancel-btn" data-form-type="estimate">Cancel</button>
+      </div>
+    </form>
+  </div>
+</template>

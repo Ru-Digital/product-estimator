@@ -67,6 +67,17 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      */
     protected $section_title;
 
+
+    /**
+     * The option name for this settings module.
+     * Child classes can override this in their constructor.
+     *
+     * @since    1.X.X // Update to your current version
+     * @access   protected
+     * @var      string    $option_name    The WordPress option name where settings for this module are stored.
+     */
+    protected $option_name = "product_estimator_settings";
+
     /**
      * Initialize the class and set its properties.
      *
@@ -74,9 +85,10 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    string    $plugin_name       The name of this plugin.
      * @param    string    $version           The version of this plugin.
      */
-    public function __construct($plugin_name, $version) {
+    public function __construct($plugin_name, $version ) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
+
 
         // Set tab and section details in child classes
         $this->set_tab_details();
@@ -202,14 +214,8 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @since    1.1.0
      * @access   public
      */
-    /**
-     * Handle AJAX save request for this module
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function handle_ajax_save() {
-        // Verify nonce and permissions (keep existing code)
+    public function handle_ajax_save() { // Removed $override_option_name parameter
+        // Verify nonce and permissions
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_settings_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed', 'product-estimator')));
             exit;
@@ -220,7 +226,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             exit;
         }
 
-        // Parse form data (keep existing code)
+        // Parse form data
         if (!isset($_POST['form_data'])) {
             wp_send_json_error(array('message' => __('No form data received', 'product-estimator')));
             exit;
@@ -228,18 +234,26 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
         parse_str($_POST['form_data'], $form_data);
 
-        if (isset($form_data['product_estimator_settings'])) {
-            $checkbox_fields = $this->get_checkbox_fields();
+        // Determine the key for this module's settings in the form data using $this->option_name
+        $settings_data_key = $this->option_name;
 
-            foreach ($checkbox_fields as $field) {
-                if (!isset($form_data['product_estimator_settings'][$field])) {
-                    $form_data['product_estimator_settings'][$field] = 0;
-                }
+        // Ensure the settings array for this module exists in form_data.
+        // This is crucial if all settings for the module (e.g., all checkboxes) are unchecked,
+        // as unchecked checkboxes are not typically sent by browsers.
+        if (!isset($form_data[$settings_data_key])) {
+            $form_data[$settings_data_key] = array();
+        }
+
+        // Handle checkbox fields: if a checkbox is not in the submitted data for this module,
+        // it means it was unchecked. Set its value to 0.
+        $checkbox_fields = $this->get_checkbox_fields(); // Method in child class
+        foreach ($checkbox_fields as $field) {
+            if (!isset($form_data[$settings_data_key][$field])) {
+                $form_data[$settings_data_key][$field] = 0;
             }
         }
 
-
-        // Process the settings specific to this module
+        // Process the settings specific to this module (pass $form_data by reference)
         $result = $this->process_form_data($form_data);
 
         if (is_wp_error($result)) {
@@ -247,41 +261,35 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             exit;
         }
 
-        // Update settings - THIS IS THE CRITICAL SECTION
-        if (isset($form_data['product_estimator_settings'])) {
+        // Update settings using $this->option_name
+        // $form_data[$settings_data_key] should now be correctly populated.
+        if (isset($form_data[$settings_data_key])) {
             global $wpdb;
 
-            // Get current settings
-            $current_settings = get_option('product_estimator_settings', array());
+            // Get current settings for this specific option name
+            $current_settings = get_option($this->option_name, array());
 
-            // Validate the new settings
-            $validated_settings = $this->validate_settings($form_data['product_estimator_settings']);
+            // Validate the new settings for the current module
+            $validated_settings = $this->validate_settings($form_data[$settings_data_key]);
 
-            // Special handling for HTML fields
+            // Special handling for HTML fields (ensure this logic is appropriate or adapted for your needs)
             $html_fields = array(
                 'pdf_footer_text',
                 'pdf_footer_contact_details_content',
-                'notification_request_copy_content',  // Add notification email content fields
+                'notification_request_copy_content',
                 'notification_estimate_approved_content',
                 'notification_estimate_rejected_content'
             );
 
             foreach ($html_fields as $field) {
                 if (isset($validated_settings[$field])) {
-                    // Make sure we strip any slashes that were added during form submission
                     $html_content = stripslashes($validated_settings[$field]);
-
-                    // Store the raw HTML content
                     $current_settings[$field] = $html_content;
-
-                    // Log for debugging
-                    // For debugging
                     if (defined('WP_DEBUG') && WP_DEBUG) {
                         error_log("Setting $field to: " . $html_content);
                     }
                 }
             }
-
 
             // Merge all other settings
             foreach ($validated_settings as $key => $value) {
@@ -290,35 +298,28 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
                 }
             }
 
-            // Serialize the data ourselves
             $serialized_data = serialize($current_settings);
+            $option_name_to_save = $this->option_name; // Use the module's specific option name
 
-            // Force direct database update to bypass WordPress option filters
-            $option_name = 'product_estimator_settings';
-            $result = $wpdb->update(
-                $wpdb->options,
-                array('option_value' => $serialized_data),
-                array('option_name' => $option_name),
-                array('%s'),
-                array('%s')
-            );
 
-            // Reset cache to ensure we get the updated version next time
-            wp_cache_delete('product_estimator_settings', 'options');
+            error_log("[DEBUG][OPTION_NAME]" . $option_name_to_save);
+            error_log("[DEBUG][OPTION_VALUE]" . print_r($current_settings, true));
+            error_log("[DEBUG][OPTION_VALUE][SERIALIZED]" . print_r($serialized_data, true));
+            $update_result = update_option($option_name_to_save, $current_settings);
 
-            // Log the result
-            error_log('Direct database update result: ' . ($result !== false ? $result : 'failed'));
+            wp_cache_delete($option_name_to_save, 'options');
 
-            // Check for any database errors
-            if ($wpdb->last_error) {
-                error_log('Database error: ' . $wpdb->last_error);
-            }
+            error_log('update_option result for ' . $option_name_to_save . ': ' . ($update_result ? 'true (changed/added)' : 'false (not changed or error)'));
+
         }
+        // else: This part might be reached if process_form_data had an issue, or if no actual settings fields
+        // were defined/submitted for the module (even after checkbox handling).
+        // The error for "No settings data received" is primarily handled by process_form_data now.
+
 
         // Allow modules to perform additional actions after saving
-        $this->after_save_actions($form_data);
+        $this->after_save_actions($form_data); // $form_data contains all parsed data
 
-        // Send success response
         wp_send_json_success(array(
             'message' => sprintf(
                 __('%s settings saved successfully', 'product-estimator'),
@@ -625,38 +626,42 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      *
      * @since    1.1.0
      * @access   protected
-     * @param    array    $form_data    The form data to process
+     * @param    array    &$form_data    The form data to process (passed by reference).
      * @return   true|\WP_Error    True on success, WP_Error on failure
      */
-    // Modify process_form_data method to preserve HTML
-    protected function process_form_data($form_data) {
-        if (!isset($form_data['product_estimator_settings'])) {
-            return new \WP_Error('missing_data', __('No settings data received', 'product-estimator'));
+    protected function process_form_data($form_data) { // $form_data is passed by reference
+        $settings_data_key = $this->option_name; // Use the module's specific option name
+
+        // This check is after handle_ajax_save ensures $form_data[$settings_data_key] is at least an empty array.
+        // So, this error would mean something more fundamental is wrong if $form_data[$settings_data_key] isn't an array or somehow removed.
+        // Or, if the module has no registered fields and all were checkboxes (already handled above),
+        // $form_data[$settings_data_key] would be an empty array. This is valid.
+        if (!isset($form_data[$settings_data_key]) || !is_array($form_data[$settings_data_key])) {
+            // This condition implies an unexpected state, as handle_ajax_save should initialize it.
+            return new \WP_Error('malformed_data', sprintf(__('Malformed settings data for %s.', 'product-estimator'), $settings_data_key));
         }
 
-        $settings = $form_data['product_estimator_settings'];
+        // $settings is a reference to the specific module's data within $form_data
+        // For example: $settings = &$form_data['product_estimator_feature_switches'];
+        $settings = &$form_data[$settings_data_key];
 
-        // Handle HTML fields specially
-        $html_fields = ['pdf_footer_text', 'pdf_footer_contact_details_content'];
-
+        // Handle HTML fields if necessary for this module (original logic from base was specific)
+        // This section might need to be generalized or made conditional if only certain modules have these HTML fields.
+        // For now, assuming the logic applies to the $settings of the current module.
+        $html_fields = ['pdf_footer_text', 'pdf_footer_contact_details_content']; // Example fields
         foreach ($html_fields as $field) {
             if (isset($settings[$field])) {
-                // Store raw content without WordPress filtering
-                // This is critical - we want to keep the content exactly as submitted
                 $raw_content = $settings[$field];
-
-                // If content seems to be double-escaped, fix it
                 if (strpos($raw_content, '&amp;lt;') !== false) {
                     $settings[$field] = html_entity_decode($raw_content, ENT_QUOTES | ENT_HTML5);
                 }
             }
         }
+        // Any other pre-processing of $settings can happen here.
 
-        // Update the form data
-        $form_data['product_estimator_settings'] = $settings;
-
-        return true;
+        return true; // $form_data (and thus $settings) might have been modified by reference.
     }
+
 
     /**
      * Additional actions to perform after saving settings
@@ -754,7 +759,9 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    array    $args    Field arguments.
      */
     protected function render_field($args) {
-        $options = get_option('product_estimator_settings');
+
+        $options = get_option($this->option_name);
+
         $id = $args['id'];
 
         // Get value with fallback to default if provided
@@ -763,7 +770,6 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             $value = $args['default'];
         }
 
-        // Common attributes for number inputs
         $extra_attrs = '';
         if (isset($args['type']) && $args['type'] === 'number') {
             if (isset($args['min'])) {
@@ -782,7 +788,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
                 printf(
                     '<input type="checkbox" id="%1$s" name="%2$s[%1$s]" value="1" %3$s />',
                     esc_attr($id),
-                    esc_attr('product_estimator_settings'),
+                    esc_attr($this->option_name), // Uses correct option name
                     checked($value, 1, false)
                 );
                 break;
@@ -791,7 +797,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
                 printf(
                     '<textarea id="%1$s" name="%2$s[%1$s]" rows="5" cols="50">%3$s</textarea>',
                     esc_attr($id),
-                    esc_attr('product_estimator_settings'),
+                    esc_attr($this->option_name), // Uses correct option name
                     esc_textarea($value)
                 );
                 break;
@@ -801,13 +807,16 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
                     '<input type="%1$s" id="%2$s" name="%3$s[%2$s]" value="%4$s" class="regular-text"%5$s />',
                     esc_attr($args['type']),
                     esc_attr($id),
-                    esc_attr('product_estimator_settings'),
+                    esc_attr($this->option_name), // Uses correct option name
                     esc_attr($value),
                     $extra_attrs
                 );
         }
 
-        if (isset($args['description'])) {
+        if (isset($args['description']) && $args['type'] == "checkbox") {
+            printf(' <span class="description">%s</span>', esc_html($args['description']));
+
+        } else if(isset($args['description'])) {
             printf('<p class="description">%s</p>', esc_html($args['description']));
         }
     }
@@ -822,7 +831,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    array    $args    Field arguments.
      */
     protected function render_textarea_field($args) {
-        $options = get_option('product_estimator_settings');
+        $options = get_option($this->option_name);
         $id = $args['id'];
         $value = isset($options[$id]) ? $options[$id] : '';
 
@@ -830,7 +839,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             $value = $args['default'];
         }
 
-        echo '<textarea id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']" rows="5" cols="50">' . esc_textarea($value) . '</textarea>';
+        echo '<textarea id="' . esc_attr($id) . '" name="' . esc_attr($this->option_name) . '[' . esc_attr($id) . ']" rows="5" cols="50">' . esc_textarea($value) . '</textarea>';
 
         if (isset($args['description'])) {
             echo '<p class="description">' . esc_html($args['description']) . '</p>';
@@ -845,7 +854,8 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    array    $args    Field arguments.
      */
     protected function render_file_field($args) {
-        $options = get_option('product_estimator_settings');
+        $options = get_option($this->option_name);
+
         $id = $args['id'];
         $file_id = isset($options[$id]) ? $options[$id] : '';
         $file_url = '';
@@ -861,8 +871,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         }
 
         // Hidden input to store the attachment ID
-        echo '<input type="hidden" id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']" value="' . esc_attr($file_id) . '"' . ($is_required ? ' required' : '') . ' />';
-
+        echo '<input type="hidden" id="' . esc_attr($id) . '" name="'.$this->option_name . '[' . esc_attr($id) . ']" value="' . esc_attr($file_id) . '"' . ($is_required ? ' required' : '') . ' />';
         // File preview with improved handling
         echo '<div class="file-preview-wrapper">';
         if ($file_url && $file_exists) {
@@ -926,7 +935,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    array    $args    Field arguments.
      */
     protected function render_html_field($args) {
-        $options = get_option('product_estimator_settings');
+        $options = get_option($this->option_name);
         $id = $args['id'];
 
         // Get the raw value
@@ -948,28 +957,28 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         // Output a hidden field with the raw HTML value for JavaScript to use
         // Use WordPress rich text editor
         $editor_id = $id;
-        $editor_settings = array(
-            'textarea_name' => "product_estimator_settings[{$id}]",
-            'media_buttons' => false,
-            'textarea_rows' => 10,
-            'teeny'         => false,
-            'wpautop'       => false,
-            'tinymce'       => array(
-                'toolbar1'        => 'bold,italic,underline,bullist,numlist,link,unlink',
-                'toolbar2'        => '',
-                'plugins'         => 'lists,paste,wordpress,wplink',
+//        $editor_settings = array(
+//            'textarea_name' => $this->option_name . "[{$id}]",
+//            'media_buttons' => false,
+//            'textarea_rows' => 10,
+//            'teeny'         => false,
+//            'wpautop'       => false,
+//            'tinymce'       => array(
+//                'toolbar1'        => 'bold,italic,underline,bullist,numlist,link,unlink',
+//                'toolbar2'        => '',
+//                'plugins'         => 'lists,paste,wordpress,wplink',
+//
+//                'forced_root_block'  => '',
+//                'entity_encoding'    => 'raw',
+//                'verify_html'        => false,
+//                'cleanup'            => false,
+//                'keep_styles'        => true,
+//                ),
+//            'quicktags'     => true,
+//        );
 
-                'forced_root_block'  => '',
-                'entity_encoding'    => 'raw',
-                'verify_html'        => false,
-                'cleanup'            => false,
-                'keep_styles'        => true,
-                ),
-            'quicktags'     => true,
-        );
-
         $editor_settings = array(
-            'textarea_name' => "product_estimator_settings[{$id}]",
+            'textarea_name' => $this->option_name ."[{$id}]",
             'media_buttons' => false,
             'textarea_rows' => 10,
             'teeny'         => false, // Set to false to get more formatting options

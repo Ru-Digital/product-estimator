@@ -20,7 +20,7 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
      * @access   private
      * @var      string $option_name Option name for settings
      */
-    private $option_name;
+    protected $option_name = 'product_estimator_labels';
 
 
     /**
@@ -31,11 +31,6 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
      * @var      array    $label_types    Array of label types
      */
     private $label_types = [];
-
-    public function __construct($plugin_name, $version) {
-        parent::__construct($plugin_name, $version);
-        $this->option_name = 'product_estimator_labels';
-    }
 
     /**
      * Set the tab and section details.
@@ -469,71 +464,7 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
      * @param    array    $args    Field arguments
      */
     public function render_field_callback($args) {
-        $this->render_field($args);
-    }
-
-    /**
-     * Render a settings field.
-     *
-     * @since    1.2.0
-     * @access   protected
-     * @param    array    $args    Field arguments.
-     */
-    protected function render_field($args) {
-        // Get labels from the dedicated labels option
-        $labels = get_option($this->option_name, []);
-        $id = $args['id'];
-
-        // Get value with fallback to default if provided
-        $value = isset($labels[$id]) ? $labels[$id] : '';
-        if ($value === '' && isset($args['default'])) {
-            $value = $args['default'];
-        }
-
-        // Common attributes for number inputs
-        $extra_attrs = '';
-        if (isset($args['type']) && $args['type'] === 'number') {
-            if (isset($args['min'])) {
-                $extra_attrs .= ' min="' . esc_attr($args['min']) . '"';
-            }
-            if (isset($args['max'])) {
-                $extra_attrs .= ' max="' . esc_attr($args['max']) . '"';
-            }
-            if (isset($args['step'])) {
-                $extra_attrs .= ' step="' . esc_attr($args['step']) . '"';
-            }
-        }
-
-        switch ($args['type']) {
-            case 'checkbox':
-                printf(
-                    '<input type="checkbox" id="%1$s" name="product_estimator_settings[%1$s]" value="1" %2$s />',
-                    esc_attr($id),
-                    checked($value, 1, false)
-                );
-                break;
-
-            case 'textarea':
-                printf(
-                    '<textarea id="%1$s" name="product_estimator_settings[%1$s]" rows="5" cols="50">%2$s</textarea>',
-                    esc_attr($id),
-                    esc_textarea($value)
-                );
-                break;
-
-            default:
-                printf(
-                    '<input type="%1$s" id="%2$s" name="product_estimator_settings[%2$s]" value="%3$s" class="regular-text"%4$s />',
-                    esc_attr($args['type']),
-                    esc_attr($id),
-                    esc_attr($value),
-                    $extra_attrs
-                );
-        }
-
-        if (isset($args['description'])) {
-            printf('<p class="description">%s</p>', esc_html($args['description']));
-        }
+        parent::render_field($args, $this->option_name, 'product_estimator_settings');
     }
 
     /**
@@ -633,15 +564,6 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
     public function enqueue_scripts() {
         // Enqueue WordPress editor functionality
         wp_enqueue_editor();
-
-        // Enqueue the labels settings script
-        wp_enqueue_script(
-            $this->plugin_name . '-label-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/admin/label-settings.js',
-            ['jquery', $this->plugin_name . '-admin'],
-            $this->version,
-            true
-        );
 
         // Localize script
         wp_localize_script(

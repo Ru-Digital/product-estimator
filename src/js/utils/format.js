@@ -29,6 +29,35 @@ export function formatPrice(amount, currencySymbol = '$', decimals = 2) {
 }
 
 /**
+ * Format a price range with currency symbol.
+ * If min and max prices are the same, it shows a single price.
+ * @param {number|string|null|undefined} minPrice - Minimum price
+ * @param {number|string|null|undefined} maxPrice - Maximum price
+ * @param {string} currencySymbol - Currency symbol
+ * @param {number} decimals - Number of decimal places
+ * @returns {string} Formatted price range string
+ */
+export function formatPriceRange(minPrice, maxPrice, currencySymbol = '$', decimals = 2) {
+  const numMinPrice = (minPrice === undefined || minPrice === null) ? 0 : (typeof minPrice === 'string' ? parseFloat(minPrice.replace(/[^0-9.-]+/g,"")) : minPrice);
+  const numMaxPrice = (maxPrice === undefined || maxPrice === null) ? 0 : (typeof maxPrice === 'string' ? parseFloat(maxPrice.replace(/[^0-9.-]+/g,"")) : maxPrice);
+
+  if (isNaN(numMinPrice) && isNaN(numMaxPrice)) {
+    return `${formatPrice(0, currencySymbol, decimals)}`; // Or some other default like "N/A"
+  }
+  if (isNaN(numMinPrice)) {
+    return formatPrice(numMaxPrice, currencySymbol, decimals);
+  }
+  if (isNaN(numMaxPrice)) {
+    return formatPrice(numMinPrice, currencySymbol, decimals);
+  }
+
+  if (numMinPrice === numMaxPrice) {
+    return formatPrice(numMinPrice, currencySymbol, decimals);
+  }
+  return `${formatPrice(numMinPrice, currencySymbol, decimals)} - ${formatPrice(numMaxPrice, currencySymbol, decimals)}`;
+}
+
+/**
  * Debounce function to limit how often a function can be called
  * @param {Function} func - Function to debounce
  * @param {number} wait - Milliseconds to wait

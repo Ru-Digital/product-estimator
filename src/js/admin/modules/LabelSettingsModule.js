@@ -46,7 +46,7 @@ class LabelSettingsModule {
     // Email validation
     $(document).on('change', 'input[type="email"]', this.validateEmail.bind(this));
 
-    console.log('Label Settings events bound');
+    // console.log('Label Settings events bound');
   }
 
   /**

@@ -10,6 +10,8 @@ import ModalManager from './ModalManager';
 import VariationHandler from './VariationHandler';
 import CustomerDetailsManager from './CustomerDetailsManager';
 
+import { createLogger, closeMainPluginLogGroup } from '@utils'; // Make sure closeMainPluginLogGroup is imported
+const logger = createLogger('EstimatorCore');
 
 class EstimatorCore {
   /**
@@ -17,6 +19,9 @@ class EstimatorCore {
    * @param {Object} config - Configuration options
    */
   constructor(config = {}) {
+
+    this.isActive = true;
+
     // Default configuration
     this.config = Object.assign({
       debug: false,
@@ -25,7 +30,9 @@ class EstimatorCore {
         estimatorMenuButtons: '.product-estimator-menu-item a, a.product-estimator-menu-item',
         modalContainer: '#product-estimator-modal'
       },
-      autoInit: true
+      autoInit: true,
+      i18n: window.productEstimatorVars?.i18n || {} // Get i18n from global vars on init
+
     }, config);
 
     // Module references
@@ -51,23 +58,23 @@ class EstimatorCore {
   init() {
     // Strong guard against multiple initialization
     if (this.initialized) {
-      this.log('EstimatorCore already initialized - aborting');
+      logger.log('already initialized - aborting');
       return this;
     }
 
     // Also check for global init status
     if (window._productEstimatorInitialized && window.productEstimator && window.productEstimator.core) {
-      this.log('EstimatorCore detected as already initialized globally - aborting');
+      logger.log('detected as already initialized globally - aborting');
       this.initialized = true;
       return this;
     }
 
-    this.log('Initializing EstimatorCore');
+    logger.log('Initializing EstimatorCore');
 
     try {
       // Verify jQuery is properly loaded
       if (typeof jQuery === 'undefined') {
-        console.error('jQuery is not loaded, cannot initialize EstimatorCore');
+        logger.error('jQuery is not loaded, cannot initialize EstimatorCore');
         return this;
       }
 
@@ -77,12 +84,12 @@ class EstimatorCore {
       }
 
       // Safe initialization with clear console marking
-      console.log('%c=== PRODUCT ESTIMATOR INITIALIZATION START ===', 'background: #f0f0f0; color: #333; padding: 3px; border-radius: 3px;');
+      logger.log('%c=== PRODUCT ESTIMATOR INITIALIZATION START ===', 'background: #f0f0f0; color: #333; padding: 3px; border-radius: 3px;');
 
       // Ensure we wait for DOM to be fully ready with a clear initialization boundary
       const initializeComponents = () => {
         if (this.modalManager) {
-          this.log('Components already initialized - skipping');
+          logger.log('Components already initialized - skipping');
           return;
         }
 
@@ -99,16 +106,16 @@ class EstimatorCore {
 
         // Initialize variation handler if on product page
         if (this.isWooCommerceProductPage()) {
-          this.log('WooCommerce product page detected, initializing VariationHandler');
+          logger.log('WooCommerce product page detected, initializing VariationHandler');
           this.variationHandler = new VariationHandler({ debug: this.config.debug });
         }
 
         this.bindGlobalEvents();
         this.initialized = true;
-        this.log('EstimatorCore initialized successfully');
+        logger.log('initialized successfully');
         this.emit('core:initialized');
 
-        console.log('%c=== PRODUCT ESTIMATOR INITIALIZATION COMPLETE ===', 'background: #f0f0f0; color: #333; padding: 3px; border-radius: 3px;');
+        logger.log('%c=== PRODUCT ESTIMATOR INITIALIZATION COMPLETE ===', 'background: #f0f0f0; color: #333; padding: 3px; border-radius: 3px;');
       };
 
       // Use a small delay to ensure DOM is ready
@@ -119,7 +126,7 @@ class EstimatorCore {
       }
 
     } catch (error) {
-      console.error('EstimatorCore initialization error:', error);
+      logger.error('EstimatorCore initialization error:', error);
     }
 
     return this;
@@ -143,7 +150,7 @@ class EstimatorCore {
         if (menuButton) {
           e.preventDefault();
           e.stopPropagation();
-          this.log('Menu button clicked - opening modal in list view');
+          logger.log('Menu button clicked - opening modal in list view');
           if (this.modalManager) {
             // Pass true as second parameter to force list view mode
             this.modalManager.openModal(null, true);
@@ -160,14 +167,14 @@ class EstimatorCore {
           // Get product ID from data attribute
           const productId = button.dataset.productId || null;
 
-          console.log('PRODUCT BUTTON CLICKED:', {
+          logger.log('PRODUCT BUTTON CLICKED:', {
             productId: productId,
             buttonElement: button,
             dataAttribute: button.dataset
           });
 
           if (this.modalManager) {
-            console.log('OPENING MODAL WITH:', {
+            logger.log('OPENING MODAL WITH:', {
               productId: productId,
               forceListView: false
             });
@@ -183,9 +190,9 @@ class EstimatorCore {
 
       // Emit event for monitoring
       this.emit('core:eventsbound');
-      this.log('Global events bound');
+      // logger.log('Global events bound');
     } catch (error) {
-      console.error('Error binding global events:', error);
+      logger.error('Error binding global events:', error);
     }
   }
 
@@ -235,15 +242,19 @@ class EstimatorCore {
     return this;
   }
 
-  /**
-   * Log debug messages
-   * @param {...any} args - Arguments to log
-   */
-  log(...args) {
-    if (this.config.debug) {
-      console.log('[EstimatorCore]', ...args);
-    }
+  destroy() {
+    if (!this.isActive) return;
+      logger.log('Plugin destroying...');
+
+    // All logging for this plugin instance is now complete.
+    // You can close the main plugin log group.
+    closeMainPluginLogGroup(); // Explicitly close the main group
+
+    this.isActive = false;
+    // After this, new logs might start a *new* main group if the plugin is re-initialized,
+    // or if other parts of the plugin are still logging (which should ideally be avoided after destroy).
   }
+
 }
 
 // Create and export a singleton instance

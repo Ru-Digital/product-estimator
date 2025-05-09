@@ -1,6 +1,9 @@
 /**
  * Direct copy of the working setupWpEditors function as a utility
  */
+
+import { createLogger } from './logger';
+const logger = createLogger('UtilsTinyMCEPreserver');
 export function setupTinyMCEHTMLPreservation(editorIds, containerSelector = 'body') {
   const $ = jQuery;
 
@@ -9,7 +12,7 @@ export function setupTinyMCEHTMLPreservation(editorIds, containerSelector = 'bod
     return;
   }
 
-  console.log('Setting up rich text editors with <br> tag preservation');
+  logger.log('Setting up rich text editors with <br> tag preservation');
 
   // Store original HTML content to restore after mode switches
   window._originalEditorContent = window._originalEditorContent || {};
@@ -90,7 +93,7 @@ export function setupTinyMCEHTMLPreservation(editorIds, containerSelector = 'bod
     editor.on('init', function() {
       const content = editor.getContent({format: 'raw'});
       window._originalEditorContent[editorId] = cleanupFromVisualEditor(content);
-      console.log(`Editor ${editorId} initialized with content length: ${content.length}`);
+      logger.log(`Editor ${editorId} initialized with content length: ${content.length}`);
     });
 
     // Prevent content loss when switching modes
@@ -121,7 +124,7 @@ export function setupTinyMCEHTMLPreservation(editorIds, containerSelector = 'bod
       }
     });
 
-    console.log(`Editor ${editorId} configured with <br> tag protection`);
+    logger.log(`Editor ${editorId} configured with <br> tag protection`);
     return true;
   };
 
@@ -187,7 +190,7 @@ export function setupTinyMCEHTMLPreservation(editorIds, containerSelector = 'bod
       // Update the textarea with final content
       if (finalContent) {
         $(`#${id}`).val(finalContent);
-        console.log(`Form submission: Updated ${id} with content length: ${finalContent.length}`);
+        logger.log(`Form submission: Updated ${id} with content length: ${finalContent.length}`);
       }
     });
 

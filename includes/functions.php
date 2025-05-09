@@ -7,7 +7,7 @@
  */
 
 use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
-use RuDigital\ProductEstimator\Includes\Loader;
+use RuDigital\ProductEstimator\Includes\SessionHandler;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -970,6 +970,44 @@ function product_estimator_get_db_id($estimate_id)
     return false;
 }
 
+/**
+ * Get customer email from estimate data or session.
+ *
+ * Prioritizes email within the specific estimate data, then falls back
+ * to the globally stored customer details in the session.
+ *
+ * @param array|null $estimate The estimate data array (optional).
+ * @param string|int|null $session_estimate_id The session estimate ID (used if $estimate is null to fetch from session).
+ * @return string The customer email or empty string if not found.
+ */
+function product_estimator_get_customer_email(?array $estimate = null, $session_estimate_id = null): string {
+    $customer_email = '';
+    $session = SessionHandler::getInstance(); // Get session handler instance
+
+    // 1. Check provided estimate data first
+    if ($estimate !== null && isset($estimate['customer_details']['email']) && !empty($estimate['customer_details']['email'])) {
+        $customer_email = sanitize_email($estimate['customer_details']['email']);
+    }
+    // 2. If not found in provided data OR data wasn't provided, try fetching estimate from session
+    elseif ($session_estimate_id !== null) {
+        $session_estimate = $session->getEstimate($session_estimate_id); // Fetches via SessionHandler
+        if ($session_estimate && isset($session_estimate['customer_details']['email']) && !empty($session_estimate['customer_details']['email'])) {
+            $customer_email = sanitize_email($session_estimate['customer_details']['email']);
+        }
+    }
+
+    // 3. If still not found, check the global customer details stored in session
+    if (empty($customer_email)) {
+        $global_customer_details = $session->getCustomerDetails(); // Uses SessionHandler method
+        if ($global_customer_details && isset($global_customer_details['email']) && !empty($global_customer_details['email'])) {
+            $customer_email = sanitize_email($global_customer_details['email']);
+        }
+    }
+
+    return $customer_email;
+}
+
+
 
 /**
  * Global helper functions for accessing Product Estimator components
@@ -992,6 +1030,39 @@ if (!function_exists('product_estimator')) {
     {
         global $product_estimator;
         return isset($product_estimator) ? $product_estimator : null;
+    }
+}
+
+// In includes/functions.php
+if ( ! function_exists( 'product_estimator_features' ) ) {
+    /**
+     * Retrieves the global instance of the runtime FeatureSwitches service.
+     *
+     * This function provides a convenient way to access the feature switches
+     * from anywhere in the plugin (admin or frontend). It relies on the main
+     * ProductEstimator class having initialized the FeatureSwitches instance
+     * and stored it in $GLOBALS['g_pe_features'].
+     *
+     * @since X.Y.Z (Version you add this helper)
+     * @return \RuDigital\ProductEstimator\Includes\FeatureSwitches|null The FeatureSwitches instance if available, otherwise null.
+     */
+    function product_estimator_features() {
+        if ( isset( $GLOBALS['g_pe_features'] ) && is_object( $GLOBALS['g_pe_features'] ) ) {
+            // Ensure it's the correct class instance, if you want to be extra safe (optional)
+            // if ($GLOBALS['g_pe_features'] instanceof \RuDigital\ProductEstimator\Includes\FeatureSwitches) {}
+            return $GLOBALS['g_pe_features'];
+        }
+
+        // Optional: Log if called when the global instance isn't set.
+        // This might indicate that it's called too early or initialization failed.
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            if ( ! isset( $GLOBALS['g_pe_features'] ) ) {
+                // error_log( 'Product Estimator: product_estimator_features() called, but $GLOBALS[\'g_pe_features\'] is not set.' );
+            } elseif ( ! is_object( $GLOBALS['g_pe_features'] ) ) {
+                // error_log( 'Product Estimator: product_estimator_features() called, but $GLOBALS[\'g_pe_features\'] is not an object.' );
+            }
+        }
+        return null;
     }
 }
 

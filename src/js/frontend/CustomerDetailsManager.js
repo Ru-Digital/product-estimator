@@ -5,6 +5,11 @@
  * Follows the ES6 module architecture used in the project.
  */
 
+import { saveCustomerDetails, clearCustomerDetails } from './CustomerStorage'; // Import the new functions
+import DataService from "./DataService";
+
+import { createLogger } from '@utils';
+const logger = createLogger('CustomerDetailsManager');
 class CustomerDetailsManager {
   /**
    * Initialize the CustomerDetailsManager
@@ -24,7 +29,8 @@ class CustomerDetailsManager {
         detailsHeader: '.customer-details-header',
         editForm: '.customer-details-edit-form',
         formContainer: '.product-estimator-modal-form-container'
-      }
+      },
+      i18n: {}
     }, config);
 
 
@@ -47,7 +53,7 @@ class CustomerDetailsManager {
    */
   init() {
     if (this.initialized) {
-      this.log('CustomerDetailsManager already initialized');
+      logger.log('CustomerDetailsManager already initialized');
       return this;
     }
 
@@ -58,7 +64,7 @@ class CustomerDetailsManager {
     document.addEventListener('customer_details_updated', this.onCustomerDetailsUpdated.bind(this));
 
     this.initialized = true;
-    this.log('CustomerDetailsManager initialized');
+    logger.log('CustomerDetailsManager initialized');
     return this;
   }
 
@@ -68,7 +74,7 @@ class CustomerDetailsManager {
    */
   onCustomerDetailsUpdated(event) {
     if (event.detail && event.detail.details) {
-      this.log('Received customer_details_updated event', event.detail);
+      logger.log('Received customer_details_updated event', event.detail);
       // Update the display with the new details
       this.updateDisplayedDetails(event.detail.details);
 
@@ -83,7 +89,7 @@ class CustomerDetailsManager {
    */
   checkAndUpdateEmailField(details) {
     const hasEmail = details && details.email && details.email.trim() !== '';
-    this.log(`Checking for email field updates: hasEmail=${hasEmail}`);
+    logger.log(`Checking for email field updates: hasEmail=${hasEmail}`);
 
     // If the edit form is already visible, update it
     const editForms = document.querySelectorAll(this.config.selectors.editForm);
@@ -93,7 +99,7 @@ class CustomerDetailsManager {
 
       // If email field doesn't exist but we have an email, add it
       if (!emailField && hasEmail) {
-        this.log('Adding email field to edit form');
+        logger.log('Adding email field to edit form');
 
         // Create the email field group
         const emailGroup = document.createElement('div');
@@ -166,7 +172,7 @@ class CustomerDetailsManager {
 
     // Only proceed if we have the necessary elements
     if (!editButton) {
-      this.log('Edit button not found, skipping event binding');
+      logger.log('Edit button not found, skipping event binding');
       return;
     }
 
@@ -188,7 +194,7 @@ class CustomerDetailsManager {
       this.bindButtonWithHandler(cancelButton, 'click', this.handleCancelClick.bind(this));
     }
 
-    this.log('Customer details events bound');
+    // logger.log('Customer details events bound');
   }
 
   /**
@@ -231,7 +237,7 @@ class CustomerDetailsManager {
     if (detailsHeader) detailsHeader.style.display = 'none';
     if (editForm) editForm.style.display = 'block';
 
-    this.log('Edit form displayed');
+    logger.log('Edit form displayed');
   }
 
   /**
@@ -250,7 +256,7 @@ class CustomerDetailsManager {
     if (detailsContainer) detailsContainer.style.display = 'block';
     if (detailsHeader) detailsHeader.style.display = 'flex';
 
-    this.log('Edit form hidden');
+    logger.log('Edit form hidden');
   }
 
   /**
@@ -285,50 +291,55 @@ class CustomerDetailsManager {
       updatedDetails.phone = phoneField.value || '';
     }
 
-    // Use the dataService to make the AJAX request or fall back to direct fetch
-    if (this.dataService && typeof this.dataService.request === 'function') {
+    // Use the imported saveCustomerDetails function
+    try {
+      saveCustomerDetails(updatedDetails); // Use the imported function
+      logger.log('Customer details saved to localStorage:', updatedDetails);
+
+      // 2. Now, send the update to the server asynchronously using DataService
       this.dataService.request('update_customer_details', {
         details: JSON.stringify(updatedDetails)
       })
         .then(data => {
-          this.handleSaveSuccess(data, updatedDetails);
-          saveButton.textContent = originalText;
-          saveButton.disabled = false;
+          // Handle successful server update
+          logger.log('Customer details updated on server successfully:', data);
+          this.handleSaveSuccess(data, updatedDetails); // Call success handler with server response data and updated details
         })
         .catch(error => {
-          this.handleSaveError(error);
+          // Handle server update error
+          this.handleSaveError(error); // Show error message
+          // Note: Details are already saved locally, so we don't revert local storage on server error.
+        })
+        .finally(() => {
+          // This block runs after both success or error of the AJAX request
           saveButton.textContent = originalText;
           saveButton.disabled = false;
         });
-    } else {
-      // Fallback to direct fetch if dataService not available
-      fetch(window.productEstimatorVars?.ajax_url || '/wp-admin/admin-ajax.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'update_customer_details',
-          nonce: window.productEstimatorVars?.nonce || '',
-          details: JSON.stringify(updatedDetails)
-        })
+
+    } catch (localStorageError) {
+      // Handle synchronous local storage save error
+      logger.log('Error saving to localStorage using imported function:', localStorageError);
+      this.showError('Could not save details locally.'); // Show local storage error
+      // We still attempt server save even if local save fails
+      this.dataService.request('update_customer_details', {
+        details: JSON.stringify(updatedDetails)
       })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success) {
-            this.handleSaveSuccess(response.data, updatedDetails);
-          } else {
-            this.handleSaveError(new Error(response.data?.message || 'Error updating details'));
-          }
+        .then(data => {
+          // Handle successful server update even after local failure
+          logger.log('Customer details updated on server successfully (after local storage error):', data);
+          this.handleSaveSuccess(data, updatedDetails); // Call success handler
         })
         .catch(error => {
-          this.handleSaveError(error);
+          // Handle server update error after local failure
+          this.handleSaveError(error); // Show server error message
         })
         .finally(() => {
+          // This block runs after both success or error of the AJAX request
           saveButton.textContent = originalText;
           saveButton.disabled = false;
         });
     }
+
   }
 
   /**
@@ -338,10 +349,10 @@ class CustomerDetailsManager {
    */
   handleSaveSuccess(data, updatedDetails) {
     // Update the displayed customer details
-    this.updateDisplayedDetails(data.details || updatedDetails);
+    this.updateDisplayedDetails(updatedDetails);  // Use the passed updatedDetails
 
     // Check if email was added and update forms
-    this.checkAndUpdateEmailField(data.details || updatedDetails);
+    this.checkAndUpdateEmailField(updatedDetails); // Use updatedDetails
 
     // Show success message
     this.showMessage('success', data.message || 'Details updated successfully!');
@@ -359,12 +370,12 @@ class CustomerDetailsManager {
     const event = new CustomEvent('customer_details_updated', {
       bubbles: true,
       detail: {
-        details: data.details || updatedDetails
+        details: updatedDetails // Use updatedDetails
       }
     });
     document.dispatchEvent(event);
 
-    this.log('Customer details updated successfully', data);
+    logger.log('Customer details updated successfully', data);
   }
 
   /**
@@ -373,7 +384,7 @@ class CustomerDetailsManager {
    */
   handleSaveError(error) {
     this.showMessage('error', error.message || 'Error updating details. Please try again.');
-    this.log('Error saving customer details:', error);
+    logger.log('Error saving customer details:', error);
   }
 
   /**
@@ -405,7 +416,7 @@ class CustomerDetailsManager {
   }
 
   /**
-   * Delete customer details via AJAX
+   * Delete customer details
    */
   deleteCustomerDetails() {
     // Get the customer details confirmation container
@@ -413,6 +424,16 @@ class CustomerDetailsManager {
     if (confirmationContainer) {
       confirmationContainer.classList.add('loading');
     }
+
+    // Use the imported clearCustomerDetails function
+    try {
+      clearCustomerDetails(); // Clear using imported function
+      logger.log('Customer details removed from localStorage using imported function'); // Log the success
+      this.handleDeleteSuccess({message: "Details deleted successfully from local storage"}, confirmationContainer);
+    } catch (e) {
+      logger.log('localStorage error on delete using imported function', e); // Log any error
+    }
+
 
     // Use the dataService to make the AJAX request if available
     if (this.dataService && typeof this.dataService.request === 'function') {
@@ -480,7 +501,7 @@ class CustomerDetailsManager {
     });
     document.dispatchEvent(event);
 
-    this.log('Customer details deleted');
+    logger.log('Customer details deleted');
   }
 
   /**
@@ -490,7 +511,7 @@ class CustomerDetailsManager {
    */
   handleDeleteError(error, confirmationContainer) {
     this.showMessage('error', error.message || 'Error deleting details!');
-    this.log('Error deleting details:', error);
+    logger.log('Error deleting details:', error);
 
     // Remove loading class
     if (confirmationContainer) {
@@ -506,11 +527,11 @@ class CustomerDetailsManager {
     const detailsContainers = document.querySelectorAll(this.config.selectors.detailsContainer);
 
     if (!detailsContainers.length) {
-      this.log('No customer details containers found for updating');
+      logger.log('No customer details containers found for updating');
       return;
     }
 
-    this.log(`Updating ${detailsContainers.length} customer details containers`);
+    logger.log(`Updating ${detailsContainers.length} customer details containers`);
 
     detailsContainers.forEach(container => {
       // Build HTML with new details
@@ -561,16 +582,6 @@ class CustomerDetailsManager {
       setTimeout(() => {
         messageEl.remove();
       }, 5000);
-    }
-  }
-
-  /**
-   * Log debug messages
-   * @param {...any} args - Arguments to log
-   */
-  log(...args) {
-    if (this.config.debug) {
-      console.log('[CustomerDetailsManager]', ...args);
     }
   }
 }

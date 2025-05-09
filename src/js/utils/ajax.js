@@ -4,6 +4,10 @@
  * Functions for handling AJAX requests and related operations.
  */
 
+import { createLogger } from './logger'; // Tries to import createLogger directly
+
+const logger = createLogger('UtilsAjax'); // <<< ERROR HAPPENS HERE: createLogger is not a function
+
 /**
  * Handle AJAX request with error handling and consistent response format
  *
@@ -36,7 +40,7 @@ export function ajaxRequest(options) {
         }
       },
       error: (xhr, status, error) => {
-        console.error('AJAX error:', status, error);
+        logger.error('AJAX error:', status, error);
         reject(new Error(error));
       }
     });

@@ -39,7 +39,17 @@ if (!defined('WPINC')) {
                             <option value=""><?php esc_html_e('-- Select Action Type --', 'product-estimator'); ?></option>
                             <option value="auto_add_by_category"><?php esc_html_e('Auto-Add Product with Category', 'product-estimator'); ?></option>
                             <option value="auto_add_note_by_category"><?php esc_html_e('Auto-Add Note with Category', 'product-estimator'); ?></option>
+                            <?php
+
+
+                            /** @var \RuDigital\ProductEstimator\Includes\FeatureSwitches|null $features */
+                            $features = product_estimator_features();
+
+                            if($features->suggested_products_enabled):
+                            ?>
                             <option value="suggest_products_by_category"><?php esc_html_e('Suggest Products when Category', 'product-estimator'); ?></option>
+                           <?php endif ?>
+
                         </select>
                         <p class="description"><?php esc_html_e('Select what action should occur when products from the source category are added to an estimate.', 'product-estimator'); ?></p>
                     </td>
@@ -131,7 +141,15 @@ if (!defined('WPINC')) {
                 </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($relations as $relation_id => $relation) : ?>
+                <?php
+                foreach ($relations as $relation_id => $relation) :
+                    $relation_type = isset($relation['relation_type']) ? $relation['relation_type'] : '';
+
+                    if(!$features->suggested_products_enabled && $relation_type == "suggest_products_by_category"):
+                        continue;
+                    endif
+                    ?>
+
                     <tr data-id="<?php echo esc_attr($relation_id); ?>">
                         <td>
                             <?php

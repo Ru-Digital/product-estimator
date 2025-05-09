@@ -5,6 +5,9 @@
  * Replaces browser's built-in confirm() with a styled dialog.
  */
 
+import { createLogger } from '@utils';
+const logger = createLogger('ConfirmationDialog');
+
 class ConfirmationDialog {
   /**
    * Initialize the confirmation dialog
@@ -38,7 +41,7 @@ class ConfirmationDialog {
     this.initialized = true;
 
     if (productEstimatorVars && productEstimatorVars.debug) {
-      console.log('[ConfirmationDialog] Initialized');
+      logger.log('Initialized');
     }
   }
 
@@ -271,17 +274,7 @@ class ConfirmationDialog {
   isVisible() {
     return this.dialog && this.dialog.style.display === 'block';
   }
-
-  /**
-   * Log debug messages
-   * @param {...any} args - Arguments to log
-   */
-  log(...args) {
-    if (productEstimatorVars && productEstimatorVars.debug) {
-      console.log('[ConfirmationDialog]', ...args);
-    }
-  }
 }
 
 // Export a singleton instance
-export default new ConfirmationDialog();
+export default ConfirmationDialog;

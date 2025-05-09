@@ -1,5 +1,5 @@
 <?php
-namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
+namespace RuDigital\ProductEstimator\Includes\Frontend;
 
 /**
  * Base Settings Module Class

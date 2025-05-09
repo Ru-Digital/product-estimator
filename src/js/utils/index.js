@@ -10,14 +10,24 @@ import * as ajax from './ajax';
 import * as dom from './dom';
 import * as format from './format';
 import * as validation from './validation';
+import * as loggerModule from './logger';
 
 // Export individual modules for direct imports
-export { ajax, dom, format, validation };
+export { ajax, dom, format, validation, loggerModule};
+
+export const {
+  log,
+  warn,
+  error,
+  createLogger, // Directly exporting createLogger
+  closeMainPluginLogGroup
+} = loggerModule;
 
 // Export all utilities as named exports for backward compatibility
 export const {
   ajaxRequest,
-  debounce,     // Also in format, we prioritize the ajax version
+  // debounce is also in format, you've prioritized the ajax version
+  debounce,
 } = ajax;
 
 export const {
@@ -35,7 +45,6 @@ export const {
 export const {
   formatPrice,
   sanitizeHTML,
-  // debounce is also defined here but we use the one from ajax
 } = format;
 
 export const {
@@ -47,20 +56,13 @@ export const {
   showNotice,
 } = validation;
 
-// Export a helper function for logging with conditional debug flag
-export function log(component, ...args) {
-  if (window.productEstimatorVars?.debug) {
-    console.log(`[${component}]`, ...args);
-  }
-}
-
 // Export a convenience function to safely access nested properties
 export function get(obj, path, defaultValue = null) {
   const keys = path.split('.');
   let result = obj;
 
   for (const key of keys) {
-    if (result === undefined || result === null) {
+    if (result === undefined || result === null || typeof result !== 'object') { // Added type check for robustnest
       return defaultValue;
     }
     result = result[key];

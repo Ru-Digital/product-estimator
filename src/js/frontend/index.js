@@ -10,6 +10,13 @@ import ConfirmationDialog from './ConfirmationDialog';
 import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
 import ProductDetailsToggle from './ProductDetailsToggle';  // Import the default instance
 import PrintEstimate from './PrintEstimate';
+import { initializeTemplates } from './template-loader';
+
+// Initialize templates first
+const templateEngine = initializeTemplates();
+
+import { createLogger } from '@utils';
+const logger = createLogger('FrontEndIndex');
 
 
 // Global initialization tracker - defined at the top level
@@ -33,24 +40,24 @@ if (!window._setupInitDone) {
  * Initialize the application
  */
 function initApp() {
-  console.log('Product Estimator initialization check...');
+  logger.log('Product Estimator initialization check...');
 
   // Multiple guard checks - check both global flags
   if (window._productEstimatorInitialized) {
-    console.log('Product Estimator already initialized globally, aborting');
+    logger.log('Product Estimator already initialized globally, aborting');
     return;
   }
 
   // Also check for object existence
   if (window.productEstimator && window.productEstimator.initialized) {
-    console.log('Product Estimator initialized property found, aborting');
+    logger.log('Product Estimator initialized property found, aborting');
     window._productEstimatorInitialized = true;
     return;
   }
 
   // Mark as initialized IMMEDIATELY before continuing
   window._productEstimatorInitialized = true;
-  console.log('Product Estimator initializing for the first time...');
+  logger.log('Product Estimator initializing for the first time...');
 
   try {
     // Setup global handlers (only once)
@@ -62,7 +69,7 @@ function initApp() {
       window.productEstimator = window.productEstimator || {};
       window.productEstimator.jQuery = jQuery;
     } else {
-      console.warn('jQuery not detected, some features may not work');
+      logger.warn('jQuery not detected, some features may not work');
     }
 
     // Get debug mode from URL parameter or localStorage
@@ -78,24 +85,27 @@ function initApp() {
       setTimeout(() => initEstimator(debugMode), 500);
     }
   } catch (error) {
-    console.error('Error in Product Estimator initialization:', error);
+    logger.error('Error in Product Estimator initialization:', error);
   }
 }
 
 /**
  * Initialize the estimator core
  */
+// In index.js (inside initEstimator function)
+
 function initEstimator(debugMode) {
   try {
     // One final check to prevent race conditions
     if (window.productEstimator && window.productEstimator.initialized) {
-      console.log('Product Estimator core already initialized, skipping');
+      logger.log('Product Estimator core already initialized, skipping');
       return;
     }
 
-    console.log('Initializing EstimatorCore...');
+    logger.log('Initializing EstimatorCore...');
 
     // Initialize core with configuration
+    // This call creates the EstimatorCore.dataService instance internally
     EstimatorCore.init({
       debug: debugMode,
       // Add any other configuration here
@@ -104,12 +114,21 @@ function initEstimator(debugMode) {
     // Make dialog available globally
     window.productEstimator = window.productEstimator || {};
     window.productEstimator.initialized = true;
-    window.productEstimator.core = EstimatorCore;
-    window.productEstimator.dialog = ConfirmationDialog; // Add dialog to global object
+    window.productEstimator.core = EstimatorCore; // EstimatorCore instance is stored here
+    window.productEstimator.dialog = new ConfirmationDialog(); // <--- ADD 'new' HERE
 
     // Initialize PrintEstimate and make it available globally
-    const printEstimate = new PrintEstimate({ debug: debugMode });
-    window.productEstimator.printEstimate = printEstimate;
+    // Get the dataService instance from the initialized EstimatorCore
+    const dataServiceInstance = window.productEstimator.core.dataService;
+
+    if (!dataServiceInstance) {
+      logger.error("[DataService] instance not found on EstimatorCore. Cannot initialize PrintEstimate.");
+      // Optionally return or handle this error case
+      return;
+    }
+
+    // Pass the dataService instance to the PrintEstimate constructor
+    window.productEstimator.printEstimate =  new PrintEstimate({ debug: debugMode }, dataServiceInstance);
 
     // Make ProductDetailsToggle available globally
     window.productEstimator.detailsToggle = ProductDetailsToggle; // Add toggle module to global object
@@ -120,15 +139,14 @@ function initEstimator(debugMode) {
     // Initialize toggle functionality explicitly
     initializeProductDetailsToggle(debugMode);
 
-    console.log(`Product Estimator initialized${debugMode ? ' (debug mode)' : ''}`);
+    logger.log(`Product Estimator initialized${debugMode ? ' (debug mode)' : ''}`);
 
     // Dispatch an event that initialization is complete
     document.dispatchEvent(new CustomEvent('product_estimator_initialized'));
   } catch (e) {
-    console.error('Error during EstimatorCore initialization:', e);
+    logger.error('Error during EstimatorCore initialization:', e);
   }
 }
-
 /**
  * Initialize the ProductDetailsToggle functionality
  */
@@ -142,7 +160,7 @@ function initializeProductDetailsToggle(debugMode) {
         setTimeout(() => {
           // Force toggle module to scan for new content
           if (ProductDetailsToggle && typeof ProductDetailsToggle.setup === 'function') {
-            console.log('Accordion clicked, reinitializing product details toggle');
+            logger.log('Accordion clicked, reinitializing product details toggle');
             ProductDetailsToggle.setup();
           }
 
@@ -239,44 +257,44 @@ function initializeProductDetailsToggle(debugMode) {
         e.stopPropagation();
       }
 
-    // Handle includes toggle
-    if (e.target.closest('.product-includes-toggle')) {
-      const toggleButton = e.target.closest('.product-includes-toggle');
-      const productItem = toggleButton.closest('.product-item');
+      // Handle includes toggle
+      if (e.target.closest('.product-includes-toggle')) {
+        const toggleButton = e.target.closest('.product-includes-toggle');
+        const productItem = toggleButton.closest('.product-item');
 
-      if (!productItem) return;
+        if (!productItem) return;
 
-      const isExpanded = toggleButton.classList.contains('expanded');
-      const includesContainer = productItem.querySelector('.includes-container');
+        const isExpanded = toggleButton.classList.contains('expanded');
+        const includesContainer = productItem.querySelector('.includes-container');
 
-      if (!includesContainer) return;
+        if (!includesContainer) return;
 
-      // Toggle state
-      if (isExpanded) {
-        // Hide container
-        toggleButton.classList.remove('expanded');
-        includesContainer.style.display = 'none';
-        includesContainer.classList.remove('visible');
-        const icon = toggleButton.querySelector('.toggle-icon');
-        if (icon) {
-          icon.classList.remove('dashicons-arrow-up-alt2');
-          icon.classList.add('dashicons-arrow-down-alt2');
+        // Toggle state
+        if (isExpanded) {
+          // Hide container
+          toggleButton.classList.remove('expanded');
+          includesContainer.style.display = 'none';
+          includesContainer.classList.remove('visible');
+          const icon = toggleButton.querySelector('.toggle-icon');
+          if (icon) {
+            icon.classList.remove('dashicons-arrow-up-alt2');
+            icon.classList.add('dashicons-arrow-down-alt2');
+          }
+        } else {
+          // Show container
+          toggleButton.classList.add('expanded');
+          includesContainer.style.display = 'block';
+          includesContainer.classList.add('visible');
+          const icon = toggleButton.querySelector('.toggle-icon');
+          if (icon) {
+            icon.classList.remove('dashicons-arrow-down-alt2');
+            icon.classList.add('dashicons-arrow-up-alt2');
+          }
         }
-      } else {
-        // Show container
-        toggleButton.classList.add('expanded');
-        includesContainer.style.display = 'block';
-        includesContainer.classList.add('visible');
-        const icon = toggleButton.querySelector('.toggle-icon');
-        if (icon) {
-          icon.classList.remove('dashicons-arrow-down-alt2');
-          icon.classList.add('dashicons-arrow-up-alt2');
-        }
+
+        e.preventDefault();
+        e.stopPropagation();
       }
-
-      e.preventDefault();
-      e.stopPropagation();
-    }
 
       // Handle suggestions toggle
       if (e.target.closest('.product-suggestions-toggle')) {
@@ -323,11 +341,11 @@ function initializeProductDetailsToggle(debugMode) {
       }
 
 
-  });
+    });
 
-    console.log('ProductDetailsToggle initialization complete');
+    logger.log('[ProductDetailsToggle] initialization complete');
   } catch (error) {
-    console.error('Error initializing ProductDetailsToggle:', error);
+    logger.error('Error initializing ProductDetailsToggle:', error);
   }
 }
 
@@ -342,17 +360,17 @@ let globalHandlersAdded = false;
 function setupGlobalEventHandlers() {
   // Only run once
   if (globalHandlersAdded) {
-    console.log('Global event handlers already added, skipping');
+    logger.log('Global event handlers already added, skipping');
     return;
   }
 
-  console.log('Setting up global event handlers...');
+  logger.log('Setting up global event handlers...');
 
   // Create and store handler reference
   window._productEstimatorCloseHandler = function(e) {
     if (e.target.closest('.product-estimator-modal-close') ||
       e.target.classList.contains('product-estimator-modal-overlay')) {
-      console.log('Global close handler triggered');
+      logger.log('Global close handler triggered');
 
       // Find the modal
       const modal = document.querySelector('#product-estimator-modal');
@@ -375,7 +393,7 @@ function setupGlobalEventHandlers() {
   document.addEventListener('click', window._productEstimatorCloseHandler);
 
   globalHandlersAdded = true;
-  console.log('Global event handlers added');
+  logger.log('Global event handlers added');
 }
 
 /**

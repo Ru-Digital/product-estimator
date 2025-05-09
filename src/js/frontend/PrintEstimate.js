@@ -8,13 +8,19 @@
  */
 
 import ConfirmationDialog from './ConfirmationDialog';
+import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails } from './CustomerStorage'; // Import the new functions
+import DataService from './DataService'; // <--- Add this line
+
+import { createLogger } from '@utils';
+const logger = createLogger('PrintEstimate');
 
 class PrintEstimate {
   /**
    * Initialize the PrintEstimate module
    * @param {Object} config - Configuration options
+   * @param {DataService} dataService - The data service instance // Added dataService parameter
    */
-  constructor(config = {}) {
+  constructor(config = {}, dataService) {
     // Default configuration
     this.config = Object.assign({
       debug: false,
@@ -27,9 +33,14 @@ class PrintEstimate {
       i18n: window.productEstimatorVars?.i18n || {}
     }, config);
 
+    // Store reference to data service
+    this.dataService = dataService; // Store the dataService
+
     // State
     this.initialized = false;
     this.processing = false;
+    // Use the imported loadCustomerDetails function on init
+    this.customerDetails = loadCustomerDetails();
 
     // Initialize if auto-init is not set to false
     if (config.autoInit !== false) {
@@ -43,7 +54,7 @@ class PrintEstimate {
    */
   init() {
     if (this.initialized) {
-      this.log('PrintEstimate already initialized');
+      logger.log('PrintEstimate already initialized');
       return this;
     }
 
@@ -51,19 +62,38 @@ class PrintEstimate {
     this.bindEvents();
 
     this.initialized = true;
-    this.log('PrintEstimate initialized');
+    logger.log('PrintEstimate initialized');
     return this;
   }
+
+  // Removed duplicated loadCustomerDetails, saveCustomerDetails, and clearCustomerDetails methods
+  // The imported functions from CustomerStorage.js will be used instead.
+
 
   /**
    * Bind events for printing estimates
    */
   bindEvents() {
+    logger.log('Binding print events'); // <--- Added log
+
     // Use event delegation for better performance and to handle dynamically added elements
     document.addEventListener('click', (e) => {
+      logger.log('Document click event triggered'); // <--- Added log
+
       // Handle print PDF buttons
       const printButton = e.target.closest(this.config.selectors.printButton);
+
+      if (printButton) {
+        logger.log('Print button clicked or is ancestor of click target'); // <--- Added log
+      } else {
+        // If it's not a print button, exit this part of the handler early
+        return;
+      }
+
+
       if (printButton && !this.processing) {
+        logger.log('Print button is active and not processing'); // <--- Added log
+
         e.preventDefault(); // Prevent default link behavior
 
         // Set processing state to prevent double-clicks
@@ -71,6 +101,7 @@ class PrintEstimate {
         this.setButtonLoading(printButton, true);
 
         if (printButton.classList.contains('print-estimate-pdf')) {
+          logger.log('Handling direct PDF link'); // <--- Added log
           // This is a direct PDF link - check customer details before proceeding
           const estimateId = printButton.dataset.estimateId;
 
@@ -86,11 +117,14 @@ class PrintEstimate {
                 const pdfUrl = printButton.getAttribute('href');
 
                 if (pdfUrl && pdfUrl !== '#' && pdfUrl !== 'javascript:void(0)') {
+                  logger.log('Opening PDF URL from href:', pdfUrl); // <--- Added log
                   window.open(pdfUrl, '_blank');
                 } else {
+                  logger.log('href is missing or invalid, getting secure PDF URL'); // <--- Added log
                   // Get a fresh PDF URL
                   this.getSecurePdfUrl(estimateId)
                     .then(url => {
+                      logger.log('Opening secure PDF URL:', url); // <--- Added log
                       window.open(url, '_blank');
                     })
                     .catch(error => {
@@ -98,6 +132,7 @@ class PrintEstimate {
                     });
                 }
               } else {
+                logger.log('Missing required customer details for PDF link:', missingFields); // <--- Added log
                 // Missing details, show prompt
                 this.showCustomerDetailsPrompt(estimateId, printButton, 'print');
               }
@@ -109,14 +144,20 @@ class PrintEstimate {
               // Button state will be reset after PDF opens or error
             });
         } else {
+          logger.log('Handling JS-based print button'); // <--- Added log
           // This is a JS-based print button
           this.handlePrintEstimate(printButton);
         }
+      } else if (this.processing) {
+        logger.log('Print button clicked but processing is true, ignoring.'); // <--- Added log
       }
+    });
 
-      // Handle request copy button (email PDF to customer)
+    // Handle request copy button (email PDF to customer)
+    document.addEventListener('click', (e) => { // <--- Separate listener for clarity
       const requestCopyButton = e.target.closest(this.config.selectors.requestCopyButton);
       if (requestCopyButton && !this.processing) {
+        logger.log('Request copy button clicked'); // <--- Added log
         e.preventDefault();
 
         this.processing = true;
@@ -127,10 +168,13 @@ class PrintEstimate {
         // Show contact method choice modal
         this.showContactSelectionPrompt(estimateId, requestCopyButton, 'request_copy');
       }
+    });
 
-      // Handle request contact from store button
+    // Handle request contact from store button
+    document.addEventListener('click', (e) => { // <--- Separate listener for clarity
       const requestContactButton = e.target.closest(this.config.selectors.requestContactButton);
       if (requestContactButton && !this.processing) {
+        logger.log('Request contact button clicked'); // <--- Added log
         e.preventDefault();
 
         this.processing = true;
@@ -149,6 +193,7 @@ class PrintEstimate {
    * @param {HTMLElement} button - The clicked button
    */
   handlePrintEstimate(button) {
+    logger.log('handlePrintEstimate called'); // <--- Added log
     const estimateId = button.dataset.estimateId;
 
     if (!estimateId) {
@@ -158,7 +203,7 @@ class PrintEstimate {
       return;
     }
 
-    this.log(`Print estimate requested for estimate ID: ${estimateId}`);
+    logger.log(`Print estimate requested for estimate ID: ${estimateId}`);
 
     // Check if customer has required details
     this.checkCustomerDetails(estimateId)
@@ -169,10 +214,12 @@ class PrintEstimate {
         if (!customerInfo.email || customerInfo.email.trim() === '') missingFields.push('email');
 
         if (missingFields.length === 0) {
+          logger.log('Customer has required details, proceeding to store estimate'); // <--- Added log
           // Customer has all required details, proceed with store and generate
           return this.storeEstimate(estimateId)
             .then(data => {
               if (data && data.estimate_id) {
+                logger.log('Estimate stored, getting secure PDF URL'); // <--- Added log
                 // Get a secure PDF URL
                 return this.getSecurePdfUrl(data.estimate_id);
               } else {
@@ -180,12 +227,14 @@ class PrintEstimate {
               }
             })
             .then(pdfUrl => {
+              logger.log('Received PDF URL, opening:', pdfUrl); // <--- Added log
               this.setButtonLoading(button, false);
               this.processing = false;
               // Open the PDF URL in a new tab
               window.open(pdfUrl, '_blank');
             });
         } else {
+          logger.log('Missing required customer details for JS print:', missingFields); // <--- Added log
           // Missing required details, show prompt
           this.showCustomerDetailsPrompt(estimateId, button, 'print');
           return Promise.reject(new Error('missing_customer_details'));
@@ -207,6 +256,7 @@ class PrintEstimate {
    * @param {string} action - The action type ('print', 'request_copy_email', 'request_copy_sms')
    */
   showCustomerDetailsPrompt(estimateId, button, action = 'print') {
+    logger.log('showCustomerDetailsPrompt called'); // <--- Added log
     // Define which fields are required for each action type
     const requiredFields = {
       'print': ['name', 'email'],
@@ -216,120 +266,125 @@ class PrintEstimate {
       'request_contact_phone': ['name', 'phone']
     };
 
-    // First check which fields are already available in customer details
-    this.checkCustomerDetails(estimateId)
-      .then(customerInfo => {
-        // Determine which fields are missing based on action type
-        const missingFields = this.getMissingFields(customerInfo, action);
+    // Use the class property for initial check
+    // IMPORTANT: Make sure this.customerDetails is up-to-date by calling loadCustomerDetails before this.
+    // Or, pass the latest customer details object fetched from checkCustomerDetails call
+    // For now, let's assume customerDetails property is updated before this call.
+    let missingFields = this.getMissingFields(this.customerDetails, action);
 
-        if (missingFields.length === 0) {
-          // No missing fields, proceed with the action
-          this.continueWithAction(action, estimateId, button, customerInfo);
+
+    if (missingFields.length === 0) {
+      logger.log('No missing fields, continuing with action:', action); // <--- Added log
+      // No missing fields, proceed with the action
+      this.continueWithAction(action, estimateId, button, this.customerDetails);
+      return;
+    }
+
+    logger.log('Missing fields detected, showing prompt modal:', missingFields); // <--- Added log
+    // Create modal HTML with dynamic fields based on what's missing
+    const modalHtml = this.createPromptModalHtml(missingFields, action, this.customerDetails);
+
+    // Create container for the modal
+    const promptEl = document.createElement('div');
+    promptEl.className = 'email-prompt-modal';
+    promptEl.innerHTML = modalHtml;
+    document.body.appendChild(promptEl);
+
+    // Get elements
+    const cancelBtn = promptEl.querySelector('.cancel-email-btn');
+    const submitBtn = promptEl.querySelector('.submit-email-btn');
+    const validationMsg = promptEl.querySelector('.email-validation-message');
+
+    // Handle cancel
+    cancelBtn.addEventListener('click', () => {
+      logger.log('Prompt modal cancelled'); // <--- Added log
+      promptEl.remove();
+      this.setButtonLoading(button, false);
+      this.processing = false;
+    });
+
+    // Handle submit
+    submitBtn.addEventListener('click', () => {
+      logger.log('Prompt modal submit clicked'); // <--- Added log
+      // Collect values from all input fields
+      const updatedDetails = { ...this.customerDetails }; // Start with existing details
+      let isValid = true;
+
+      // Validate and collect all fields
+      missingFields.forEach(field => {
+        const input = promptEl.querySelector(`#customer-${field}-input`);
+        const value = input ? input.value.trim() : '';
+
+        if (!value) {
+          validationMsg.textContent = `${this.getFieldLabel(field)} is required`;
+          isValid = false;
           return;
         }
 
-        // Create modal HTML with dynamic fields based on what's missing
-        const modalHtml = this.createPromptModalHtml(missingFields, action, customerInfo);
+        // Special validation for email and phone
+        if (field === 'email' && !this.validateEmail(value)) {
+          validationMsg.textContent = 'Please enter a valid email address';
+          isValid = false;
+          return;
+        }
 
-        // Create container for the modal
-        const promptEl = document.createElement('div');
-        promptEl.className = 'email-prompt-modal';
-        promptEl.innerHTML = modalHtml;
-        document.body.appendChild(promptEl);
+        if (field === 'phone' && !this.validatePhone(value)) {
+          validationMsg.textContent = 'Please enter a valid phone number';
+          isValid = false;
+          return;
+        }
 
-        // Get elements
-        const cancelBtn = promptEl.querySelector('.cancel-email-btn');
-        const submitBtn = promptEl.querySelector('.submit-email-btn');
-        const validationMsg = promptEl.querySelector('.email-validation-message');
-
-        // Handle cancel
-        cancelBtn.addEventListener('click', () => {
-          promptEl.remove();
-          this.setButtonLoading(button, false);
-          this.processing = false;
-        });
-
-        // Handle submit
-        submitBtn.addEventListener('click', () => {
-          // Collect values from all input fields
-          const updatedDetails = {...customerInfo};
-          let isValid = true;
-
-          // Validate and collect all fields
-          missingFields.forEach(field => {
-            const input = promptEl.querySelector(`#customer-${field}-input`);
-            const value = input ? input.value.trim() : '';
-
-            if (!value) {
-              validationMsg.textContent = `${this.getFieldLabel(field)} is required`;
-              isValid = false;
-              return;
-            }
-
-            // Special validation for email and phone
-            if (field === 'email' && !this.validateEmail(value)) {
-              validationMsg.textContent = 'Please enter a valid email address';
-              isValid = false;
-              return;
-            }
-
-            if (field === 'phone' && !this.validatePhone(value)) {
-              validationMsg.textContent = 'Please enter a valid phone number';
-              isValid = false;
-              return;
-            }
-
-            updatedDetails[field] = value;
-          });
-
-          if (!isValid) return;
-
-          // Show loading state
-          submitBtn.disabled = true;
-          submitBtn.textContent = 'Saving...';
-
-          // Update customer details with the new values
-          this.updateCustomerDetails(estimateId, updatedDetails)
-            .then(() => {
-              // Remove prompt
-              promptEl.remove();
-              this.setButtonLoading(button, true);
-              this.processing = true;
-
-              // Continue with the original action
-              this.continueWithAction(action, estimateId, button, updatedDetails);
-            })
-            .catch(error => {
-              validationMsg.textContent = 'Error saving details. Please try again.';
-              submitBtn.disabled = false;
-              submitBtn.textContent = 'Continue';
-            });
-        });
-
-        // Set focus to the first input field
-        setTimeout(() => {
-          const firstInput = promptEl.querySelector('input');
-          if (firstInput) {
-            firstInput.focus();
-
-            // Add enter key handler to all inputs
-            const allInputs = promptEl.querySelectorAll('input');
-            allInputs.forEach(input => {
-              input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  submitBtn.click();
-                }
-              });
-            });
-          }
-        }, 100);
-      })
-      .catch(error => {
-        this.showError('Error checking customer details. Please try again.');
-        this.setButtonLoading(button, false);
-        this.processing = false;
+        updatedDetails[field] = value;
       });
+
+      if (!isValid) {
+        logger.log('Prompt modal validation failed'); // <--- Added log
+        return;
+      }
+
+      logger.log('Prompt modal validation successful, saving details:', updatedDetails); // <--- Added log
+      // Show loading state
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+
+      // Update customer details with the new values
+      this.updateCustomerDetails(estimateId, updatedDetails)
+        .then(() => {
+          logger.log('Details saved successfully after prompt'); // <--- Added log
+          // Remove prompt
+          promptEl.remove();
+          this.setButtonLoading(button, true);
+          this.processing = true;
+
+          // Continue with the original action
+          this.continueWithAction(action, estimateId, button, updatedDetails);
+        })
+        .catch(error => {
+          logger.log('Error saving details after prompt:', error); // <--- Added log
+          validationMsg.textContent = 'Error saving details. Please try again.';
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Continue';
+        });
+    });
+
+    // Set focus to the first input field
+    setTimeout(() => {
+      const firstInput = promptEl.querySelector('input');
+      if (firstInput) {
+        firstInput.focus();
+
+        // Add enter key handler to all inputs
+        const allInputs = promptEl.querySelectorAll('input');
+        allInputs.forEach(input => {
+          input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              submitBtn.click();
+            }
+          });
+        });
+      }
+    }, 100);
   }
 
   /**
@@ -464,6 +519,7 @@ class PrintEstimate {
    * @param {Object} customerDetails - Updated customer details
    */
   continueWithAction(action, estimateId, button, customerDetails) {
+    logger.log('continueWithAction called:', action); // <--- Added log
     switch (action) {
       case 'print':
         this.handlePrintEstimate(button);
@@ -510,6 +566,7 @@ class PrintEstimate {
    * @param {string} action - The action type
    */
   showContactSelectionPrompt(estimateId, button, action = 'request_copy') {
+    logger.log('showContactSelectionPrompt called:', action); // <--- Added log
     // Customize title and prompt based on the action
     let title = 'How would you like to receive your estimate?';
     let prompt = 'Please choose how you\'d prefer to receive your estimate:';
@@ -550,90 +607,85 @@ class PrintEstimate {
     const smsBtn = promptEl.querySelector('.sms-choice');
 
     cancelBtn.addEventListener('click', () => {
+      logger.log('Contact selection cancelled'); // <--- Added log
       this.setButtonLoading(button, false);
       this.processing = false;
       promptEl.remove();
     });
 
     emailBtn.addEventListener('click', () => {
+      logger.log('Email contact method selected'); // <--- Added log
       promptEl.remove();
 
       // Determine the specific action for email
       const emailAction = action === 'request_contact' ? 'request_contact_email' : 'request_copy_email';
 
-      // Check customer details
-      this.checkCustomerDetails(estimateId)
-        .then(customerInfo => {
-          // Always check for name, plus email for email actions
-          const missingFields = [];
-          if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
-          if (!customerInfo.email || customerInfo.email.trim() === '') missingFields.push('email');
+      // Check customer details using the imported function
+      const customerInfo = loadCustomerDetails();
 
-          if (missingFields.length === 0) {
-            // All required details exist, proceed with the action
-            if (action === 'request_contact') {
-              this.requestStoreContact(estimateId, 'email', button, customerInfo);
-            } else {
-              // Original request_copy email flow
-              this.requestCopyEstimate(estimateId, button)
-                .then(response => {
-                  this.showMessage(`Estimate has been emailed to ${customerInfo.email}`, 'success', () => {
-                    this.setButtonLoading(button, false);
-                    this.processing = false;
-                  });
-                })
-                .catch(() => {
-                  this.showError('Error sending estimate copy. Please try again.');
-                  this.setButtonLoading(button, false);
-                  this.processing = false;
-                });
-            }
-          } else {
-            // Missing details, show prompt
-            this.showCustomerDetailsPrompt(estimateId, button, emailAction);
-          }
-        })
-        .catch(() => {
-          this.showError('Error checking customer details. Please try again.');
-          this.setButtonLoading(button, false);
-          this.processing = false;
-        });
+      // Always check for name, plus email for email actions
+      const missingFields = [];
+      if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
+      if (!customerInfo.email || customerInfo.email.trim() === '') missingFields.push('email');
+
+      if (missingFields.length === 0) {
+        logger.log('Required details for email contact exist, proceeding'); // <--- Added log
+        // All required details exist, proceed with the action
+        if (action === 'request_contact') {
+          this.requestStoreContact(estimateId, 'email', button, customerInfo);
+        } else {
+          // Original request_copy email flow
+          this.requestCopyEstimate(estimateId, button)
+            .then(response => {
+              this.showMessage(`Estimate has been emailed to ${customerInfo.email}`, 'success', () => {
+                this.setButtonLoading(button, false);
+                this.processing = false;
+              });
+            })
+            .catch(() => {
+              this.showError('Error sending estimate copy. Please try again.');
+              this.setButtonLoading(button, false);
+              this.processing = false;
+            });
+        }
+      } else {
+        logger.log('Missing details for email contact, showing prompt:', missingFields); // <--- Added log
+        // Missing details, show prompt
+        this.showCustomerDetailsPrompt(estimateId, button, emailAction);
+      }
     });
 
     smsBtn.addEventListener('click', () => {
+      logger.log('Phone contact method selected'); // <--- Added log
       promptEl.remove();
 
       // Determine the specific action for SMS/phone
       const smsAction = action === 'request_contact' ? 'request_contact_phone' : 'request_copy_sms';
 
-      // Check customer details
-      this.checkCustomerDetails(estimateId)
-        .then(customerInfo => {
-          // Always check for name, plus phone for SMS/phone actions
-          const missingFields = [];
-          if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
-          if (!customerInfo.phone || customerInfo.phone.trim() === '') missingFields.push('phone');
+      // Check customer details using the imported function
+      const customerInfo = loadCustomerDetails();
 
-          if (missingFields.length === 0) {
-            // All required details exist, proceed with the action
-            if (action === 'request_contact') {
-              this.requestStoreContact(estimateId, 'phone', button, customerInfo);
-            } else {
-              // Original request_copy SMS flow (coming soon)
-              this.showMessage('SMS option coming soon.', 'success');
-              this.setButtonLoading(button, false);
-              this.processing = false;
-            }
-          } else {
-            // Missing details, show prompt
-            this.showCustomerDetailsPrompt(estimateId, button, smsAction);
-          }
-        })
-        .catch(() => {
-          this.showError('Error checking customer details. Please try again.');
+      // Always check for name, plus phone for SMS/phone actions
+      const missingFields = [];
+      if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
+      if (!customerInfo.phone || customerInfo.phone.trim() === '') missingFields.push('phone');
+
+      if (missingFields.length === 0) {
+        logger.log('Required details for phone contact exist, proceeding'); // <--- Added log
+        // All required details exist, proceed with the action
+        if (action === 'request_contact') {
+          this.requestStoreContact(estimateId, 'phone', button, customerInfo);
+        } else {
+          // Original request_copy SMS flow (coming soon)
+          this.showMessage('SMS option coming soon.', 'success');
           this.setButtonLoading(button, false);
           this.processing = false;
-        });
+        }
+      } else {
+        logger.log('Missing details for phone contact, showing prompt:', missingFields); // <--- Added log
+        // Missing details, show prompt
+        this.showCustomerDetailsPrompt(estimateId, button, smsAction);
+      }
     });
   }
 
@@ -645,6 +697,7 @@ class PrintEstimate {
    * @param {Object} customerDetails - Customer details
    */
   requestStoreContact(estimateId, contactMethod, button, customerDetails) {
+    logger.log('requestStoreContact called:', { estimateId, contactMethod, customerDetails }); // <--- Added log
     // First store the estimate to ensure it's in the database
     this.storeEstimate(estimateId)
       .then(data => {
@@ -654,45 +707,31 @@ class PrintEstimate {
 
         // Prepare data for the server-side request
         const requestData = {
-          action: 'request_store_contact',
-          nonce: productEstimatorVars.nonce,
           estimate_id: estimateId,
           contact_method: contactMethod,
           customer_details: JSON.stringify(customerDetails)
         };
 
-        this.log('Sending store contact request with data:', requestData);
+        logger.log('Sending store contact request with data:', requestData);
 
-        // Make the AJAX request to send the email
-        return fetch(productEstimatorVars.ajax_url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: new URLSearchParams(requestData)
-        });
+        // Use DataService for the AJAX request
+        return this.dataService.request('request_store_contact', requestData);
       })
-      .then(response => response.json())
       .then(response => {
-        if (response.success) {
-          this.log('Store contact request successful:', response.data);
+        logger.log('Store contact request successful:', response);
 
-          // Show success message based on contact method
-          let message = '';
-          if (contactMethod === 'email') {
-            message = `Your request has been sent. Our store will contact you at ${customerDetails.email} shortly.`;
-          } else {
-            message = `Your request has been sent. Our store will call you at ${customerDetails.phone} shortly.`;
-          }
-
-          this.showMessage(message, 'success');
+        // Show success message based on contact method
+        let message = '';
+        if (contactMethod === 'email') {
+          message = `Your request has been sent. Our store will contact you at ${customerDetails.email} shortly.`;
         } else {
-          this.log('Store contact request failed:', response.data);
-          this.showError(response.data?.message || 'Error sending contact request. Please try again.');
+          message = `Your request has been sent. Our store will call you at ${customerDetails.phone} shortly.`;
         }
+
+        this.showMessage(message, 'success');
       })
       .catch(error => {
-        this.log('Error in requestStoreContact:', error);
+        logger.log('Error in requestStoreContact:', error);
         this.showError('Error sending contact request. Please try again.');
       })
       .finally(() => {
@@ -707,33 +746,52 @@ class PrintEstimate {
    * @returns {Promise<Object>} Customer details object
    */
   checkCustomerDetails(estimateId) {
+    logger.log('checkCustomerDetails called for estimate:', estimateId); // <--- Added log
     return new Promise((resolve, reject) => {
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'check_customer_details',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateId
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success) {
-            this.log('Customer details check result:', response.data);
-            resolve(response.data.customer_details || {});
+      // If we have customer details in local storage, resolve immediately
+      // Use the imported loadCustomerDetails function
+      const currentDetails = loadCustomerDetails();
+      // Add a check for required fields (name and email are typically needed for printing/contact)
+      // Adjust the check below based on which fields are *always* required for this check.
+      // If any required fields are missing from local storage, proceed to AJAX.
+      if (currentDetails && currentDetails.name && currentDetails.email) {
+        this.customerDetails = currentDetails; // Update class property
+        logger.log('Customer details found in local storage.');
+        resolve(this.customerDetails);
+        return; // Exit early
+      }
+
+      // If not in local storage, fetch from the server using DataService
+      logger.log('Customer details not fully available in local storage, fetching from server.');
+      this.dataService.request('check_customer_details', { estimate_id: estimateId })
+        .then(data => {
+          logger.log('Customer details check result from server:', data);
+          if (data && data.customer_details) {
+            // Save to local storage using the imported function
+            saveCustomerDetails(data.customer_details);
+            // Load updated details into class property using the imported function
+            this.customerDetails = loadCustomerDetails();
+            resolve(this.customerDetails);
           } else {
-            reject(new Error(response.data?.message || 'Error checking customer details'));
+            // Even if server returns success, if no details are provided, treat as not found
+            logger.log('Server check succeeded but no customer details returned.');
+            // Optionally save an empty state or just resolve with empty details
+            saveCustomerDetails({}); // Save empty details to indicate server has none
+            this.customerDetails = {};
+            resolve(this.customerDetails); // Resolve with empty object
           }
         })
         .catch(error => {
-          this.log('Error checking customer details:', error);
-          reject(error);
+          logger.log('Error fetching customer details from server:', error);
+          // On AJAX error, resolve with empty details, but log the error
+          this.customerDetails = {};
+          resolve(this.customerDetails); // Resolve with empty object on error
+          // Or reject if a server error should halt the process:
+          // reject(error);
         });
     });
   }
+
 
   /**
    * Update customer details with multiple fields
@@ -743,30 +801,17 @@ class PrintEstimate {
    * @returns {Promise<Object>} Promise that resolves when details are updated
    */
   updateCustomerDetails(estimateId, details) {
+    logger.log('updateCustomerDetails called:', { estimateId, details }); // <--- Added log
     return new Promise((resolve, reject) => {
       // Make sure we have the minimum required fields
       if (!details.postcode) {
         details.postcode = '0000'; // Default postcode if not set
       }
 
-      // Update customer details
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'update_customer_details',
-          nonce: productEstimatorVars.nonce,
-          details: JSON.stringify(details)
-        })
-      })
-        .then(response => response.json())
+      // Update customer details using DataService
+      this.dataService.request('update_customer_details', { details: JSON.stringify(details) })
         .then(response => {
-          if (!response.success) {
-            throw new Error(response.data?.message || 'Error updating customer details');
-          }
-
+          logger.log('Server update_customer_details successful:', response); // <--- Added log
           // Dispatch an event to notify other components of updated details
           const event = new CustomEvent('customer_details_updated', {
             bubbles: true,
@@ -776,67 +821,50 @@ class PrintEstimate {
           });
           document.dispatchEvent(event);
 
-          // Now store the estimate to the database, passing ONLY the estimate_id
-          return fetch(productEstimatorVars.ajax_url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-              action: 'store_single_estimate',
-              nonce: productEstimatorVars.nonce,
-              estimate_id: estimateId
-            })
-          });
+          // Now store the estimate to the database using DataService
+          return this.dataService.request('store_single_estimate', { estimate_id: estimateId });
         })
-        .then(response => response.json())
         .then(response => {
-          if (response.success) {
-            resolve(response.data);
-          } else {
-            console.error('Error storing estimate:', response);
-            throw new Error(response.data?.message || 'Error storing estimate');
-          }
+          logger.log('Server store_single_estimate successful:', response); // <--- Added log
+          // Save updated details to local storage using the imported function
+          saveCustomerDetails(details);
+          this.customerDetails = details; // Update class property
+          resolve(response); // Resolve with the response from storing the estimate
         })
         .catch(error => {
-          console.error('Error in updateCustomerDetails:', error);
+          logger.error('Error in updateCustomerDetails AJAX chain:', error); // <--- Added log
           reject(error);
         });
     });
   }
 
   /**
+   * This method is now redundant and can be removed, as it's handled by CustomerStorage.js
+   */
+  /*
+  clearCustomerDetails() {
+    try {
+      localStorage.removeItem('customerDetails');
+    } catch (localStorageError) {
+      logger.warn('localStorage not available:', localStorageError);
+    }
+    try {
+      sessionStorage.removeItem('customerDetails');
+    } catch (sessionStorageError) {
+      logger.warn('sessionStorage not available:', sessionStorageError);
+    }
+    this.customerDetails = {}; // Clear the class property
+  }
+  */
+  /**
    * Store the estimate in the database
    * @param {string} estimateId - The estimate ID
    * @returns {Promise<Object>} Promise that resolves when estimate is stored
    */
   storeEstimate(estimateId) {
-    return new Promise((resolve, reject) => {
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'store_single_estimate',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateId
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success) {
-            this.log('Estimate stored successfully', response.data);
-            resolve(response.data);
-          } else {
-            reject(new Error(response.data?.message || 'Error storing estimate'));
-          }
-        })
-        .catch(error => {
-          this.log('Error storing estimate:', error);
-          reject(error);
-        });
-    });
+    logger.log('storeEstimate called:', estimateId); // <--- Added log
+    // Use DataService for the AJAX request
+    return this.dataService.request('store_single_estimate', { estimate_id: estimateId });
   }
 
   /**
@@ -845,82 +873,53 @@ class PrintEstimate {
    * @returns {Promise<string>} Promise that resolves to the secure URL
    */
   getSecurePdfUrl(dbId) {
-    return new Promise((resolve, reject) => {
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'get_secure_pdf_url',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: dbId
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success && response.data.url) {
-            this.log('Received secure PDF URL:', response.data);
-            resolve(response.data.url);
-          } else {
-            reject(new Error(response.data?.message || 'Failed to get secure PDF URL'));
-          }
-        })
-        .catch(error => {
-          this.log('Error getting secure PDF URL:', error);
-          reject(error);
-        });
-    });
+    logger.log('getSecurePdfUrl called:', dbId); // <--- Added log
+    // Use DataService for the AJAX request
+    return this.dataService.request('get_secure_pdf_url', { estimate_id: dbId })
+      .then(data => {
+        if (data && data.url) {
+          logger.log('Received secure PDF URL:', data);
+          return data.url; // Resolve with the URL string
+        } else {
+          throw new Error('Failed to get secure PDF URL');
+        }
+      });
   }
 
   /**
    * Request a copy of the estimate to be sent via email
    * @param {string} estimateId - The estimate ID
-   * @param {HTMLElement} button - The button element
+   * @param {HTMLElement} button - The buttonelement
    * @returns {Promise<Object>} Promise that resolves when email is sent
    */
   requestCopyEstimate(estimateId, button) {
-    return this.checkCustomerDetails(estimateId)
-      .then(customerInfo => {
-        if (!customerInfo.email) {
-          return Promise.reject(new Error('no_email'));
-        }
-        return this.storeEstimate(estimateId)
-          .then(data => {
-            if (!data || !data.estimate_id) {
-              throw new Error('Failed to store estimate');
-            }
+    logger.log('requestCopyEstimate called:', estimateId); // <--- Added log
+    // Use the imported loadCustomerDetails function
+    const customerInfo = loadCustomerDetails();
 
-            return new Promise((resolve, reject) => {
-              fetch(productEstimatorVars.ajax_url, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: new URLSearchParams({
-                  action: 'request_copy_estimate',
-                  nonce: productEstimatorVars.nonce,
-                  estimate_id: estimateId
-                })
-              })
-                .then(response => response.json())
-                .then(response => {
-                  if (response.success) {
-                    resolve(response.data);
-                  } else {
-                    if (response.data?.code === 'no_email') {
-                      reject(new Error('no_email'));
-                    } else {
-                      reject(new Error(response.data?.message || 'Error requesting estimate copy'));
-                    }
-                  }
-                })
-                .catch(error => {
-                  this.log('Error requesting estimate copy:', error);
-                  reject(error);
-                });
-            });
-          });
+    if (!customerInfo.email) {
+      logger.log('No email found for requestCopyEstimate'); // <--- Added log
+      return Promise.reject(new Error('no_email'));
+    }
+
+    return this.storeEstimate(estimateId)
+      .then(data => {
+        if (!data || !data.estimate_id) {
+          throw new Error('Failed to store estimate');
+        }
+
+        // Use DataService for the AJAX request
+        return this.dataService.request('request_copy_estimate', { estimate_id: estimateId });
+      })
+      .catch(error => {
+        // Handle specific no_email error from server response if needed
+        if (error.data?.code === 'no_email') {
+          logger.log('Server returned no_email error for requestCopyEstimate'); // <--- Added log
+          throw new Error('no_email');
+        } else {
+          logger.log('Error requesting estimate copy:', error);
+          throw error; // Re-throw other errors
+        }
       });
   }
 
@@ -930,7 +929,11 @@ class PrintEstimate {
    * @param {boolean} isLoading - Whether button is in loading state
    */
   setButtonLoading(button, isLoading) {
-    if (!button) return;
+    logger.log('setButtonLoading called:', { button: button?.id || button?.className, isLoading }); // <--- Added log
+    if (!button) {
+      logger.log('setButtonLoading called with null button'); // <--- Added log
+      return;
+    }
 
     const originalText = button.dataset.originalText || button.textContent;
 
@@ -957,14 +960,15 @@ class PrintEstimate {
    * @param {Function} onConfirm - Callback when confirmed
    */
   showMessage(message, type = 'success', onConfirm = null) {
+    logger.log('showMessage called:', { message, type }); // <--- Added log
     if (window.productEstimator && window.productEstimator.dialog) {
       window.productEstimator.dialog.show({
-        title: 'Estimate Sent',
+        title: type === 'success' ? 'Success' : 'Error', // Use generic titles here
         message: message,
-        type: 'estimate',
+        type: 'estimate', // Use 'estimate' type for styling if appropriate
         action: 'confirm',
-        confirmText: 'OK',
-        cancelText: null,
+        confirmText: this.config.i18n.confirm || 'OK', // Use localized OK
+        cancelText: null, // Hide cancel for simple messages
         onConfirm: () => {
           if (typeof onConfirm === 'function') {
             onConfirm();
@@ -984,6 +988,7 @@ class PrintEstimate {
    * @param {string} message - Error message
    */
   showError(message) {
+    logger.log('showError called:', message); // <--- Added log
     // Try to use modal error display if available
     if (window.productEstimator &&
       window.productEstimator.core &&
@@ -992,16 +997,6 @@ class PrintEstimate {
     } else {
       // Fall back to alert
       alert(message);
-    }
-  }
-
-  /**
-   * Log debug messages
-   * @param {...any} args - Arguments to log
-   */
-  log(...args) {
-    if (this.config.debug) {
-      console.log('[PrintEstimate]', ...args);
     }
   }
 }

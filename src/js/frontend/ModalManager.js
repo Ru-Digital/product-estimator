@@ -5,7 +5,12 @@
  * This is the single source of truth for modal operations.
  */
 import ConfirmationDialog from './ConfirmationDialog';
-import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
+import { SuggestionsCarousel } from './SuggestionsCarousel';
+import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails} from "./CustomerStorage";
+import { loadEstimateData, saveEstimate, saveEstimateData, clearEstimateData, addEstimate, removeEstimate } from "./EstimateStorage";
+import TemplateEngine from './TemplateEngine';
+import { format, createLogger } from '@utils';
+const logger = createLogger('ModalManager');
 
 
 
@@ -37,6 +42,17 @@ class ModalManager {
 
     // Store references to dependencies
     this.dataService = dataService;
+
+    this.loadCustomerDetails = loadCustomerDetails;
+    this.saveCustomerDetails = saveCustomerDetails;
+    this.clearCustomerDetails = clearCustomerDetails;
+
+    this.loadEstimateData = loadEstimateData;
+    this.clearEstimateData = clearEstimateData;
+    this.saveEstimateData = saveEstimateData;
+    // Make addEstimate and removeEstimate available if needed elsewhere, though direct import is used below
+    // this.addEstimate = addEstimate;
+    // this.removeEstimate = removeEstimate;
 
     // UI elements
     this.modal = null;
@@ -70,7 +86,7 @@ class ModalManager {
    */
   init() {
     if (this.initialized) {
-      this.log('ModalManager already initialized');
+      logger.log('ModalManager already initialized');
       return;
     }
 
@@ -78,10 +94,10 @@ class ModalManager {
     this.modal = document.querySelector(this.config.selectors.modalContainer);
 
     if (!this.modal) {
-      this.log('Warning: Modal element not found in DOM. The PHP partial may not be included.');
+      logger.log('Warning: Modal element not found in DOM. The PHP partial may not be included.');
       // Don't attempt to create it - the partial should be included by PHP
     } else {
-      this.log('Found existing modal in DOM, initializing elements');
+      logger.log('Found existing modal in DOM, initializing elements');
     }
 
     // Initialize modal elements if modal exists
@@ -102,7 +118,7 @@ class ModalManager {
     this.initializeJQueryAccordions();
 
     this.initialized = true;
-    this.log('ModalManager initialized');
+    logger.log('ModalManager initialized');
   }
 
   /**
@@ -110,7 +126,7 @@ class ModalManager {
    */
   initializeElements() {
     if (!this.modal) {
-      console.error('[ModalManager] Modal element not available for initializing elements');
+      logger.error('Modal element not available for initializing elements');
       return;
     }
 
@@ -120,9 +136,23 @@ class ModalManager {
     this.contentContainer = this.modal.querySelector(this.config.selectors.contentContainer);
     this.loadingIndicator = this.modal.querySelector(this.config.selectors.loadingIndicator);
 
-    // Create loading indicator if it doesn't exist
+    // Find view containers - ASSUME they are now in the PHP template
+    this.estimatesList = this.modal.querySelector('#estimates');
+    this.estimateSelection = this.modal.querySelector('#estimate-selection-wrapper');
+    this.estimateSelectionForm = this.modal.querySelector('#estimate-selection-form-wrapper'); // If this is also a persistent wrapper
+    this.roomSelectionForm = this.modal.querySelector('#room-selection-form-wrapper');
+    this.newEstimateForm = this.modal.querySelector('#new-estimate-form-wrapper');
+    this.newRoomForm = this.modal.querySelector('#new-room-form-wrapper');
+
+    // Add checks and potential error handling if essential elements are missing
+    if (!this.estimatesList) {
+      logger.error('Critical: #estimates div not found in modal template!');
+      // You might want to disable the modal or show a fatal error message here
+    }
+
+    // Create missing containers if needed
     if (!this.loadingIndicator) {
-      console.warn('[ModalManager] Loading indicator not found, creating one');
+      logger.warn('Loading indicator not found, creating one');
       this.loadingIndicator = document.createElement('div');
       this.loadingIndicator.className = 'product-estimator-modal-loading';
       this.loadingIndicator.innerHTML = `
@@ -132,42 +162,10 @@ class ModalManager {
       this.modal.appendChild(this.loadingIndicator);
     }
 
-    // Find view containers - directly use string IDs for performance
-    this.estimatesList = this.modal.querySelector('#estimates');
-    this.estimateSelection = this.modal.querySelector('#estimate-selection-wrapper');
-    this.estimateSelectionForm = this.modal.querySelector('#estimate-selection-form-wrapper');
-    this.roomSelectionForm = this.modal.querySelector('#room-selection-form-wrapper');
-    this.newEstimateForm = this.modal.querySelector('#new-estimate-form-wrapper');
-    this.newRoomForm = this.modal.querySelector('#new-room-form-wrapper');
-
-    // Critical fix: If estimate selection isn't found, create it
-    if (!this.estimateSelection && this.contentContainer) {
-      console.warn('Creating estimate selection container');
-      this.estimateSelection = document.createElement('div');
-      this.estimateSelection.id = 'estimate-selection-wrapper';
-      this.contentContainer.appendChild(this.estimateSelection);
-
-      // Also create the form wrapper
-      if (!this.estimateSelectionForm) {
-        this.estimateSelectionForm = document.createElement('div');
-        this.estimateSelectionForm.id = 'estimate-selection-form-wrapper';
-        this.estimateSelection.appendChild(this.estimateSelectionForm);
-      }
-    }
-
-    // Create any missing form containers to prevent errors
-    if (!this.roomSelectionForm && this.contentContainer) {
-      console.warn('Creating room selection form container');
-      this.roomSelectionForm = document.createElement('div');
-      this.roomSelectionForm.id = 'room-selection-form-wrapper';
-      this.roomSelectionForm.style.display = 'none';
-      this.contentContainer.appendChild(this.roomSelectionForm);
-    }
 
     // Bind events to any existing forms
-    this.bindExistingForms();
+    // this.bindExistingForms();
   }
-
   /**
    * Show loading overlay - with error handling
    */
@@ -175,7 +173,7 @@ class ModalManager {
     if (this.loadingIndicator) {
       this.loadingIndicator.style.display = 'flex';
     } else {
-      console.warn('Loading indicator not available - creating one');
+      logger.warn('Loading indicator not available - creating one');
       // Try to initialize a loading indicator
       if (this.modal) {
         const loadingIndicator = document.createElement('div');
@@ -188,7 +186,7 @@ class ModalManager {
         this.modal.appendChild(loadingIndicator);
         this.loadingIndicator = loadingIndicator;
       } else {
-        console.error('Cannot create loading indicator - modal not available');
+        logger.error('Cannot create loading indicator - modal not available');
       }
     }
   }
@@ -204,91 +202,28 @@ class ModalManager {
       this.loadingIndicator.style.display = 'none';
 
       // Log operation for tracking
-      console.log('Loading indicator hidden at:', new Date().toISOString());
+      // logger.log('Loading indicator hidden at:', new Date().toISOString());
     } else {
-      console.warn('Loading indicator not available during hide operation');
+      logger.warn('Loading indicator not available during hide operation');
     }
   }
 
   initializeCarousels() {
-    console.log('Initializing carousels in modal');
+    logger.log('Initializing carousels in modal');
 
     // Find all carousel containers in the modal (both suggestions and similar products)
     const carouselContainers = this.modal.querySelectorAll('.suggestions-carousel');
 
     if (carouselContainers.length > 0) {
-      console.log(`Found ${carouselContainers.length} carousel containers in modal`);
+      logger.log(`Found ${carouselContainers.length} carousel containers in modal`);
 
-      // Count each type for better debugging
-      const suggestionCarousels = this.modal.querySelectorAll('.product-suggestions .suggestions-carousel').length;
-      const similarProductCarousels = this.modal.querySelectorAll('.product-similar-products .suggestions-carousel').length;
-
-      console.log(`Carousel types: ${suggestionCarousels} suggestion carousels, ${similarProductCarousels} similar product carousels`);
 
       // Initialize all carousels
       initSuggestionsCarousels();
     } else {
-      console.log('No carousel containers found in modal');
+      logger.log('No carousel containers found in modal');
     }
   }
-
-  /**
-   * New method to bind events to any forms that already exist in the DOM
-   */
-  bindExistingForms() {
-    // Bind room form events
-    if (this.newRoomForm) {
-      const form = this.newRoomForm.querySelector('form#new-room-form');
-      if (form) {
-        console.log('Found existing room form, binding event handlers');
-
-        // Remove any existing event handlers to prevent duplicates
-        if (this._newRoomFormSubmitHandler) {
-          form.removeEventListener('submit', this._newRoomFormSubmitHandler);
-        }
-
-        // Create new handler with preventDefault
-        this._newRoomFormSubmitHandler = (e) => {
-          e.preventDefault();
-          console.log('Existing room form submitted');
-          this.handleNewRoomSubmission(form, e);
-        };
-
-        // Add event listener
-        form.addEventListener('submit', this._newRoomFormSubmitHandler);
-
-        // Also bind cancel button
-        const cancelButton = form.querySelector('.cancel-btn');
-        if (cancelButton) {
-          cancelButton.addEventListener('click', () => {
-            this.cancelForm('room');
-          });
-        }
-      }
-    }
-
-    // Bind estimate form events
-    if (this.newEstimateForm) {
-      const form = this.newEstimateForm.querySelector('form#new-estimate-form');
-      if (form) {
-        // Similar binding for the estimate form
-        if (this._estimateFormSubmitHandler) {
-          form.removeEventListener('submit', this._estimateFormSubmitHandler);
-        }
-
-        this._estimateFormSubmitHandler = (e) => {
-          e.preventDefault();
-          this.handleNewEstimateSubmission(form, e);
-        };
-
-        form.addEventListener('submit', this._estimateFormSubmitHandler);
-      }
-    }
-
-    // Bind room selection form events if needed
-    this.bindRoomSelectionFormEvents();
-  }
-
 
   /**
    * Bind events to modal elements
@@ -296,7 +231,7 @@ class ModalManager {
   bindEvents() {
     // Make sure elements exist before binding events
     if (!this.modal) {
-      this.log('Modal element not available, cannot bind events');
+      logger.log('Modal element not available, cannot bind events');
       return;
     }
 
@@ -311,7 +246,7 @@ class ModalManager {
       if (e.target.closest(this.config.selectors.closeButton)) {
         e.preventDefault();
         e.stopPropagation();
-        this.log('Close button clicked');
+        logger.log('Close button clicked');
         this.closeModal();
       }
 
@@ -319,7 +254,7 @@ class ModalManager {
       if (e.target.classList.contains('product-estimator-modal-overlay')) {
         e.preventDefault();
         e.stopPropagation();
-        this.log('Overlay clicked');
+        logger.log('Overlay clicked');
         this.closeModal();
       }
     };
@@ -329,7 +264,7 @@ class ModalManager {
     // Escape key to close modal
     const escHandler = (e) => {
       if (e.key === 'Escape' && this.isOpen) {
-        this.log('Escape key pressed');
+        logger.log('Escape key pressed');
         this.closeModal();
       }
     };
@@ -339,16 +274,16 @@ class ModalManager {
     document.addEventListener('keydown', escHandler);
     this.escKeyHandler = escHandler;
 
-    this.log('Modal events bound');
+    // logger.log('Modal events bound');
   }
 
   /**
-   * Open the modal with corrected loading handling
+   * Open the modal with template-based rendering
    * @param {number|string|null} productId - Product ID or null for list view
    * @param {boolean} forceListView - Whether to force showing the list view
    */
   openModal(productId = null, forceListView = false) {
-    console.log('MODAL OPEN CALLED WITH:', {
+    logger.log('MODAL OPEN CALLED WITH:', {
       productId: productId,
       forceListView: forceListView,
       typeOfProductId: typeof productId
@@ -356,11 +291,12 @@ class ModalManager {
 
     // Make sure modal exists and is initialized
     if (!this.modal) {
-      console.error('Cannot open modal - not found in DOM');
+      logger.error('Cannot open modal - not found in DOM');
+      this.showError('Modal element not found. Please contact support.');
       return;
     }
 
-    // Reset any previous modal state
+    // Reset any previous modal state (hides all view wrappers)
     this.resetModalState();
 
     // Store product ID
@@ -373,7 +309,7 @@ class ModalManager {
       delete this.modal.dataset.productId;
     }
 
-    // Always start with loader visible
+    // Always show loader at the start of openModal
     this.showLoading();
 
     // Make sure modal is visible
@@ -383,142 +319,208 @@ class ModalManager {
     document.body.classList.add('modal-open');
     this.isOpen = true;
 
-    // DETERMINE WHICH FLOW TO USE
-    console.log('FLOW DECISION:', {
-      hasProductId: !!productId,
-      forceListView: forceListView,
-      willShowProductFlow: (!!productId && !forceListView),
-      willShowListView: (!productId || forceListView)
-    });
-
-    // PRODUCT FLOW: Has product ID and not forcing list view
-    if (productId && !forceListView) {
-      console.log('STARTING PRODUCT FLOW with product ID:', productId);
-
-      // Explicitly hide the estimates list
-      if (this.estimatesList) {
-        this.estimatesList.style.display = 'none';
-        if (typeof jQuery !== 'undefined') {
-          jQuery(this.estimatesList).hide();
-        }
-      }
-
-      // Check if estimates exist
-      this.dataService.checkEstimatesExist()
-        .then(hasEstimates => {
-          console.log('Has estimates check result:', hasEstimates);
-
-          if (hasEstimates) {
-            // Show estimate selection view
-            this.showEstimateSelection();
-          } else {
-            // Show new estimate form
-            this.showNewEstimateForm();
-            // IMPORTANT: Hide the loading indicator when showing the form
-            this.hideLoading();
-          }
-        })
-        .catch(error => {
-          console.error('Error checking estimates:', error);
-          this.showError('Error checking estimates. Please try again.');
-          this.hideLoading();
-        });
-    } else {
-      // LIST VIEW FLOW: No product ID or forcing list view
-      console.log('STARTING LIST VIEW FLOW');
-
-      // Ensure the estimates list is visible and other views are hidden
-      if (this.estimatesList) {
-        this.estimatesList.style.display = 'block';
-      }
-
-      if (this.estimateSelection) {
-        this.estimateSelection.style.display = 'none';
-      }
-
-      if (this.newEstimateForm) {
-        this.newEstimateForm.style.display = 'none';
-      }
-
-      if (this.newRoomForm) {
-        this.newRoomForm.style.display = 'none';
-      }
-
-      // Show estimates list
-      this.loadEstimatesList()
-        .then(() => {
-          // Find and ensure the create estimate button has correct event handler
-          const createButton = this.modal.querySelector('#create-estimate-btn');
-          if (createButton) {
-            // Remove existing handlers
-            if (this._createEstimateBtnHandler) {
-              createButton.removeEventListener('click', this._createEstimateBtnHandler);
-            }
-
-            // Create and store new handler
-            this._createEstimateBtnHandler = () => {
-              this.showNewEstimateForm();
-            };
-
-            // Add the handler
-            createButton.addEventListener('click', this._createEstimateBtnHandler);
-            console.log('Updated event handler for list view create estimate button');
-          }
-        })
-        .catch(error => {
-          console.error('Error loading estimates list:', error);
-          this.showError('Error loading estimates list.');
-        })
-        .finally(() => {
-          this.hideLoading();
-        });
-    }
-  }
-
-  /**
-   * Show estimate selection with force visibility
-   */
-  showEstimateSelection() {
-    console.log('Showing estimate selection');
-
-    // Make sure estimates list is hidden
-    if (this.estimatesList) {
-      this.estimatesList.style.display = 'none';
-    }
-
-    // Force visibility of estimate selection
-    if (!this.estimateSelection) {
-      console.error('Estimate selection container not found');
+    // Get the form container for content (where view wrappers reside)
+    const formContainer = this.modal.querySelector('.product-estimator-modal-form-container');
+    if (!formContainer) {
+      logger.error('Form container not found in modal');
+      this.hideLoading(); // Hide loading on error
+      this.showError('Modal structure missing. Please contact support.');
       return;
     }
 
-    // Force visibility using multiple techniques
-    this.forceElementVisibility(this.estimateSelection);
+    // DETERMINE WHICH FLOW TO USE
+    if (productId && !forceListView) {
+      logger.log('STARTING PRODUCT FLOW with product ID:', productId);
 
-    // Ensure the form is also visible
-    if (this.estimateSelectionForm) {
-      this.forceElementVisibility(this.estimateSelectionForm);
-    }
+      // Check if estimates exist using DataService
+      this.dataService.checkEstimatesExist()
+        .then(hasEstimates => {
+          logger.log('Has estimates check result:', hasEstimates);
 
-    // Make sure the form is loaded properly
-    if (!this.estimateSelectionForm || !this.estimateSelectionForm.querySelector('form')) {
-      // Form content needs to be loaded
-      this.loadEstimateSelectionForm()
-        .then(() => {
-          // Double-check event binding
-          this.bindEstimateSelectionFormEvents();
+          if (hasEstimates) {
+            // Estimates exist, show estimate selection view
+            logger.log('Estimates found, showing estimate selection.');
+
+            // Ensure estimate selection wrapper is visible
+            const estimateSelectionWrapper = formContainer.querySelector('#estimate-selection-wrapper');
+            if (estimateSelectionWrapper) {
+              this.forceElementVisibility(estimateSelectionWrapper); // Use force visibility
+
+              // --- MODIFIED CODE START ---
+              // Insert the estimate selection template content into the wrapper
+              try {
+                // Clear existing content first in case it was loaded before
+                estimateSelectionWrapper.innerHTML = '';
+                TemplateEngine.insert('estimate-selection-template', {}, estimateSelectionWrapper);
+                logger.log('Estimate selection template inserted into wrapper.');
+
+                // *** FIX: Update the instance property to the newly inserted element ***
+                this.estimateSelectionForm = estimateSelectionWrapper.querySelector('#estimate-selection-form-wrapper');
+                // *** END FIX ***
+
+              } catch (templateError) {
+                logger.error('Error inserting estimate selection template:', templateError);
+                this.showError('Error loading selection form template. Please try again.');
+                this.hideLoading();
+                return; // Stop execution if template insertion fails
+              }
+              // --- MODIFIED CODE END ---
+
+              // Now that this.estimateSelectionForm is updated, safely proceed
+              if (this.estimateSelectionForm) {
+                this.forceElementVisibility(this.estimateSelectionForm); // Ensure the form wrapper itself is visible
+
+                // Assuming the template insertion includes the actual <form> element,
+                // we can proceed directly to loading data and binding events.
+                // If the form content itself is loaded via a separate AJAX call *after* the wrapper template,
+                // you would keep the check `if (!this.estimateSelectionForm.querySelector('form'))` and the AJAX logic here.
+                // Based on the template structure, it seems the <form> is included in estimate-selection.html.
+
+                const estimateSelectionFormElement = this.estimateSelectionForm.querySelector('form');
+                if (estimateSelectionFormElement) {
+                  logger.log('Estimate selection form element found after template insertion, populating dropdown and binding events.');
+                  this.loadEstimatesData(); // This function now uses the updated this.estimateSelectionForm
+                  this.bindEstimateSelectionFormEvents(); // This function now uses the updated this.estimateSelectionForm
+                  // hideLoading() is now called within loadEstimatesData's finally() block
+                } else {
+                  logger.error('Form element (#estimate-selection-form) not found inside the template after insertion!');
+                  this.showError('Error rendering form template. Please try again.');
+                  this.hideLoading(); // Ensure loading is hidden on error
+                }
+
+
+              } else {
+                // This error is less likely now that template insertion is handled, but keep as a fallback
+                logger.error('Estimate selection form wrapper not found in template AFTER INSERTION!');
+                this.showError('Modal structure incomplete. Please contact support.');
+                this.hideLoading(); // Ensure loading is hidden on error
+              }
+
+            } else {
+              logger.error('Estimate selection wrapper not found in template!');
+              this.showError('Modal structure incomplete. Please contact support.');
+              this.hideLoading(); // Ensure loading is hidden on error
+              return;
+            }
+
+          } else {
+            // No estimates, show new estimate form
+            logger.log('No estimates found, showing new estimate form.');
+
+            // Check if template exists before calling showNewEstimateForm
+            if (!TemplateEngine.getTemplate('new-estimate-form-template')) {
+              logger.error('Template not found: new-estimate-form-template');
+              this.showError('Template not found. Please refresh and try again.');
+              this.hideLoading(); // Hide loading on error
+              return;
+            }
+
+            this.showNewEstimateForm();
+            // Note: showNewEstimateForm now manages its own loading state.
+            // The hideLoading() that was previously here is no longer needed.
+          }
         })
         .catch(error => {
-          console.error('Error loading form:', error);
+          logger.error('Error checking estimates:', error);
+          if (formContainer) { // Ensure formContainer exists before showing message
+            TemplateEngine.showMessage('Error checking estimates. Please try again.', 'error', formContainer);
+          }
+          this.hideLoading(); // Hide loading on error checking estimates
         });
     } else {
-      // Form already exists, just load the estimates data for the dropdown
-      this.loadEstimatesData();
+      // LIST VIEW FLOW: No product ID or forcing list view
+      logger.log('STARTING LIST VIEW FLOW');
 
-      // Re-bind events to ensure they work
-      this.bindEstimateSelectionFormEvents();
+      // Ensure estimates list container is visible (it's in the template)
+      if (this.estimatesList) {
+        this.forceElementVisibility(this.estimatesList); // Use force visibility
+      } else {
+        logger.error('Estimates list container not found in template!');
+        this.showError('Modal structure incomplete. Please contact support.');
+        this.hideLoading(); // Hide loading on error
+        return;
+      }
 
-      this.hideLoading();
+      // Bind event handlers to the estimates list container (for delegation)
+      this.bindEstimateListEventHandlers();
+
+      // Load and render the estimates list content
+      this.loadEstimatesList()
+        .catch(error => {
+          logger.error('Error loading estimates list:', error);
+          // Show error message in the estimates list container if possible
+          if (this.estimatesList) {
+            TemplateEngine.showMessage('Error loading estimates. Please try again.', 'error', this.estimatesList);
+          } else {
+            this.showError('Error loading estimates. Please try again.');
+          }
+        })
+        .finally(() => {
+          this.hideLoading(); // Ensure loading is hidden after loading estimates list
+        });
+    }
+    // Any hideLoading() here at the end of openModal are likely redundant
+  }
+
+  /**
+   * Bind events to the new room form element
+   * @param {HTMLFormElement} formElement - The form element to bind events to
+   * @param {string} estimateId - The estimate ID for the new room
+   * @param {string|null} productId - The current product ID, if applicable
+   */
+  bindNewRoomFormEvents(formElement, estimateId, productId = null) {
+    if (!formElement) {
+      logger.error('Cannot bind events - new room form element not provided');
+      return;
+    }
+
+    logger.log('Binding events to new room form:', formElement);
+
+    // Set data attributes on the form
+    formElement.dataset.estimateId = estimateId;
+    logger.log('Set estimate ID on new room form:', estimateId);
+
+    if (productId !== null && productId !== undefined) {
+      formElement.dataset.productId = productId;
+      logger.log('Set product ID on new room form:', productId);
+    } else {
+      delete formElement.dataset.productId;
+      logger.log('Removed product ID from new room form dataset.');
+    }
+
+
+    // Remove any existing submit handler to prevent duplicates
+    if (formElement._submitHandler) {
+      formElement.removeEventListener('submit', formElement._submitHandler);
+    }
+
+    // Bind submit event
+    formElement._submitHandler = (e) => {
+      e.preventDefault(); // Prevent default form submission
+      logger.log('New room form submitted via template');
+      this.handleNewRoomSubmission(formElement, e); // Pass the event object
+    };
+    formElement.addEventListener('submit', formElement._submitHandler);
+    logger.log('New room form submit event bound.');
+
+
+    // Bind cancel button
+    const cancelButton = formElement.querySelector('.cancel-btn');
+    if (cancelButton) {
+      // Remove existing handler if any, store handler directly on button
+      if (cancelButton._clickHandler) {
+        cancelButton.removeEventListener('click', cancelButton._clickHandler);
+      }
+
+      cancelButton._clickHandler = () => {
+        logger.log('New room form cancel button clicked');
+        this.cancelForm('room'); // Call the cancel handler
+      };
+      cancelButton.addEventListener('click', cancelButton._clickHandler);
+      logger.log('New room form cancel button bound.');
+
+    } else {
+      logger.warn('Cancel button not found in new room form.');
     }
   }
 
@@ -529,11 +531,11 @@ class ModalManager {
    */
   forceElementVisibility(element) {
     if (!element) {
-      console.error('Cannot show null element');
+      logger.error('Cannot show null element');
       return null;
     }
 
-    console.log('Forcing visibility for:', element.id || element.tagName);
+    logger.log('Forcing visibility for:', element.id || element.tagName);
 
     // 1. Apply inline styles with !important to override any CSS rules
     element.style.cssText += 'display: block !important; visibility: visible !important; opacity: 1 !important; height: auto !important;';
@@ -580,7 +582,7 @@ class ModalManager {
       this.modal.style.display = 'none';
       delete this.modal.dataset.productId;
     } else {
-      this.log('Cannot close modal - element not found');
+      logger.log('Cannot close modal - element not found');
       return;
     }
 
@@ -612,7 +614,7 @@ class ModalManager {
         const currentTime = new Date().getTime();
 
         if (loaderStartTime && (currentTime - loaderStartTime > 10000)) {
-          console.warn('Loading indicator has been visible for more than 10 seconds, hiding it.');
+          logger.warn('Loading indicator has been visible for more than 10 seconds, hiding it.');
           this.hideLoading();
           this.showError('The operation is taking longer than expected or may have failed silently.');
         }
@@ -633,7 +635,7 @@ class ModalManager {
       return originalHideLoading.call(this);
     };
 
-    console.log('Loader safety system installed');
+    logger.log('Loader safety system installed');
   }
 
   /**
@@ -644,14 +646,14 @@ class ModalManager {
     // Check if we have a loader that's currently visible
     if (this.loadingIndicator &&
       window.getComputedStyle(this.loadingIndicator).display !== 'none') {
-      console.log('Force hiding loader that was left visible');
+      logger.log('Force hiding loader that was left visible');
       this.hideLoading();
     }
 
     // Also check for any other loading indicators that might exist
     const allLoaders = document.querySelectorAll('.product-estimator-modal-loading');
     if (allLoaders.length > 1) {
-      console.warn(`Found ${allLoaders.length} loading indicators, cleaning up duplicates`);
+      logger.warn(`Found ${allLoaders.length} loading indicators, cleaning up duplicates`);
       // Keep only the first one, remove others
       for (let i = 1; i < allLoaders.length; i++) {
         allLoaders[i].remove();
@@ -668,7 +670,7 @@ class ModalManager {
    * Reset modal state
    */
   resetModalState() {
-    console.log('Resetting modal state');
+    // logger.log('Resetting modal state');
 
     // Hide all views with null checking and jQuery support
     const hideElement = (element) => {
@@ -696,171 +698,694 @@ class ModalManager {
     }
   }
 
+// Inside ModalManager.js
+
   /**
    * Load the estimates list with improved multi-estimate expansion
+   * and pre-loading of similar products.
+   * MODIFIED: Correctly retrieves inserted product element using lastElementChild.
+   * Ensures similarProductsLoaded flag is set if element is found.
+   * Ensures toggle button state is synchronised with container visibility.
+   * FIXED: Added a null check for 'suggestions' before accessing 'suggestions.length'.
    * @param {string|null} expandRoomId - Optional room ID to expand after loading
    * @param {string|null} expandEstimateId - Optional estimate ID containing the room
    * @returns {Promise} Promise that resolves when the list is loaded
    */
   loadEstimatesList(expandRoomId = null, expandEstimateId = null) {
+    logger.log('[loadEstimatesList] Function started', { expandRoomId, expandEstimateId });
+
     return new Promise((resolve, reject) => {
-      // Show loading state
       this.showLoading();
 
-      // Ensure estimates list container exists
       if (!this.estimatesList) {
+        logger.error('[loadEstimatesList] Estimates list container not found!');
+        this.hideLoading(); // Hide loading before rejecting
         reject(new Error('Estimates list container not found'));
         return;
       }
 
-      // Make sure it's visible
-      this.estimatesList.style.display = 'block';
+      this.forceElementVisibility(this.estimatesList); // Use force visibility
 
-      // Log expansion parameters
-      console.log(`Loading estimates list with expansion params - Room: ${expandRoomId}, Estimate: ${expandEstimateId}`);
+      try {
+        const estimateData = this.loadEstimateData();
+        const estimates = estimateData.estimates || {};
 
-      // Load estimates list via AJAX
-      jQuery.ajax({
-        url: productEstimatorVars.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'get_estimates_list',
-          nonce: productEstimatorVars.nonce
-        },
-        success: (response) => {
-          if (response.success && response.data.html) {
-            // Insert the HTML into the container
-            this.estimatesList.innerHTML = response.data.html;
+        logger.log('[loadEstimatesList] Loaded estimate data from LocalStorage:', estimateData);
+        this.estimatesList.innerHTML = '';
 
-            // Initialize accordions with a slight delay to ensure DOM is updated
-            setTimeout(() => {
-
-              // Update estimate-specific data attributes if needed
-              if (expandEstimateId) {
-                const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${expandEstimateId}"]`);
-                if (!estimateSection) {
-                  // Add data-estimate-id to estimate sections that don't have it
-                  const estimateSections = this.modal.querySelectorAll('.estimate-section');
-                  console.log(`Adding missing data-estimate-id attributes to ${estimateSections.length} estimates`);
-
-                  // Find sections that match our estimate ID by other means
-                  estimateSections.forEach((section, index) => {
-                    if (!section.dataset.estimateId) {
-                      // Get estimate ID from the section's remove button if available
-                      const removeButton = section.querySelector('.remove-estimate');
-                      if (removeButton && removeButton.dataset.estimateId) {
-                        section.dataset.estimateId = removeButton.dataset.estimateId;
-                        console.log(`Added estimate ID ${removeButton.dataset.estimateId} to section`);
-                      } else {
-                        // Fallback: add sequential IDs
-                        section.dataset.estimateId = String(index);
-                        console.log(`Added fallback estimate ID ${index} to section`);
-                      }
-                    }
-                  });
-                }
-              }
-
-              // Initialize accordions with a slight delay to ensure DOM is updated
-              setTimeout(() => {
-                this.updateEstimatesList(expandRoomId, expandEstimateId);
-                // ... existing code ...
-              }, 150);
-
-              this.initializeAccordions(expandRoomId, expandEstimateId);
-
-              // Bind all the necessary event handlers
-              this.bindProductRemovalEvents();
-              this.bindRoomRemovalEvents();
-              this.bindEstimateRemovalEvents();
-              this.bindEstimateListEventHandlers();
-
-              initCarouselOnAccordionOpen();
-              this.initializeCarousels();
-
-
-              // Also bind the suggested product buttons
-              this.bindSuggestedProductButtons();
-
-
-            }, 150); // Increased delay for more reliability
-
-            resolve(response.data.html);
-          } else {
-            const error = new Error('Failed to load estimates list');
-            console.error(error);
-            reject(error);
+        if (Object.keys(estimates).length === 0) {
+          logger.log('[loadEstimatesList] No estimates found, showing empty template.');
+          TemplateEngine.insert('estimates-empty-template', {}, this.estimatesList);
+          const createButton = this.estimatesList.querySelector('#create-estimate-btn');
+          if (createButton) {
+            createButton.addEventListener('click', () => this.showNewEstimateForm());
           }
-        },
-        error: (error) => {
-          console.error('Error loading estimates list:', error);
-          reject(error);
-        },
-        complete: () => {
+        } else {
+          logger.log(`[loadEstimatesList] Found ${Object.keys(estimates).length} estimates, rendering.`);
+          Object.entries(estimates).forEach(([estimateId, estimate]) => {
+            try {
+              logger.log(`[loadEstimatesList] Rendering estimate: ${estimateId}`);
+              TemplateEngine.insert('estimate-item-template', {
+                estimate_id: estimateId,
+                name: estimate.name || 'Unnamed Estimate',
+                min_total: estimate.totals?.min_total || estimate.min_total || 0,
+                max_total: estimate.totals?.max_total || estimate.max_total || 0,
+                default_markup: estimate.default_markup || 0
+              }, this.estimatesList);
+
+              const estimateSection = this.estimatesList.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
+              if (estimateSection) {
+                const roomsContainer = estimateSection.querySelector('.rooms-container');
+                if (roomsContainer) {
+                  if (estimate.rooms && Object.keys(estimate.rooms).length > 0) {
+                    Object.entries(estimate.rooms || {}).forEach(([roomId, room]) => { // Added default empty object for rooms
+                      logger.log(`[loadEstimatesList] Rendering room: ${roomId} in estimate ${estimateId}`);
+                      TemplateEngine.insert('room-item-template', {
+                        room_id: roomId,
+                        estimate_id: estimateId,
+                        name: room.name || 'Unnamed Room',
+                        room_name: room.name || 'Unnamed Room',
+                        width: room.width || 0,
+                        length: room.length || 0,
+                        min_total: room.totals?.min_total || room.min_total || 0,
+                        max_total: room.totals?.max_total || room.max_total || 0,
+                      }, roomsContainer);
+
+                      const roomElement = roomsContainer.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+                      const productListContainer = roomElement ? roomElement.querySelector('.product-list') : null;
+
+                      // BLOCK 1 START (Checks if productListContainer exists)
+                      if (productListContainer) {
+                        (room.products || []).forEach((product, productIndex) => { // Added default empty array for products
+                          if (product && product.id !== undefined) {
+                            try {
+                              logger.log(`[loadEstimatesList] Rendering product ${product.id} at index ${productIndex} for room ${roomId}.`);
+
+                              // Check container before inserting
+                              logger.log(`[DEBUG] Product ${product.id}: Target productListContainer is:`, productListContainer);
+                              if (!productListContainer) {
+                                logger.error(`[DEBUG] CRITICAL: productListContainer is NULL for product ${product.id}. Skipping insertion.`);
+                                return; // Skip this product if container is null
+                              }
+
+                              // Insert the template - appends children to productListContainer, returns empty fragment
+                              const insertionResultFragment = TemplateEngine.insert('product-item-template', {
+                                ...product,
+                                product_index: productIndex,
+                                room_id: roomId,
+                                estimate_id: estimateId
+                              }, productListContainer, true); // The 'true' for position defaults to 'append'
+
+                              // Check if insertion itself failed (e.g., container invalid)
+                              if (!insertionResultFragment) {
+                                logger.error(`[loadEstimatesList] TemplateEngine.insert failed for product ${product.id}.`);
+                                return; // Skips to the next product in the loop
+                              }
+
+                              // --- START: Correctly Find the Inserted Element ---
+                              const productItemElement = productListContainer.lastElementChild;
+
+                              // Verify it's the element we expect (optional but good practice)
+                              if (!productItemElement || !productItemElement.matches || !productItemElement.matches('.product-item')) {
+                                logger.error(`[loadEstimatesList] Failed to find the appended .product-item element for product ${product.id}. Last child was:`, productItemElement);
+                                // Set to null explicitly if not found/matched so the 'else' block below runs
+                                productItemElement = null;
+                              }
+                              // --- END: Correctly Find the Inserted Element ---
+
+                              // Check if the element was successfully found after insertion
+                              if (productItemElement) {
+                                logger.log(`[loadEstimatesList] Successfully found appended productItemElement for product ${product.id}`);
+
+                                // --- SIMILAR PRODUCTS PRE-LOADING ---
+                                const similarProductsContainerInProductItem = productItemElement.querySelector('.similar-products-container');
+                                const similarProductsListInProductItem = productItemElement.querySelector('.similar-products-list'); // Target container
+                                const similarProductsToggleInProductItem = productItemElement.querySelector('.product-details-toggle.similar-products-toggle'); // Made selector more specific
+                                const similarProductsCarouselInProductItem = productItemElement.querySelector('.similar-products-carousel');
+                                const carouselNav = similarProductsCarouselInProductItem ? similarProductsCarouselInProductItem.querySelectorAll('.suggestions-nav') : [];
+
+                                logger.log(`[DEBUG] Product ${product.id}: Checking pre-load conditions.`);
+                                logger.log(`  - Has similar_products array?`, product.similar_products && Array.isArray(product.similar_products));
+                                logger.log(`  - similar_products length:`, product.similar_products?.length);
+                                logger.log(`  - similarProductsListInProductItem found?`, !!similarProductsListInProductItem);
+                                logger.log(`  - Other required elements found?`, !!similarProductsContainerInProductItem && !!similarProductsToggleInProductItem && !!similarProductsCarouselInProductItem);
+
+                                if (product.similar_products && Array.isArray(product.similar_products) && product.similar_products.length > 0 &&
+                                  similarProductsListInProductItem &&
+                                  similarProductsContainerInProductItem &&
+                                  similarProductsToggleInProductItem && // Ensure toggle button exists
+                                  similarProductsCarouselInProductItem) {
+
+                                  logger.log(`[loadEstimatesList] Product ${product.id} has ${product.similar_products.length} pre-loaded similar products. Rendering...`);
+                                  similarProductsListInProductItem.innerHTML = ''; // Clear target container
+
+                                  product.similar_products.forEach(similarProduct => {
+                                    const similarProductData = {
+                                      ...similarProduct,
+                                      estimate_id: estimateId,
+                                      room_id: roomId,
+                                      replace_product_id: product.id // Pass ID of main product being viewed
+                                    };
+                                    logger.log(`[DEBUG] Preparing to insert similar-product-item-template for similar product ID ${similarProduct.id}`);
+                                    try {
+                                      TemplateEngine.insert('similar-product-item-template', similarProductData, similarProductsListInProductItem);
+                                      logger.log(`[DEBUG] Successfully inserted template for similar product ID ${similarProduct.id}`);
+                                    } catch (templateInsertError) {
+                                      logger.error(`[DEBUG] Error inserting similar-product-item-template for similar product ID ${similarProduct.id}:`, templateInsertError);
+                                    }
+                                  });
+
+                                  similarProductsContainerInProductItem.style.display = 'block';
+                                  similarProductsContainerInProductItem.classList.add('visible');
+
+                                  // ***** START FIX *****
+                                  // Ensure the toggle button reflects the expanded state
+                                  if (similarProductsToggleInProductItem) {
+                                    similarProductsToggleInProductItem.style.display = ''; // Ensure button is visible
+                                    similarProductsToggleInProductItem.classList.add('expanded');
+                                    const iconElement = similarProductsToggleInProductItem.querySelector('.toggle-icon');
+                                    if (iconElement) {
+                                      iconElement.classList.remove('dashicons-arrow-down-alt2');
+                                      iconElement.classList.add('dashicons-arrow-up-alt2');
+                                    }
+                                  }
+                                  // ***** END FIX *****
+
+                                  // Set flag after successful rendering
+                                  productItemElement.dataset.similarProductsLoaded = 'true';
+                                  logger.log(`[loadEstimatesList] Set similarProductsLoaded flag for product ${product.id} after pre-load.`);
+
+                                  carouselNav.forEach(nav => nav.style.display = '');
+
+                                  if (similarProductsCarouselInProductItem) {
+                                    if (similarProductsCarouselInProductItem.carouselInstance) {
+                                      similarProductsCarouselInProductItem.carouselInstance.destroy();
+                                    }
+                                    // Ensure SuggestionsCarousel is defined before calling new
+                                    if (typeof SuggestionsCarousel !== 'undefined') {
+                                      new SuggestionsCarousel(similarProductsCarouselInProductItem);
+                                      logger.log(`[loadEstimatesList] Initialized similar products carousel for product ${product.id}.`);
+                                    } else {
+                                      logger.error("SuggestionsCarousel class is not defined/imported.");
+                                    }
+                                  }
+
+                                } else {
+                                  // Pre-loading criteria NOT met (no data or missing DOM elements)
+                                  logger.log(`[loadEstimatesList] Pre-loading criteria not met for ${product.id}. Hiding section and setting flag.`);
+                                  if (similarProductsToggleInProductItem) {
+                                    similarProductsToggleInProductItem.style.display = 'none';
+                                    // ***** START CONSISTENCY FIX *****
+                                    // Ensure button is not marked as expanded if section is hidden
+                                    similarProductsToggleInProductItem.classList.remove('expanded');
+                                    const iconElement = similarProductsToggleInProductItem.querySelector('.toggle-icon');
+                                    if (iconElement) {
+                                      iconElement.classList.remove('dashicons-arrow-up-alt2');
+                                      iconElement.classList.add('dashicons-arrow-down-alt2');
+                                    }
+                                    // ***** END CONSISTENCY FIX *****
+                                  }
+                                  if (similarProductsContainerInProductItem) similarProductsContainerInProductItem.style.display = 'none';
+                                  carouselNav.forEach(nav => nav.style.display = 'none');
+                                  // Still set flag to prevent fallback
+                                  productItemElement.dataset.similarProductsLoaded = 'true';
+                                  logger.log(`[loadEstimatesList] Set similarProductsLoaded flag for product ${product.id} because pre-load criteria not met.`);
+                                }
+                                // --- END SIMILAR PRODUCTS PRE-LOADING ---
+
+                              } else {
+                                // productItemElement is null (failed to find after insert) - Flag is NOT set
+                                logger.warn(`[loadEstimatesList] Could not find the appended .product-item element for product ${product.id}. Similar products might load via fallback.`);
+                              }
+
+                            } catch (productRenderError) {
+                              logger.error(`[loadEstimatesList] Error rendering product ${product?.id || 'unknown'} at index ${productIndex} for room ${roomId}:`, productRenderError);
+                            }
+                          } else {
+                            logger.warn(`[loadEstimatesList] Invalid product data found in room ${roomId} at index ${productIndex}:`, product);
+                          }
+                        }); // End products loop
+
+                        // Handle case where product container exists but product array is empty
+                        if (!room.products || room.products.length === 0) {
+                          logger.log(`[loadEstimatesList] Room ${roomId} has no products, showing empty template.`);
+                          TemplateEngine.insert('products-empty-template', {}, productListContainer);
+                        }
+
+                        // LINE 904 approx: This brace closes the outer `if (productListContainer)`
+                      } else {
+                        // This else corresponds to: if (productListContainer)
+                        logger.error(`[loadEstimatesList] .product-list container not found for room ${roomId}. Cannot render products.`);
+                        const roomContent = roomElement ? roomElement.querySelector('.accordion-content') : null;
+                        if (roomContent) {
+                          TemplateEngine.insert('products-empty-template', {}, roomContent);
+                        }
+                      }
+
+                      if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
+
+                        // --- SUGGESTION LOADING AND RENDERING START ---
+                        const suggestionsSection = roomElement ? roomElement.querySelector('.product-suggestions') : null;
+                        const suggestionsContainer = roomElement ? roomElement.querySelector('.product-suggestions .suggestions-container') : null;
+                        const suggestionsCarouselWrapper = roomElement ? roomElement.querySelector('.product-suggestions .suggestions-carousel') : null;
+
+                        const roomProductsArray = room.products || [];
+                        if (suggestionsSection && suggestionsContainer && suggestionsCarouselWrapper) {
+                          logger.log(`[loadEstimatesList] Found suggestions container for room ${roomId}. Fetching suggestions...`);
+                          suggestionsContainer.innerHTML = '<div class="loading-text">Loading suggestions...</div>';
+                          suggestionsSection.style.display = 'none'; // Hide until suggestions are loaded
+
+                          this.dataService.getSuggestedProducts(estimateId, roomId, roomProductsArray)
+                            .then(suggestions => {
+                              // ***** SOLUTION START *****
+                              // Check if suggestions is null or undefined before accessing length
+                              const suggestionsLength = suggestions ? suggestions.length : 0;
+                              logger.log(`[loadEstimatesList] Fetched ${suggestionsLength} suggestions for room ${roomId}.`);
+                              // ***** SOLUTION END *****
+
+                              suggestionsContainer.innerHTML = ''; // Clear loading/old
+                              if (suggestions && suggestions.length > 0) { // Check suggestions itself, then length
+                                suggestionsSection.style.display = 'block'; // Show section
+                                const carouselNav = suggestionsCarouselWrapper.querySelectorAll('.suggestions-nav');
+                                carouselNav.forEach(nav => nav.style.display = ''); // Show nav
+
+                                suggestions.forEach(suggestion => {
+                                  const suggestionData = {
+                                    ...suggestion,
+                                    estimate_id: estimateId,
+                                    room_id: roomId
+                                  };
+                                  TemplateEngine.insert('suggestion-item-template', suggestionData, suggestionsContainer);
+                                });
+                                // Initialize carousel
+                                if (suggestionsCarouselWrapper.carouselInstance) {
+                                  suggestionsCarouselWrapper.carouselInstance.destroy();
+                                }
+                                // Ensure SuggestionsCarousel is defined before calling new
+                                if (typeof SuggestionsCarousel !== 'undefined') {
+                                  new SuggestionsCarousel(suggestionsCarouselWrapper);
+                                } else {
+                                  logger.error("SuggestionsCarousel class is not defined/imported.");
+                                }
+                              } else {
+                                suggestionsSection.style.display = 'none'; // Keep hidden if no suggestions
+                                const carouselNav = suggestionsCarouselWrapper.querySelectorAll('.suggestions-nav');
+                                carouselNav.forEach(nav => nav.style.display = 'none'); // Hide nav
+                                if (suggestionsCarouselWrapper.carouselInstance) {
+                                  suggestionsCarouselWrapper.carouselInstance.destroy();
+                                  suggestionsCarouselWrapper.carouselInstance = null;
+                                }
+                              }
+                            })
+                            .catch(error => {
+                              logger.error(`[loadEstimatesList] Error fetching suggestions for room ${roomId}:`, error);
+                              suggestionsContainer.innerHTML = '<p class="error-message">Error loading suggestions.</p>';
+                              suggestionsSection.style.display = 'none'; // Hide on error
+                              const carouselNav = suggestionsCarouselWrapper.querySelectorAll('.suggestions-nav');
+                              carouselNav.forEach(nav => nav.style.display = 'none'); // Hide nav
+                              if (suggestionsCarouselWrapper.carouselInstance) {
+                                suggestionsCarouselWrapper.carouselInstance.destroy();
+                                suggestionsCarouselWrapper.carouselInstance = null; // Clear reference
+                              }
+                            });
+                        } else {
+                          logger.warn(`[loadEstimatesList] Suggestions elements not found for room ${roomId}.`);
+                        }
+                      // --- SUGGESTION LOADING AND RENDERING END ---
+                    }
+                    }); // End of room loop
+                  } else {
+                    logger.log(`[loadEstimatesList] Estimate ${estimateId} has no rooms, showing empty template.`);
+                    TemplateEngine.insert('rooms-empty-template', {}, roomsContainer);
+                  }
+                } else {
+                  logger.warn(`[loadEstimatesList] Rooms container not found for estimate ${estimateId}.`);
+                }
+              } else {
+                logger.error(`[loadEstimatesList] Estimate section element not found for estimate ${estimateId}.`);
+              }
+            } catch (error) {
+              logger.error(`[loadEstimatesList] Error rendering estimate ${estimateId}:`, error);
+            }
+          }); // End of estimate loop
+        } // End if estimates exist
+
+        // Initialization after rendering all content
+        setTimeout(() => {
+          logger.log('[loadEstimatesList] Initializing accordions and events after content rendering');
+          this.initializeEstimateAccordions(expandRoomId, expandEstimateId);
+          this.initializeAccordions(expandRoomId, expandEstimateId); // This handles room expansion and subsequent similar product loading trigger
+
+          // Bind all necessary events
+          this.bindProductRemovalEvents();
+          this.bindRoomRemovalEvents();
+          this.bindEstimateListEventHandlers();
+          this.bindDirectEstimateRemovalEvents();
+          this.bindReplaceProductButtons();
+          if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
+            this.bindSuggestedProductButtons();
+            this.bindSuggestionsToggle();
+          }
+          this.bindSimilarProductsToggle();
+
+          // Setup details toggle if available
+          if (window.productEstimator && window.productEstimator.detailsToggle) {
+            window.productEstimator.detailsToggle.setup();
+          } else {
+            logger.warn('[loadEstimatesList] Product details toggle setup not available.');
+          }
+
           this.hideLoading();
+          logger.log('[loadEstimatesList] Loading complete.');
+          resolve(this.estimatesList.innerHTML);
+        }, 250); // Delay allows DOM updates before initializing scripts
+
+      } catch (error) {
+        logger.error('[loadEstimatesList] Error during rendering process:', error);
+        this.showError('Error rendering estimates. Please try again.');
+        this.hideLoading();
+        reject(error);
+      }
+    }); // End Promise
+  }
+
+
+  /**
+   * Binds click events to the similar products toggle button within each product item.
+   * This controls the visibility of the similar products carousel.
+   */
+  bindSimilarProductsToggle() {
+    logger.log('Binding similar products toggle buttons');
+
+    if (!this.estimatesList) {
+      logger.warn('Estimates list container not available for binding similar products toggle.');
+      return;
+    }
+
+    // Remove any existing handler to prevent duplicates
+    if (this._similarProductsToggleHandler) {
+      this.estimatesList.removeEventListener('click', this._similarProductsToggleHandler);
+    }
+
+    this._similarProductsToggleHandler = (e) => {
+      const toggleButton = e.target.closest('.similar-products-toggle');
+
+      if (toggleButton) {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent this click from triggering the main room accordion
+
+        logger.log('Similar products toggle button clicked.');
+
+        const productItemElement = toggleButton.closest('.product-item');
+        if (!productItemElement) {
+          logger.warn('Could not find parent .product-item for similar products toggle.');
+          return;
         }
+
+        const similarProductsContainer = productItemElement.querySelector('.similar-products-container');
+        const toggleIcon = toggleButton.querySelector('.toggle-icon');
+
+        if (similarProductsContainer) {
+          toggleButton.classList.toggle('expanded');
+
+          if (toggleIcon) {
+            toggleIcon.classList.toggle('dashicons-arrow-down-alt2'); // Typically shown when collapsed
+            toggleIcon.classList.toggle('dashicons-arrow-up-alt2');   // Typically shown when expanded
+          }
+
+          // Toggle visibility of the similar products container
+          if (window.getComputedStyle(similarProductsContainer).display === 'none' || !similarProductsContainer.classList.contains('visible')) {
+            logger.log('Expanding similar products section.');
+            similarProductsContainer.classList.add('visible');
+            // Use jQuery slideDown if available for smoother animation
+            if (typeof jQuery !== 'undefined') {
+              jQuery(similarProductsContainer).slideDown(200, () => {
+                // Optional: Re-initialize carousel if needed, though it should be initialized when content is first loaded
+                const carousel = similarProductsContainer.querySelector('.similar-products-carousel');
+                if (carousel && !carousel.carouselInstance) { // Only if not already initialized
+                  new SuggestionsCarousel(carousel);
+                }
+              });
+            } else {
+              similarProductsContainer.style.display = 'block'; // Or 'flex' depending on layout
+              const carousel = similarProductsContainer.querySelector('.similar-products-carousel');
+              if (carousel && !carousel.carouselInstance) {
+                new SuggestionsCarousel(carousel);
+              }
+            }
+          } else {
+            logger.log('Collapsing similar products section.');
+            similarProductsContainer.classList.remove('visible');
+            if (typeof jQuery !== 'undefined') {
+              jQuery(similarProductsContainer).slideUp(200);
+            } else {
+              similarProductsContainer.style.display = 'none';
+            }
+          }
+        } else {
+          logger.warn('Similar products container not found for toggling.');
+        }
+      }
+    };
+
+    this.estimatesList.addEventListener('click', this._similarProductsToggleHandler);
+    logger.log('Similar products toggle events bound to #estimates element.');
+  }
+
+
+
+  /**
+   * Bind estimate removal events directly to buttons after rendering.
+   * Used when event propagation is stopped by ancestor handlers (like accordion).
+   */
+  bindDirectEstimateRemovalEvents() {
+    logger.log('>>> Entered bindDirectEstimateRemovalEvents function (Direct Binding)');
+
+    // Find all remove estimate buttons within the estimates list container
+    if (!this.estimatesList) {
+      logger.error('Estimates list not available for direct binding.');
+      return;
+    }
+
+    const removeButtons = this.estimatesList.querySelectorAll('.remove-estimate');
+
+    if (removeButtons.length > 0) {
+      logger.log(`>>> Found ${removeButtons.length} remove estimate buttons for direct binding`);
+
+      removeButtons.forEach(button => {
+        // Remove any existing direct handlers on this specific button
+        // This prevents duplicate bindings if loadEstimatesList is called multiple times
+        if (button._directEstimateRemovalHandler) {
+          button.removeEventListener('click', button._directEstimateRemovalHandler);
+        }
+
+        // Create and store the new handler directly on the button element
+        button._directEstimateRemovalHandler = (e) => {
+          logger.log('>>> Direct click handler fired for remove estimate button.', button);
+          e.preventDefault(); // Prevent default button action
+          e.stopPropagation(); // Explicitly stop propagation from the button itself
+
+          const estimateId = button.dataset.estimateId;
+          logger.log('>>> Direct handler extracted estimateId:', estimateId, 'Type:', typeof estimateId);
+
+          // Use the robust check for estimateId
+          if (estimateId !== null && estimateId !== undefined && estimateId !== '') {
+            logger.log('>>> Direct handler found valid estimate ID. Calling confirmDelete.');
+            this.confirmDelete('estimate', estimateId);
+          } else {
+            logger.error('>>> Direct handler found invalid estimate ID.', button);
+            this.showError('Cannot remove estimate: Missing ID.');
+          }
+        };
+
+        // Add the event listener directly to the button
+        button.addEventListener('click', button._directEstimateRemovalHandler);
       });
-    });
+      logger.log('>>> Direct estimate removal events bound successfully.');
+    } else {
+      logger.log('>>> No remove estimate buttons found for direct binding.');
+    }
+  }
+
+  // ModalManager.js
+
+  /**
+   * Bind events to the new estimate form element
+   * @param {HTMLFormElement} formElement - The form element to bind events to
+   * @param {string|null} productId - The current product ID, if applicable (for data attribute)
+   */
+  bindNewEstimateFormEvents(formElement, productId = null) {
+    if (!formElement) {
+      logger.error('Cannot bind events - new estimate form element not provided');
+      return;
+    }
+
+    logger.log('Binding events to new estimate form:', formElement);
+
+    // Set product ID as data attribute on the form if needed
+    if (productId !== null && productId !== undefined) {
+      formElement.dataset.productId = productId;
+      logger.log('Set product ID on new estimate form:', productId);
+    } else {
+      // Ensure it's removed if no product ID
+      delete formElement.dataset.productId;
+      logger.log('Removed product ID from new estimate form dataset.');
+    }
+
+
+    // Remove any existing submit handler to prevent duplicates
+    // Store handler reference directly on the form element
+    if (formElement._submitHandler) {
+      formElement.removeEventListener('submit', formElement._submitHandler);
+    }
+
+    // Bind submit event
+    formElement._submitHandler = (e) => {
+      e.preventDefault(); // Prevent default form submission
+      logger.log('New estimate form submitted via template');
+      this.handleNewEstimateSubmission(formElement); // Call the submission handler
+    };
+    formElement.addEventListener('submit', formElement._submitHandler);
+    logger.log('New estimate form submit event bound.');
+
+
+    // Bind cancel button
+    const cancelButton = formElement.querySelector('.cancel-btn');
+    if (cancelButton) {
+      // Remove existing handler if any, store handler directly on button
+      if (cancelButton._clickHandler) {
+        cancelButton.removeEventListener('click', cancelButton._clickHandler);
+      }
+
+      cancelButton._clickHandler = () => {
+        logger.log('New estimate form cancel button clicked');
+        this.cancelForm('estimate'); // Call the cancel handler
+      };
+      cancelButton.addEventListener('click', cancelButton._clickHandler);
+      logger.log('New estimate form cancel button bound.');
+
+    } else {
+      logger.warn('Cancel button not found in new estimate form.');
+    }
+
+    // Initialize customer details manager if available and form is loaded
+    // Pass the form or its container to the init method if it expects a context
+    if (window.productEstimator && window.productEstimator.core &&
+      window.productEstimator.core.customerDetailsManager) {
+      // Slight delay to ensure DOM is fully updated after insertion before initializing customer details
+      setTimeout(() => {
+        // Check if the init method accepts a form element or container as context
+        if (typeof window.productEstimator.core.customerDetailsManager.init === 'function') {
+          window.productEstimator.core.customerDetailsManager.init(this.newEstimateForm); // Pass the container
+          logger.log('CustomerDetailsManager init called for new estimate form.');
+        } else {
+          logger.warn('CustomerDetailsManager init method does not accept a form element argument.');
+          // Call init without argument if it expects to find elements itself
+          window.productEstimator.core.customerDetailsManager.init();
+          logger.log('CustomerDetailsManager init called without form element for new estimate form.');
+        }
+      }, 50); // Small delay
+    }
   }
 
   /**
    * Handle product removal
+   * MODIFIED to call updateRoomSuggestions if products still exist after removal.
+   * MODIFIED to insert 'products-empty-template' if the room becomes empty of products.
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    * @param {number} productIndex - Product index
+   * @param {number} productId - Product Id
    */
-  handleProductRemoval(estimateId, roomId, productIndex) {
+  handleProductRemoval(estimateId, roomId, productIndex, productId) {
     this.showLoading();
 
-    console.log(`Removing product at index ${productIndex} from room ${roomId} in estimate ${estimateId}`);
+    logger.log(`[handleProductRemoval] Removing product at index ${productIndex} from room ${roomId} in estimate ${estimateId}`);
 
-    this.dataService.removeProductFromRoom(estimateId, roomId, productIndex)
+    // Find the room element
+    const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+
+    if (!roomElement) {
+      logger.warn(`[handleProductRemoval] Could not find room element for room ID ${roomId} and estimate ID ${estimateId}`);
+      this.showError('Room element not found. Please refresh and try again.');
+      this.hideLoading();
+      return;
+    }
+
+    const productElement = roomElement.querySelector(`.product-item[data-product-id="${productId}"]`);
+
+    if (!productElement) {
+      logger.warn(`[handleProductRemoval] Could not find product element with id ${productId} in the DOM`);
+      this.showError('Product element not found. Please refresh and try again.');
+      this.hideLoading();
+      return;
+    }
+
+    // Use DataService to make the AJAX request
+    this.dataService.removeProductFromRoom(estimateId, roomId, productIndex, productId)
       .then(response => {
-        // Call loadEstimatesList with the IDs to expand
-        return this.loadEstimatesList(roomId, estimateId)
-          .then(() => {
-            console.log(`Estimates list refreshed, attempting to expand room ${roomId} in estimate ${estimateId}`);
+        logger.log('[handleProductRemoval] Product removal successful:', response);
 
-            // Ensure the estimate section is expanded
-            const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
-            if (estimateSection) {
-              estimateSection.classList.remove('collapsed');
-              const estimateContent = estimateSection.querySelector('.estimate-content');
-              if (estimateContent) {
-                estimateContent.style.display = 'block';
-              }
+        // Get parent container (the product list) before removing the product element
+        const productListContainer = productElement.parentElement;
+
+        // Remove the product element from the DOM
+        productElement.remove();
+
+        // Check if this was the last product in the room
+        if (productListContainer && productListContainer.children.length === 0) {
+          logger.log('[handleProductRemoval] Last product in room removed, updating room UI. Inserting products-empty-template.');
+
+          // Insert the 'products-empty-template' into the now empty product list container
+          if (TemplateEngine && typeof TemplateEngine.insert === 'function') {
+            TemplateEngine.insert('products-empty-template', {}, productListContainer);
+          } else {
+            logger.error('[handleProductRemoval] TemplateEngine or TemplateEngine.insert is not available.');
+          }
+          if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
+
+          // If room is now empty of products, also hide suggestions section
+          const suggestions = roomElement.querySelector('.product-suggestions');
+          if (suggestions) {
+            suggestions.style.display = 'none';
+            // Clear any existing suggestions content and destroy carousel if any
+            const suggestionsContainer = suggestions.querySelector('.suggestions-container');
+            if (suggestionsContainer) suggestionsContainer.innerHTML = '';
+            const carouselWrapper = suggestions.querySelector('.suggestions-carousel');
+            if (carouselWrapper && carouselWrapper.carouselInstance) {
+              carouselWrapper.carouselInstance.destroy();
+              carouselWrapper.carouselInstance = null;
             }
+          }
+        }
+          // Similar products are part of the product-item, so they are removed with the product.
+          // No specific action needed here for similar products container of the room itself.
 
-            // Find the specific room that needs to be expanded
-            const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-            if (!roomElement) {
-              // Try a more general selector if the specific one fails
-              console.log('Using fallback room selector');
-              roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-            }
+        } else {
+          // Products still exist in the room, update suggestions for the room
+          logger.log(`[handleProductRemoval] Products still exist in room ${roomId}. Checking for updated suggestions.`);
+          if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
 
-            if (roomElement) {
-              console.log('Found room element, expanding it');
-              const header = roomElement.querySelector('.accordion-header');
-              const content = roomElement.querySelector('.accordion-content');
+            this.updateRoomSuggestions(estimateId, roomId, roomElement);
+          }
+        }
 
-              if (header) header.classList.add('active');
-              if (content) content.style.display = 'block';
 
-              // Scroll to the room to ensure it's visible
-              setTimeout(() => {
-                roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }, 200);
-            } else {
-              console.warn(`Could not find room element for room ID ${roomId}`);
-            }
+        // Update the room's total price if needed
+        if (response.room_totals) {
+          this.updateRoomTotals(estimateId, roomId, response.room_totals);
+        }
 
-            // Show success message
-            this.showMessage('Product removed successfully', 'success');
-          });
+        // Also update the estimate's total price
+        if (response.estimate_totals) {
+          this.updateEstimateTotals(estimateId, response.estimate_totals);
+        }
+
+        // Show success message
+        this.showMessage('Product removed successfully', 'success');
       })
       .catch(error => {
-        console.error('Error removing product:', error);
+        logger.error('[handleProductRemoval] Error removing product:', error);
         this.showError(error.message || 'Error removing product. Please try again.');
       })
       .finally(() => {
@@ -868,138 +1393,541 @@ class ModalManager {
       });
   }
 
-  handleAddSuggestedProduct(productId, estimateId, roomId, buttonElement) {
-    // Show loading indicator
-    this.showLoading();
 
-    // Show loading state on the button
+
+  /**
+   * Update room price totals after a product is removed
+   * @param {string} estimateId - Estimate ID
+   * @param {string} roomId - Room ID
+   * @param {Object} totals - New price totals from the server
+   */
+  updateRoomTotals(estimateId, roomId, totals) {
+    if (!totals) return;
+
+    const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+    if (!roomElement) return;
+
+    // Update the room price display
+    const priceElement = roomElement.querySelector('.room-price');
+    if (priceElement && totals.min_total !== undefined && totals.max_total !== undefined) {
+      const formattedPrice = `${format.formatPrice(totals.min_total)} - ${format.formatPrice(totals.max_total)}`;
+      priceElement.textContent = formattedPrice;
+      logger.log(`Updated room price display to ${formattedPrice}`);
+    }
+
+    // Update the price graph if it exists
+    const priceGraph = roomElement.querySelector('.price-graph-range');
+    if (priceGraph && totals.max_total) {
+      // Calculate percentage width based on max price
+      const maxPossible = totals.max_total * 1.5; // Assume the graph is scaled to 150% of max
+      const percentage = (totals.max_total / maxPossible) * 100;
+      priceGraph.style.width = `${Math.min(percentage, 100)}%`;
+    }
+  }
+
+  /**
+   * Update estimate price totals after a product is removed
+   * @param {string} estimateId - Estimate ID
+   * @param {Object} totals - New price totals from the server
+   */
+  updateEstimateTotals(estimateId, totals) {
+    if (!totals) return;
+
+    const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
+    if (!estimateSection) return;
+
+    // Update the estimate price display
+    const priceElement = estimateSection.querySelector('.estimate-price');
+    if (priceElement && totals.min_total !== undefined && totals.max_total !== undefined) {
+      const formattedPrice = `${format.formatPrice(totals.min_total)} - ${format.formatPrice(totals.max_total)}`;
+      priceElement.textContent = formattedPrice;
+      logger.log(`Updated estimate price display to ${formattedPrice}`);
+    }
+
+    // Update the price graph if it exists
+    const priceGraph = estimateSection.querySelector('.price-graph-range');
+    if (priceGraph && totals.max_total) {
+      // Calculate percentage width based on max price
+      const maxPossible = totals.max_total * 1.5; // Assume the graph is scaled to 150% of max
+      const percentage = (totals.max_total / maxPossible) * 100;
+      priceGraph.style.width = `${Math.min(percentage, 100)}%`;
+    }
+  }
+
+  /**
+   * Handle adding a suggested product to a room.
+   * Moves the AJAX request to the DataService for consistency.
+   * Calls updateRoomSuggestions after successful add and list reload.
+   * Removes the suggestion item from the DOM after successful local add.
+   * Includes logging to help debug the add process.
+   *
+   * @param {string|number} productId - Product ID
+   * @param {string|number} estimateId - Estimate ID
+   * @param {string|number} roomId - Room ID
+   * @param {HTMLElement} buttonElement - The button element that triggered the action
+   */
+  handleAddSuggestedProduct(productId, estimateId, roomId, buttonElement) {
+    if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+      return this.loadEstimatesList(roomId, estimateId);
+    }
+      logger.log('[handleAddSuggestedProduct] Function called with:', { productId, estimateId, roomId, buttonElement }); // Added log
+    this.showLoading(); // Show loading indicator
+
+    // Disable button and show loading state
     if (buttonElement) {
       buttonElement.disabled = true;
       buttonElement.classList.add('loading');
-      buttonElement.innerHTML = '<span class="loading-dots">Adding...</span>';
+      buttonElement.innerHTML = '<span class="loading-dots">Adding...</span>'; // Use loading text/spinner
     }
 
-    console.log(`Adding suggested product ${productId} to room ${roomId} in estimate ${estimateId}`);
+    logger.log(`[handleAddSuggestedProduct] Adding suggested product ${productId} to room ${roomId} in estimate ${estimateId} via DataService`);
 
-    // Make AJAX request to add product to room
-    jQuery.ajax({
-      url: productEstimatorVars.ajax_url,
-      type: 'POST',
-      data: {
-        action: 'add_product_to_room',
-        nonce: productEstimatorVars.nonce,
-        product_id: productId,
-        room_id: roomId,
-        estimate_id: estimateId
-      },
-      success: (response) => {
-        console.log('Add suggested product response:', response);
+    // Use DataService to add the product (handles local storage and async server request)
+    this.dataService.addProductToRoom(roomId, productId, estimateId)
+      .then(localResult => {
+        logger.log('[handleAddSuggestedProduct] DataService.addProductToRoom local storage attempt result:', localResult); // Log the result from DataService
 
-        if (response.success) {
-          // Refresh the estimates list to show the updated room
-          this.loadEstimatesList(roomId, estimateId)
-            .then(() => {
-              // Auto-expand the room accordion after refreshing
-              setTimeout(() => {
-                const roomAccordion = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-                if (roomAccordion) {
-                  const header = roomAccordion.querySelector('.accordion-header');
-                  if (header && !header.classList.contains('active')) {
-                    header.click();
-                  }
-                }
-              }, 300);
+        if (localResult.success) {
+          logger.log('[handleAddSuggestedProduct] Local storage add successful.');
 
-              // Show success message
-              this.showMessage('Product added successfully!', 'success');
-            })
-            .catch(error => {
-              console.error('Error refreshing estimates list:', error);
-              this.showError('Error refreshing list. Please try again.');
-            });
-        } else {
-          // Check if this is a duplicate product error
-          if (response.data?.duplicate) {
-            console.log('Duplicate suggested product detected:', response.data);
+          // --- NEW: Remove the suggestion item from the DOM ---
+          // Find the closest ancestor element with the class 'suggestion-item' from the clicked button
+          const suggestionItemElement = buttonElement ? buttonElement.closest('.suggestion-item') : null;
+          if (suggestionItemElement) {
+            logger.log('[handleAddSuggestedProduct] Removing suggestion item from DOM:', suggestionItemElement); // Added log
+            // Remove the element from the document
+            suggestionItemElement.remove();
 
-            // Show specific error message
-            this.showMessage(response.data.message || 'This product already exists in this room.', 'error');
-
-            // The room is already open, so we don't need to refresh or expand
+            // Check if the carousel needs to be updated/re-initialized after removal
+            const carouselContainer = suggestionItemElement.closest('.suggestions-carousel');
+            if (carouselContainer && carouselContainer.carouselInstance) {
+              logger.log('[handleAddSuggestedProduct] Reinitializing carousel after item removal.'); // Added log
+              // Destroy existing instance if any and create a new one
+              carouselContainer.carouselInstance.destroy();
+              // Create a new instance of SuggestionsCarousel for the container
+              carouselContainer.carouselInstance = new SuggestionsCarousel(carouselContainer);
+            }
           } else {
-            // Handle error response
-            this.showError(response.data?.message || 'Error adding product. Please try again.');
+            logger.warn('[handleAddSuggestedProduct] Could not find suggestion item element to remove.'); // Added log
+          }
+          // --- END NEW ---
+
+
+          // Hide selection forms if they are visible (only applicable in product flow)
+          if (this.estimateSelection) this.estimateSelection.style.display = 'none';
+          if (this.roomSelectionForm) this.roomSelectionForm.style.display = 'none';
+
+          // Clear product ID from modal state as we've completed the product flow
+          delete this.modal.dataset.productId;
+          this.currentProductId = null;
+
+          // Use the estimate_id and room_id from the localResult if available, fallback to original IDs
+          const responseEstimateId = localResult.estimate_id || estimateId;
+          const responseRoomId = localResult.room_id || roomId;
+
+          logger.log(`[handleAddSuggestedProduct] Product added to estimate ${responseEstimateId}, room ${responseRoomId} (based on local storage). Refreshing list.`); // Added log
+
+          // --- KEY LINE FOR EXPANSION AND REFRESH ---
+          // Call loadEstimatesList with the room and estimate IDs to expand the relevant section
+          // This will re-render the room and its product list, including the newly added product.
+          // It will also re-fetch and re-render suggestions for that room,
+          // which should no longer include the product that was just added.
+          return this.loadEstimatesList(responseRoomId, responseEstimateId)
+            .then(() => {
+              logger.log('[handleAddSuggestedProduct] Estimates list refreshed.'); // Added log
+
+              // *** MODIFIED: After list reloads and room is expanded, update suggestions for *this* room ***
+              // Find the newly loaded room element in the DOM using the response IDs
+              const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${responseRoomId}"][data-estimate-id="${responseEstimateId}"]`);
+              if (roomElement) {
+                logger.log('[handleAddSuggestedProduct] List reloaded. Triggering suggestion update for room:', responseRoomId); // Added log
+                // Pass the room element, estimate ID, and room ID to the update function
+                this.updateRoomSuggestions(responseEstimateId, responseRoomId, roomElement);
+              } else {
+                logger.warn('[handleAddSuggestedProduct] Could not find room element after list reload to update suggestions.'); // Added log
+              }
+              // *** END MODIFIED ***
+
+              // Show success message after the list is loaded and expanded
+              this.showMessage('Product added successfully!', 'success');
+            });
+          // --- END KEY LINE ---
+
+        } else {
+          // Handle cases where local storage add failed (e.g., duplicate product)
+          logger.error('[handleAddSuggestedProduct] Error during local storage add:', localResult.error); // Added log
+          // Show error message based on the error provided by DataService
+          this.showError(localResult.error.message || 'Failed to add product locally. Please try again.');
+
+          // If it's a duplicate, navigate to the room where the product already exists
+          if (localResult.error?.data?.duplicate) {
+            const duplicateEstimateId = localResult.error.data.estimate_id;
+            const duplicateRoomId = localResult.error.data.room_id;
+            logger.log(`[handleAddSuggestedProduct] Duplicate detected, navigating to estimate ${duplicateEstimateId}, room ${duplicateRoomId}`); // Added log
+            this.loadEstimatesList(duplicateRoomId, duplicateEstimateId); // Expand the room with the duplicate
           }
         }
-      },
-      error: (jqXHR, textStatus, errorThrown) => {
-        console.error('AJAX error:', textStatus, errorThrown);
-        this.showError('Error adding product. Please try again.');
-      },
-      complete: () => {
-        // Reset button state
+      })
+      .catch(error => {
+        // This catch block handles errors from the DataService.addProductToRoom promise itself
+        // (e.g., error during the initial fetch for comprehensive product data, or the DataService promise rejection)
+        logger.error('[handleAddSuggestedProduct] Error adding suggested product via DataService promise rejection:', error); // Added log
+
+        // Check if the error has the duplicate flag from DataService
+        if (error.data?.duplicate) {
+          logger.log('[handleAddSuggestedProduct] Duplicate suggested product detected by DataService promise rejection:', error.data); // Added log
+
+          // Hide selection forms if they are visible
+          if (this.estimateSelection) this.estimateSelection.style.display = 'none';
+          if (this.roomSelectionForm) this.roomSelectionForm.style.display = 'none';
+
+          // Clear product ID from modal state
+          delete this.modal.dataset.productId;
+          this.currentProductId = null;
+
+          const duplicateEstimateId = error.data.estimate_id;
+          const duplicateRoomId = error.data.room_id;
+
+          this.showError(error.data.message || 'This product already exists in the selected room.');
+
+          // --- KEY LINE FOR EXPANSION (Duplicate Case) ---
+          // Call loadEstimatesList with the duplicate room and estimate IDs to show where it exists
+          this.loadEstimatesList(duplicateRoomId, duplicateEstimateId)
+            .then(() => {
+              logger.log('[handleAddSuggestedProduct] Estimates list refreshed to show duplicate product location'); // Added log
+              // No need to update suggestions here, as the room already contains the product.
+            })
+            .catch(error => {
+              logger.error('[handleAddSuggestedProduct] Error refreshing estimates list:', error); // Added log
+            });
+          // --- END KEY LINE ---
+
+        } else {
+          // Handle other types of errors from the DataService promise
+          this.showError(error.message || 'Error adding product. Please try again.');
+        }
+      })
+      .finally(() => {
+        // Ensure button state is reset and loading is hidden
         if (buttonElement) {
           buttonElement.disabled = false;
           buttonElement.classList.remove('loading');
-          buttonElement.textContent = 'Add';
+          buttonElement.textContent = 'Add'; // Reset button text
         }
-
-        // Hide loading
-        this.hideLoading();
-      }
-    });
+        this.hideLoading(); // Hide loading indicator
+      });
   }
 
+
+  /**
+   * Binds click events to the suggested product buttons within each room.
+   * This controls the action of adding a suggested product to a room.
+   * Includes logging to help debug click events and data attributes.
+   */
   bindSuggestedProductButtons() {
-    console.log('Binding suggested product buttons');
+    if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+      return;
+    }
+      logger.log('[bindSuggestedProductButtons] Binding suggested product buttons'); // Added log
 
     // Find all suggestion buttons in the modal
-    const suggestionButtons = this.modal.querySelectorAll('.add-suggestion-to-room');
+    // Use event delegation by querying within the main estimates list container
+    // We will bind the handler to the estimatesList container and use event delegation
+    // to catch clicks on buttons with the class 'add-suggestion-to-room'.
+    const estimatesListContainer = this.modal.querySelector('#estimates');
 
-    if (suggestionButtons.length) {
-      console.log(`Found ${suggestionButtons.length} suggestion buttons to bind`);
+    if (!estimatesListContainer) {
+      logger.error('[bindSuggestedProductButtons] Estimates list container (#estimates) not found. Cannot bind suggestion button events.');
+      return;
+    }
 
-      // Loop through each button and bind click event
-      suggestionButtons.forEach(button => {
-        // Remove any existing handlers to prevent duplicates
-        // Store handler reference directly on the button element for easy removal
-        if (button._suggestionButtonHandler) {
-          button.removeEventListener('click', button._suggestionButtonHandler);
+    // Remove any existing event listener on the estimatesList container for this handler
+    // This prevents duplicate bindings if loadEstimatesList is called multiple times
+    if (estimatesListContainer._suggestionButtonHandler) {
+      estimatesListContainer.removeEventListener('click', estimatesListContainer._suggestionButtonHandler);
+    }
+
+    // Create a single handler function and store a reference to it
+    // Store the handler directly on the container element
+    estimatesListContainer._suggestionButtonHandler = (e) => {
+      const button = e.target.closest('.add-suggestion-to-room'); // Find the clicked button using closest()
+
+      if (button) { // Check if a button with the class was actually clicked
+        logger.log('[bindSuggestedProductButtons] Click handler triggered for button:', button); // Added log
+        e.preventDefault(); // Prevent default button action
+        e.stopPropagation(); // Prevent the click from propagating to parent elements (like accordion headers)
+
+        // Get data attributes directly from the clicked button element's dataset
+        const productId = button.dataset.productId;
+        const estimateId = button.dataset.estimateId;
+        const roomId = button.dataset.roomId;
+
+        logger.log('[bindSuggestedProductButtons] Data attributes read:', {
+          productId,
+          estimateId,
+          roomId
+        }); // Added log
+
+        // Handle adding the suggested product if all required data attributes are present
+        if (productId && estimateId && roomId) {
+          logger.log('[bindSuggestedProductButtons] Data attributes are valid, calling handleAddSuggestedProduct'); // Added log
+          this.handleAddSuggestedProduct(productId, estimateId, roomId, button);
+        } else {
+          logger.error('[bindSuggestedProductButtons] Missing required data attributes for adding suggested product on button:', button); // Added log
+          // Optionally provide user feedback here
+          this.showError('Cannot add product: Missing required information.');
         }
+      }
+    };
 
-        // Create and store new handler directly on button element
-        button._suggestionButtonHandler = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
+    // Add the event listener to the estimates list container using the stored handler
+    estimatesListContainer.addEventListener('click', estimatesListContainer._suggestionButtonHandler);
+    logger.log('[bindSuggestedProductButtons] Suggestion button click event handler bound to #estimates element.'); // Added log
 
-          // Get data attributes
-          const productId = button.dataset.productId;
-          const estimateId = button.dataset.estimateId;
-          const roomId = button.dataset.roomId;
-
-          console.log('Add suggestion button clicked:', {
-            productId,
-            estimateId,
-            roomId
-          });
-
-          // Handle adding the suggested product
-          if (productId && estimateId && roomId) {
-            this.handleAddSuggestedProduct(productId, estimateId, roomId, button);
-          } else {
-            console.error('Missing required data attributes for adding suggested product');
-          }
-        };
-
-        // Add click event listener
-        button.addEventListener('click', button._suggestionButtonHandler);
-      });
-
-      console.log('Suggestion buttons bound successfully');
+    // Initial check for buttons that might already be in the DOM on load
+    const initialButtons = estimatesListContainer.querySelectorAll('.add-suggestion-to-room');
+    if (initialButtons.length > 0) {
+      logger.log(`[bindSuggestedProductButtons] Found ${initialButtons.length} suggestion buttons initially in the DOM.`); // Added log
     } else {
-      console.log('No suggestion buttons found to bind');
+      logger.log('[bindSuggestedProductButtons] No suggestion buttons found initially in the DOM.'); // Added log
     }
   }
+
+
+
+  /**
+   * Asynchronously fetches and updates the suggested products for a specific room.
+   * Hides the suggestions section if no suggestions are returned.
+   * Includes logging to help debug the suggestion fetching and rendering process.
+   *
+   * @param {string} estimateId - Estimate ID
+   * @param {string} roomId - Room ID
+   * @param {HTMLElement} roomElement - The DOM element for the room
+   */
+  updateRoomSuggestions(estimateId, roomId, roomElement) {
+    if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+      logger.log(`[updateRoomSuggestions] Suggested products feature is disabled. Skipping update for room ${roomId}.`);
+      return;
+    }
+      logger.log(`[updateRoomSuggestions] Updating suggestions for room ${roomId} in estimate ${estimateId}`); // Added log
+
+    if (!roomElement) {
+      logger.error('[updateRoomSuggestions] Room element not provided.'); // Added log
+      return;
+    }
+
+    // Find the necessary elements within the room element
+    const suggestionsSection = roomElement.querySelector('.product-suggestions');
+    const suggestionsContainer = roomElement.querySelector('.product-suggestions .suggestions-container');
+    const suggestionsWrapper = roomElement.querySelector('.suggestions-container-wrapper');
+    const carouselWrapper = roomElement.querySelector('.suggestions-carousel');
+    const carouselNav = roomElement.querySelectorAll('.suggestions-nav'); // Get navigation elements
+
+    if (!suggestionsSection || !suggestionsContainer || !suggestionsWrapper || !carouselWrapper) {
+      logger.warn('[updateRoomSuggestions] Required suggestion elements not found in room element.', {
+        suggestionsSection: !!suggestionsSection,
+        suggestionsContainer: !!suggestionsContainer,
+        suggestionsWrapper: !!suggestionsWrapper,
+        carouselWrapper: !!carouselWrapper
+      }); // Added log with element checks
+      return; // Cannot update suggestions if elements are missing
+    }
+
+    // Load estimate data to get the current list of products in the room
+    // This is crucial because the DataService needs the current products to filter suggestions
+    const estimateData = this.loadEstimateData();
+    const roomData = estimateData.estimates?.[estimateId]?.rooms?.[roomId];
+    const roomProducts = roomData?.products || [];
+
+    logger.log(`[updateRoomSuggestions] Room ${roomId} has ${roomProducts.length} products.`, roomProducts); // Added log
+
+    // If there are no products in the room, hide suggestions immediately
+    if (roomProducts.length === 0) {
+      logger.log(`[updateRoomSuggestions] Room ${roomId} has no products. Hiding suggestions section.`); // Added log
+      suggestionsSection.style.display = 'none';
+      suggestionsContainer.innerHTML = ''; // Clear old suggestions
+      carouselNav.forEach(nav => nav.style.display = 'none'); // Hide nav
+      // Destroy existing carousel instance if any
+      if (carouselWrapper.carouselInstance) {
+        carouselWrapper.carouselInstance.destroy();
+        carouselWrapper.carouselInstance = null; // Clear reference
+      }
+      return; // No products, no suggestions to fetch
+    }
+
+
+    // Show loading state in the suggestions container
+    suggestionsContainer.innerHTML = '<div class="loading-text">Loading suggestions...</div>';
+    suggestionsSection.style.display = 'block'; // Ensure section is visible while loading
+
+    // Fetch suggestions using DataService, passing the current list of room products
+    this.dataService.getSuggestedProducts(estimateId, roomId, roomProducts)
+      .then(suggestions => {
+        logger.log(`[updateRoomSuggestions] Fetched ${suggestions.length} suggestions for room ${roomId}. Rendering...`); // Added log
+        logger.log('[updateRoomSuggestions] Suggestions data received:', suggestions); // Log the suggestions data
+        suggestionsContainer.innerHTML = ''; // Clear loading state
+
+        if (suggestions && suggestions.length > 0) {
+          logger.log('[updateRoomSuggestions] Suggestions found, showing section and rendering items.'); // Added log
+          // Show the entire suggestions section if it was hidden
+          suggestionsSection.style.display = 'block';
+          // Ensure carousel nav is visible
+          carouselNav.forEach(nav => nav.style.display = ''); // Or 'block' or 'flex' as appropriate
+
+
+          // Use TemplateEngine to render each suggestion item
+          suggestions.forEach(suggestion => {
+            logger.log('[updateRoomSuggestions] Rendering suggestion item:', suggestion); // Log each suggestion item being rendered
+            // Ensure suggestion data includes necessary IDs for the button
+            const suggestionData = {
+              ...suggestion,
+              estimate_id: estimateId,
+              room_id: roomId // Pass the room ID to the suggestion item template
+            };
+            const suggestionElement = TemplateEngine.create('suggestion-item-template', suggestionData);
+            if (suggestionElement) {
+              suggestionsContainer.appendChild(suggestionElement);
+            } else {
+              logger.warn('[updateRoomSuggestions] Failed to create suggestion element from template for suggestion:', suggestion); // Added log
+            }
+          });
+          logger.log(`[updateRoomSuggestions] Rendered ${suggestions.length} suggestion items.`); // Added log
+
+          // Initialize the carousel for this specific room's suggestions container
+          logger.log(`[updateRoomSuggestions] Initializing carousel for room ${roomId}.`); // Added log
+          // Destroy existing instance if any and create a new one
+          if (carouselWrapper.carouselInstance) {
+            carouselWrapper.carouselInstance.destroy();
+          }
+          carouselWrapper.carouselInstance = new SuggestionsCarousel(carouselWrapper); // Store instance
+
+        } else {
+          logger.log(`[updateRoomSuggestions] No suggestions found. Hiding suggestions section.`); // Added log
+          // If no suggestions are returned, hide the entire suggestions section
+          suggestionsSection.style.display = 'none';
+          suggestionsContainer.innerHTML = ''; // Clear any old suggestions
+          // Hide carousel nav
+          carouselNav.forEach(nav => nav.style.display = 'none');
+          // Destroy existing carousel instance if any
+          if (carouselWrapper.carouselInstance) {
+            carouselWrapper.carouselInstance.destroy();
+            carouselWrapper.carouselInstance = null; // Clear reference
+          }
+        }
+      })
+      .catch(error => {
+        logger.error(`[updateRoomSuggestions] Error fetching suggestions:`, error); // Added log
+        // Display an error message in the suggestions container
+        suggestionsContainer.innerHTML = '<p class="error-message">Error loading suggestions.</p>';
+        // Hide the suggestions section on error
+        suggestionsSection.style.display = 'none';
+        // Hide carousel nav on error
+        carouselNav.forEach(nav => nav.style.display = 'none');
+        // Destroy existing carousel instance if any
+        if (carouselWrapper.carouselInstance) {
+          carouselWrapper.carouselInstance.destroy();
+          carouselWrapper.carouselInstance = null; // Clear reference
+        }
+      });
+  }
+
+
+  /**
+   * Binds click events to the suggestions toggle button within each room.
+   * This controls the visibility of the suggestions carousel.
+   */
+  bindSuggestionsToggle() {
+    logger.log('Binding suggestions toggle buttons');
+
+    // Use event delegation on the main estimates list container
+    if (!this.estimatesList) {
+      logger.warn('Estimates list container not available for binding suggestions toggle.');
+      return;
+    }
+
+    // Remove any existing handler to prevent duplicates
+    if (this._suggestionsToggleHandler) {
+      this.estimatesList.removeEventListener('click', this._suggestionsToggleHandler);
+    }
+
+    // Create and store the new handler
+    this._suggestionsToggleHandler = (e) => {
+      const toggleButton = e.target.closest('.product-suggestions-toggle');
+
+      if (toggleButton) {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent this click from triggering the main room accordion
+
+        logger.log('Suggestions toggle button clicked.');
+
+        const suggestionsSection = toggleButton.closest('.product-suggestions');
+        const suggestionsWrapper = suggestionsSection ? suggestionsSection.querySelector('.suggestions-container-wrapper') : null;
+        const toggleIcon = toggleButton.querySelector('.toggle-icon');
+
+        if (suggestionsWrapper) {
+          // Toggle the 'expanded' class on the button
+          toggleButton.classList.toggle('expanded');
+
+          // Toggle the icon class
+          if (toggleIcon) {
+            toggleIcon.classList.toggle('dashicons-arrow-down-alt2');
+            toggleIcon.classList.toggle('dashicons-arrow-up-alt2');
+          }
+
+
+          // Toggle the visibility of the suggestions wrapper with animation
+          if (window.getComputedStyle(suggestionsWrapper).display === 'none' || !suggestionsWrapper.classList.contains('visible')) {
+            logger.log('Expanding suggestions section.');
+            suggestionsWrapper.classList.add('visible');
+            if (typeof jQuery !== 'undefined') {
+              jQuery(suggestionsWrapper).slideDown(200, () => {
+                // Initialize carousels after slideDown completes
+                const carousels = suggestionsWrapper.querySelectorAll('.suggestions-carousel');
+                if (carousels.length) {
+                  logger.log('Initializing carousels in suggestions section after toggle.');
+                  carousels.forEach(container => {
+                    if (container.carouselInstance) {
+                      container.carouselInstance.destroy();
+                    }
+                    new SuggestionsCarousel(container);
+                  });
+                }
+              });
+            } else {
+              suggestionsWrapper.style.display = 'block';
+              // Initialize carousels after setting display block
+              const carousels = suggestionsWrapper.querySelectorAll('.suggestions-carousel');
+              if (carousels.length) {
+                logger.log('Initializing carousels in suggestions section after toggle.');
+                carousels.forEach(container => {
+                  if (container.carouselInstance) {
+                    container.carouselInstance.destroy();
+                  }
+                  new SuggestionsCarousel(container);
+                });
+              }
+            }
+          } else {
+            logger.log('Collapsing suggestions section.');
+            suggestionsWrapper.classList.remove('visible');
+            if (typeof jQuery !== 'undefined') {
+              jQuery(suggestionsWrapper).slideUp(200);
+            } else {
+              suggestionsWrapper.style.display = 'none';
+            }
+          }
+        } else {
+          logger.warn('Suggestions container wrapper not found for toggling.');
+        }
+      }
+    };
+
+    // Add the new handler using event delegation
+    this.estimatesList.addEventListener('click', this._suggestionsToggleHandler);
+    logger.log('Suggestions toggle events bound to #estimates element.');
+  }
+
+
   /**
    * Handle room removal
    * @param {string} estimateId - Estimate ID
@@ -1013,14 +1941,14 @@ class ModalManager {
     this.showLoading();
 
     // Log the exact parameters being sent
-    console.log('Removing room with parameters:', {
+    logger.log('Removing room with parameters:', {
       estimate_id: estimateId,
       room_id: roomId
     });
 
     this.dataService.removeRoom(estimateId, roomId)
       .then((response) => {
-        console.log('Room removal response:', response);
+        logger.log('Room removal response:', response);
 
         // Refresh estimates list
         this.loadEstimatesList(null, estimateId)
@@ -1030,7 +1958,7 @@ class ModalManager {
 
             // If the estimate has no rooms left, it might need special handling
             if (response.has_rooms === false) {
-              console.log('Estimate has no rooms left after removal');
+              logger.log('Estimate has no rooms left after removal');
 
               // You might want to highlight the "Add New Room" button or similar
               const addRoomBtn = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"] .add-room`);
@@ -1044,12 +1972,12 @@ class ModalManager {
             }
           })
           .catch(error => {
-            this.log('Error refreshing estimates list:', error);
+            logger.log('Error refreshing estimates list:', error);
             this.showError('Error refreshing estimates list. Please try again.');
           });
       })
       .catch(error => {
-        this.log('Error removing room:', error);
+        logger.log('Error removing room:', error);
         this.showError(error.message || 'Error removing room. Please try again.');
       })
       .finally(() => {
@@ -1066,11 +1994,11 @@ class ModalManager {
     this.showLoading();
 
     // Log the estimate ID being removed for debugging
-    console.log(`Attempting to remove estimate ID: ${estimateId}`);
+    logger.log(`Attempting to remove estimate ID: ${estimateId}`);
 
     this.dataService.removeEstimate(estimateId)
       .then((response) => {
-        console.log('Estimate removal response:', response);
+        logger.log('Estimate removal response:', response);
 
         // Refresh estimates list
         this.loadEstimatesList()
@@ -1079,12 +2007,12 @@ class ModalManager {
             this.showMessage('Estimate removed successfully', 'success');
           })
           .catch(error => {
-            console.error('Error refreshing estimates list:', error);
+            logger.error('Error refreshing estimates list:', error);
             this.showError('Error refreshing estimates list. Please try again.');
           });
       })
       .catch(error => {
-        console.error('Error removing estimate:', error);
+        logger.error('Error removing estimate:', error);
         this.showError(error.message || 'Error removing estimate. Please try again.');
       })
       .finally(() => {
@@ -1093,51 +2021,61 @@ class ModalManager {
   }
 
   /**
-   * Bind product removal events with duplicate prevention
+   * Bind product removal events with proper event delegation
    */
   bindProductRemovalEvents() {
-    console.log('Binding product removal events');
+    logger.log('Binding product removal events');
 
-    // Important: Remove any existing click handlers first to prevent duplicates
-    if (this.estimatesList) {
-      // Store a reference to our delegated handler
-      if (this._productRemovalHandler) {
-        this.estimatesList.removeEventListener('click', this._productRemovalHandler);
-      }
-
-      // Create a new handler function and save a reference to it
-      this._productRemovalHandler = (e) => {
-        const removeButton = e.target.closest('.remove-product');
-        if (removeButton) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          // Get the necessary data attributes
-          const estimateId = removeButton.dataset.estimateId;
-          const roomId = removeButton.dataset.roomId;
-          const productIndex = removeButton.dataset.productIndex;
-
-          console.log('Remove product button clicked:', {
-            estimateId,
-            roomId,
-            productIndex
-          });
-
-          if (estimateId && roomId && productIndex !== undefined) {
-            // Confirm before removing
-            this.confirmDelete('product', estimateId, roomId, productIndex);
-          } else {
-            console.error('Missing data attributes for product removal');
-          }
-        }
-      };
-
-      // Add the new handler
-      this.estimatesList.addEventListener('click', this._productRemovalHandler);
+    // Make sure we have a valid estimatesList element
+    if (!this.estimatesList) {
+      logger.error('Estimates list not available for binding product removal events');
+      return;
     }
 
-    console.log('Product removal events bound with duplicate prevention');
+    // Remove any existing click handlers first to prevent duplicates
+    if (this._productRemovalHandler) {
+      this.estimatesList.removeEventListener('click', this._productRemovalHandler);
+    }
+
+    // Create a new handler function and save a reference to it
+    this._productRemovalHandler = (e) => {
+      const removeButton = e.target.closest('.remove-product');
+      if (removeButton) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Get the necessary data attributes
+        const estimateId = removeButton.dataset.estimateId;
+        const roomId = removeButton.dataset.roomId;
+        const productIndex = removeButton.dataset.productIndex;
+        const productId = removeButton.dataset.productId;
+
+        logger.log('Remove product button clicked:', {
+          estimateId,
+          roomId,
+          productIndex,
+          button: removeButton
+        });
+
+        if (estimateId && roomId && productIndex !== undefined) {
+          // Confirm before removing
+          this.confirmDelete('product', estimateId, roomId, productIndex, productId);
+        } else {
+          logger.error('Missing data attributes for product removal:', {
+            estimateId,
+            roomId,
+            productIndex,
+            buttonData: removeButton.dataset
+          });
+        }
+      }
+    };
+
+    // Add the new handler
+    this.estimatesList.addEventListener('click', this._productRemovalHandler);
+    logger.log('Product removal events bound to #estimates element');
   }
+
 
   /**
    * Bind room removal events with duplicate prevention
@@ -1159,7 +2097,7 @@ class ModalManager {
           const estimateId = removeButton.dataset.estimateId;
           const roomId = removeButton.dataset.roomId;
 
-          console.log('Remove room button clicked:', {
+          logger.log('Remove room button clicked:', {
             estimateId,
             roomId
           });
@@ -1175,45 +2113,16 @@ class ModalManager {
     }
   }
 
-  /**
-   * Bind estimate removal events with duplicate prevention
-   */
-  bindEstimateRemovalEvents() {
-    if (this.estimatesList) {
-      // Remove any existing handlers
-      if (this._estimateRemovalHandler) {
-        this.estimatesList.removeEventListener('click', this._estimateRemovalHandler);
-      }
-
-      // Create new handler and store reference
-      this._estimateRemovalHandler = (e) => {
-        const removeButton = e.target.closest('.remove-estimate');
-        if (removeButton) {
-          e.preventDefault();
-          e.stopPropagation();
-
-          const estimateId = removeButton.dataset.estimateId;
-
-          console.log('Remove estimate button clicked:', {
-            estimateId
-          });
-
-          if (estimateId) {
-            this.confirmDelete('estimate', estimateId);
-          }
-        }
-      };
-
-      // Add the new handler
-      this.estimatesList.addEventListener('click', this._estimateRemovalHandler);
-    }
-  }
 
   /**
-   * Replace your existing confirmDelete method with this updated version
-   * that uses the custom confirmation dialog
+   * Confirm deletion with better error handling and logging
+   * @param {string} type - Item type ('product', 'room', or 'estimate')
+   * @param {string} estimateId - Estimate ID
+   * @param {string} roomId - Room ID (for room or product deletion)
+   * @param {string|null} elementId - Element ID (for product deletion, can be null)
+   * @param {string} productIndex - Product index (for product deletion only)
    */
-  confirmDelete(type, estimateId, roomId, productIndex) {
+  confirmDelete(type, estimateId, roomId, productIndex, elementId = null) {
     // Get text from localized strings if available
     const i18n = window.productEstimatorVars?.i18n || {};
     const dialogTitles = i18n.dialog_titles || {};
@@ -1244,17 +2153,19 @@ class ModalManager {
     }
 
     // Log what we're trying to delete
-    console.log(`Confirming deletion of ${type} - ID: ${type === 'product' ? productIndex : (type === 'room' ? roomId : estimateId)}`);
+    logger.log(`Confirming deletion of ${type} - ID: ${type === 'product' ? productIndex : (type === 'room' ? roomId : estimateId)}`);
 
     // Use our custom confirmation dialog
     if (window.productEstimator && window.productEstimator.dialog) {
+      logger.log('Using custom dialog for deletion confirmation');
+
       window.productEstimator.dialog.show({
         title: title,
         message: message,
         type: type,
         confirmText: confirmText,
         onConfirm: () => {
-          console.log(`User confirmed deletion of ${type}`);
+          logger.log(`User confirmed deletion of ${type}`);
 
           // Handle deletion based on type
           switch (type) {
@@ -1265,18 +2176,22 @@ class ModalManager {
               this.handleRoomRemoval(estimateId, roomId);
               break;
             case 'product':
-              this.handleProductRemoval(estimateId, roomId, productIndex);
+              this.handleProductRemoval(estimateId, roomId, productIndex, elementId);
               break;
           }
         },
         onCancel: () => {
-          console.log(`User cancelled deletion of ${type}`);
+          logger.log(`User cancelled deletion of ${type}`);
           // No action needed on cancel
         }
       });
     } else {
       // Fallback to standard confirm if custom dialog not available
+      logger.log('Custom dialog not available, using browser confirm');
+
       if (confirm(message)) {
+        logger.log(`User confirmed deletion of ${type} via browser confirm`);
+
         switch (type) {
           case 'estimate':
             this.handleEstimateRemoval(estimateId);
@@ -1288,10 +2203,12 @@ class ModalManager {
             this.handleProductRemoval(estimateId, roomId, productIndex);
             break;
         }
+      } else {
+        logger.log(`User cancelled deletion of ${type} via browser confirm`);
       }
     }
-
   }
+
   /**
    * Load estimate selection form via AJAX
    * @returns {Promise} Promise that resolves when form is loaded
@@ -1328,12 +2245,12 @@ class ModalManager {
             resolve(response.data.html);
           } else {
             const error = new Error('Failed to load estimate selection form');
-            console.error(error);
+            logger.error(error);
             reject(error);
           }
         },
         error: (error) => {
-          console.error('Error loading estimate selection form:', error);
+          logger.error('Error loading estimate selection form:', error);
           reject(error);
         },
         complete: () => {
@@ -1347,16 +2264,16 @@ class ModalManager {
    * Add a dedicated method to bind form events
    */
   bindEstimateSelectionFormEvents() {
-    console.log('Binding estimate selection form events');
+    logger.log('Binding estimate selection form events');
 
     const form = this.estimateSelectionForm.querySelector('form');
     if (!form) {
-      console.error('Cannot bind events - form not found in estimate selection form');
+      logger.error('Cannot bind events - form not found in estimate selection form');
       return;
     }
 
     // Log what we're working with
-    console.log('Form found:', form);
+    logger.log('Form found:', form);
 
     // Remove existing event listeners to prevent duplication
     if (this._estimateFormSubmitHandler) {
@@ -1366,7 +2283,7 @@ class ModalManager {
     // Create and store the handler
     this._estimateFormSubmitHandler = (e) => {
       e.preventDefault();
-      console.log('Estimate selection form submitted');
+      logger.log('Estimate selection form submitted');
       this.handleEstimateSelection(form);
     };
 
@@ -1380,15 +2297,15 @@ class ModalManager {
         createButton.removeEventListener('click', this._createEstimateHandler);
       }
 
-      this._createEstimateHandler = (e) => {
-        console.log('Create estimate button clicked');
+      this._createEstimateHandler = () => {
+        logger.log('Create estimate button clicked');
         this.showNewEstimateForm();
       };
 
       createButton.addEventListener('click', this._createEstimateHandler);
     }
 
-    console.log('Form events bound successfully');
+    logger.log('Form events bound successfully');
   }
 
   /**
@@ -1406,7 +2323,7 @@ class ModalManager {
           this.loadEstimateSelectionForm()
             .then(() => this.populateEstimateDropdown(estimates))
             .catch(error => {
-              this.log('Error loading estimate selection form:', error);
+              logger.log('Error loading estimate selection form:', error);
               this.showError('Error loading estimate selection form. Please try again.');
             })
             .finally(() => {
@@ -1419,7 +2336,7 @@ class ModalManager {
         this.hideLoading();
       })
       .catch(error => {
-        this.log('Error loading estimates data:', error);
+        logger.log('Error loading estimates data:', error);
         this.showError('Error loading estimates data. Please try again.');
         this.hideLoading();
       });
@@ -1436,7 +2353,7 @@ class ModalManager {
       null;
 
     if (!dropdown) {
-      this.log('Estimate dropdown not found, cannot populate');
+      logger.log('Estimate dropdown not found, cannot populate');
       return;
     }
 
@@ -1464,239 +2381,143 @@ class ModalManager {
       });
     }
 
-    this.log(`Populated dropdown with ${estimates ? estimates.length : 0} estimates`);
+    logger.log(`Populated dropdown with ${estimates ? estimates.length : 0} estimates`);
   }
 
   /**
-   * Show new estimate form with correct loading indicator handling
+   * Show new estimate form using template rendering
    */
   showNewEstimateForm() {
+    logger.log('Showing new estimate form using template');
+
+    // Hide other views that might be visible
+    // Assuming these wrappers are persistent in the PHP template
     if (this.estimatesList) this.estimatesList.style.display = 'none';
     if (this.estimateSelection) this.estimateSelection.style.display = 'none';
+    if (this.roomSelectionForm) this.roomSelectionForm.style.display = 'none';
 
-    // Force visibility of the form
+
+    // Ensure the form wrapper element exists in the DOM (it should be in your PHP template)
+    if (!this.newEstimateForm) {
+      logger.error('New estimate form wrapper (#new-estimate-form-wrapper) not found in modal template!');
+      this.showError('Modal structure incomplete. Cannot show new estimate form.');
+      this.hideLoading(); // Ensure loading is hidden on error
+      return;
+    }
+
+    // Force visibility of the form wrapper element
     this.forceElementVisibility(this.newEstimateForm);
 
-    // Check if form content needs to be loaded
-    if (!this.newEstimateForm.querySelector('form')) {
-      this.loadNewEstimateForm()
-        .finally(() => {
-          // Always hide loading when form is ready
-          this.hideLoading();
-
-          // Add this: Ensure cancel button is properly bound
-          this.bindCancelButton(this.newEstimateForm, 'estimate');
-        });
-    } else {
-      // Form already exists, just make sure loading is hidden and cancel button is bound
-      this.hideLoading();
-
-      // Add this: Ensure cancel button is properly bound
-      this.bindCancelButton(this.newEstimateForm, 'estimate');
-    }
-  }
-
-  bindCancelButton(formContainer, formType) {
-    if (!formContainer) return;
-
-    // Find the cancel button in this form
-    const cancelButton = formContainer.querySelector('.cancel-btn');
-
-    if (cancelButton) {
-      // Remove any existing event listeners to prevent duplicates
-      cancelButton.removeEventListener('click', this._cancelFormHandler);
-
-      // Create and store new handler
-      this._cancelFormHandler = () => {
-        console.log(`Cancel button clicked for ${formType} form`);
-        this.cancelForm(formType);
-      };
-
-      // Add the event listener
-      cancelButton.addEventListener('click', this._cancelFormHandler);
-
-      console.log(`Cancel button bound for ${formType} form`);
-    } else {
-      console.warn(`No cancel button found in ${formType} form`);
-    }
-  }
-
-  /**
-   * Load new estimate form via AJAX with improved loading handling
-   * @returns {Promise} Promise that resolves when form is loaded
-   */
-  loadNewEstimateForm() {
-    return new Promise((resolve, reject) => {
-      // Show loading
-      this.showLoading();
-
-      // Load form via AJAX
-      jQuery.ajax({
-        url: productEstimatorVars.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'get_new_estimate_form',
-          nonce: productEstimatorVars.nonce
-        },
-        success: (response) => {
-          if (response.success && response.data.html) {
-            this.newEstimateForm.innerHTML = response.data.html;
-
-            if (window.productEstimator && window.productEstimator.core &&
-              window.productEstimator.core.customerDetailsManager) {
-              // Slight delay to ensure DOM is updated
-              setTimeout(() => {
-                window.productEstimator.core.customerDetailsManager.init();
-              }, 100);
-            }
-
-            // Bind form events
-            const form = this.newEstimateForm.querySelector('form');
-            if (form) {
-              form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleNewEstimateSubmission(form);
-              });
-
-              const cancelButton = form.querySelector('.cancel-btn');
-              if (cancelButton) {
-                cancelButton.addEventListener('click', () => {
-                  this.cancelForm('estimate');
-                });
-              }
-            }
+    // Show loading state briefly while template is inserted and events are bound
+    this.showLoading();
 
 
-            // Dispatch a custom event that modal content has been loaded
-            document.dispatchEvent(new CustomEvent('product_estimator_modal_loaded'));
+    // --- NEW: Insert form content using TemplateEngine ---
+    // Clear any existing content inside the wrapper before inserting the new template
+    // This prevents multiple forms from appearing if the button is clicked repeatedly
+    this.newEstimateForm.innerHTML = '';
 
-            resolve(response.data.html);
-          } else {
-            reject(new Error('Failed to load new estimate form'));
-          }
-        },
-        error: (error) => {
-          console.error('Error loading new estimate form:', error);
-          reject(error);
-        },
-        complete: () => {
-          // Hide loading indicator when AJAX completes, regardless of success or error
-          this.hideLoading();
-        }
-      });
-    });
-  }
+    try {
+      // Use the TemplateEngine to create and insert the form HTML from the template
+      // Insert it into the predefined #new-estimate-form-wrapper element
+      TemplateEngine.insert('new-estimate-form-template', {}, this.newEstimateForm); // The second argument {} can be used to pass data if needed
 
-  /**
-   * Show new room form
-   * @param {string} estimateId - Estimate ID
-   */
-  showNewRoomForm(estimateId) {
-    console.log('Showing new room form for estimate:', estimateId);
+      logger.log('New estimate form template inserted into wrapper.');
 
-    // Store the estimate ID with the form
-    if (this.newRoomForm) {
-      this.newRoomForm.dataset.estimateId = estimateId;
+      // Get a reference to the actual <form> element that was just inserted
+      const formElement = this.newEstimateForm.querySelector('form#new-estimate-form');
 
-      // Also set it on the form element directly for redundancy
-      const form = this.newRoomForm.querySelector('form');
-      if (form) {
-        form.dataset.estimateId = estimateId;
+      if (formElement) {
+        // Bind events to the newly inserted form element
+        // Pass the currentProductId if you need to set it on the form's data attribute
+        this.bindNewEstimateFormEvents(formElement, this.currentProductId);
+
+        logger.log('Called bindNewEstimateFormEvents for the new form.');
+      } else {
+        logger.error('Form element with ID #new-estimate-form not found inside #new-estimate-form-wrapper after template insertion!');
+        this.showError('Error rendering form template. Please try again.');
       }
+
+    } catch (error) {
+      logger.error('Error inserting new estimate form template:', error);
+      this.showError('Error loading form template. Please try again.');
+    } finally {
+      // Hide loading after the template insertion and binding attempt
+      this.hideLoading();
     }
+    // --- END NEW ---
+
+    // Remove the old check for querySelector('form') and the loadNewEstimateForm call entirely.
+    // The logic above replaces it.
+  }
+
+  /**
+   * Show new room form using template rendering
+   * @param {string} estimateId - Estimate ID for the new room
+   * @param {string|null} productId - Optional product ID if adding a product to this new room
+   */
+  showNewRoomForm(estimateId, productId = null) {
+    logger.log('Showing new room form using template for estimate:', estimateId, 'with product:', productId);
 
     // Hide other views
     if (this.estimatesList) this.estimatesList.style.display = 'none';
     if (this.estimateSelection) this.estimateSelection.style.display = 'none';
     if (this.roomSelectionForm) this.roomSelectionForm.style.display = 'none';
+    if (this.newEstimateForm) this.newEstimateForm.style.display = 'none'; // Ensure new estimate form is hidden
 
-    // Force visibility of the form
+
+    // Ensure the form wrapper element exists in the DOM (it should be in your PHP template)
+    if (!this.newRoomForm) {
+      logger.error('New room form wrapper (#new-room-form-wrapper) not found in modal template!');
+      this.showError('Modal structure incomplete. Cannot show new room form.');
+      this.hideLoading(); // Ensure loading is hidden on error
+      return;
+    }
+
+    // Force visibility of the form wrapper element
     this.forceElementVisibility(this.newRoomForm);
 
-    // Check if form content needs to be loaded
-    if (!this.newRoomForm.querySelector('form')) {
-      this.loadNewRoomForm(estimateId);
-    } else {
-      // Form already exists, make sure it has the right estimate ID
-      const form = this.newRoomForm.querySelector('form');
-      if (form) {
-        form.dataset.estimateId = estimateId;
+    // Show loading state briefly while template is inserted and events are bound
+    this.showLoading();
+
+    // Clear any existing content inside the wrapper before inserting the new template
+    this.newRoomForm.innerHTML = '';
+
+    try {
+      // Use the TemplateEngine to create and insert the form HTML from the template
+      // Pass estimateId and productId to the template data if needed for initial values or data attributes
+      TemplateEngine.insert('new-room-form-template', {
+        estimate_id: estimateId,
+        product_id: productId
+      }, this.newRoomForm);
+
+      logger.log('New room form template inserted into wrapper.');
+
+      // Get a reference to the actual <form> element that was just inserted
+      const formElement = this.newRoomForm.querySelector('form#new-room-form');
+
+      if (formElement) {
+        // Bind events to the newly inserted form element
+        this.bindNewRoomFormEvents(formElement, estimateId, productId);
+
+        logger.log('Called bindNewRoomFormEvents for the new room form.');
+      } else {
+        logger.error('Form element with ID #new-room-form not found inside #new-room-form-wrapper after template insertion!');
+        this.showError('Error rendering form template. Please try again.');
       }
+
+    } catch (error) {
+      logger.error('Error inserting new room form template:', error);
+      this.showError('Error loading form template. Please try again.');
+    } finally {
+      // Hide loading after the template insertion and binding attempt
+      this.hideLoading();
     }
-  }
-
-  /**
-   * Load new room form via AJAX
-   * @param {string} estimateId - Estimate ID
-   * @returns {Promise} Promise that resolves when form is loaded
-   */
-  loadNewRoomForm(estimateId) {
-    return new Promise((resolve, reject) => {
-      // Show loading
-      this.showLoading();
-
-      // Load form via AJAX
-      jQuery.ajax({
-        url: productEstimatorVars.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'get_new_room_form',
-          nonce: productEstimatorVars.nonce
-        },
-        success: (response) => {
-          if (response.success && response.data.html) {
-            // Insert form HTML
-            this.newRoomForm.innerHTML = response.data.html;
-
-            // HERE IS WHERE YOU ADD THE EVENT BINDING CODE:
-            const form = this.newRoomForm.querySelector('form');
-            if (form) {
-              // Set estimate ID on the form
-              form.dataset.estimateId = estimateId;
-
-              // Remove any existing event handlers
-              if (this._newRoomFormSubmitHandler) {
-                form.removeEventListener('submit', this._newRoomFormSubmitHandler);
-              }
-
-              // Create new handler that PREVENTS DEFAULT
-              this._newRoomFormSubmitHandler = (e) => {
-                e.preventDefault(); // This is crucial to prevent page reload
-                console.log('New room form submitted');
-                this.handleNewRoomSubmission(form);
-              };
-
-              // Bind the handler
-              form.addEventListener('submit', this._newRoomFormSubmitHandler);
-
-              // Also bind cancel button
-              const cancelButton = form.querySelector('.cancel-btn');
-              if (cancelButton) {
-                cancelButton.addEventListener('click', () => {
-                  this.cancelForm('room');
-                });
-              }
-            }
-
-            resolve(response.data.html);
-          } else {
-            reject(new Error('Failed to load new room form'));
-          }
-        },
-        error: (error) => {
-          console.error('Error loading new room form:', error);
-          reject(error);
-        },
-        complete: () => {
-          this.hideLoading();
-        }
-      });
-    });
   }
 
   bindEstimateListEventHandlers() {
     if (!this.estimatesList) {
-      console.error('Cannot bind events - estimates list container not found');
+      logger.error('Cannot bind events - estimates list container not found');
       return;
     }
 
@@ -1713,37 +2534,52 @@ class ModalManager {
         e.stopPropagation();
 
         // Get estimate ID from data attribute
-        const estimateId = addRoomButton.dataset.estimate;
-        console.log('Add room button clicked for estimate:', estimateId);
+        const estimateId = addRoomButton.dataset.estimateId;
+        logger.log('Add room button clicked for estimate:', estimateId);
 
-        if (estimateId) {
-          this.showNewRoomForm(estimateId);
+        // Get product ID if available (e.g., from modal dataset if we are in product flow)
+        const productId = this.currentProductId; // Use the stored currentProductId
+
+        if (estimateId !== null && estimateId !== undefined && estimateId !== '') {
+          // --- END MODIFIED CHECK ---
+          // Call the modified showNewRoomForm
+          this.showNewRoomForm(estimateId, productId);
         } else {
-          console.error('No estimate ID found for add room button');
+          logger.error('No estimate ID found for add room button');
+          this.showError('Cannot add room: Missing estimate ID.'); // Show error to user
         }
       }
     };
 
     // Add the event listener to the estimates list
     this.estimatesList.addEventListener('click', this._addRoomButtonHandler);
-    console.log('Add room button event handler bound');
+    logger.log('Add room button event handler bound');
   }
 
 
   /**
    * Bind room selection form events
    */
+  /**
+   * Bind room selection form events
+   */
   bindRoomSelectionFormEvents() {
-    console.log('Binding room selection form events');
+    logger.log('Binding room selection form events');
 
-    const form = this.roomSelectionForm.querySelector('form');
-    if (!form) {
-      console.error('Cannot bind events - form not found in room selection form');
+    // First check if the form container exists
+    if (!this.roomSelectionForm) {
+      logger.warn('Cannot bind events - room selection form container not found');
       return;
     }
 
-    console.log('Room selection form found:', form);
+    // Then check if the form exists inside the container
+    const form = this.roomSelectionForm.querySelector('form');
+    if (!form) {
+      logger.warn('Cannot bind events - form not found in room selection form');
+      return;
+    }
 
+    // Continue with the rest of your binding code...
     // Remove existing event listeners to prevent duplication
     if (this._roomFormSubmitHandler) {
       form.removeEventListener('submit', this._roomFormSubmitHandler);
@@ -1752,7 +2588,7 @@ class ModalManager {
     // Create and store the handler
     this._roomFormSubmitHandler = (e) => {
       e.preventDefault();
-      console.log('Room selection form submitted');
+      logger.log('Room selection form submitted');
       this.handleRoomSelection(form);
     };
 
@@ -1760,17 +2596,18 @@ class ModalManager {
     form.addEventListener('submit', this._roomFormSubmitHandler);
 
     // Also bind the back button
-    const backButton = form.querySelector('.back-btn');
+    const backButton = form.querySelector('.cancel-btn'); // Assuming cancel-btn is also the back button
     if (backButton) {
       if (this._backButtonHandler) {
         backButton.removeEventListener('click', this._backButtonHandler);
       }
 
       this._backButtonHandler = () => {
-        console.log('Back button clicked');
+        logger.log('Back button clicked in room selection form');
+        // Go back to estimate selection view
         this.forceElementVisibility(this.estimateSelectionForm);
         this.forceElementVisibility(this.estimateSelection);
-        this.roomSelectionForm.style.display = 'none';
+        this.roomSelectionForm.style.display = 'none'; // Hide the room selection form
       };
 
       backButton.addEventListener('click', this._backButtonHandler);
@@ -1784,173 +2621,170 @@ class ModalManager {
       }
 
       this._addNewRoomHandler = () => {
-        console.log('Add new room button clicked in form');
+        logger.log('Add new room button clicked in room selection form');
+        // Get the estimate ID from the room selection form's data attribute
         const estimateId = this.roomSelectionForm.dataset.estimateId;
-        console.log('Estimate ID for new room:', estimateId);
+        // Get the product ID from the modal's data attribute
+        const productId = this.currentProductId;
+
+        logger.log('Estimate ID for new room:', estimateId, 'Product ID:', productId);
 
         if (estimateId) {
-          this.showNewRoomForm(estimateId);
+          // Call the modified showNewRoomForm
+          this.showNewRoomForm(estimateId, productId);
         } else {
-          console.error('No estimate ID found for new room');
+          logger.error('No estimate ID found for add new room button in room selection form');
+          this.showError('Cannot add room: Missing estimate ID.'); // Show error to user
         }
       };
 
       addRoomButton.addEventListener('click', this._addNewRoomHandler);
-      console.log('Add new room button handler bound');
+      logger.log('Add new room button handler bound in room selection form');
     } else {
-      console.warn('Add new room button not found in room selection form');
+      logger.warn('Add new room button not found in room selection form');
     }
 
-    console.log('Room selection form events bound successfully');
+    logger.log('Room selection form events bound successfully');
   }
 
   /**
    * Update handleEstimateSelection to bind room selection form events
    */
   handleEstimateSelection(form) {
-    const estimateId = form.querySelector('#estimate-dropdown').value;
-    const productId = this.currentProductId;
+    // Get the selected estimate ID from the dropdown
+    const estimateDropdown = form.querySelector('#estimate-dropdown');
+    const estimateId = String(estimateDropdown ? estimateDropdown.value || '' : '').trim();
 
+    // Get the current product ID from the modal state
+    const productId = String(this.currentProductId || '').trim();
+
+    // Validate that an estimate was selected
     if (!estimateId) {
-      this.showError('Please select an estimate');
+      this.showError('Please select an estimate to continue.');
       return;
     }
 
+    // Show the loading indicator
     this.showLoading();
 
-    // Get rooms for the selected estimate
+    // Use the DataService to get rooms for the selected estimate
     this.dataService.getRoomsForEstimate(estimateId, productId)
       .then(response => {
-        // Hide estimate selection form
-        this.estimateSelectionForm.style.display = 'none';
+        // Hide the estimate selection form wrapper
+        if (this.estimateSelectionForm) {
+          this.estimateSelectionForm.style.display = 'none';
+        } else {
+          logger.warn('Estimate selection form wrapper not found when trying to hide it.');
+        }
 
-        // If the estimate has rooms, show room selection form
-        if (response.has_rooms) {
-          // Populate room dropdown
-          const roomDropdown = document.getElementById('room-dropdown');
-          if (roomDropdown) {
-            roomDropdown.innerHTML = '';
-            roomDropdown.appendChild(new Option('-- Select a Room --', ''));
 
-            response.rooms.forEach(room => {
-              roomDropdown.appendChild(new Option(
-                `${room.name} (${room.dimensions})`,
-                room.id
-              ));
-            });
+        // *** ADD setTimeout HERE to allow DOM to update after template insertion ***
+        // A 0ms delay is often enough to defer the task until the current call stack is clear
+        setTimeout(() => {
 
-            // Store estimate ID with the form
-            this.roomSelectionForm.dataset.estimateId = estimateId;
+          // Ensure the room selection form wrapper element exists
+          const roomSelectionWrapper = this.modal.querySelector('#room-selection-form-wrapper'); // Query the main modal for the wrapper
+          if (!roomSelectionWrapper) {
+            logger.error('Room selection form wrapper not found in modal template!');
+            this.showError('Modal structure incomplete. Cannot proceed.');
+            this.hideLoading(); // Hide loading on error
+            return;
+          }
 
-            // Also set the data-estimate attribute on the Add New Room button
-            const addNewRoomButton = document.getElementById('add-new-room-from-selection');
-            if (addNewRoomButton) {
-              addNewRoomButton.dataset.estimate = estimateId;
-            }
+          // Update the instance property to ensure it's correct
+          this.roomSelectionForm = roomSelectionWrapper; // *** Update the instance property ***
 
-            // Show room selection form with force visibility
+
+          // If the estimate has rooms (based on the response from DataService)
+          if (response.has_rooms) {
+            logger.log('Estimate has rooms, showing room selection form.');
+
+            // Force visibility of the room selection form wrapper
             this.forceElementVisibility(this.roomSelectionForm);
 
-            // Important: Bind the room selection form events
-            this.bindRoomSelectionFormEvents();
+            // Populate the room dropdown - query *within* the correct wrapper element
+            const roomDropdown = this.roomSelectionForm.querySelector('#room-dropdown');
+
+            if (roomDropdown) {
+              // Clear existing options and add a default option
+              roomDropdown.innerHTML = '';
+              const defaultOption = document.createElement('option');
+              defaultOption.value = '';
+              defaultOption.textContent = productEstimatorVars.i18n.select_room || '-- Select a Room --';
+              roomDropdown.appendChild(defaultOption);
+
+              // Add room options from the response data
+              if (Array.isArray(response.rooms)) {
+                response.rooms.forEach(room => {
+                  if (room && room.id !== undefined && room.name !== undefined && room.dimensions !== undefined) {
+                    const option = document.createElement('option');
+                    option.value = room.id;
+                    option.textContent = `${room.name} (${room.dimensions})`; // Use the formatted dimensions
+                    roomDropdown.appendChild(option);
+                  } else {
+                    logger.warn('Skipping invalid room data received:', room);
+                  }
+                });
+                logger.log(`Populated room dropdown with ${response.rooms.length} rooms.`);
+              } else {
+                logger.warn('Received non-array data for rooms:', response.rooms);
+              }
+
+
+              // Store the estimate ID on the room selection form wrapper for later use (e.g., adding a new room)
+              this.roomSelectionForm.dataset.estimateId = estimateId;
+
+              // Find the "Add New Room" button within the room selection form wrapper
+              const addNewRoomButton = this.roomSelectionForm.querySelector('#add-new-room-from-selection');
+              if (addNewRoomButton) {
+                // Set the data-estimate-id on the button if your logic requires it there too
+                addNewRoomButton.dataset.estimateId = estimateId;
+                logger.log('Set estimate ID on Add New Room button:', estimateId);
+              } else {
+                logger.warn('Add New Room button not found in room selection form.');
+              }
+
+
+              // Important: Bind the form events to the room selection form
+              // This function will now correctly find the form inside the wrapper
+              this.bindRoomSelectionFormEvents();
+
+              // Hide loading is handled in the .finally block
+              // Ensure no double hideLoading calls if bindEvents or populate finishes quickly
+              // this.hideLoading();
+
+
+            } else {
+              logger.error('Room dropdown element (#room-dropdown) not found inside the room selection form wrapper!');
+              this.showError('Modal structure incomplete. Cannot show room selection form.');
+              // Hide loading immediately as there's nothing else to do in this path
+              this.hideLoading();
+            }
+
           } else {
-            this.loadRoomSelectionForm(estimateId)
-              .then(() => {
-                this.roomSelectionForm.dataset.estimateId = estimateId;
-                this.forceElementVisibility(this.roomSelectionForm);
-                // Bind events after loading
-                this.bindRoomSelectionFormEvents();
-              })
-              .catch(error => {
-                this.log('Error loading room selection form:', error);
-                this.showError('Error loading room selection form. Please try again.');
-              });
+            // No rooms found for this estimate, proceed directly to showing the new room form
+            logger.log('No rooms found for this estimate, showing new room form.');
+
+            // Pass the estimateId and productId to the showNewRoomForm function
+            // showNewRoomForm handles showing the correct wrapper and setting data attributes
+            this.showNewRoomForm(estimateId, productId);
+            // hideLoading() is handled within showNewRoomForm's finally block
           }
-        } else {
-          // No rooms, show new room form
-          this.newRoomForm.dataset.estimateId = estimateId;
-          this.newRoomForm.dataset.productId = productId;
-          this.forceElementVisibility(this.newRoomForm);
-        }
+
+        }, 0); // A 0ms delay is usually sufficient
+
       })
       .catch(error => {
-        this.log('Error getting rooms:', error);
-        this.showError('Error getting rooms. Please try again.');
+        // Handle errors from getRoomsForEstimate
+        logger.log('Error getting rooms for estimate:', error);
+        this.showError(error.message || 'Error loading rooms. Please try again.');
       })
       .finally(() => {
+        // Ensure loading is hidden after the entire process (both success and error paths)
+        // This finally block will execute after the .then() or .catch() completes.
+        // If hideLoading is called inside the setTimeout paths, this will simply be redundant, which is fine.
         this.hideLoading();
       });
-  }
-
-  /**
-   * Load room selection form content
-   */
-  loadRoomSelectionForm(estimateId) {
-    return new Promise((resolve, reject) => {
-      if (!this.roomSelectionForm) {
-        reject(new Error('Room selection form container not found'));
-        return;
-      }
-
-      // Show loading state
-      this.showLoading();
-
-      // Load form via AJAX
-      jQuery.ajax({
-        url: productEstimatorVars.ajax_url,
-        type: 'POST',
-        data: {
-          action: 'get_room_selection_form',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateId
-        },
-        success: (response) => {
-          if (response.success && response.data.html) {
-            // Insert the HTML
-            this.roomSelectionForm.innerHTML = response.data.html;
-
-            // Set estimate ID
-            this.roomSelectionForm.dataset.estimateId = estimateId;
-
-            // Bind form events
-            this.bindRoomSelectionFormEvents();
-
-            resolve(response.data.html);
-          } else {
-            const error = new Error('Failed to load room selection form');
-            console.error(error);
-            reject(error);
-          }
-        },
-        error: (error) => {
-          console.error('Error loading room selection form:', error);
-          reject(error);
-        },
-        complete: () => {
-          this.hideLoading();
-        }
-      });
-    });
-  }
-
-  /**
-   * Add this method to the ModalManager class to handle customer details updates
-   */
-  onCustomerDetailsUpdated(event) {
-    if (event.detail && event.detail.details) {
-      console.log('Customer details updated:', event.detail.details);
-
-      // Update any new estimate form in the modal
-      const newEstimateForm = this.modal?.querySelector('#new-estimate-form');
-      if (newEstimateForm) {
-        // Set data-has-email attribute to update UI behavior
-        const hasEmail = event.detail.details.email && event.detail.details.email.trim() !== '';
-        newEstimateForm.setAttribute('data-has-email', hasEmail ? 'true' : 'false');
-      }
-
-      // If there's a customer details confirmation area, update it with new details
-      this.updateCustomerDetailsDisplay(event.detail.details);
-    }
   }
 
   /**
@@ -2004,166 +2838,121 @@ class ModalManager {
 
   /**
    * Handle room selection form submission with multi-estimate support
+   * MODIFIED to call updateRoomSuggestions after successful add and list reload.
    * @param {HTMLFormElement} form - The submitted form
    */
   handleRoomSelection(form) {
-    // Ensure all form values are strings to avoid type issues
-    const roomId = String(form.querySelector('#room-dropdown').value || '').trim();
+    const roomDropdown = form.querySelector('#room-dropdown');
+    const roomId = String(roomDropdown ? roomDropdown.value || '' : '').trim();
     const productId = String(this.currentProductId || '').trim();
-
-    // Get the estimate ID from the form's data attribute
     const estimateId = String(this.roomSelectionForm.dataset.estimateId || '').trim();
 
-    // Validate required data - check for undefined, null, or empty string, but allow '0'
     if (roomId === undefined || roomId === null || roomId === '') {
       this.showError('Please select a room');
-      console.error('Room selection requires a valid room ID but it was empty or invalid');
+      logger.error('[handleRoomSelection] Room selection requires a valid room ID but it was empty or invalid');
       return;
     }
 
     if (productId === undefined || productId === null || productId === '' || productId === '0') {
       this.showError('No product selected');
-      console.error('Room selection requires a valid product ID but it was empty or invalid');
+      logger.error('[handleRoomSelection] Room selection requires a valid product ID but it was empty or invalid');
       return;
     }
 
-    // Debug information - log before submission
-    console.log('Room selection validated with:', {
+    logger.log('[handleRoomSelection] Room selection validated with:', {
       roomId,
       productId,
-      estimateId,
-      formData: Object.fromEntries(new FormData(form))
+      estimateId
     });
 
     this.showLoading();
 
-    // Make the AJAX request
-    jQuery.ajax({
-      url: productEstimatorVars.ajax_url,
-      type: 'POST',
-      data: {
-        action: 'add_product_to_room',
-        nonce: productEstimatorVars.nonce,
-        room_id: roomId,
-        product_id: productId,
-        estimate_id: estimateId
-      },
-      success: (response) => {
-        console.log('Add product AJAX response:', response);
+    this.dataService.addProductToRoom(roomId, productId, estimateId)
+      .then(localResult => {
+        logger.log('[handleRoomSelection] Room selection add product local storage attempt result:', localResult);
 
-        if (response.success) {
-          // Hide selection forms
+        if (localResult.success) {
+          logger.log('[handleRoomSelection] Local storage add successful. Refreshing list.');
+
           this.estimateSelection.style.display = 'none';
           this.roomSelectionForm.style.display = 'none';
 
-          // Clear the product ID from the modal after successful addition
           delete this.modal.dataset.productId;
           this.currentProductId = null;
 
-          // Get the estimate and room IDs from the response
-          const responseEstimateId = response.data?.estimate_id || estimateId;
-          const responseRoomId = response.data?.room_id || roomId;
+          const responseEstimateId = localResult.estimate_id || estimateId; // Corrected to use localResult.estimate_id
+          const responseRoomId = localResult.room_id || roomId; // Corrected to use localResult.room_id
 
-          console.log(`Product added to estimate ${responseEstimateId}, room ${responseRoomId}`);
+          logger.log(`[handleRoomSelection] Product added to estimate ${responseEstimateId}, room ${responseRoomId} (based on local storage)`);
 
-          // Refresh estimates list and expand the specific estimate
+          // --- KEY LINE FOR EXPANSION ---
+          // Call loadEstimatesList with the room and estimate IDs to expand
           this.loadEstimatesList(responseRoomId, responseEstimateId)
             .then(() => {
-              // Show success message
+              // *** MODIFIED: After list reloads and room is expanded, update suggestions for *this* room ***
+              // Find the newly loaded room element in the DOM
+              const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${responseRoomId}"][data-estimate-id="${responseEstimateId}"]`);
+              if (roomElement) {
+                logger.log('[handleRoomSelection] List reloaded. Triggering suggestion update for room:', responseRoomId);
+                // Pass the room element, estimate ID, and room ID to the update function
+                this.updateRoomSuggestions(responseEstimateId, responseRoomId, roomElement);
+              } else {
+                logger.warn('[handleRoomSelection] Could not find room element after list reload to update suggestions.');
+              }
+              // *** END MODIFIED ***
+
+              // Show success message after the list is loaded and expanded
               this.showMessage('Product added successfully!', 'success');
             })
             .catch(error => {
-              this.log('Error refreshing estimates list:', error);
+              logger.error('[handleRoomSelection] Error refreshing estimates list:', error);
               this.showError('Error refreshing estimates list. Please try again.');
             });
+          // --- END KEY LINE ---
+
         } else {
-          // Check if this is a duplicate product error
-          if (response.data?.duplicate) {
-            console.log('Duplicate product detected:', response.data);
-
-            // Hide selection forms
-            this.estimateSelection.style.display = 'none';
-            this.roomSelectionForm.style.display = 'none';
-
-            // Clear the product ID after handling
-            delete this.modal.dataset.productId;
-            this.currentProductId = null;
-
-            const duplicateEstimateId = response.data.estimate_id;
-            const duplicateRoomId = response.data.room_id;
-
-            // Show specific error message
-            this.showError(response.data.message || 'This product already exists in the selected room.');
-
-            // Load the estimates and expand the specific room where the product already exists
-            this.loadEstimatesList(duplicateRoomId, duplicateEstimateId)
-              .then(() => {
-                console.log('Estimates list refreshed to show duplicate product location');
-                setTimeout(() => {
-                  // Find and expand the estimate containing the room
-                  const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${duplicateEstimateId}"]`);
-                  if (estimateSection && estimateSection.classList.contains('collapsed')) {
-                    // Remove collapsed class
-                    estimateSection.classList.remove('collapsed');
-                    // Show content
-                    const estimateContent = estimateSection.querySelector('.estimate-content');
-                    if (estimateContent) {
-                      if (typeof jQuery !== 'undefined') {
-                        jQuery(estimateContent).slideDown(200);
-                      } else {
-                        estimateContent.style.display = 'block';
-                      }
-                    }
-                  }
-
-                  // Find and expand the room accordion
-                  const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${duplicateRoomId}"]`);
-                  if (roomElement) {
-                    const header = roomElement.querySelector('.accordion-header');
-                    if (header && !header.classList.contains('active')) {
-                      // Add active class
-                      header.classList.add('active');
-
-                      // Show room content
-                      const content = roomElement.querySelector('.accordion-content');
-                      if (content) {
-                        if (typeof jQuery !== 'undefined') {
-                          jQuery(content).slideDown(300, function() {
-                            // Scroll to room after animation completes
-                            roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          });
-                        } else {
-                          content.style.display = 'block';
-                          roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                      }
-                    } else {
-                      // Room is already expanded, just scroll to it
-                      roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                  }
-                }, 300); // Wa
-              })
-              .catch(error => {
-                console.error('Error refreshing estimates list:', error);
-              });
-          } else {
-            // Handle regular error response
-            const errorMessage = response.data?.message || 'Error adding product to room. Please try again.';
-            this.showError(errorMessage);
-            console.error('AJAX error response:', response);
-          }
+          logger.error('[handleRoomSelection] Error during local storage add:', localResult.error);
+          this.showError(localResult.error.message || 'Failed to add product locally. Please try again.');
         }
-      },
-      error: (jqXHR, textStatus, errorThrown) => {
-        this.log('Error adding product to room:', textStatus, errorThrown);
-        this.showError('Error adding product to room. Please try again.');
-        console.error('AJAX error details:', {jqXHR, textStatus, errorThrown});
-      },
-      complete: () => {
+      })
+      .catch(error => {
+        logger.error('[handleRoomSelection] Error adding product from room selection via DataService:', error);
+
+        if (error.data?.duplicate) {
+          logger.log('[handleRoomSelection] Duplicate product detected from room selection by DataService:', error.data);
+
+          this.estimateSelection.style.display = 'none';
+          this.roomSelectionForm.style.display = 'none';
+
+          delete this.modal.dataset.productId;
+          this.currentProductId = null;
+
+          const duplicateEstimateId = error.data.estimate_id;
+          const duplicateRoomId = error.data.room_id;
+
+          this.showError(error.data.message || 'This product already exists in the selected room.');
+
+          // --- KEY LINE FOR EXPANSION (Duplicate Case) ---
+          // Call loadEstimatesList with the duplicate room and estimate IDs to show where it exists
+          this.loadEstimatesList(duplicateRoomId, duplicateEstimateId)
+            .then(() => {
+              logger.log('[handleRoomSelection] Estimates list refreshed to show duplicate product location');
+              // No need to update suggestions here, as the room already contains the product.
+            })
+            .catch(error => {
+              logger.error('[handleRoomSelection] Error refreshing estimates list:', error);
+            });
+          // --- END KEY LINE ---
+
+        } else {
+          const errorMessage = error.message || 'Error adding product to room. Please try again.';
+          this.showError(errorMessage);
+          logger.error('[handleRoomSelection] DataService error:', error);
+        }
+      })
+      .finally(() => {
         this.hideLoading();
-      }
-    });
+      });
   }
 
   /**
@@ -2173,16 +2962,30 @@ class ModalManager {
   handleNewEstimateSubmission(form) {
     const formData = new FormData(form);
     const productId = this.currentProductId;
+    const estimateName = formData.get('estimate_name') || 'Unnamed Estimate';
 
     this.showLoading();
 
     // Use console.log to debug the process
-    console.log('Submitting new estimate form');
+    logger.log('Submitting new estimate form');
+
+    logger.log(formData);
 
     this.dataService.addNewEstimate(formData, productId)
       .then(response => {
         // Check that we got a valid estimate_id
-        console.log('New estimate created with ID:', response.estimate_id);
+        logger.log('New estimate created with ID:', response.estimate_id);
+
+        // === START: Save customer details from the form to localStorage ===
+        const customerDetails = {
+          name: formData.get('customer_name') || '',
+          email: formData.get('customer_email') || '',
+          phone: formData.get('customer_phone') || '',
+          postcode: formData.get('customer_postcode') || ''
+        };
+        saveCustomerDetails(customerDetails); // Use the imported function
+        logger.log('Customer details from new estimate form saved to localStorage:', customerDetails);
+        // === END: Save customer details ===
 
         // Clear form
         form.reset();
@@ -2195,30 +2998,20 @@ class ModalManager {
           // THIS IS THE KEY PART - we need to properly pass the new estimate ID
           const newEstimateId = response.estimate_id;
 
-          console.log('Setting new room form with estimate ID:', newEstimateId);
+          logger.log('New estimate created in product flow, showing new room form for estimate ID:', newEstimateId, 'with product ID:', productId);
 
-          // Set on container element
-          this.newRoomForm.dataset.estimateId = newEstimateId;
+          // Call the modified showNewRoomForm
+          this.showNewRoomForm(newEstimateId, productId); // Pass both IDs
 
-          // Also ensure it's set on the actual form element
-          const roomForm = this.newRoomForm.querySelector('form');
-          if (roomForm) {
-            roomForm.dataset.estimateId = newEstimateId;
-            console.log('Form dataset updated:', roomForm.dataset);
-          } else {
-            console.error('Could not find room form element');
-          }
+          // Note: showNewRoomForm now handles setting data attributes and visibility
+          // The hideLoading() that was previously here is no longer needed.
 
-          this.newRoomForm.dataset.productId = productId;
-          this.forceElementVisibility(this.newRoomForm);
-
-          // Important - hide the loading indicator when showing the new form
-          this.hideLoading();
         } else {
           // Just refresh the estimates list
+          logger.log('New estimate created in general flow, refreshing estimates list.');
           this.loadEstimatesList()
             .catch(error => {
-              this.log('Error refreshing estimates list:', error);
+              logger.log('Error refreshing estimates list:', error);
               this.showError('Error refreshing estimates list. Please try again.');
             })
             .finally(() => {
@@ -2228,7 +3021,7 @@ class ModalManager {
         }
       })
       .catch(error => {
-        this.log('Error creating estimate:', error);
+        logger.log('Error creating estimate:', error);
         this.showError(error.message || 'Error creating estimate. Please try again.');
         // Make sure to hide the loading indicator on error
         this.hideLoading();
@@ -2237,33 +3030,30 @@ class ModalManager {
 
   /**
    * Handle new room form submission with multi-estimate support
+   * MODIFIED to call updateRoomSuggestions after successful add and list reload.
    * @param {HTMLFormElement} form - The submitted form
    * @param {Event} event - The form submission event
    */
   handleNewRoomSubmission(form, event) {
-    console.log('Processing new room form submission via AJAX');
+    logger.log('[handleNewRoomSubmission] Processing new room form submission via DataService');
 
-    // Prevent default form submission which would cause page reload
     if (event) {
       event.preventDefault();
     } else if (typeof window.event !== 'undefined') {
       window.event.preventDefault();
     }
 
-    // Check form validity
     if (!form.checkValidity()) {
-      console.error('Form validation failed');
+      logger.error('[handleNewRoomSubmission] Form validation failed');
       form.reportValidity();
       return;
     }
 
-    // Get the estimate ID directly from the form's dataset
     const formData = new FormData(form);
     const estimateId = form.dataset.estimateId;
     const productId = this.currentProductId || form.dataset.productId;
 
-    // Log the full state for debugging
-    console.log('Room form submission data:', {
+    logger.log('[handleNewRoomSubmission] Room form submission data:', {
       formElement: form,
       formDataset: form.dataset,
       containerDataset: this.newRoomForm.dataset,
@@ -2279,64 +3069,60 @@ class ModalManager {
 
     this.showLoading();
 
-    // Add a specific log message for the AJAX submission
-    console.log('Submitting room for estimate ID:', estimateId);
+    logger.log('[handleNewRoomSubmission] Calling DataService.addNewRoom for estimate ID:', estimateId);
 
-    // Use jQuery AJAX to submit the form data
-    jQuery.ajax({
-      url: productEstimatorVars.ajax_url,
-      type: 'POST',
-      data: {
-        action: 'add_new_room',
-        nonce: productEstimatorVars.nonce,
-        estimate_id: estimateId,
-        product_id: productId || '',
-        form_data: jQuery(form).serialize()
-      },
-      success: (response) => {
-        if (response.success) {
-          console.log('Room added successfully:', response.data);
+    this.dataService.addNewRoom(formData, estimateId, productId)
+      .then(response => {
+        logger.log('[handleNewRoomSubmission] DataService.addNewRoom response:', response);
 
-          // Clear form
-          form.reset();
+        form.reset();
+        this.newRoomForm.style.display = 'none';
 
-          // Hide new room form
-          this.newRoomForm.style.display = 'none';
+        delete this.modal.dataset.productId;
+        this.currentProductId = null;
 
-          // Clear the product ID from the modal after successful addition
-          delete this.modal.dataset.productId;
-          this.currentProductId = null;
+        const responseEstimateId = response.estimate_id || estimateId;
+        const responseRoomId = response.room_id || '0';
 
-          // Get estimate and room IDs from the response
-          const responseEstimateId = response.data?.estimate_id || estimateId;
-          const responseRoomId = response.data?.room_id || '0';
+        logger.log(`[handleNewRoomSubmission] New room added to estimate ${responseEstimateId}, room ${responseRoomId}`);
 
-          // Refresh the estimates list to show the new room
-          this.loadEstimatesList(responseRoomId, responseEstimateId)
-            .then(() => {
-              // Show success message
-              this.showMessage('Room added successfully!', 'success');
-            })
-            .catch(error => {
-              console.error('Error refreshing estimates list:', error);
-              this.showError('Error refreshing estimates list. Please try again.');
-            });
-        } else {
-          // Handle error response
-          console.error('Error adding room:', response.data.message);
-          this.showError(response.data.message || 'Error adding room. Please try again.');
-        }
-      },
-      error: (jqXHR, textStatus, errorThrown) => {
-        console.error('AJAX error:', textStatus, errorThrown);
-        this.showError('Error adding room. Please try again.');
-      },
-      complete: () => {
+        // --- KEY LINE FOR EXPANSION ---
+        // Call loadEstimatesList with the newly added room and its estimate IDs to expand
+        this.loadEstimatesList(responseRoomId, responseEstimateId)
+          .then(() => {
+            // Show success message after the list is loaded and expanded
+            this.showMessage('Room added successfully!', 'success');
+
+            // *** MODIFIED: After list reloads and room is expanded, update suggestions for *this* room ***
+            // Find the newly loaded room element in the DOM
+            if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+              const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${responseRoomId}"][data-estimate-id="${responseEstimateId}"]`);
+
+              if (roomElement) {
+                logger.log('[handleNewRoomSubmission] List reloaded. Triggering suggestion update for room:', responseRoomId);
+                // Pass the room element, estimate ID, and room ID to the update function
+                this.updateRoomSuggestions(responseEstimateId, responseRoomId, roomElement);
+              } else {
+                logger.warn('[handleNewRoomSubmission] Could not find room element after list reload to update suggestions.');
+              }
+            }
+            // *** END MODIFIED ***
+          })
+          .catch(error => {
+            logger.error('[handleNewRoomSubmission] Error refreshing estimates list:', error);
+            this.showError('Error refreshing estimates list. Please try again.');
+          });
+        // --- END KEY LINE ---
+
+      })
+      .catch(error => {
+        logger.error('[handleNewRoomSubmission] Error adding room via DataService:', error);
+        this.showError(error.message || 'Error adding room. Please try again.');
+      })
+      .finally(() => {
         this.hideLoading();
-      }
-    });
+      });
   }
-
 
 
   /**
@@ -2344,7 +3130,7 @@ class ModalManager {
    * @param {string} formType - Form type ('estimate' or 'room')
    */
   cancelForm(formType) {
-    console.log(`Canceling form type: ${formType}`);
+    logger.log(`Canceling form type: ${formType}`);
 
     switch (formType) {
       case 'estimate':
@@ -2367,7 +3153,7 @@ class ModalManager {
               }
             })
             .catch(error => {
-              console.error('Error checking estimates:', error);
+              logger.error('Error checking estimates:', error);
               // On error, just show the estimates list
               this.forceElementVisibility(this.estimatesList);
             });
@@ -2381,26 +3167,51 @@ class ModalManager {
         // Hide the new room form
         if (this.newRoomForm) {
           this.newRoomForm.style.display = 'none';
+          // Clear data attributes when hidden
+          this.newRoomForm.removeAttribute('data-estimate-id');
+          this.newRoomForm.removeAttribute('data-product-id');
+          const form = this.newRoomForm.querySelector('form');
+          if(form) {
+            form.removeAttribute('data-estimate-id');
+            form.removeAttribute('data-product-id');
+          }
         }
 
-        // If we have a product ID and came from room selection
-        if (this.currentProductId && this.roomSelectionForm.dataset.estimateId) {
-          // Return to room selection (we were adding a new room during product addition)
+
+        // Determine where to go back to
+        // If we came from room selection (product flow)
+        if (this.currentProductId && this.roomSelectionForm && this.roomSelectionForm.dataset.estimateId) {
+          logger.log('Canceling room form, returning to room selection.');
           this.forceElementVisibility(this.roomSelectionForm);
+          // Assuming estimateSelection is the parent wrapper that needs to be visible too
+          if (this.estimateSelection) {
+            this.forceElementVisibility(this.estimateSelection);
+          }
+
+        } else if (this.currentProductId && this.estimateSelection && this.estimateSelection.dataset.estimateId) {
+          // If we came from estimate selection (product flow, but no rooms existed)
+          logger.log('Canceling room form, returning to estimate selection (no rooms existed).');
           this.forceElementVisibility(this.estimateSelection);
+          // Ensure estimate selection form is also visible if it's a separate element
+          if (this.estimateSelectionForm) {
+            this.forceElementVisibility(this.estimateSelectionForm);
+          }
+
         } else {
           // Regular flow (no product being added), return to estimates list
+          logger.log('Canceling room form, returning to estimates list.');
           this.forceElementVisibility(this.estimatesList);
         }
         break;
 
       default:
-        console.warn(`Unknown form type: ${formType}`);
+        logger.warn(`Unknown form type: ${formType}`);
         // Default behavior - show the estimates list
         this.forceElementVisibility(this.estimatesList);
         break;
     }
   }
+
 
   /**
    * Initialize estimate accordions with support for auto-expanding specific estimates
@@ -2408,120 +3219,69 @@ class ModalManager {
    * @param {string|null} expandEstimateId - Optional estimate ID to auto-expand
    */
   initializeEstimateAccordions(expandRoomId = null, expandEstimateId = null) {
-    // Find all estimate headers
-    const estimateHeaders = document.querySelectorAll('.estimate-header');
+    logger.log('Initializing estimate accordions');
 
+    // Find all estimate headers within the modal
+    const estimateHeaders = this.modal.querySelectorAll('.estimate-header');
+    logger.log(`Found ${estimateHeaders.length} estimate headers to initialize`);
+
+    // Clear previous handlers
     estimateHeaders.forEach(header => {
-      // Remove existing event listeners to prevent duplicates
-      if (header._estimateAccordionHandler) {
-        header.removeEventListener('click', header._estimateAccordionHandler);
-      }
+      const newHeader = header.cloneNode(true);
+      header.parentNode.replaceChild(newHeader, header);
 
-      // Create new handler
-      header._estimateAccordionHandler = (e) => {
-        // Ignore clicks on buttons inside the header
+      // Add new handler directly to the cloned node
+      newHeader.addEventListener('click', (e) => {
+        // Skip if clicking on a button
         if (e.target.closest('.remove-estimate')) {
+          e.stopPropagation();
           return;
         }
 
-        // Toggle collapsed class on the estimate section
-        const estimateSection = header.closest('.estimate-section');
-        if (estimateSection) {
-          estimateSection.classList.toggle('collapsed');
+        logger.log('Estimate header clicked');
 
-          // Use slide animation if jQuery is available
-          if (typeof jQuery !== 'undefined') {
-            const content = estimateSection.querySelector('.estimate-content');
-            if (content) {
-              if (estimateSection.classList.contains('collapsed')) {
-                jQuery(content).slideUp(200);
-              } else {
-                jQuery(content).slideDown(200);
-              }
-            }
-          }
+        // Find the parent estimate section
+        const estimateSection = newHeader.closest('.estimate-section');
+        if (!estimateSection) {
+          logger.error('No parent estimate section found');
+          return;
         }
-      };
 
-      // Add the event listener
-      header.addEventListener('click', header._estimateAccordionHandler);
+        // Toggle the collapsed state
+        estimateSection.classList.toggle('collapsed');
+        logger.log('Toggled collapsed class on estimate section');
+
+        // Find the content element
+        const content = estimateSection.querySelector('.estimate-content');
+        if (!content) {
+          logger.error('No estimate content element found');
+          return;
+        }
+
+        // Toggle the content visibility
+        if (estimateSection.classList.contains('collapsed')) {
+          // Hide content
+          content.style.display = 'none';
+        } else {
+          // Show content
+          content.style.display = 'block';
+        }
+      });
     });
 
-    // Auto-expand specified estimate if provided
-    if (expandEstimateId) {
-      const estimateToExpand = document.querySelector(`.estimate-section[data-estimate-id="${expandEstimateId}"]`);
-      if (estimateToExpand && estimateToExpand.classList.contains('collapsed')) {
-        // Remove collapsed class
-        estimateToExpand.classList.remove('collapsed');
-
-        // Show content with animation if jQuery is available
-        if (typeof jQuery !== 'undefined') {
-          const content = estimateToExpand.querySelector('.estimate-content');
-          if (content) {
-            jQuery(content).slideDown(200);
-          }
-        }
-
-        // Log the auto-expansion for debugging
-        if (window.productEstimatorVars && window.productEstimatorVars.debug) {
-          console.log(`Auto-expanded estimate ID: ${expandEstimateId}`);
-        }
-      }
-    }
+    logger.log('Estimate accordions initialization complete');
   }
-
-
-  /**
-   * Toggle estimate accordion expansion
-   * @param {HTMLElement} header - The estimate header element
-   */
-  toggleEstimateAccordion(header) {
-    this.log('Toggling estimate accordion');
-
-    // Find the estimate section
-    const estimateSection = header.closest('.estimate-section');
-    if (!estimateSection) {
-      this.log('No parent estimate section found');
-      return;
-    }
-
-    // Toggle collapsed class
-    estimateSection.classList.toggle('collapsed');
-
-    // Find the content container
-    const content = estimateSection.querySelector('.estimate-content');
-    if (!content) {
-      this.log('No estimate content found');
-      return;
-    }
-
-    // Toggle display of content with animation if jQuery is available
-    if (estimateSection.classList.contains('collapsed')) {
-      this.log('Collapsing estimate content');
-      if (typeof jQuery !== 'undefined') {
-        jQuery(content).slideUp(200);
-      } else {
-        content.style.display = 'none';
-      }
-    } else {
-      this.log('Expanding estimate content');
-      if (typeof jQuery !== 'undefined') {
-        jQuery(content).slideDown(200);
-      } else {
-        content.style.display = 'block';
-      }
-    }
-  }
-
 
   /**
    * Initialize accordion functionality for rooms with better multi-estimate support
+   * This function handles the actual expansion logic based on provided IDs.
+   * It initiates the loading of similar products concurrently for each product item.
    * @param {string|null} expandRoomId - Optional room ID to auto-expand after initialization
    * @param {string|null} expandEstimateId - Optional estimate ID containing the room
    */
   initializeAccordions(expandRoomId = null, expandEstimateId = null) {
     if (!this.modal) {
-      console.error('[ModalManager] Modal not available for initializing accordions');
+      logger.error('Modal not available for initializing accordions');
       return;
     }
 
@@ -2536,25 +3296,55 @@ class ModalManager {
       if (header) {
         e.preventDefault();
         e.stopPropagation();
-        this.log('Accordion header clicked via delegation');
+        logger.log('Accordion header clicked via delegation');
         this.toggleAccordionItem(header);
 
-        // After toggling, initialize carousels in this accordion
         const accordionItem = header.closest('.accordion-item');
         if (accordionItem) {
           const content = accordionItem.querySelector('.accordion-content');
           if (content && window.getComputedStyle(content).display !== 'none') {
-            // Content is visible, initialize carousels
+            // Content is visible, initialize carousels and load similar products
             setTimeout(() => {
-              // Find carousels within this content - check for both types
-              const carousels = content.querySelectorAll('.suggestions-carousel');
-              if (carousels.length) {
-                this.log(`Found ${carousels.length} carousels in opened accordion`);
-                if (typeof initSuggestionsCarousels === 'function') {
-                  initSuggestionsCarousels();
+              // Initialize Suggestions Carousels (runs concurrently with similar product loading)
+              if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+
+                const suggestionCarousels = content.querySelectorAll('.product-suggestions .suggestions-carousel');
+                if (suggestionCarousels.length) {
+                  logger.log(`Found ${suggestionCarousels.length} suggestion carousels in opened accordion`);
+                  if (typeof initSuggestionsCarousels === 'function') {
+                    initSuggestionsCarousels();
+                  }
                 }
               }
-            }, 100);
+
+              // Load Similar Products for each product item in the expanded room (runs concurrently)
+              const productItems = content.querySelectorAll('.product-item');
+              const estimateId = accordionItem.dataset.estimateId;
+              const roomId = accordionItem.dataset.roomId;
+
+              if (productItems.length > 0 && estimateId && roomId) {
+                logger.log(`Found ${productItems.length} product items in room ${roomId}, loading similar products.`);
+                productItems.forEach(productItem => {
+                  // Only load if similar products haven't been loaded for this item yet
+                  if (!productItem.dataset.similarProductsLoaded) {
+                    // Check if the product item is a regular product (not a note)
+                    const isNote = productItem.classList.contains('product-note-item');
+                    if (!isNote) {
+                      // Call loadSimilarProductsForProduct for each product item
+                      this.loadSimilarProductsForProduct(productItem, estimateId, roomId);
+                    } else {
+                      // Mark notes as processed so we don't try to load similar products for them
+                      productItem.dataset.similarProductsLoaded = 'true';
+                    }
+                  } else {
+                    logger.log(`Similar products already loaded for product item ${productItem.dataset.productId || 'unknown'}.`);
+                  }
+                });
+              } else {
+                logger.log(`No product items found in room ${roomId} or missing estimate/room ID. Skipping similar products load.`);
+              }
+
+            }, 100); // Small delay to ensure DOM is ready after accordion animation
           }
         }
       }
@@ -2563,11 +3353,11 @@ class ModalManager {
     // Add the event listener to the estimates list container
     if (this.estimatesList) {
       this.estimatesList.addEventListener('click', this.accordionHandler);
-      this.log('Accordion event handler (re)attached');
+      logger.log('Accordion event handler (re)attached');
 
-      // If a specific room ID is provided, expand that accordion item
+      // If a specific room ID is provided, find and expand that accordion item
       if (expandRoomId) {
-        // More specific selector that includes estimate ID when available
+        // Build selector based on available information
         let selector = `.accordion-item[data-room-id="${expandRoomId}"]`;
 
         // If specific estimate ID is provided, make the selector more precise
@@ -2575,64 +3365,171 @@ class ModalManager {
           selector = `.estimate-section[data-estimate-id="${expandEstimateId}"] ${selector}`;
         }
 
+        logger.log(`[initializeAccordions] Looking for room with selector: ${selector} for auto-expansion`);
+
         const roomElement = this.modal.querySelector(selector);
         if (roomElement) {
-          this.log(`Found room element to expand: ${selector}`);
+          logger.log(`[initializeAccordions] Found room element to expand: ${selector}`);
 
           // First ensure the estimate container is visible if it's a nested structure
           const estimateSection = roomElement.closest('.estimate-section');
           if (estimateSection) {
+            logger.log(`[initializeAccordions] Found parent estimate section for room ${expandRoomId}, ensuring visibility.`);
             // Make sure the estimate section is visible
             estimateSection.style.display = 'block';
+
+            // Also ensure the estimate accordion is not collapsed and its content is visible
+            estimateSection.classList.remove('collapsed');
+            const estimateContent = estimateSection.querySelector('.estimate-content');
+            if (estimateContent) {
+              logger.log(`[initializeAccordions] Ensuring estimate content for ${expandEstimateId} is visible.`);
+              estimateContent.style.display = 'block';
+              if (typeof jQuery !== 'undefined') {
+                jQuery(estimateContent).show(0); // Show immediately
+              }
+            }
+
+            // Re-initialize estimate accordion logic briefly for this section if needed (optional, might be handled by initializeEstimateAccordions)
+            const estimateHeader = estimateSection.querySelector('.estimate-header');
+            if(estimateHeader && typeof jQuery !== 'undefined') {
+              jQuery(estimateHeader).addClass('active'); // Ensure header is active
+            }
+          } else {
+            logger.warn(`[initializeAccordions] Parent estimate section not found for room ${expandRoomId} using closest('.estimate-section')`);
           }
+
 
           // Now expand the room accordion
           const header = roomElement.querySelector('.accordion-header');
           if (header) {
-            // Add active class
+            logger.log(`[initializeAccordions] Found room header for room ${expandRoomId}, expanding.`);
             header.classList.add('active');
 
-            // Find and show content
             const content = roomElement.querySelector('.accordion-content');
             if (content) {
+              logger.log(`[initializeAccordions] Found room content for room ${expandRoomId}, showing.`);
               content.style.display = 'block';
 
-              // Try jQuery if available for smoother animation
               if (typeof jQuery !== 'undefined') {
-                jQuery(content).show(300);
+                jQuery(content).slideDown(300, function() {
+                  logger.log(`[initializeAccordions] jQuery slideDown complete for room ${expandRoomId}, attempting to scroll.`);
+                  roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                  // Load Similar Products for each product item in the expanded room after animation
+                  const productItems = content.querySelectorAll('.product-item');
+                  const estimateId = roomElement.dataset.estimateId;
+                  const roomId = roomElement.dataset.roomId;
+
+                  if (productItems.length > 0 && estimateId && roomId) {
+                    logger.log(`Found ${productItems.length} product items in room ${roomId} after slideDown, loading similar products.`);
+                    productItems.forEach(productItem => {
+                      // Only load if similar products haven't been loaded for this item yet
+                      if (!productItem.dataset.similarProductsLoaded) {
+                        const isNote = productItem.classList.contains('product-note-item');
+                        if (!isNote) {
+                          this.loadSimilarProductsForProduct(productItem, estimateId, roomId);
+                        } else {
+                          productItem.dataset.similarProductsLoaded = 'true';
+                        }
+                      }
+                    });
+                  } else {
+                    logger.log(`No product items found in room ${roomId} or missing estimate/room ID after slideDown. Skipping similar products load.`);
+                  }
+
+                  // Initialize Suggestions Carousels after slideDown
+                  if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
+
+                    const suggestionCarousels = content.querySelectorAll('.product-suggestions .suggestions-carousel');
+                    if (suggestionCarousels.length) {
+                      logger.log(`Found ${suggestionCarousels.length} suggestion carousels in auto-opened accordion after slideDown.`);
+                      if (typeof initSuggestionsCarousels === 'function') {
+                        initSuggestionsCarousels();
+                      }
+                    }
+                  }
+
+
+                }.bind(this)); // Bind 'this' to the callback
+              } else {
+                logger.log(`[initializeAccordions] No jQuery, setting display: block for room ${expandRoomId}.`);
+                content.style.display = 'block';
+                roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Load Similar Products immediately if no jQuery animation
+                const productItems = content.querySelectorAll('.product-item');
+                const estimateId = roomElement.dataset.estimateId;
+                const roomId = roomElement.dataset.roomId;
+
+                if (productItems.length > 0 && estimateId && roomId) {
+                  logger.log(`Found ${productItems.length} product items in room ${roomId} immediately, loading similar products.`);
+                  productItems.forEach(productItem => {
+                    if (!productItem.dataset.similarProductsLoaded) {
+                      const isNote = productItem.classList.contains('product-note-item');
+                      if (!isNote) {
+                        this.loadSimilarProductsForProduct(productItem, estimateId, roomId);
+                      } else {
+                        productItem.dataset.similarProductsLoaded = 'true';
+                      }
+                    }
+                  });
+                } else {
+                  logger.log(`No product items found in room ${roomId} or missing estimate/room ID immediately. Skipping similar products load.`);
+                }
+
+                setTimeout(() => {
+                  if (typeof initSuggestionsCarousels === 'function') {
+                    initSuggestionsCarousels();
+                    logger.log(`[initializeAccordions] Initialized carousels in room ${expandRoomId} content.`);
+                  } else {
+                    logger.warn('[initializeAccordions] initSuggestionsCarousels function not available.');
+                  }
+                }, 150);
               }
 
-              // Initialize carousels in the expanded room
-              setTimeout(() => {
-                if (typeof initSuggestionsCarousels === 'function') {
-                  initSuggestionsCarousels();
-                }
-              }, 150);
+            } else {
+              logger.warn(`[initializeAccordions] Room content (.accordion-content) not found for room ID ${expandRoomId}`);
             }
 
-            // Scroll to the expanded room
-            setTimeout(() => {
-              roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 150);
-
-            this.log(`Auto-expanded room ID: ${expandRoomId} in estimate: ${expandEstimateId || 'any'}`);
+            logger.log(`[initializeAccordions] Auto-expanded logic completed for room ID: ${expandRoomId} in estimate: ${expandEstimateId || 'any'}`);
           }
         } else {
-          this.log(`Room ID ${expandRoomId} not found for auto-expansion`);
-          // If room wasn't found, log all available rooms for debugging
+          logger.log(`[initializeAccordions] Room ID ${expandRoomId} not found for auto-expansion using selector: ${selector}`);
           const allRooms = this.modal.querySelectorAll('.accordion-item[data-room-id]');
-          this.log(`Available rooms: ${Array.from(allRooms).map(r => r.dataset.roomId).join(', ')}`);
+          logger.log(`[initializeAccordions] Available room elements found in modal: ${Array.from(allRooms).map(r => r.dataset.roomId).join(', ')}`);
         }
+      } else if (expandEstimateId) {
+        logger.log(`[initializeAccordions] expandRoomId not provided, checking if only estimate ${expandEstimateId} needs expansion.`);
+        const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${expandEstimateId}"]`);
+        if(estimateSection) {
+          logger.log(`[initializeAccordions] Found estimate section ${expandEstimateId}, expanding.`);
+          estimateSection.classList.remove('collapsed');
+          const estimateContent = estimateSection.querySelector('.estimate-content');
+          if(estimateContent) {
+            estimateContent.style.display = 'block';
+            if (typeof jQuery !== 'undefined') {
+              jQuery(estimateContent).show(0); // Show immediately
+            }
+          }
+          setTimeout(() => {
+            estimateSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 150);
+        } else {
+          logger.warn(`[initializeAccordions] Estimate ID ${expandEstimateId} not found for auto-expansion.`);
+        }
+      } else {
+        logger.log('[initializeAccordions] No specific room or estimate ID provided for auto-expansion.');
       }
     }
   }
+
 
   /**
    * Toggle accordion item expansion with enhanced animation
    * @param {HTMLElement} header - The accordion header element
    */
   toggleAccordionItem(header) {
-    this.log('Toggling accordion item');
+    logger.log('Toggling accordion item');
 
     // Toggle active class on header
     header.classList.toggle('active');
@@ -2640,26 +3537,26 @@ class ModalManager {
     // Find the accordion content
     const accordionItem = header.closest('.accordion-item');
     if (!accordionItem) {
-      this.log('No parent accordion item found');
+      logger.log('No parent accordion item found');
       return;
     }
 
     const content = accordionItem.querySelector('.accordion-content');
     if (!content) {
-      this.log('No accordion content found');
+      logger.log('No accordion content found');
       return;
     }
 
     // Toggle display of content with animation if jQuery is available
     if (header.classList.contains('active')) {
-      this.log('Opening accordion content');
+      logger.log('Opening accordion content');
       if (typeof jQuery !== 'undefined') {
         jQuery(content).slideDown(200);
       } else {
         content.style.display = 'block';
       }
     } else {
-      this.log('Closing accordion content');
+      logger.log('Closing accordion content');
       if (typeof jQuery !== 'undefined') {
         jQuery(content).slideUp(200);
       } else {
@@ -2675,7 +3572,7 @@ class ModalManager {
    */
   initializeJQueryAccordions(expandRoomId = null, expandEstimateId = null) {
     if (typeof jQuery === 'undefined') {
-      this.log('jQuery not available for fallback');
+      logger.log('jQuery not available for fallback');
       return;
     }
 
@@ -2686,7 +3583,7 @@ class ModalManager {
       e.preventDefault();
       e.stopPropagation();
 
-      console.log('jQuery accordion handler triggered');
+      logger.log('jQuery accordion handler triggered');
 
       const $header = jQuery(this);
       $header.toggleClass('active');
@@ -2694,7 +3591,20 @@ class ModalManager {
       const $content = $header.closest('.accordion-item').find('.accordion-content');
       if ($content.length) {
         if ($header.hasClass('active')) {
-          $content.slideDown(200);
+          $content.slideDown(200, function() {
+            // Initialize carousels after slideDown animation completes
+            const carousels = $content.find('.suggestions-carousel');
+            if (carousels.length) {
+              logger.log(`[initializeJQueryAccordions] Initializing carousels in opened accordion via slideDown callback.`);
+              carousels.each(function() {
+                const container = this;
+                if (container.carouselInstance) {
+                  container.carouselInstance.destroy();
+                }
+                new SuggestionsCarousel(container);
+              });
+            }
+          });
         } else {
           $content.slideUp(200);
         }
@@ -2713,11 +3623,11 @@ class ModalManager {
           selector = `.estimate-section[data-estimate-id="${expandEstimateId}"] ${selector}`;
         }
 
-        console.log(`Looking for room with selector: ${selector}`);
+        logger.log(`Looking for room with selector: ${selector}`);
 
         const $roomElement = jQuery(selector);
         if ($roomElement.length) {
-          console.log(`Found room element using jQuery: ${selector}`);
+          logger.log(`Found room element using jQuery: ${selector}`);
 
           // Make sure the estimate section is expanded if nested
           const $estimateSection = $roomElement.closest('.estimate-section');
@@ -2736,14 +3646,27 @@ class ModalManager {
               $content.slideDown(300, function() {
                 // Scroll to room after animation completes
                 $roomElement[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Initialize carousels after slideDown animation completes
+                const carousels = $content.find('.suggestions-carousel');
+                if (carousels.length) {
+                  logger.log(`[initializeJQueryAccordions] Initializing carousels in auto-opened room via slideDown callback.`);
+                  carousels.each(function() {
+                    const container = this;
+                    if (container.carouselInstance) {
+                      container.carouselInstance.destroy();
+                    }
+                    new SuggestionsCarousel(container);
+                  });
+                }
               });
             }
 
-            console.log(`jQuery auto-expanded room ID: ${expandRoomId} in estimate: ${expandEstimateId || 'any'}`);
+            logger.log(`jQuery auto-expanded room ID: ${expandRoomId} in estimate: ${expandEstimateId || 'any'}`);
           }
         } else {
-          console.warn(`Room element not found with jQuery using selector: ${selector}`);
-          console.log('Available room elements:', jQuery('.accordion-item[data-room-id]').map(function() {
+          logger.warn(`Room element not found with jQuery using selector: ${selector}`);
+          logger.log('Available room elements:', jQuery('.accordion-item[data-room-id]').map(function() {
             return jQuery(this).data('roomId');
           }).get());
         }
@@ -2753,111 +3676,532 @@ class ModalManager {
 
 
   /**
-   * Update the estimates list view with enhanced room expansion
-   * @param {string|null} expandRoomId - Optional room ID to expand after update
-   * @param {string|null} expandEstimateId - Optional estimate ID containing the room
+   * Completely revised bindReplaceProductButtons method that ensures
+   * consistent button behavior between page refreshes
    */
-  updateEstimatesList(expandRoomId = null, expandEstimateId = null) {
-    // Check if there are any estimates
-    const hasEstimates = !!this.modal.querySelector('.estimate-section');
+  bindReplaceProductButtons() {
+    // logger.log('[BUTTON BINDING] Binding replace product buttons');
 
-    // If no estimates, DON'T add create button - it's already in the template
-    // We'll just ensure the existing no-estimates div is properly shown
-    if (!hasEstimates) {
-      const noEstimatesDiv = this.modal.querySelector('.no-estimates');
-      if (noEstimatesDiv) {
-        noEstimatesDiv.style.display = 'block';
+    // Find all replacement buttons in the modal
+    const replaceButtons = this.modal.querySelectorAll('.replace-product-in-room');
 
-        // Make sure the button has the right event handler
-        const createButton = noEstimatesDiv.querySelector('#create-estimate-btn');
-        if (createButton) {
-          // Remove any existing event listeners to prevent duplication
-          if (this._createEstimateBtnHandler) {
-            createButton.removeEventListener('click', this._createEstimateBtnHandler);
-          }
+    if (replaceButtons.length) {
+      // logger.log(`[BUTTON BINDING] Found ${replaceButtons.length} replace buttons to bind`);
 
-          // Create and store new handler
-          this._createEstimateBtnHandler = () => {
-            this.showNewEstimateForm();
-          };
+      // Loop through each button and bind click event
+      replaceButtons.forEach((button, index) => {
+        // Log each button's attributes for debugging
+        logger.log(`[BUTTON BINDING] Button #${index+1} attributes:`, {
+          productId: button.dataset.productId,
+          estimateId: button.dataset.estimateId,
+          roomId: button.dataset.roomId,
+          replaceProductId: button.dataset.replaceProductId,
+          replaceType: button.dataset.replaceType || 'main'
+        });
 
-          // Add the new handler
-          createButton.addEventListener('click', this._createEstimateBtnHandler);
-          console.log('Added event handler to existing create estimate button');
+        // Remove any existing handlers to prevent duplicates
+        if (button._replaceButtonHandler) {
+          button.removeEventListener('click', button._replaceButtonHandler);
         }
-      }
+
+        // Create and store new handler directly on button element
+        button._replaceButtonHandler = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Get data attributes - explicitly check the button.dataset properties
+          const newProductId = button.dataset.productId;
+          const estimateId = button.dataset.estimateId;
+          const roomId = button.dataset.roomId;
+          const oldProductId = button.dataset.replaceProductId;
+          const parentProductId = button.dataset.parentProductId || null; // Get parent product ID
+
+
+          // Get the replace type - defaulting to 'main' if not specified
+          const replaceType = button.hasAttribute('data-replace-type') ?
+            button.getAttribute('data-replace-type') : 'main';
+
+          logger.log('[BUTTON CLICKED] Replace product button clicked:', {
+            estimateId,
+            roomId,
+            oldProductId,
+            newProductId,
+            replaceType
+          });
+
+          // Handle replacing the product with confirmation dialog
+          this.handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, parentProductId, button, replaceType);
+        };
+
+        // Add click event listener
+        button.addEventListener('click', button._replaceButtonHandler);
+      });
+
+      logger.log('[BUTTON BINDING] Replace product buttons bound successfully');
     } else {
-      // If we have estimates, make sure the no-estimates div is hidden
-      const noEstimatesDiv = this.modal.querySelector('.no-estimates');
-      if (noEstimatesDiv) {
-        noEstimatesDiv.style.display = 'none';
-      }
+      logger.log('[BUTTON BINDING] No replace product buttons found to bind');
     }
-
-    // Update all suggestions visibility
-    this.updateAllSuggestionsVisibility();
-
-    // Initialize estimate accordions
-    this.initializeEstimateAccordions(expandRoomId, expandEstimateId);
-
-    // Initialize accordions with auto-expansion if a room ID is specified
-    this.initializeAccordions(expandRoomId, expandEstimateId);
-
-
-
-    this.initializeCarousels();
-
-    // Bind the replace product buttons
-    this.bindReplaceProductButtons();
-
-    // Also bind the suggested product buttons again
-    this.bindSuggestedProductButtons();
   }
 
 
   /**
-   * Update suggestion visibility based on room contents
-   * @param {string} estimateId - Estimate ID
-   * @param {string} roomId - Room ID
+   * Update all replacement chains on buttons after page refresh
+   * This ensures consistent ID references for multiple replacements
+   *
+   * @param {HTMLElement} roomElement - The room element containing buttons
    */
-  updateSuggestionVisibility(estimateId, roomId) {
-    // Find the room element
-    const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
+  updateAllReplacementChains(roomElement) {
+    if (!roomElement || !window._productReplacementChains) return;
+
+    logger.log('[REPLACEMENT CHAINS] Updating all buttons with replacement chains');
+
+    // Find all upgrade buttons in this room
+    const upgradeButtons = roomElement.querySelectorAll('button.replace-product-in-room[data-replace-type="additional_products"]');
+
+    upgradeButtons.forEach(button => {
+      const productId = button.dataset.productId;
+      const roomId = button.dataset.roomId;
+      const replaceProductId = button.dataset.replaceProductId;
+
+      const chainKey = `${roomId}_${productId}`; // Corrected line
+      const replacementChain = window._productReplacementChains[chainKey];
+
+      if (replacementChain) {
+        logger.log(`[REPLACEMENT CHAINS] Found chain for ${chainKey}:`, replacementChain);
+
+        // Add data attribute with the replacement chain for debugging
+        button.dataset.replacementChain = JSON.stringify(replacementChain);
+
+        // This helps track the relationship for debugging
+        logger.log(`[REPLACEMENT CHAINS] Updated button ${button.textContent} with chain data`);
+      }
+    });
+  }
+
+
+
+  /**
+   * Update additional product upgrade buttons after replacement
+   * This updates the data-replace-product-id attribute to the new product ID
+   *
+   * @param {HTMLElement} roomElement - The room accordion element
+   * @param {string} newProductId - The new product ID
+   * @param {string} oldProductId - The old product ID that was replaced
+   */
+  updateAdditionalProductUpgradeButtons(roomElement, newProductId, oldProductId) {
     if (!roomElement) return;
 
-    // Check if this room has any products
-    const hasProducts = roomElement.querySelectorAll('.product-item:not(.product-note-item)').length > 0;
+    logger.log(`Updating additional product upgrade buttons: newProductId=${newProductId}, oldProductId=${oldProductId}`);
 
-    // Find the product suggestions section
-    const suggestions = roomElement.querySelector('.product-suggestions');
-    if (!suggestions) return;
+    // Look for upgrade buttons with the specific data-replace-type="additional_products" attribute
+    // that match the old product ID
+    const upgradeButtons = roomElement.querySelectorAll(
+      `button.replace-product-in-room[data-replace-product-id="${oldProductId}"][data-replace-type="additional_products"]`
+    );
 
-    // Toggle visibility based on whether there are products in the room
-    suggestions.style.display = hasProducts ? 'block' : 'none';
+    if (upgradeButtons.length > 0) {
+      logger.log(`Found ${upgradeButtons.length} additional product upgrade buttons to update`);
+
+      // Update each button's data-replace-product-id to the new product ID
+      upgradeButtons.forEach(button => {
+        logger.log(`Updating button data-replace-product-id from ${oldProductId} to ${newProductId}`);
+        button.dataset.replaceProductId = newProductId;
+      });
+    } else {
+      logger.log('No additional product upgrade buttons found that need updating');
+    }
+
+    // Also update any product-upgrades containers
+    const upgradeContainers = roomElement.querySelectorAll(`.product-upgrades[data-product-id="${oldProductId}"]`);
+    upgradeContainers.forEach(container => {
+      container.dataset.productId = newProductId;
+      logger.log(`Updated product-upgrades container data-product-id from ${oldProductId} to ${newProductId}`);
+    });
   }
 
+
   /**
-   * Update visibility of suggestions for all rooms
+   * Load and display similar products for a specific product item.
+   * This function is called for each product item in an expanded room
+   * if similar products were not pre-loaded OR if the fallback was intended.
+   * MODIFIED: This function will now effectively NOT run the AJAX call if
+   * `similarProductsLoaded` is true (which it will be after the change in `loadEstimatesList`).
+   * @param {HTMLElement} productItemElement - The DOM element for the product item.
+   * @param {string} estimateId - The ID of the estimate the product belongs to.
+   * @param {string} roomId - The ID of the room the product belongs to.
    */
-  updateAllSuggestionsVisibility() {
-    const rooms = this.modal.querySelectorAll('.accordion-item');
+  loadSimilarProductsForProduct(productItemElement, estimateId, roomId) {
+    // Check if similar products are already marked as loaded.
+    // After the change in `loadEstimatesList`, this will usually be 'true'.
+    if (productItemElement.dataset.similarProductsLoaded === 'true') {
+      logger.log(`Similar products already processed (pre-loaded or fallback skipped) for product item in room ${roomId}.`);
+      // Ensure toggle is correctly displayed if container has items from pre-loading
+      const similarProductsContainer = productItemElement.querySelector('.similar-products-container');
+      const similarProductsList = productItemElement.querySelector('.similar-products-list');
+      const similarProductsToggle = productItemElement.querySelector('.similar-products-toggle');
+      if (similarProductsContainer && similarProductsList && similarProductsList.children.length > 0) {
+        // This means pre-loading was successful and items are there.
+        similarProductsContainer.style.display = 'block';
+        if(similarProductsToggle) similarProductsToggle.style.display = '';
+      } else if (similarProductsContainer && similarProductsList && similarProductsList.children.length === 0) {
+        // This means pre-loading might have failed to find DOM elements OR no similar products in localStorage.
+        // Since fallback is removed, we just hide the section.
+        if(similarProductsToggle) similarProductsToggle.style.display = 'none';
+        if(similarProductsContainer) similarProductsContainer.style.display = 'none';
+        logger.log(`[EstimatorCore] No similar products were pre-loaded for product ${productItemElement.dataset.productId || 'unknown'}. Hiding container and toggle as fallback is removed.`);
+      }
+      return; // Exit, no AJAX call needed.
+    }
 
-    rooms.forEach(room => {
-      const roomId = room.dataset.roomId;
-      const estimateId = room.closest('.estimate-section')?.dataset.estimateId;
+    // The code below would have been the AJAX fallback.
+    // Since `productItemElement.dataset.similarProductsLoaded` will now always be true
+    // by the time this function is called (due to changes in `loadEstimatesList`),
+    // this part of the function will not be reached.
+    // For completeness, if it *were* reached, it would try to fetch via AJAX.
 
-      if (!roomId || !estimateId) return;
+    let productId = productItemElement.dataset.productId;
+    // ... (rest of productId and roomArea derivation logic, which is now less relevant)
 
-      // Check if this room has any products (excluding note items)
-      const hasProducts = room.querySelectorAll('.product-item:not(.product-note-item)').length > 0;
+    const similarProductsContainer = productItemElement.querySelector('.similar-products-container');
+    const similarProductsList = productItemElement.querySelector('.similar-products-list');
+    const similarProductsToggle = productItemElement.querySelector('.similar-products-toggle');
+    const similarProductsCarousel = productItemElement.querySelector('.similar-products-carousel');
+    const carouselNav = similarProductsCarousel ? similarProductsCarousel.querySelectorAll('.suggestions-nav') : [];
 
-      // Find the product suggestions section
-      const suggestions = room.querySelector('.product-suggestions');
-      if (!suggestions) return;
+    if (!productId || !similarProductsContainer || !similarProductsList || !similarProductsToggle || !similarProductsCarousel) {
+      logger.log(`Skipping similar products (fallback path, should not be common now) for product ID ${productId} because elements missing or ID invalid.`);
+      productItemElement.dataset.similarProductsLoaded = 'true';
+      if (similarProductsToggle) similarProductsToggle.style.display = 'none';
+      if (similarProductsContainer) similarProductsContainer.style.display = 'none';
+      carouselNav.forEach(nav => nav.style.display = 'none');
+      return;
+    }
 
-      // Toggle visibility based on whether there are products in the room
-      suggestions.style.display = hasProducts ? 'block' : 'none';
-    });
+    // This log indicates the AJAX fallback, which we are trying to avoid.
+    logger.log(`[EstimatorCore] Fallback Loading (should be rare): Fetching similar products for product ID: ${productId} in room ${roomId}`);
+    // ... (rest of the AJAX call logic via this.dataService.getSimilarProducts)
+    // ... (which would then populate the similarProductsList or show an error)
+
+    // As the AJAX call is effectively bypassed, the console message:
+    // "[EstimatorCore] Fallback Loading: No similar products found. Hiding container and toggle."
+    // should no longer appear from this function's AJAX path.
+    // If it still appears, it means `productItemElement.dataset.similarProductsLoaded` was somehow not set to 'true' earlier.
+  }
+
+
+
+  /**
+   * Comprehensively fixed handleReplaceProduct method
+   * This method handles replacing products with enhanced front-end handling
+   * MODIFIED to show different confirmation text for similar products vs. upgrades.
+   *
+   * @param {string} estimateId - Estimate ID
+   * @param {string} roomId - Room ID
+   * @param {string} oldProductId - ID of product to replace
+   * @param {string} newProductId - ID of new product
+   * @param {string|null} parentProductId - ID of the parent product (if replacing additional product)
+   * @param {HTMLElement} buttonElement - Button element for UI feedback
+   * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
+   */
+  handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, parentProductId, buttonElement, replaceType = 'main') {
+    // First, log detailed replacement information for debugging
+    logger.log(`[PRODUCT REPLACEMENT] Starting product replacement process
+    Type: ${replaceType}
+    Old Product ID: ${oldProductId}
+    New Product ID: ${newProductId}
+    Parent Product ID: ${parentProductId} // Log parent product ID
+    Room ID: ${roomId}
+    Estimate ID: ${estimateId}
+  `);
+
+    // Get product names if available (from button attributes or nearby elements)
+    let oldProductName = "this product";
+    let newProductName = "the selected product";
+
+    try {
+      // Try to get product names from DOM
+      if (buttonElement) {
+        // Get name of new product (the one in the carousel or tile)
+        const productItem = buttonElement.closest('.suggestion-item, .upgrade-tile, .similar-product-item'); // Added .similar-product-item
+        if (productItem) {
+          const nameEl = productItem.querySelector('.suggestion-name, .tile-label');
+          if (nameEl) {
+            newProductName = nameEl.textContent.trim();
+          }
+        }
+
+        // For additional products (find in the includes section)
+        if (replaceType === 'additional_products') {
+          logger.log('Looking for additional product name to replace');
+
+          // Find the product item that contains this button (usually the outer parent)
+          const mainProductItem = buttonElement.closest('.product-item');
+
+          if (mainProductItem) {
+            // Look specifically within this product's includes section
+            // and find the include-item that matches our oldProductId
+            const includeItems = mainProductItem.querySelectorAll('.include-item');
+            logger.log(`Found ${includeItems.length} include items to search through`);
+
+            for (const item of includeItems) {
+              const nameEl = item.querySelector('.include-item-name');
+              if (nameEl) {
+                // For additional products, we need a better way to match
+                // Look for data attributes if available
+                const includeProduct = item.closest('[data-product-id]');
+                if (includeProduct && includeProduct.dataset.productId === oldProductId) {
+                  oldProductName = nameEl.textContent.trim();
+                  logger.log(`Found matching additional product: ${oldProductName}`);
+                  break;
+                } else {
+                  // If no data attribute, just use the first one we find
+                  // This is a fallback that might not be accurate
+                  oldProductName = nameEl.textContent.trim();
+                }
+              }
+            }
+          }
+        }
+        // For main products
+        else {
+          const productWrapper = buttonElement.closest('.product-item');
+          if (productWrapper) {
+            const nameEl = productWrapper.querySelector('.product-name, .price-title');
+            if (nameEl) {
+              oldProductName = nameEl.textContent.trim();
+              logger.log(`Found main product name: ${oldProductName}`);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      logger.warn('Could not determine product names for confirmation dialog:', e);
+    }
+
+    // --- MODIFIED: Determine dialog text based on button origin ---
+    let dialogTitle = 'Confirm Upgrade';
+    let confirmButtonText = 'Upgrade';
+    let dialogAction = 'upgrade_product'; // Default action
+
+    // Check if the button is within a similar product item
+    if (buttonElement && buttonElement.closest('.similar-product-item')) {
+      dialogTitle = 'Confirm Replacement';
+      confirmButtonText = 'Replace';
+      dialogAction = 'replace_product'; // Use a different action identifier if needed
+    }
+    // --- END MODIFIED ---
+
+
+    // Build confirmation message
+    const confirmMessage = `Are you sure you want to replace "${oldProductName}" with "${newProductName}"?`;
+
+    // Use the confirmation dialog
+    if (window.productEstimator && window.productEstimator.dialog) {
+      window.productEstimator.dialog.show({
+        title: dialogTitle, // Use dynamic title
+        message: confirmMessage,
+        type: 'product', // Using product type for styling
+        action: dialogAction, // Use dynamic action
+        confirmText: confirmButtonText, // Use dynamic button text
+        cancelText: 'Cancel',
+        onConfirm: () => {
+          // Proceed with replacement, passing parentProductId
+          this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, parentProductId, buttonElement, replaceType);
+        },
+        onCancel: () => {
+          // Reset button state if needed
+          if (buttonElement) {
+            buttonElement.disabled = false;
+            buttonElement.classList.remove('loading');
+            // Reset text to original based on context (Upgrade or Replace)
+            buttonElement.textContent = buttonElement.closest('.similar-product-item') ? 'Replace' : 'Upgrade';
+          }
+          logger.log('Product replacement cancelled');
+        }
+      });
+    } else {
+      // Fallback to browser confirm if custom dialog isn't available
+      if (confirm(confirmMessage)) {
+        this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, parentProductId, buttonElement, replaceType);
+      } else {
+        // Reset button state if needed
+        if (buttonElement) {
+          buttonElement.disabled = false;
+          buttonElement.classList.remove('loading');
+          // Reset text to original based on context (Upgrade or Replace)
+          buttonElement.textContent = buttonElement.closest('.similar-product-item') ? 'Replace' : 'Upgrade';
+        }
+      }
+    }
+  }
+
+
+  /**
+   * Completely revised executeProductReplacement method for upgrading products
+   * with more robust upgrade button handling.
+   * This now handles the promise resolving after local storage update.
+   *
+   * @param {string} estimateId - Estimate ID
+   * @param {string} roomId - Room ID
+   * @param {string} oldProductId - ID of product to replace
+   * @param {string} newProductId - ID of new product
+   * @param {string|null} parentProductId - ID of the parent product (if replacing additional product)
+   * @param {HTMLElement} buttonElement - Button element for UI feedback
+   * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
+   */
+  executeProductReplacement(estimateId, roomId, oldProductId, newProductId, parentProductId, buttonElement, replaceType = 'main') {
+    // Show loading indicator
+    this.showLoading();
+
+    // Show loading state on the button
+    if (buttonElement) {
+      buttonElement.disabled = true;
+      buttonElement.classList.add('loading');
+      // Use appropriate text based on replaceType
+      const loadingText = replaceType === 'additional_products' ? 'Upgrading...' : 'Replacing...';
+      buttonElement.innerHTML = `<span class="loading-dots">${loadingText}</span>`;
+    }
+
+    logger.log(`[PRODUCT REPLACEMENT] Executing replacement via DataService (waiting for local update):
+  Type: ${replaceType}
+  Old Product ID: ${oldProductId}
+  New Product ID: ${newProductId}
+  Room ID: ${roomId}
+  Parent Product ID: ${parentProductId}
+  Estimate ID: ${estimateId}`);
+
+    // Use DataService to make the replacement request.
+    // The promise returned by DataService.replaceProductInRoom now resolves
+    // after the local storage update is attempted, *not* after the server request.
+    this.dataService.replaceProductInRoom(estimateId, roomId, oldProductId, newProductId, parentProductId, replaceType)
+      .then(localResult => { // 'localResult' is the object returned by DataService after local update
+        logger.log('[PRODUCT REPLACEMENT] DataService.replaceProductInRoom local storage attempt successful:', localResult);
+
+        // The UI update logic now happens here, based on the successful local storage change.
+
+        // Store the replacement chain from the localResult if available
+        // This is now handled inside DataService, storing it globally.
+        // We can access it later after the list refresh.
+
+        logger.log('[PRODUCT REPLACEMENT] Local storage update successful, attempting to load estimates list...');
+
+        // Refresh the estimates list with the room expanded
+        // Pass the room and estimate IDs from the localResult for accuracy
+        this.loadEstimatesList(localResult.roomId, localResult.estimateId)
+          .then(() => {
+            logger.log('[PRODUCT REPLACEMENT] Estimates list refreshed');
+
+            // Find the updated room element in the DOM after the list refresh
+            const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${localResult.roomId}"][data-estimate-id="${localResult.estimateId}"]`) ||
+              this.modal.querySelector(`.accordion-item[data-room-id="${localResult.roomId}"]`); // Fallback selector
+
+            if (roomElement) {
+              logger.log('[PRODUCT REPLACEMENT] Found updated room element after refresh, performing post-refresh updates.');
+
+              // Ensure the parent estimate section is expanded if it exists
+              const estimateSection = roomElement.closest('.estimate-section');
+              if (estimateSection) {
+                logger.log('[PRODUCT REPLACEMENT] Found parent estimate section, ensuring it is not collapsed.');
+                // Remove collapsed class and ensure content is visible
+                estimateSection.classList.remove('collapsed');
+                const estimateContent = estimateSection.querySelector('.estimate-content');
+                if (estimateContent) {
+                  // Use jQuery slideDown if available, otherwise display block
+                  if (typeof jQuery !== 'undefined') {
+                    jQuery(estimateContent).slideDown(200);
+                  } else {
+                    estimateContent.style.display = 'block';
+                  }
+                }
+              }
+
+
+              // Activate the room's accordion header
+              const header = roomElement.querySelector('.accordion-header');
+              if (header) header.classList.add('active');
+
+              // Show the room's accordion content
+              const content = roomElement.querySelector('.accordion-content');
+              if (content) {
+                // Use jQuery slideDown if available, otherwise display block
+                if (typeof jQuery !== 'undefined') {
+                  jQuery(content).slideDown(300, () => {
+                    // Scroll to the room after animation completes
+                    roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  });
+                } else {
+                  content.style.display = 'block';
+                  // Scroll immediately if no jQuery animation
+                  roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+
+                // CRITICAL FIX: Update the data-replace-product-id attributes on additional product buttons
+                // to maintain reference to the original product ID for future upgrades
+                // Use localResult.newProductId and localResult.oldProductId for accuracy
+                if (replaceType === 'additional_products') {
+                  this.updateAdditionalProductUpgradeButtons(roomElement, localResult.newProductId, localResult.oldProductId);
+                }
+
+                // Initialize carousels in the expanded room (suggestions and similar products)
+                setTimeout(() => { // Keep a small delay to ensure DOM is ready
+                  logger.log('[PRODUCT REPLACEMENT] Initializing carousels and rebinding events after list refresh.');
+                  if (typeof initSuggestionsCarousels === 'function') {
+                    initSuggestionsCarousels();
+                  }
+
+                  // Rebind all button events to ensure they work properly on the new DOM elements
+                  this.bindReplaceProductButtons();
+                  this.bindSuggestedProductButtons();
+
+                  // Update replacement chains on buttons in this room
+                  this.updateAllReplacementChains(roomElement); // Ensure this function exists and works with the new structure
+
+                  // Update room and estimate totals based on the localResult
+                  if (localResult.room_totals) {
+                    this.updateRoomTotals(localResult.estimateId, localResult.roomId, localResult.room_totals);
+                  }
+                  if (localResult.estimate_totals) {
+                    this.updateEstimateTotals(localResult.estimateId, localResult.estimate_totals);
+                  }
+
+                  // Show success message
+                  this.showMessage('Product updated successfully!', 'success'); // Changed message to "updated"
+                }, 300); // Small delay
+
+              } else {
+                logger.warn('[PRODUCT REPLACEMENT] Room content element not found after refresh.');
+                // If no room content, just show success message and hide loading
+                this.showMessage('Product updated successfully!', 'success');
+              }
+            } else {
+              logger.warn(`[PRODUCT REPLACEMENT] Could not find updated room element for room ID ${localResult.roomId} after refresh.`);
+              this.showMessage('Product updated successfully!', 'success');
+            }
+          })
+          .catch(error => {
+            // This catch handles errors specifically from loadEstimatesList
+            logger.error('[PRODUCT REPLACEMENT] Error refreshing estimates list after local update:', error);
+            this.showError('Error refreshing list after update. Please try again.');
+          });
+      })
+      .catch(error => {
+        // This catch handles errors from the initial fetch or the local storage attempt itself
+        logger.error('[PRODUCT REPLACEMENT] DataService local update attempt failed:', error);
+        this.showError(error.message || 'Error updating product. Please try again.');
+      })
+      .finally(() => {
+        // Ensure button state is reset
+        if (buttonElement) {
+          buttonElement.disabled = false;
+          buttonElement.classList.remove('loading');
+          // Reset text to original based on context (Upgrade or Replace)
+          buttonElement.textContent = replaceType === 'additional_products' ? 'Upgrade' : 'Replace';
+        }
+
+        // Hide loading
+        this.hideLoading();
+      });
   }
 
   /**
@@ -2871,7 +4215,7 @@ class ModalManager {
 
     if (!formContainer) {
       // If we can't find the container, log the error but don't try to prepend
-      console.error('Form container not found for message display:', message);
+      logger.error('Form container not found for message display:', message);
       return;
     }
 
@@ -2889,7 +4233,7 @@ class ModalManager {
     try {
       formContainer.prepend(messageEl);
     } catch (e) {
-      console.error('Error adding message to container:', e);
+      logger.error('Error adding message to container:', e);
     }
 
     // Auto-remove after 5 seconds
@@ -2933,596 +4277,8 @@ class ModalManager {
     }
     return this;
   }
-
-  /**
-   * Diagnostic function to check for duplicate elements
-   */
-  checkModalElements() {
-    console.group('🔍 MODAL ELEMENTS CHECK');
-
-    // Check for duplicates
-    const checkElement = (selector, name) => {
-      const elements = document.querySelectorAll(selector);
-      console.log(`${name}: ${elements.length} elements found`);
-      return elements.length;
-    };
-
-    checkElement('#product-estimator-modal', 'Modal container');
-    checkElement('.product-estimator-modal-form-container', 'Form container');
-    checkElement('#estimates', 'Estimates list');
-    checkElement('#estimate-selection-wrapper', 'Estimate selection');
-    checkElement('#estimate-selection-form-wrapper', 'Estimate selection form');
-    checkElement('#new-estimate-form-wrapper', 'New estimate form');
-
-    // Check our specific element's visibility
-    const estimateSelection = document.querySelector('#estimate-selection-wrapper');
-    if (estimateSelection) {
-      console.log('Estimate selection container:', {
-        display: estimateSelection.style.display,
-        computedDisplay: window.getComputedStyle(estimateSelection).display,
-        visibility: window.getComputedStyle(estimateSelection).visibility,
-        opacity: window.getComputedStyle(estimateSelection).opacity,
-        parent: estimateSelection.parentElement ? estimateSelection.parentElement.tagName : 'none'
-      });
-    } else {
-      console.warn('Estimate selection container not found');
-    }
-
-    console.groupEnd();
-  }
-
-  /**
-   * Log debug messages
-   * @param {...any} args - Arguments to log
-   */
-  log(...args) {
-    if (this.config.debug) {
-      console.log('[ModalManager]', ...args);
-    }
-  }
-
-  /**
-   * Completely revised bindReplaceProductButtons method that ensures
-   * consistent button behavior between page refreshes
-   */
-  bindReplaceProductButtons() {
-    console.log('[BUTTON BINDING] Binding replace product buttons');
-
-    // Find all replacement buttons in the modal
-    const replaceButtons = this.modal.querySelectorAll('.replace-product-in-room');
-
-    if (replaceButtons.length) {
-      console.log(`[BUTTON BINDING] Found ${replaceButtons.length} replace buttons to bind`);
-
-      // Loop through each button and bind click event
-      replaceButtons.forEach((button, index) => {
-        // Log each button's attributes for debugging
-        console.log(`[BUTTON BINDING] Button #${index+1} attributes:`, {
-          productId: button.dataset.productId,
-          estimateId: button.dataset.estimateId,
-          roomId: button.dataset.roomId,
-          replaceProductId: button.dataset.replaceProductId,
-          replaceType: button.dataset.replaceType || 'main'
-        });
-
-        // Remove any existing handlers to prevent duplicates
-        if (button._replaceButtonHandler) {
-          button.removeEventListener('click', button._replaceButtonHandler);
-        }
-
-        // Create and store new handler directly on button element
-        button._replaceButtonHandler = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-
-          // Get data attributes - explicitly check the button.dataset properties
-          const newProductId = button.dataset.productId;
-          const estimateId = button.dataset.estimateId;
-          const roomId = button.dataset.roomId;
-          const oldProductId = button.dataset.replaceProductId;
-
-          // Get the replace type - defaulting to 'main' if not specified
-          const replaceType = button.hasAttribute('data-replace-type') ?
-            button.getAttribute('data-replace-type') : 'main';
-
-          console.log('[BUTTON CLICKED] Replace product button clicked:', {
-            estimateId,
-            roomId,
-            oldProductId,
-            newProductId,
-            replaceType
-          });
-
-          // Handle replacing the product with confirmation dialog
-          this.handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, button, replaceType);
-        };
-
-        // Add click event listener
-        button.addEventListener('click', button._replaceButtonHandler);
-      });
-
-      console.log('[BUTTON BINDING] Replace product buttons bound successfully');
-    } else {
-      console.log('[BUTTON BINDING] No replace product buttons found to bind');
-    }
-  }
-
-
-  /**
-   * Comprehensively fixed handleReplaceProduct method
-   * This method handles replacing products with enhanced front-end handling
-   *
-   * @param {string} estimateId - Estimate ID
-   * @param {string} roomId - Room ID
-   * @param {string} oldProductId - ID of product to replace
-   * @param {string} newProductId - ID of new product
-   * @param {HTMLElement} buttonElement - Button element for UI feedback
-   * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
-   */
-  handleReplaceProduct(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType = 'main') {
-    // First, log detailed replacement information for debugging
-    console.log(`[PRODUCT REPLACEMENT] Starting product replacement process
-    Type: ${replaceType}
-    Old Product ID: ${oldProductId}
-    New Product ID: ${newProductId}
-    Room ID: ${roomId}
-    Estimate ID: ${estimateId}
-  `);
-
-    // Get product names if available (from button attributes or nearby elements)
-    let oldProductName = "this product";
-    let newProductName = "the selected product";
-
-    try {
-      // Try to get product names from DOM
-      if (buttonElement) {
-        // Get name of new product (the one in the carousel or tile)
-        const productItem = buttonElement.closest('.suggestion-item, .upgrade-tile');
-        if (productItem) {
-          const nameEl = productItem.querySelector('.suggestion-name, .tile-label');
-          if (nameEl) {
-            newProductName = nameEl.textContent.trim();
-          }
-        }
-
-        // For additional products (find in the includes section)
-        if (replaceType === 'additional_products') {
-          console.log('Looking for additional product name to replace');
-
-          // Find the product item that contains this button (usually the outer parent)
-          const mainProductItem = buttonElement.closest('.product-item');
-
-          if (mainProductItem) {
-            // Look specifically within this product's includes section
-            // and find the include-item that matches our oldProductId
-            const includeItems = mainProductItem.querySelectorAll('.include-item');
-            console.log(`Found ${includeItems.length} include items to search through`);
-
-            for (const item of includeItems) {
-              const nameEl = item.querySelector('.include-item-name');
-              if (nameEl) {
-                // For additional products, we need a better way to match
-                // Look for data attributes if available
-                const includeProduct = item.closest('[data-product-id]');
-                if (includeProduct && includeProduct.dataset.productId === oldProductId) {
-                  oldProductName = nameEl.textContent.trim();
-                  console.log(`Found matching additional product: ${oldProductName}`);
-                  break;
-                } else {
-                  // If no data attribute, just use the first one we find
-                  // This is a fallback that might not be accurate
-                  oldProductName = nameEl.textContent.trim();
-                }
-              }
-            }
-          }
-        }
-        // For main products
-        else {
-          const productWrapper = buttonElement.closest('.product-item');
-          if (productWrapper) {
-            const nameEl = productWrapper.querySelector('.product-name, .price-title');
-            if (nameEl) {
-              oldProductName = nameEl.textContent.trim();
-              console.log(`Found main product name: ${oldProductName}`);
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Could not determine product names for confirmation dialog:', e);
-    }
-
-    // Build confirmation message
-    const confirmMessage = `Are you sure you want to replace "${oldProductName}" with "${newProductName}"?`;
-
-    // Use the confirmation dialog
-    if (window.productEstimator && window.productEstimator.dialog) {
-      window.productEstimator.dialog.show({
-        title: 'Confirm Upgrade',
-        message: confirmMessage,
-        type: 'product', // Using product type for styling
-        action: 'upgrade_product',
-        confirmText: 'Upgrade',
-        cancelText: 'Cancel',
-        onConfirm: () => {
-          // Proceed with replacement
-          this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType);
-        },
-        onCancel: () => {
-          // Reset button state if needed
-          if (buttonElement) {
-            buttonElement.disabled = false;
-            buttonElement.classList.remove('loading');
-            buttonElement.textContent = 'Upgrade';
-          }
-          console.log('Product upgrade cancelled');
-        }
-      });
-    } else {
-      // Fallback to browser confirm if custom dialog isn't available
-      if (confirm(confirmMessage)) {
-        this.executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType);
-      } else {
-        // Reset button state if needed
-        if (buttonElement) {
-          buttonElement.disabled = false;
-          buttonElement.classList.remove('loading');
-          buttonElement.textContent = 'Upgrade';
-        }
-      }
-    }
-  }
-  /**
-   * Enhanced method to reload and properly expand estimates and rooms,
-   * especially after product replacements
-   *
-   * @param {string} roomId - Room ID to expand
-   * @param {string} estimateId - Estimate ID to expand
-   * @param {string|null} productId - Optional product ID to highlight
-   * @returns {Promise} Promise that resolves when list is loaded and expanded
-   */
-  reloadAndExpandEstimatesList(roomId, estimateId, productId = null) {
-    return new Promise((resolve, reject) => {
-      this.showLoading();
-
-      console.log(`Reloading estimates list with expansion params - Room: ${roomId}, Estimate: ${estimateId}, Product: ${productId}`);
-
-      // Load the estimates list
-      this.loadEstimatesList(roomId, estimateId)
-        .then(() => {
-          // First, find and expand the estimate
-          setTimeout(() => {
-            const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
-            if (estimateSection) {
-              console.log(`Found estimate section: ${estimateId}`);
-
-              // Remove collapsed class
-              estimateSection.classList.remove('collapsed');
-
-              // Show estimate content
-              const estimateContent = estimateSection.querySelector('.estimate-content');
-              if (estimateContent) {
-                estimateContent.style.display = 'block';
-
-                // Now find and expand the room
-                setTimeout(() => {
-                  const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`) ||
-                    this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-
-                  if (roomElement) {
-                    console.log(`Found and expanding room: ${roomId}`);
-
-                    // Add active class to header
-                    const header = roomElement.querySelector('.accordion-header');
-                    if (header) header.classList.add('active');
-
-                    // Show room content
-                    const content = roomElement.querySelector('.accordion-content');
-                    if (content) {
-                      content.style.display = 'block';
-
-                      // Initialize carousels in the expanded room
-                      setTimeout(() => {
-                        if (typeof initSuggestionsCarousels === 'function') {
-                          initSuggestionsCarousels();
-                        }
-
-                        // If a product ID was provided, highlight it briefly
-                        if (productId) {
-                          const productElements = content.querySelectorAll('.product-item');
-                          productElements.forEach(productEl => {
-                            // Look for the product item that contains data for this product
-                            if (productEl.dataset.productId === productId ||
-                              productEl.querySelector(`[data-product-id="${productId}"]`)) {
-
-                              // Highlight the product for attention
-                              productEl.classList.add('highlight-product');
-
-                              // Remove highlight after 2 seconds
-                              setTimeout(() => {
-                                productEl.classList.remove('highlight-product');
-                              }, 2000);
-
-                              // Scroll to make the product visible
-                              productEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
-                          });
-                        } else {
-                          // No specific product to highlight, just scroll to the room
-                          roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                      }, 150);
-                    }
-                  } else {
-                    console.warn(`Room ID ${roomId} not found for auto-expansion`);
-                  }
-                }, 150);
-              }
-            } else {
-              console.warn(`Estimate ID ${estimateId} not found for auto-expansion`);
-            }
-
-            resolve();
-          }, 200);
-        })
-        .catch(error => {
-          console.error('Error reloading estimates list:', error);
-          reject(error);
-        })
-        .finally(() => {
-          this.hideLoading();
-        });
-    });
-  }
-
-  /**
-   * Completely revised executeProductReplacement method for upgrading products
-   * with more robust upgrade button handling
-   *
-   * @param {string} estimateId - Estimate ID
-   * @param {string} roomId - Room ID
-   * @param {string} oldProductId - ID of product to replace
-   * @param {string} newProductId - ID of new product
-   * @param {HTMLElement} buttonElement - Button element for UI feedback
-   * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
-   */
-  executeProductReplacement(estimateId, roomId, oldProductId, newProductId, buttonElement, replaceType = 'main') {
-    // Show loading indicator
-    this.showLoading();
-
-    // Show loading state on the button
-    if (buttonElement) {
-      buttonElement.disabled = true;
-      buttonElement.classList.add('loading');
-      buttonElement.innerHTML = '<span class="loading-dots">Upgrading...</span>';
-    }
-
-    console.log(`[PRODUCT REPLACEMENT] Executing replacement:
-    Type: ${replaceType}
-    Old Product ID: ${oldProductId}
-    New Product ID: ${newProductId}
-    Room ID: ${roomId}
-    Estimate ID: ${estimateId}`);
-
-    // Make AJAX request to replace product
-    jQuery.ajax({
-      url: productEstimatorVars.ajax_url,
-      type: 'POST',
-      data: {
-        action: 'replace_product_in_room',
-        nonce: productEstimatorVars.nonce,
-        estimate_id: estimateId,
-        room_id: roomId,
-        product_id: newProductId,
-        replace_product_id: oldProductId,
-        replace_type: replaceType // Send the replacement type to the server
-      },
-      success: (response) => {
-        console.log('[PRODUCT REPLACEMENT] Server response:', response);
-
-        if (response.success) {
-          // Store the replacement chain in window for later reference
-          window._productReplacementChains = window._productReplacementChains || {};
-          window._productReplacementChains[`${roomId}_${newProductId}`] = response.data.replacement_chain || [];
-
-          // Refresh the estimates list with the room expanded
-          this.loadEstimatesList(roomId, estimateId)
-            .then(() => {
-              console.log('[PRODUCT REPLACEMENT] Estimates list refreshed');
-
-              // Ensure the estimate section is expanded
-              const estimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
-              if (estimateSection) {
-                estimateSection.classList.remove('collapsed');
-                const estimateContent = estimateSection.querySelector('.estimate-content');
-                if (estimateContent) {
-                  estimateContent.style.display = 'block';
-                }
-              }
-
-              // Find and expand the room
-              const roomElement = this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`) ||
-                this.modal.querySelector(`.accordion-item[data-room-id="${roomId}"]`);
-
-              if (roomElement) {
-                console.log('[PRODUCT REPLACEMENT] Found room element, expanding');
-
-                // Activate the header
-                const header = roomElement.querySelector('.accordion-header');
-                if (header) header.classList.add('active');
-
-                // Show the content
-                const content = roomElement.querySelector('.accordion-content');
-                if (content) {
-                  content.style.display = 'block';
-
-                  // CRITICAL FIX: Update the data-replace-product-id attributes on additional product buttons
-                  // to maintain reference to the original product ID for future upgrades
-                  if (replaceType === 'additional_products') {
-                    this.updateAdditionalProductUpgradeButtons(roomElement, newProductId, oldProductId);
-                  }
-
-                  // Initialize carousels in the expanded room
-                  setTimeout(() => {
-                    if (typeof initSuggestionsCarousels === 'function') {
-                      initSuggestionsCarousels();
-                    }
-
-                    // Scroll to the room
-                    roomElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                    // Rebind all button events to ensure they work properly
-                    this.bindReplaceProductButtons();
-                    this.bindSuggestedProductButtons();
-
-                    this.updateAllReplacementChains(roomElement);
-
-                    // Show success message
-                    this.showMessage('Product upgraded successfully!', 'success');
-                  }, 300);
-                }
-              } else {
-                console.warn(`[PRODUCT REPLACEMENT] Could not find room element for room ID ${roomId}`);
-                this.showMessage('Product upgraded successfully!', 'success');
-              }
-            })
-            .catch(error => {
-              console.error('[PRODUCT REPLACEMENT] Error refreshing estimates list:', error);
-              this.showError('Error refreshing list after upgrade. Please try again.');
-            });
-        } else {
-          // Handle error response
-          this.showError(response.data?.message || 'Error upgrading product. Please try again.');
-
-          // Log detailed debug info
-          if (response.data?.debug) {
-            console.error('[PRODUCT REPLACEMENT] Server reported error details:', response.data.debug);
-          }
-        }
-      },
-      error: (jqXHR, textStatus, errorThrown) => {
-        console.error('[PRODUCT REPLACEMENT] AJAX error:', textStatus, errorThrown);
-        this.showError('Error upgrading product. Please try again.');
-      },
-      complete: () => {
-        // Reset button state
-        if (buttonElement) {
-          buttonElement.disabled = false;
-          buttonElement.classList.remove('loading');
-          buttonElement.textContent = 'Upgrade';
-        }
-
-        // Hide loading
-        this.hideLoading();
-      }
-    });
-  }
-
-  /**
-   * Update all replacement chains on buttons after page refresh
-   * This ensures consistent ID references for multiple replacements
-   *
-   * @param {HTMLElement} roomElement - The room element containing buttons
-   */
-  updateAllReplacementChains(roomElement) {
-    if (!roomElement || !window._productReplacementChains) return;
-
-    console.log('[REPLACEMENT CHAINS] Updating all buttons with replacement chains');
-
-    // Find all upgrade buttons in this room
-    const upgradeButtons = roomElement.querySelectorAll('button.replace-product-in-room[data-replace-type="additional_products"]');
-
-    upgradeButtons.forEach(button => {
-      const productId = button.dataset.productId;
-      const roomId = button.dataset.roomId;
-      const replaceProductId = button.dataset.replaceProductId;
-
-      const chainKey = `${roomId}_${replaceProductId}`;
-      const replacementChain = window._productReplacementChains[chainKey];
-
-      if (replacementChain) {
-        console.log(`[REPLACEMENT CHAINS] Found chain for ${chainKey}:`, replacementChain);
-
-        // Add data attribute with the replacement chain for debugging
-        button.dataset.replacementChain = JSON.stringify(replacementChain);
-
-        // This helps track the relationship for debugging
-        console.log(`[REPLACEMENT CHAINS] Updated button ${button.textContent} with chain data`);
-      }
-    });
-  }
-
-
-
-  /**
-   * Update additional product upgrade buttons after replacement
-   * This updates the data-replace-product-id attribute to the new product ID
-   *
-   * @param {HTMLElement} roomElement - The room accordion element
-   * @param {string} newProductId - The new product ID
-   * @param {string} oldProductId - The old product ID that was replaced
-   */
-  updateAdditionalProductUpgradeButtons(roomElement, newProductId, oldProductId) {
-    if (!roomElement) return;
-
-    console.log(`Updating additional product upgrade buttons: newProductId=${newProductId}, oldProductId=${oldProductId}`);
-
-    // Look for upgrade buttons with the specific data-replace-type="additional_products" attribute
-    // that match the old product ID
-    const upgradeButtons = roomElement.querySelectorAll(
-      `button.replace-product-in-room[data-replace-product-id="${oldProductId}"][data-replace-type="additional_products"]`
-    );
-
-    if (upgradeButtons.length > 0) {
-      console.log(`Found ${upgradeButtons.length} additional product upgrade buttons to update`);
-
-      // Update each button's data-replace-product-id to the new product ID
-      upgradeButtons.forEach(button => {
-        console.log(`Updating button data-replace-product-id from ${oldProductId} to ${newProductId}`);
-        button.dataset.replaceProductId = newProductId;
-      });
-    } else {
-      console.log('No additional product upgrade buttons found that need updating');
-    }
-
-    // Also update any product-upgrades containers
-    const upgradeContainers = roomElement.querySelectorAll(`.product-upgrades[data-product-id="${oldProductId}"]`);
-    upgradeContainers.forEach(container => {
-      container.dataset.productId = newProductId;
-      console.log(`Updated product-upgrades container data-product-id from ${oldProductId} to ${newProductId}`);
-    });
-  }
-
-  /**
-   * Update all upgrade buttons within a room to point to a new product ID
-   * This ensures that after an upgrade, subsequent upgrade buttons work correctly
-   *
-   * @param {HTMLElement} roomElement - The room accordion element
-   * @param {string} oldProductId - The old product ID to replace
-   * @param {string} newProductId - The new product ID to use
-   */
-  updateUpgradeButtonProductIds(roomElement, oldProductId, newProductId) {
-    if (!roomElement) return;
-
-    console.log(`Updating upgrade buttons: replacing ${oldProductId} with ${newProductId}`);
-
-    // Find all replace buttons that reference the old product ID
-    const upgradeButtons = roomElement.querySelectorAll(`button.replace-product-in-room[data-replace-product-id="${oldProductId}"]`);
-
-    if (upgradeButtons.length > 0) {
-      console.log(`Found ${upgradeButtons.length} upgrade buttons to update`);
-
-      // Update each button's data attribute
-      upgradeButtons.forEach(button => {
-        button.dataset.replaceProductId = newProductId;
-        console.log(`Updated button to use new product ID: ${newProductId}`);
-      });
-    } else {
-      console.log('No upgrade buttons found that need updating');
-    }
-  }
 }
 
 // Export the class
 export default ModalManager;
+

@@ -3,7 +3,9 @@
  *
  * Handles functionality specific to the pricing rules settings tab.
  */
-import { ajax, dom, validation, log } from '@utils';
+import { ajax, dom, validation } from '@utils';
+import { createLogger } from '@utils';
+const logger = createLogger('NetSuiteSettingsModule');
 
 class PricingRulesSettingsModule {
   /**
@@ -29,7 +31,7 @@ class PricingRulesSettingsModule {
    * Initialize the module
    */
   init() {
-    log('PricingRulesSettingsModule', 'Initializing Pricing Rules Settings Module');
+    logger.log('Initializing Pricing Rules Settings Module');
     this.bindEvents();
     this.setupFormHandling();
     this.initializeDefaultSettingsForm();
@@ -88,7 +90,7 @@ class PricingRulesSettingsModule {
 
     // Show form when "Add New Pricing Rule" button is clicked
     $addButton.on('click', function() {
-      log('PricingRulesSettingsModule', 'Add New Pricing Rule button clicked');
+      logger.log('Add New Pricing Rule button clicked');
       this.resetForm();
       $('.form-title').text(this.settings.i18n.addNew || 'Add New Pricing Rule');
       $('.save-rule').text(this.settings.i18n.saveChanges || 'Save Changes');
@@ -209,7 +211,7 @@ class PricingRulesSettingsModule {
       pricing_source: pricingSource
     };
 
-    log('PricingRulesSettingsModule', 'Sending form data:', formData);
+    logger.log('Sending form data:', formData);
 
     // Send AJAX request using the ajax utility
     ajax.ajaxRequest({
@@ -217,14 +219,14 @@ class PricingRulesSettingsModule {
       data: formData
     })
       .then(data => {
-        log('PricingRulesSettingsModule', 'Response received:', data);
+        logger.log('Response received:', data);
 
         // Show success message
         this.showMessage('success', data.message);
 
         // If editing an existing rule, replace the row
         if (formData.rule_id) {
-          log('PricingRulesSettingsModule', 'Updating existing rule:', formData.rule_id);
+          logger.log('Updating existing rule:', formData.rule_id);
           const $existingRow = $('.pricing-rules-list').find(`tr[data-id="${formData.rule_id}"]`);
           if ($existingRow.length) {
             $existingRow.replaceWith(this.createRuleRow(data.rule));
@@ -267,7 +269,7 @@ class PricingRulesSettingsModule {
       .catch(error => {
         // Show error message
         this.showMessage('error', error.message || 'Error saving pricing rule. Please try again.');
-        log('PricingRulesSettingsModule', 'Error saving pricing rule:', error);
+        logger.error('Error saving pricing rule:', error);
       })
       .finally(() => {
         // Re-enable form
@@ -287,7 +289,7 @@ class PricingRulesSettingsModule {
     const pricingMethod = $btn.data('method');
     const pricingSource = $btn.data('source');
 
-    log('PricingRulesSettingsModule', 'Edit rule:', ruleId, categories, pricingMethod, pricingSource);
+    logger.log('Edit rule:', ruleId, categories, pricingMethod, pricingSource);
 
     // Reset form
     this.resetForm();
@@ -324,7 +326,7 @@ class PricingRulesSettingsModule {
     const $btn = $(e.currentTarget);
     const ruleId = $btn.data('id');
 
-    log('PricingRulesSettingsModule', 'Delete rule:', ruleId);
+    logger.log('Delete rule:', ruleId);
 
     if (!confirm(this.settings.i18n.confirmDelete || 'Are you sure you want to delete this pricing rule?')) {
       return;
@@ -343,7 +345,7 @@ class PricingRulesSettingsModule {
       }
     })
       .then(data => {
-        log('PricingRulesSettingsModule', 'Delete response:', data);
+        logger.log('Delete response:', data);
 
         // Remove row from table
         const $row = $btn.closest('tr');
@@ -364,7 +366,7 @@ class PricingRulesSettingsModule {
         // Show error message
         this.showMessage('error', error.message || 'Error deleting pricing rule. Please try again.');
         $btn.prop('disabled', false).text('Delete');
-        log('PricingRulesSettingsModule', 'Error deleting rule:', error);
+        logger.error('Error deleting rule:', error);
       });
   }
 

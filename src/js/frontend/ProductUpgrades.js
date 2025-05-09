@@ -5,9 +5,6 @@
  * Manages display and selection of product upgrade options in the estimator.
  */
 
-import { createLogger } from '@utils';
-const logger = createLogger('ProductUpgrades');
-
 class ProductUpgrades {
   /**
    * Initialize the ProductUpgrades module
@@ -43,7 +40,7 @@ class ProductUpgrades {
    */
   init() {
     if (this.initialized) {
-      logger.log('ProductUpgrades already initialized');
+      this.log('ProductUpgrades already initialized');
       return this;
     }
 
@@ -54,7 +51,7 @@ class ProductUpgrades {
     this.initializeExistingUpgrades();
 
     this.initialized = true;
-    logger.log('ProductUpgrades initialized');
+    this.log('ProductUpgrades initialized');
     return this;
   }
 
@@ -100,7 +97,7 @@ class ProductUpgrades {
       }
     });
 
-    // logger.log('Events bound for product upgrades');
+    this.log('Events bound for product upgrades');
   }
 
   /**
@@ -109,7 +106,7 @@ class ProductUpgrades {
   initializeExistingUpgrades() {
     const productItems = document.querySelectorAll(this.config.selectors.productItem);
     if (productItems.length) {
-      logger.log(`Found ${productItems.length} existing product items to check for upgrades`);
+      this.log(`Found ${productItems.length} existing product items to check for upgrades`);
 
       productItems.forEach(product => {
         this.initializeUpgradesForProduct(product);
@@ -126,13 +123,13 @@ class ProductUpgrades {
 
     const productId = this.getProductIdFromElement(productElement);
     if (!productId) {
-      logger.log('No product ID found for element', productElement);
+      this.log('No product ID found for element', productElement);
       return;
     }
 
     // First check if upgrades are already initialized for this product
     if (productElement.dataset.upgradesInitialized === 'true') {
-      logger.log(`Upgrades already initialized for product ${productId}`);
+      this.log(`Upgrades already initialized for product ${productId}`);
       return;
     }
 
@@ -143,11 +140,11 @@ class ProductUpgrades {
           this.renderUpgrades(productElement, upgradeData);
           productElement.dataset.upgradesInitialized = 'true';
         } else {
-          logger.log(`No upgrade options found for product ${productId}`);
+          this.log(`No upgrade options found for product ${productId}`);
         }
       })
       .catch(error => {
-        logger.log('Error loading product upgrades:', error);
+        this.log('Error loading product upgrades:', error);
       });
   }
 
@@ -197,7 +194,7 @@ class ProductUpgrades {
     return new Promise((resolve, reject) => {
       // Check if we already have data cached
       if (this.upgradeData[productId]) {
-        logger.log(`Using cached upgrade data for product ${productId}`);
+        this.log(`Using cached upgrade data for product ${productId}`);
         resolve(this.upgradeData[productId]);
         return;
       }
@@ -232,7 +229,7 @@ class ProductUpgrades {
           }
         })
         .catch(error => {
-          logger.log('Error fetching product upgrades:', error);
+          this.log('Error fetching product upgrades:', error);
           reject(error);
         });
     });
@@ -249,7 +246,7 @@ class ProductUpgrades {
     // Find the product includes container to add upgrades inside it
     const includesContainer = productElement.querySelector(this.config.selectors.productIncludes);
     if (!includesContainer) {
-      logger.log('Product includes container not found, cannot add upgrades');
+      this.log('Product includes container not found, cannot add upgrades');
       return;
     }
 
@@ -269,7 +266,7 @@ class ProductUpgrades {
       this.renderUpgradeOption(upgradeContainer, upgrade);
     });
 
-    logger.log(`Rendered ${upgradeOptions.length} upgrade options for product`);
+    this.log(`Rendered ${upgradeOptions.length} upgrade options for product`);
   }
 
   /**
@@ -355,7 +352,7 @@ class ProductUpgrades {
           });
         })
         .catch(error => {
-          logger.log('Error loading category products:', error);
+          this.log('Error loading category products:', error);
         });
     }
 
@@ -414,7 +411,7 @@ class ProductUpgrades {
           });
         })
         .catch(error => {
-          logger.log('Error loading category products:', error);
+          this.log('Error loading category products:', error);
         });
     }
 
@@ -476,7 +473,7 @@ class ProductUpgrades {
           });
         })
         .catch(error => {
-          logger.log('Error loading category products:', error);
+          this.log('Error loading category products:', error);
         });
     }
 
@@ -544,7 +541,7 @@ class ProductUpgrades {
           }
         })
         .catch(error => {
-          logger.log('Error fetching category products:', error);
+          this.log('Error fetching category products:', error);
           reject(error);
         });
     });
@@ -612,18 +609,18 @@ class ProductUpgrades {
     const productElement = container.closest(this.config.selectors.productItem);
 
     if (!productElement) {
-      logger.log('Product element not found for upgrade change');
+      this.log('Product element not found for upgrade change');
       return;
     }
 
     const productId = this.getProductIdFromElement(productElement);
 
     if (!productId) {
-      logger.log('Product ID not found for upgrade change');
+      this.log('Product ID not found for upgrade change');
       return;
     }
 
-    logger.log(`Upgrade changed for product ${productId}, upgrade ${upgradeId}: ${value}`);
+    this.log(`Upgrade changed for product ${productId}, upgrade ${upgradeId}: ${value}`);
 
     // Update product data with upgrade selection
     this.updateProductWithUpgrade(productElement, upgradeId, value);
@@ -690,6 +687,18 @@ class ProductUpgrades {
       }
     });
   }
+
+  /**
+   * Log debug messages
+   * @param {...any} args - Arguments to log
+   */
+  log(...args) {
+    if (this.config.debug) {
+      console.log('[ProductUpgrades]', ...args);
+    }
+  }
+
+
 }
 
 // Export the class

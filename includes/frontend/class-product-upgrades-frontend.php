@@ -1,6 +1,8 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes\Frontend;
 
+use RuDigital\ProductEstimator\Includes\Admin\Settings\FrontendBase;
+
 /**
  * Frontend-only functionality for product upgrades
  * This lightweight class provides only what's needed for the frontend

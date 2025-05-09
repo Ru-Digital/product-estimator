@@ -5,6 +5,8 @@
  * Note: Tab management functionality has been moved to ProductEstimatorSettings.js
  */
 import { showNotice, showFieldError, clearFieldError, validateEmail } from '@utils';
+import { createLogger } from '@utils';
+const logger = createLogger('ProductEstimatorAdmin');
 
 class ProductEstimatorAdmin {
   /**
@@ -188,7 +190,7 @@ class ProductEstimatorAdmin {
    */
   loadInitialReport() {
     // This would load report data from the server via AJAX
-    console.log('Loading initial report data');
+    logger.log('Loading initial report data');
   }
 }
 

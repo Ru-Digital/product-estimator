@@ -33,26 +33,6 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
     }
 
     /**
-     * Register module with the settings manager
-     *
-     * @since    1.2.0
-     * @access   public
-     */
-    public function register() {
-        add_action('product_estimator_register_settings_modules', function($manager) {
-            $manager->register_module($this);
-        });
-    }
-
-    /**
-     * Check if this module handles a specific setting
-     *
-     * @since    1.2.0
-     * @access   public
-     * @param    string    $key    Setting key
-     * @return   bool      Whether this module handles the setting
-     */
-    /**
      * Check if this module handles a specific setting
      *
      * @since    1.1.0
@@ -121,7 +101,7 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      * @param    array    $args    Field arguments.
      */
     public function render_field_callback($args) {
-        $this->render_field($args, $this->option_name);
+        $this->render_field($args);
     }
 
     /**
@@ -210,16 +190,6 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
             array($this->plugin_name . '-settings'),
             $this->version
         );
-    }
-
-    /**
-     * Register module hooks.
-     *
-     * @since    1.1.0
-     * @access   protected
-     */
-    protected function register_hooks() {
-        parent::register_hooks();
     }
 
     protected function get_checkbox_fields() {

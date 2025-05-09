@@ -4,8 +4,9 @@
  * Handles common functionality for the settings page.
  * Modified to work with separate forms for each tab.
  */
-import { ajax, dom, validation, log } from '@utils';
-
+import { ajax, dom, validation } from '@utils';
+import { createLogger } from '@utils';
+const logger = createLogger('ProductEstimatorSettings');
 class ProductEstimatorSettings {
   /**
    * Initialize the Settings Manager
@@ -93,7 +94,7 @@ class ProductEstimatorSettings {
     this.initFormChangeTracking();
     this.initializeValidation();
 
-    log('ProductEstimatorSettings', 'Settings manager initialized with tab:', this.currentTab);
+    logger.log('Settings manager initialized with tab:', this.currentTab);
   }
 
   /**
@@ -111,7 +112,7 @@ class ProductEstimatorSettings {
     // Window beforeunload for unsaved changes warning
     $(window).on('beforeunload', this.handleBeforeUnload.bind(this));
 
-    // log('ProductEstimatorSettings', 'Events bound');
+    // logger.log('Events bound');
   }
 
   /**
@@ -124,7 +125,7 @@ class ProductEstimatorSettings {
     const $form = $(e.target);
     const tabId = $form.closest('.tab-content').attr('id');
     let formData = $form.serialize();
-    console.log('Serialized form data:', formData);
+    logger.log('Serialized form data:', formData);
 
     const checkboxFields = $form.find('input[type="checkbox"]');
     checkboxFields.each(function() {
@@ -147,7 +148,7 @@ class ProductEstimatorSettings {
     // Show loading state
     this.showFormLoading($form);
 
-    log('ProductEstimatorSettings', `Submitting form for tab: ${tabId}`);
+    logger.log(`Submitting form for tab: ${tabId}`);
 
     // Make the AJAX request to save settings
     ajax.ajaxRequest({
@@ -171,12 +172,12 @@ class ProductEstimatorSettings {
           this.formChanged = false;
         }
 
-        log('ProductEstimatorSettings', `Settings saved successfully for tab: ${tabId}`);
+        logger.log(`Settings saved successfully for tab: ${tabId}`);
       })
       .catch(error => {
         // Show error message
         validation.showNotice(error.message || productEstimatorSettings.i18n.saveError, 'error');
-        log('ProductEstimatorSettings', `Error saving settings for tab ${tabId}:`, error);
+        logger.log(`Error saving settings for tab ${tabId}:`, error);
       })
       .finally(() => {
         this.hideFormLoading($form);
@@ -227,7 +228,7 @@ class ProductEstimatorSettings {
       });
     });
 
-    log('ProductEstimatorSettings', 'Form change tracking initialized');
+    logger.log('Form change tracking initialized');
   }
 
   /**
@@ -270,7 +271,7 @@ class ProductEstimatorSettings {
       });
     });
 
-    log('ProductEstimatorSettings', 'Form validation initialized');
+    logger.log('Form validation initialized');
   }
 
   /**
@@ -330,7 +331,7 @@ class ProductEstimatorSettings {
     // Trigger tab changed event for modules
     $(document).trigger('product_estimator_tab_changed', [tabId, previousTab]);
 
-    log('ProductEstimatorSettings', `Switched to tab: ${tabId} from ${previousTab}`);
+    logger.log(`Switched to tab: ${tabId} from ${previousTab}`);
   }
 
   /**

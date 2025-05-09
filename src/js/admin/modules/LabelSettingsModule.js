@@ -3,280 +3,273 @@
  *
  * Handles functionality specific to the label settings tab.
  */
-import { showFieldError, clearFieldError, showNotice } from '@utils';
-import { dom, ajax, validation } from '@utils';
+import { showFieldError, clearFieldError, showNotice } from '@utils'; // Assuming these are utility functions
+import { dom, ajax, validation } from '@utils'; // Assuming these are utility functions
+import { createLogger } from '@utils';
+const logger = createLogger('LabelSettingsModule');
 
 class LabelSettingsModule {
-  /**
-   * Initialize the module
-   */
   constructor() {
-    // Initialize when document is ready
-    jQuery(document).ready(() => this.init());
+    // Cache the main container for this module's settings
+    this.$container = null;
+    this.tabId = 'labels'; // The main horizontal tab ID for this module
+
+    jQuery(document).ready(() => {
+      // Initialize only if this main tab exists
+      this.$container = jQuery(`#${this.tabId}`);
+      if (this.$container.length) {
+        this.init();
+      }
+    });
   }
 
-  /**
-   * Initialize the module
-   */
   init() {
-    console.log('Label Settings Module initialized');
+    logger.log('Label Settings Module initialized');
     this.bindEvents();
 
-    // Slight delay to ensure DOM is fully rendered
-    setTimeout(() => {
-      this.setupVerticalTabs();
-    }, 100);
+    // Setup vertical tabs if the main "Labels" tab is already active or becomes active
+    // The ProductEstimatorSettings.js will trigger 'product_estimator_tab_changed' on initial load if 'labels' is the active tab.
+    // And also when switching to the 'labels' tab.
+    // Initial setup can also be done here if needed, checking if currentTab is 'labels'.
+    if (window.ProductEstimatorSettings && window.ProductEstimatorSettings.currentTab === this.tabId) {
+      setTimeout(() => {
+        this.setupVerticalTabs();
+      }, 100); // Delay to ensure DOM is fully rendered
+    }
   }
 
-  /**
-   * Bind event handlers
-   */
   bindEvents() {
     const $ = jQuery;
 
-    // Listen for tab changes
-    $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
+    // Listen for main horizontal tab changes
+    $(document).on('product_estimator_tab_changed', this.handleMainTabChanged.bind(this));
 
-    // Form submission - convert to AJAX
-    $('.label-settings-form').on('submit', this.handleFormSubmit.bind(this));
+    // Form submission - scoped to this module's container
+    this.$container.on('submit', '.label-settings-form', this.handleFormSubmit.bind(this));
 
-    // Vertical tabs navigation - use delegated events to handle dynamically loaded content
-    $(document).on('click', '.vertical-tabs-nav a', this.handleVerticalTabClick.bind(this));
+    // Vertical tabs navigation - scoped to this module's container
+    this.$container.on('click', '.vertical-tabs-nav a', this.handleVerticalTabClick.bind(this));
 
-    // Email validation
-    $(document).on('change', 'input[type="email"]', this.validateEmail.bind(this));
-
-    // console.log('Label Settings events bound');
+    // Email validation - scoped
+    this.$container.on('change', 'input[type="email"]', this.validateEmail.bind(this));
   }
 
-  /**
-   * Validate email field
-   * @param {Event} e Change event
-   */
   validateEmail(e) {
     const $ = jQuery;
     const $field = $(e.target);
-    const email = $field.val().trim();
+    // Ensure the event target is within this module's container
+    if (!$field.closest(this.$container).length) return;
 
-    if (email && !validation.validateEmail(email)) {
-      this.showFieldError($field, 'Please enter a valid email address');
+    const email = $field.val().trim();
+    if (email && !validation.validateEmail(email)) { // Assuming validation.validateEmail exists
+      this.showFieldError($field, 'Please enter a valid email address'); // Use module-specific or global error display
       return false;
     }
-
     this.clearFieldError($field);
     return true;
   }
 
-  /**
-   * Show field error message
-   * @param {jQuery} $field The field element
-   * @param {string} message Error message
-   */
   showFieldError($field, message) {
-    if (typeof ProductEstimatorSettings !== 'undefined' &&
-      typeof ProductEstimatorSettings.showFieldError === 'function') {
+    // Prefer global error display if available
+    if (typeof ProductEstimatorSettings !== 'undefined' && typeof ProductEstimatorSettings.showFieldError === 'function') {
       ProductEstimatorSettings.showFieldError($field, message);
-    } else {
-      validation.clearFieldError($field);
+    } else if (typeof validation !== 'undefined' && typeof validation.showFieldError === 'function') {
+      validation.showFieldError($field, message);
+    } else { // Basic fallback
+      validation.clearFieldError($field); // Assuming this exists or implement
       const $error = jQuery(`<span class="field-error">${message}</span>`);
       $field.after($error).addClass('error');
     }
   }
 
-  /**
-   * Clear field error message
-   * @param {jQuery} $field The field element
-   */
   clearFieldError($field) {
-    if (typeof ProductEstimatorSettings !== 'undefined' &&
-      typeof ProductEstimatorSettings.clearFieldError === 'function') {
+    if (typeof ProductEstimatorSettings !== 'undefined' && typeof ProductEstimatorSettings.clearFieldError === 'function') {
       ProductEstimatorSettings.clearFieldError($field);
-    } else {
+    } else if (typeof validation !== 'undefined' && typeof validation.clearFieldError === 'function') {
       validation.clearFieldError($field);
+    } else { // Basic fallback
+      $field.removeClass('error').next('.field-error').remove();
     }
   }
 
-  /**
-   * Set up vertical tabs
-   */
   setupVerticalTabs() {
+    if (!this.$container || !this.$container.length) return; // Ensure container exists
+
     const $ = jQuery;
-    console.log('Setting up vertical tabs');
+    logger.log(' Setting up vertical tabs');
 
-    // First check URL parameters for sub_tab
-    let activeTabId = 'labels-general'; // Default to general
+    const $verticalTabsNav = this.$container.find('.vertical-tabs-nav');
+    const $verticalTabContents = this.$container.find('.vertical-tab-content'); // Direct children preferred for content
 
-    // Check for sub_tab in URL
+    if (!$verticalTabsNav.length || !$verticalTabContents.length) {
+      logger.warn(' Vertical tab navigation or content areas not found.');
+      return;
+    }
+
+    // Determine active tab (respect URL param, then PHP-set active class, then default)
+    let activeSubTabId = 'labels-general'; // Default sub-tab for labels
     const urlParams = new URLSearchParams(window.location.search);
-    const subTab = urlParams.get('sub_tab');
-    if (subTab && $('.vertical-tabs-nav a[data-tab="' + subTab + '"]').length) {
-      activeTabId = subTab;
+    const urlSubTab = urlParams.get('sub_tab');
+
+    if (urlSubTab && $verticalTabsNav.find(`a[data-tab="${urlSubTab}"]`).length) {
+      activeSubTabId = urlSubTab;
+    } else {
+      const $phpActiveLink = $verticalTabsNav.find('.tab-item.active a');
+      if ($phpActiveLink.length) {
+        activeSubTabId = $phpActiveLink.data('tab');
+      }
     }
-    // If no valid sub_tab in URL, look for .active class
-    else if ($('.vertical-tabs-nav .tab-item.active a').length) {
-      activeTabId = $('.vertical-tabs-nav .tab-item.active a').data('tab');
+    // Fallback if activeSubTabId determined is somehow not valid for this module
+    if (!$verticalTabsNav.find(`a[data-tab="${activeSubTabId}"]`).length) {
+      activeSubTabId = 'labels-general';
     }
 
-    console.log('Active tab ID:', activeTabId);
 
-    // Show the active tab
-    this.showVerticalTab(activeTabId);
-
-    // Adjust height of the tab content container to match the nav
+    logger.log(' Active sub-tab ID:', activeSubTabId);
+    this.showVerticalTab(activeSubTabId);
     this.adjustTabContentHeight();
 
-    // Adjust on window resize
-    $(window).on('resize', this.adjustTabContentHeight.bind(this));
+    // Adjust on window resize - ensure to unbind previous to avoid multiple listeners if re-initialized
+    $(window).off('resize.labelSettings').on('resize.labelSettings', this.adjustTabContentHeight.bind(this));
   }
 
-  /**
-   * Adjust tab content height
-   */
   adjustTabContentHeight() {
+    if (!this.$container || !this.$container.length) return;
     const $ = jQuery;
-    const navHeight = $('.vertical-tabs-nav').outerHeight();
-    if (navHeight) {
-      $('.vertical-tabs-content').css('min-height', navHeight + 'px');
+    const $nav = this.$container.find('.vertical-tabs-nav');
+    const $contentWrapper = this.$container.find('.vertical-tabs-content'); // The direct wrapper of all tab panes
+
+    if ($nav.length && $contentWrapper.length) {
+      const navHeight = $nav.outerHeight();
+      if (navHeight) {
+        $contentWrapper.css('min-height', navHeight + 'px');
+      }
     }
   }
 
-  /**
-   * Handle vertical tab click
-   * @param {Event} e Click event
-   */
   handleVerticalTabClick(e) {
     e.preventDefault();
     const $ = jQuery;
-
     const $link = $(e.currentTarget);
-    const tabId = $link.data('tab');
 
-    console.log('Vertical tab clicked:', tabId);
+    // Ensure the click originated from within this module's vertical tabs
+    if (!$link.closest(this.$container.find('.vertical-tabs-nav')).length) {
+      return; // Not our event
+    }
 
-    // Update URL hash
-    window.history.pushState({}, '', `?page=product-estimator-settings&tab=labels&sub_tab=${tabId}`);
+    const subTabId = $link.data('tab');
+    logger.log(' Vertical tab clicked:', subTabId);
 
-    // Show the selected tab
-    this.showVerticalTab(tabId);
+    window.history.pushState({}, '', `?page=product-estimator-settings&tab=${this.tabId}&sub_tab=${subTabId}`);
+    this.showVerticalTab(subTabId);
   }
 
-  /**
-   * Show vertical tab
-   * @param {string} tabId Tab ID to show
-   */
-  showVerticalTab(tabId) {
+  showVerticalTab(subTabId) {
+    if (!this.$container || !this.$container.length || !subTabId) return;
+
     const $ = jQuery;
+    logger.log(' Showing vertical tab:', subTabId);
 
-    console.log('Showing vertical tab:', tabId);
+    const $verticalTabsNav = this.$container.find('.vertical-tabs-nav');
+    const $verticalTabContents = this.$container.find('.vertical-tab-content'); // All content panes within this module
 
-    // Update active tab in navigation
-    $('.vertical-tabs-nav .tab-item').removeClass('active');
-    $(`.vertical-tabs-nav a[data-tab="${tabId}"]`).parent().addClass('active');
+    $verticalTabsNav.find('.tab-item').removeClass('active');
+    $verticalTabsNav.find(`a[data-tab="${subTabId}"]`).parent().addClass('active');
 
-    // Show the tab content
-    $('.vertical-tab-content').hide().removeClass('active');
-    $(`#${tabId}`).show().addClass('active');
+    $verticalTabContents.hide().removeClass('active');
+    this.$container.find(`#${subTabId}.vertical-tab-content`).show().addClass('active'); // More specific selector for the content pane
   }
 
-  /**
-   * Handle tab changed event
-   * @param {Event} e Tab changed event
-   * @param {string} tabId The newly active tab ID
-   */
-  handleTabChanged(e, tabId) {
-    // If our tab becomes active, refresh vertical tabs
-    if (tabId === 'labels') {
-      console.log('Labels tab activated');
-
-      // Slight delay to ensure content is rendered
+  handleMainTabChanged(e, newMainTabId, oldMainTabId) {
+    if (newMainTabId === this.tabId) {
+      logger.log('Label Settings main tab activated');
       setTimeout(() => {
-        this.setupVerticalTabs();
+        this.setupVerticalTabs(); // Re-initialize vertical tabs when main tab becomes active
       }, 100);
     }
   }
 
-  /**
-   * Handle form submission
-   * @param {Event} e Submit event
-   */
   handleFormSubmit(e) {
     e.preventDefault();
+    if (!this.$container || !this.$container.length) return;
+
     const $ = jQuery;
-
     const $form = $(e.currentTarget);
-    const formData = $form.serialize();
-    const type = $form.data('type') || 'labels-general';
 
-    console.log('Form submitted for type:', type);
+    // Ensure the form is within this module's container
+    if (!$form.closest(this.$container).length) return;
 
-    // Show loading state
+    let formDataStr = $form.serialize();
+    const type = $form.data('type') || 'labels-general'; // Sub-tab type
+
+    logger.log(' Form submitted for type:', type);
+
     const $submitButton = $form.find('.save-settings');
     const $spinner = $form.find('.spinner');
 
     $submitButton.prop('disabled', true);
     $spinner.addClass('is-active');
 
-    // Ensure unchecked checkboxes are properly represented
-    // This helps ensure all checkboxes are submitted even when unchecked
-    let formDataStr = formData;
-    const checkboxFields = $form.find('input[type="checkbox"]');
-    checkboxFields.each(function() {
-      if (!$(this).is(':checked') && !formDataStr.includes($(this).attr('name'))) {
-        formDataStr += '&' + $(this).attr('name') + '=0';
+    // Add unchecked checkboxes
+    $form.find('input[type="checkbox"]').each(function() {
+      const $cb = $(this);
+      if (!$cb.is(':checked')) {
+        // Check if already present (e.g. if it was 0 and then changed to 1 and back to 0)
+        const regex = new RegExp(`&?${encodeURIComponent($cb.attr('name'))}=[^&]*`);
+        if (formDataStr.match(regex)) {
+          formDataStr = formDataStr.replace(regex, ''); // Remove existing
+        }
+        formDataStr += `&${encodeURIComponent($cb.attr('name'))}=0`;
       }
     });
+    // Clean leading ampersand if formDataStr was initially empty and only checkboxes were added
+    if (formDataStr.startsWith('&')) {
+      formDataStr = formDataStr.substring(1);
+    }
 
-    // Log the data being sent
-    console.log('Sending form data:', formDataStr);
 
-    // Submit the form via AJAX - use the direct save_labels_settings action
-    ajax.ajaxRequest({
-      url: productEstimatorSettings.ajax_url,
+    logger.log(' Sending form data:', formDataStr);
+
+    ajax.ajaxRequest({ // Assuming ajax.ajaxRequest exists
+      url: window.productEstimatorSettings.ajax_url, // Use global settings for ajax_url and nonce
       type: 'POST',
       data: {
-        action: 'save_labels_settings', // Direct action name
-        nonce: productEstimatorSettings.nonce,
+        action: 'save_labels_settings', // Specific AJAX action for labels
+        nonce: window.productEstimatorSettings.nonce,
         form_data: formDataStr,
-        label_type: type
+        label_type: type // To identify which sub-form/label type is being saved
       }
     })
       .then(response => {
-        console.log('Success response:', response);
-        // Show success message
-        if (typeof ProductEstimatorSettings !== 'undefined' &&
-          typeof ProductEstimatorSettings.showNotice === 'function') {
-          ProductEstimatorSettings.showNotice(response.message || 'Labels saved successfully', 'success');
+        logger.log(' Success response:', response);
+        if (typeof ProductEstimatorSettings !== 'undefined' && typeof ProductEstimatorSettings.showNotice === 'function') {
+          ProductEstimatorSettings.showNotice(response.message || 'Labels saved successfully.', 'success');
         } else {
-          showNotice(response.message || 'Labels saved successfully', 'success');
+          showNotice(response.message || 'Labels saved successfully.', 'success'); // Fallback
         }
+        // Reset form changed state for this specific sub-form/tab if ProductEstimatorSettings handles it per sub-form.
+        // Otherwise, the main ProductEstimatorSettings.js handles it per main tab.
       })
       .catch(error => {
-        console.error('Error response:', error);
-        // Show error message
-        if (typeof ProductEstimatorSettings !== 'undefined' &&
-          typeof ProductEstimatorSettings.showNotice === 'function') {
-          ProductEstimatorSettings.showNotice(error.message || 'Error saving labels', 'error');
+        logger.error('Error response:', error);
+        if (typeof ProductEstimatorSettings !== 'undefined' && typeof ProductEstimatorSettings.showNotice === 'function') {
+          ProductEstimatorSettings.showNotice(error.message || 'Error saving labels.', 'error');
         } else {
-          showNotice(error.message || 'Error saving labels', 'error');
+          showNotice(error.message || 'Error saving labels.', 'error'); // Fallback
         }
       })
       .finally(() => {
-        // Reset form state
         $submitButton.prop('disabled', false);
         $spinner.removeClass('is-active');
       });
   }
 }
 
-// Initialize the module and make it globally available
-let labelSettingsInstance = null;
-
+// Initialize the module
 jQuery(document).ready(function() {
-  console.log('Document ready, initializing Label Settings Module');
-  labelSettingsInstance = new LabelSettingsModule();
-
-  // Export the module globally for backward compatibility
-  window.LabelSettingsModule = labelSettingsInstance;
+  if (jQuery('#labels').length) { // Only instantiate if the main #labels tab container exists
+    window.ProductEstimatorLabelSettingsModule = new LabelSettingsModule();
+  }
 });
 
-export default LabelSettingsModule;
+export default LabelSettingsModule; // If using ES modules

@@ -1,35 +1,30 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes;
 
+use RuDigital\ProductEstimator\Includes\Frontend\ProductUpgradesFrontend;
+use RuDigital\ProductEstimator\Includes\Frontend\SimilarProductsFrontend;
+use WP_Error;
+use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
 
 /**
  * AJAX Handlers for Product Estimator
  */
 class AjaxHandler {
-    use \RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
+    use EstimateDbHandler;
 
 
-//    /**
-//     * @var SessionHandler Session handler instance
-//     */
-//    private $session;
+    /**
+     * @var SessionHandler Session handler instance
+     */
+    private $session;
 
     /**
      * Initialize the class
      */
     public function __construct() {
         try {
-            $features = product_estimator_features(); // Get feature flags
-            if ($features->suggested_products_enabled) {
-                add_action('wp_ajax_fetch_suggestions_for_modified_room', array($this, 'handle_fetch_suggestions_for_modified_room'));
-                add_action('wp_ajax_nopriv_fetch_suggestions_for_modified_room', array($this, 'handle_fetch_suggestions_for_modified_room'));
-
-                add_action('wp_ajax_get_suggested_products', array($this, 'generateSuggestions'));
-                add_action('wp_ajax_nopriv_get_suggested_products', array($this, 'generateSuggestions'));
-            }
-
-                // Ensure session is started
-//            $this->session = SessionHandler::getInstance();
+            // Ensure session is started
+            $this->session = SessionHandler::getInstance();
 
             // Register AJAX handlers
             add_action('wp_ajax_get_rooms_for_estimate', array($this, 'getRoomsForEstimate'));
@@ -88,7 +83,8 @@ class AjaxHandler {
             add_action('wp_ajax_get_similar_products', array($this, 'get_similar_products'));
             add_action('wp_ajax_nopriv_get_similar_products', array($this, 'get_similar_products'));
 
-
+            add_action('wp_ajax_get_suggestions', array($this, 'generateSuggestions'));
+            add_action('wp_ajax_nopriv_get_suggestions', array($this, 'generateSuggestions'));
 
             add_action('wp_ajax_update_customer_details', array($this, 'updateCustomerDetails'));
             add_action('wp_ajax_nopriv_update_customer_details', array($this, 'updateCustomerDetails'));
@@ -125,8 +121,7 @@ class AjaxHandler {
             add_action('wp_ajax_request_store_contact', array($this, 'request_store_contact'));
             add_action('wp_ajax_nopriv_request_store_contact', array($this, 'request_store_contact'));
 
-            add_action('wp_ajax_get_product_data_for_storage', array($this, 'get_product_data_for_storage'));
-            add_action('wp_ajax_nopriv_get_product_data_for_storage', array($this, 'get_product_data_for_storage'));
+
 
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -137,486 +132,8 @@ class AjaxHandler {
     }
 
     /**
-     * AJAX handler to get comprehensive product data for local storage.
-     * Ensures room_suggested_products is a numerically indexed array.
-     *
-     * @since 1.0.0
-     */
-    public function get_product_data_for_storage() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
-
-        // Ensure 'null' string from JS is converted to actual null for PHP
-        $room_width_raw = $_POST['room_width'] ?? null;
-        $room_length_raw = $_POST['room_length'] ?? null;
-
-        $room_width = ($room_width_raw === 'null' || $room_width_raw === null) ? null : floatval($room_width_raw);
-        $room_length = ($room_length_raw === 'null' || $room_length_raw === null) ? null : floatval($room_length_raw);
-
-        // --- Parsing block for room_products ---
-        $room_products_input = $_POST['room_products'] ?? '';
-        $room_products_ids_for_suggestions = [];
-
-        if (is_string($room_products_input) && $room_products_input !== '') {
-            $ids_from_string = explode(',', $room_products_input);
-            $temp_ids = [];
-            foreach ($ids_from_string as $id_str) {
-                $trimmed_id_str = trim($id_str);
-                if (ctype_digit($trimmed_id_str)) {
-                    $id_val = intval($trimmed_id_str);
-                    if ($id_val > 0) {
-                        $temp_ids[] = $id_val;
-                    }
-                }
-            }
-            if (!empty($temp_ids)) {
-                $room_products_ids_for_suggestions = array_values(array_unique($temp_ids));
-            }
-        }
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('AJAX get_product_data_for_storage: Raw room_products_input from POST: \'' . ($_POST['room_products'] ?? 'not set') . '\'');
-            error_log('AJAX get_product_data_for_storage: Processed $room_products_ids_for_suggestions (array of IDs): ' . print_r($room_products_ids_for_suggestions, true));
-        }
-        // --- End of parsing block ---
-
-
-        if (!$product_id) {
-            wp_send_json_error(['message' => __('Product ID is required', 'product-estimator')]);
-            return;
-        }
-
-        try {
-            $product = wc_get_product($product_id);
-            if (!$product) {
-                wp_send_json_error(['message' => __('Product not found', 'product-estimator')]);
-                return;
-            }
-
-            $room_area = 0;
-            if ($room_width !== null && $room_length !== null && is_numeric($room_width) && is_numeric($room_length)) {
-                $room_area = floatval($room_width) * floatval($room_length);
-            }
-
-            if (!function_exists('product_estimator_get_product_price')) {
-                $helper_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/helpers.php';
-                if (file_exists($helper_path)) {
-                    require_once $helper_path;
-                    if (!function_exists('product_estimator_get_product_price')) {
-                        wp_send_json_error(['message' => __('Pricing helper function not available after include attempt.', 'product-estimator')]);
-                        return;
-                    }
-                } else {
-                    wp_send_json_error(['message' => __('Pricing helper file not found.', 'product-estimator')]);
-                    return;
-                }
-            }
-            $pricing_data = product_estimator_get_product_price($product_id, $room_area, false);
-
-            $product_data = [
-                'id' => $product_id,
-                'name' => $product->get_name(),
-                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
-                'min_price' => $pricing_data['min_price'],
-                'max_price' => $pricing_data['max_price'],
-                'pricing_method' => $pricing_data['pricing_method'],
-                'pricing_source' => $pricing_data['pricing_source'],
-                'room_area' => $room_area,
-                'additional_products' => [],
-                'additional_notes' => [],
-                'min_price_total' => 0,
-                'max_price_total' => 0,
-                'similar_products' => [],
-                'room_suggested_products' => [] // Initialize as empty array
-            ];
-
-            if ($pricing_data['pricing_method'] === 'sqm' && $room_area > 0) {
-                $product_data['min_price_total'] = $pricing_data['min_price'] * $room_area;
-                $product_data['max_price_total'] = $pricing_data['max_price'] * $room_area;
-            } else {
-                $product_data['min_price_total'] = $pricing_data['min_price'];
-                $product_data['max_price_total'] = $pricing_data['max_price'];
-            }
-
-            $product_id_for_categories = $product->is_type('variation') ? $product->get_parent_id() : $product_id;
-            $product_categories = wp_get_post_terms($product_id_for_categories, 'product_cat', array('fields' => 'ids'));
-            if (is_wp_error($product_categories)) {
-                $product_categories = [];
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('AJAX get_product_data_for_storage: Error fetching product categories: ' . $product_categories->get_error_message());
-                }
-            }
-
-            $fqcn_pa = '\\RuDigital\\ProductEstimator\\Includes\\Frontend\\ProductAdditionsFrontend';
-            $product_additions_frontend_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-product-additions-frontend.php';
-            $product_additions_manager = null;
-
-            if (!class_exists($fqcn_pa)) {
-                if (file_exists($product_additions_frontend_path)) {
-                    require_once $product_additions_frontend_path;
-                }
-            }
-
-            if (class_exists($fqcn_pa)) {
-                try {
-                    if (!defined('PRODUCT_ESTIMATOR_VERSION')) {
-                        if (function_exists('get_plugin_data') && file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'product-estimator.php')) {
-                            $plugin_data = get_plugin_data(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'product-estimator.php');
-                            define('PRODUCT_ESTIMATOR_VERSION', $plugin_data['Version'] ?? '1.0.0');
-                        } else {
-                            define('PRODUCT_ESTIMATOR_VERSION', '1.0.0');
-                        }
-                    }
-                    $product_additions_manager = new $fqcn_pa('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-                } catch (\Throwable $e) {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('AJAX Handler FATAL: Failed to instantiate ' . $fqcn_pa . '. Error: ' . $e->getMessage());
-                    }
-                    $product_additions_manager = null;
-                }
-            }
-
-            if ($product_additions_manager instanceof $fqcn_pa) {
-                // Auto-add products and notes logic...
-                $auto_add_products_ids = [];
-                $auto_add_notes_texts = [];
-
-                if (is_array($product_categories)) {
-                    foreach ($product_categories as $category_id) {
-                        $cat_auto_add_prods = $product_additions_manager->get_auto_add_products_for_category($category_id);
-                        if (!empty($cat_auto_add_prods)) {
-                            $auto_add_products_ids = array_merge($auto_add_products_ids, $cat_auto_add_prods);
-                        }
-                        $cat_auto_add_notes = $product_additions_manager->get_auto_add_notes_for_category($category_id);
-                        if (!empty($cat_auto_add_notes)) {
-                            $auto_add_notes_texts = array_merge($auto_add_notes_texts, $cat_auto_add_notes);
-                        }
-                    }
-                }
-                $auto_add_products_ids = array_values(array_unique($auto_add_products_ids)); // Ensure unique and re-indexed
-                $auto_add_notes_texts = array_values(array_unique($auto_add_notes_texts));   // Ensure unique and re-indexed
-
-                foreach ($auto_add_products_ids as $related_product_id) {
-                    if ($related_product_id == $product_id) continue;
-                    $related_product_obj = wc_get_product($related_product_id);
-                    if ($related_product_obj) {
-                        $related_pricing_data = product_estimator_get_product_price($related_product_id, $room_area, false);
-                        $additional_product_entry = [
-                            'id' => $related_product_id,
-                            'name' => $related_product_obj->get_name(),
-                            'image' => wp_get_attachment_image_url($related_product_obj->get_image_id(), 'thumbnail'),
-                            'min_price' => $related_pricing_data['min_price'],
-                            'max_price' => $related_pricing_data['max_price'],
-                            'pricing_method' => $related_pricing_data['pricing_method'],
-                            'min_price_total' => ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $related_pricing_data['min_price'] * $room_area : $related_pricing_data['min_price'],
-                            'max_price_total' => ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $related_pricing_data['max_price'] * $room_area : $related_pricing_data['max_price'],
-                        ];
-                        $product_data['additional_products'][] = $additional_product_entry;
-                    }
-                }
-                foreach ($auto_add_notes_texts as $note_text) {
-                    $product_data['additional_notes'][] = ['id' => 'note_' . uniqid(), 'type' => 'note', 'note_text' => $note_text];
-                }
-
-                // Generate room suggestions.
-                // $room_products_ids_for_suggestions is already an array of product IDs.
-                // Format it for get_suggestions_for_room which expects an array of items, each with an 'id' key.
-
-                $features = product_estimator_features(); // Get feature flags
-
-                if ($features->suggested_products_enabled) {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('AJAX get_product_data_for_storage: Suggested products ENABLED. Generating suggestions.');
-                    }
-                    // Format $room_products_ids_for_suggestions_context for get_suggestions_for_room
-                    // which expects an array of items, each with an 'id' key.
-                    $current_room_contents_for_suggestions_formatted = [];
-                    foreach ($room_products_ids_for_suggestions as $pid) {
-                        $current_room_contents_for_suggestions_formatted[] = ['id' => intval($pid)];
-                    }
-
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('AJAX get_product_data_for_storage: Calling get_suggestions_for_room with formatted items: ' . print_r($current_room_contents_for_suggestions_formatted, true) . ' for room_area ' . $room_area);
-                    }
-
-                    $raw_suggestions = $product_additions_manager->get_suggestions_for_room($current_room_contents_for_suggestions_formatted, $room_area);
-
-                    if (is_array($raw_suggestions)) {
-                        // Ensure the suggestions are a numerically indexed array for JSON
-                        $product_data['room_suggested_products'] = array_values($raw_suggestions);
-                        if (defined('WP_DEBUG') && WP_DEBUG) {
-                            error_log('AJAX get_product_data_for_storage: Suggestions returned (and re-indexed): ' . print_r($product_data['room_suggested_products'], true));
-                        }
-                    } else {
-                        // If $raw_suggestions is not an array, default to an empty array.
-                        $product_data['room_suggested_products'] = [];
-                        if (defined('WP_DEBUG') && WP_DEBUG) {
-                            error_log('AJAX get_product_data_for_storage: get_suggestions_for_room did not return an array. Value: ' . print_r($raw_suggestions, true) . '. Defaulting to empty array for room_suggested_products.');
-                        }
-                    }
-                } else {
-                    // If suggested_products_enabled is false, ensure room_suggested_products is an empty array.
-                    $product_data['room_suggested_products'] = [];
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('AJAX get_product_data_for_storage: Suggested products DISABLED. Setting room_suggested_products to empty array.');
-                    }
-                }
-                // **END MODIFIED PART**
-
-            } else {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('AJAX Handler Warning: ProductAdditionsFrontend manager is NOT available. Auto-add products and suggestions will be skipped.');
-                }
-                $product_data['room_suggested_products'] = []; // Ensure it's an empty array if manager is not available
-            }
-
-            $similar_products_list = $this->fetch_and_format_similar_products($product_id, $room_area);
-            $product_data['similar_products'] = $similar_products_list;
-
-            wp_send_json_success([
-                'message' => __('Product data retrieved successfully', 'product-estimator'),
-                'product_data' => $product_data
-            ]);
-
-        } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Exception in get_product_data_for_storage: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
-                error_log('Trace: ' . $e->getTraceAsString());
-            }
-            wp_send_json_error([
-                'message' => __('An error occurred while retrieving product data', 'product-estimator'),
-                'error_detail' => $e->getMessage()
-            ]);
-        }
-    }
-
-
-    /**
-     * AJAX handler to fetch suggestions for a room given its modified content (array of product IDs).
-     * This is used before a product is actually removed to get relevant suggestions.
-     * FIXED: Changed the validation for estimate_id and room_id to allow '0' as a valid ID.
-     * MODIFIED: Expects 'room_product_ids_for_suggestions' to be a JSON array of product IDs.
-     */
-    public function handle_fetch_suggestions_for_modified_room() {
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-        $features = product_estimator_features(); // Get feature flags
-        $estimate_id_input = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : null;
-        $room_id_input = isset($_POST['room_id']) ? sanitize_text_field($_POST['room_id']) : null;
-        if (!$features->suggested_products_enabled) {
-            wp_send_json_success([
-                'suggestions' => [],
-                'estimate_id' => $estimate_id_input,
-                'room_id' => $room_id_input,
-                'message' => sprintf(__('Suggestions are disabled.', 'product-estimator'))
-            ]);
-        }
-
-        $estimate_id_input = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : null;
-        $room_id_input = isset($_POST['room_id']) ? sanitize_text_field($_POST['room_id']) : null;
-        // Ensure 'null' string from JS is converted to actual null for PHP
-        $room_width_raw = $_POST['room_width'] ?? null;
-        $room_length_raw = $_POST['room_length'] ?? null;
-
-        $room_width = ($room_width_raw === 'null' || $room_width_raw === null) ? null : floatval($room_width_raw);
-        $room_length = ($room_length_raw === 'null' || $room_length_raw === null) ? null : floatval($room_length_raw);
-
-
-        // **MODIFIED: Expecting a JSON string of an array of product IDs**
-        $room_product_ids_json = isset($_POST['room_product_ids_for_suggestions']) ? stripslashes($_POST['room_product_ids_for_suggestions']) : '[]';
-        $simulated_room_product_ids = json_decode($room_product_ids_json, true); // true for associative array (though it will be a simple array of IDs)
-
-        if ($estimate_id_input === null || trim($estimate_id_input) === '' || $room_id_input === null || trim($room_id_input) === '') {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('handle_fetch_suggestions_for_modified_room: Estimate ID or Room ID is missing or empty. Estimate ID: "' . $estimate_id_input . '", Room ID: "' . $room_id_input . '"');
-            }
-            wp_send_json_error(['message' => __('Estimate ID and Room ID are required and cannot be empty.', 'product-estimator')]);
-            return;
-        }
-
-        // **MODIFIED: Validate that $simulated_room_product_ids is an array (even if empty)**
-        if (!is_array($simulated_room_product_ids)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('handle_fetch_suggestions_for_modified_room: simulated_room_product_ids is not a valid array after JSON decode.');
-                error_log('Raw room_product_ids_json: ' . $room_product_ids_json);
-            }
-            wp_send_json_error(['message' => __('Invalid simulated product IDs data received.', 'product-estimator')]);
-            return;
-        }
-
-        try {
-            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\ProductAdditionsFrontend')) {
-                $pa_frontend_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-product-additions-frontend.php';
-                if (file_exists($pa_frontend_path)) {
-                    require_once $pa_frontend_path;
-                } else {
-                    throw new \Exception('ProductAdditionsFrontend class file not found.');
-                }
-            }
-            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-
-            $room_area = 0;
-            if (is_numeric($room_width) && is_numeric($room_length)) {
-                $room_area = floatval($room_width) * floatval($room_length);
-            }
-
-            $products_for_suggestion_engine = [];
-            foreach ($simulated_room_product_ids as $product_id) {
-                $products_for_suggestion_engine[] = ['id' => intval($product_id)];
-            }
-
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('handle_fetch_suggestions_for_modified_room: Calling get_suggestions_for_room with formatted items from IDs: ' . print_r($products_for_suggestion_engine, true) . ' for room_area ' . $room_area);
-            }
-
-
-            $raw_suggestions = $product_additions_manager->get_suggestions_for_room($products_for_suggestion_engine, $room_area);
-            $suggestions = array_values($raw_suggestions);
-
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('handle_fetch_suggestions_for_modified_room: Sending success with ' . count($suggestions) . ' suggestions.');
-                error_log('--- handle_fetch_suggestions_for_modified_room AJAX END ---');
-            }
-
-            wp_send_json_success([
-                'updated_suggestions' => array_values($suggestions),
-                'message' => __('Suggestions fetched successfully for modified room state.', 'product-estimator')
-            ]);
-
-        } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Exception in handle_fetch_suggestions_for_modified_room: ' . $e->getMessage());
-                error_log('Trace: ' . $e->getTraceAsString());
-            }
-            wp_send_json_error([
-                'message' => __('An error occurred while fetching suggestions.', 'product-estimator'),
-                'error_detail' => $e->getMessage()
-            ]);
-        }
-    }
-
-
-    /**
-     * Helper function to fetch and format detailed similar products.
-     *
-     * @param int $product_id The source product ID.
-     * @param float $room_area The area of the room.
-     * @param int $limit Maximum number of similar products to return.
-     * @return array Array of similar product data.
-     */
-    private function fetch_and_format_similar_products($product_id, $room_area, $limit = 5) {
-        if (!$product_id) {
-            return [];
-        }
-
-        try {
-            // Ensure SimilarProductsFrontend is available
-            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\SimilarProductsFrontend')) {
-                $similar_products_frontend_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-similar-products-frontend.php';
-                if (file_exists($similar_products_frontend_path)) {
-                    require_once $similar_products_frontend_path;
-                } else {
-                    error_log('SimilarProductsFrontend class file not found for fetching similar products.');
-                    return [];
-                }
-            }
-            $similar_products_module = new \RuDigital\ProductEstimator\Includes\Frontend\SimilarProductsFrontend(
-                'product-estimator',
-                PRODUCT_ESTIMATOR_VERSION
-            );
-
-            // Find similar product IDs
-            $similar_product_ids = $similar_products_module->find_similar_products($product_id);
-
-            if (empty($similar_product_ids)) {
-                return [];
-            }
-
-            $similar_products_data = [];
-            $count = 0;
-
-            // Ensure the pricing helper function is available
-            if (!function_exists('product_estimator_calculate_total_price_with_additions')) {
-                // This function is crucial. If it's not globally available,
-                // you might need to include the file where it's defined or call it via a class method.
-                error_log('Helper function product_estimator_calculate_total_price_with_additions not available for similar products.');
-                return [];
-            }
-
-            foreach ($similar_product_ids as $similar_id_candidate) {
-                if (intval($similar_id_candidate) === intval($product_id)) { // Skip the product itself
-                    continue;
-                }
-
-                $product_obj = wc_get_product($similar_id_candidate);
-                if (!$product_obj) {
-                    continue;
-                }
-
-                $current_similar_id_to_use = $similar_id_candidate; // ID to use for pricing and data
-
-                // Check if estimator is enabled for this product (or its variations)
-                $is_estimator_enabled = false;
-                if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Integration\\WoocommerceIntegration') &&
-                    method_exists('\\RuDigital\\ProductEstimator\\Includes\\Integration\\WoocommerceIntegration', 'isEstimatorEnabled')) {
-
-                    if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($similar_id_candidate)) {
-                        $is_estimator_enabled = true;
-                    } elseif ($product_obj->is_type('variable')) {
-                        $variations = $product_obj->get_available_variations();
-                        foreach ($variations as $variation) {
-                            if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation['variation_id'])) {
-                                $current_similar_id_to_use = $variation['variation_id']; // Use the variation ID
-                                $product_obj = wc_get_product($current_similar_id_to_use); // Get the variation product object
-                                if ($product_obj) { // Ensure variation product object is valid
-                                    $is_estimator_enabled = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    error_log('WoocommerceIntegration::isEstimatorEnabled not available. Cannot reliably check if estimator is enabled for similar products.');
-                    // Depending on desired behavior, you might default to true or false, or skip.
-                    // For now, let's skip if we can't check.
-                    continue;
-                }
-
-                if (!$is_estimator_enabled) {
-                    continue;
-                }
-
-                // Calculate total price including additions using the helper function
-                $price_data = product_estimator_calculate_total_price_with_additions(
-                    $current_similar_id_to_use, // Use the potentially updated ID (e.g., variation ID)
-                    $room_area
-                );
-
-                // Prepare data for the frontend
-                $similar_products_data[] = [
-                    'id' => intval($current_similar_id_to_use),
-                    'name' => $product_obj->get_name(),
-                    'min_price' => $price_data['min_price'], // Use total prices
-                    'max_price' => $price_data['max_price'], // Use total prices
-                    'min_price_total' => $price_data['min_total'], // Use total prices
-                    'max_price_total' => $price_data['max_total'], // Use total prices
-                    'image' => wp_get_attachment_image_url($product_obj->get_image_id(), 'thumbnail') ?: '',
-                    'pricing_method' => $price_data['breakdown'][0]['pricing_method'] ?? 'sqm' // Get pricing method from main product in breakdown
-                ];
-
-                $count++;
-                if ($count >= $limit) {
-                    break;
-                }
-            }
-            return $similar_products_data;
-
-        } catch (\Exception $e) {
-            error_log('Exception in fetch_and_format_similar_products: ' . $e->getMessage());
-            return [];
-        }
-    }
+     * * Get variation estimator content via AJAX
+     * */
 
     public function getVariationEstimator() {
         // Verify nonce
@@ -659,7 +176,7 @@ class AjaxHandler {
                 'parent_id' => $parent_id,
                 'is_variation' => true
             ];
-            include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-display.php';
+            include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-display.php';
 
             // Get HTML
             $html = ob_get_clean();
@@ -681,10 +198,10 @@ class AjaxHandler {
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
         // Force session initialization
-        $session = SessionHandler::getInstance();
+        $this->session->startSession();
 
         // Get all estimates and check if there are any
-        $estimates = $session->getEstimates();
+        $estimates = $this->session->getEstimates();
         $has_estimates = !empty($estimates);
 
         wp_send_json_success([
@@ -720,16 +237,14 @@ class AjaxHandler {
         }
 
         // Get the estimate from session
-        $session = SessionHandler::getInstance();
-
-        $estimate = $session->getEstimate($estimate_id);
+        $estimate = $this->session->getEstimate($estimate_id);
 
         if (!$estimate) {
             wp_send_json_error(array(
                 'message' => __('Estimate not found', 'product-estimator'),
                 'debug' => [
                     'request_estimate_id' => $estimate_id,
-                    'available_estimates' => array_keys($session->getEstimates())
+                    'available_estimates' => array_keys($this->session->getEstimates())
                 ]
             ));
             return;
@@ -798,8 +313,7 @@ class AjaxHandler {
 
         try {
             // Get all estimates from session
-            $session = SessionHandler::getInstance();
-            $estimates = $session->getEstimates();
+            $estimates = $this->session->getEstimates();
 
             // If an estimate ID was explicitly provided
             if (!empty($estimate_id)) {
@@ -926,9 +440,7 @@ class AjaxHandler {
         ob_start();
 
         // Get all estimates
-        $session = SessionHandler::getInstance();
-
-        $estimates = $session->getEstimates();
+        $estimates = $this->session->getEstimates();
 
         // We no longer need to generate suggestions here
         // The template will handle this at render time
@@ -953,10 +465,10 @@ class AjaxHandler {
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
         // Force session initialization
-        $session = SessionHandler::getInstance();
+        $this->session->startSession();
 
         // Get all estimates
-        $estimates = $session->getEstimates();
+        $estimates = $this->session->getEstimates();
 
         // Format for the frontend
         $formatted_estimates = [];
@@ -1003,6 +515,7 @@ class AjaxHandler {
 
         try {
             // Force session initialization
+            $this->session->startSession();
 
             // Check if CustomerDetails class exists and is accessible
             if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\CustomerDetails')) {
@@ -1045,9 +558,8 @@ class AjaxHandler {
                     'plugin_version' => PRODUCT_ESTIMATOR_VERSION,
                     'default_markup' => $default_markup
                 ];
-                $session = SessionHandler::getInstance();
 
-                $estimate_id = $session->addEstimate($estimate_data);
+                $estimate_id = $this->session->addEstimate($estimate_data);
 
                 wp_send_json_success([
                     'message' => __('Estimate created successfully (fallback mode)', 'product-estimator'),
@@ -1093,9 +605,7 @@ class AjaxHandler {
             ];
 
             // Add estimate to session
-            $session = SessionHandler::getInstance();
-
-            $estimate_id = $session->addEstimate($estimate_data);
+            $estimate_id = $this->session->addEstimate($estimate_data);
 
             if (!$estimate_id && $estimate_id !== '0') { // Check for both false and non-zero values
                 wp_send_json_error(['message' => __('Failed to create estimate', 'product-estimator')]);
@@ -1157,6 +667,7 @@ class AjaxHandler {
 
         try {
             // Force session initialization
+            $this->session->startSession();
 
             // Create room data with explicit values - USING STRICT TYPE CONVERSION
             $room_width = (float)$form_data['room_width'];
@@ -1171,9 +682,7 @@ class AjaxHandler {
             ];
 
             // Add room to estimate
-            $session = SessionHandler::getInstance();
-
-            $room_id = $session->addRoom($estimate_id, $room_data);
+            $room_id = $this->session->addRoom($estimate_id, $room_data);
 
             if ($room_id === false) {
                 error_log('Failed to add room: session returned false');
@@ -1188,9 +697,7 @@ class AjaxHandler {
             }
 
             // Verify room was added correctly
-            $session = SessionHandler::getInstance();
-
-            $updated_estimates = $session->getEstimates();
+            $updated_estimates = $this->session->getEstimates();
 
             // Check if the room exists with correct data
             if (isset($updated_estimates[$estimate_id]['rooms'][$room_id])) {
@@ -1224,12 +731,12 @@ class AjaxHandler {
                     $product_data = $result['product_data'];
 
                     // Get the updated room data to check for products
-                    $updated_room = $session->getRoom($estimate_id, $room_id);
+                    $updated_room = $this->session->getRoom($estimate_id, $room_id);
                 }
             }
 
             // Final check of session data
-            $final_estimates = $session->getEstimates();
+            $final_estimates = $this->session->getEstimates();
 
             wp_send_json_success([
                 'message' => __('Room added successfully', 'product-estimator'),
@@ -1243,7 +750,7 @@ class AjaxHandler {
                     'length' => $room_length
                 ],
                 // Include suggestions in the response if available
-                'has_suggestions' => false
+                'has_suggestions' => isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['product_suggestions'])
             ]);
 
         } catch (Exception $e) {
@@ -1259,105 +766,73 @@ class AjaxHandler {
     }
 
     /**
-     * AJAX handler to remove a product from a room based on Product ID.
+     * Remove a product from a room
      */
     public function removeProductFromRoom() {
-        // Verify nonce security check
+        // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
-        // --- MODIFIED: Expect product_id instead of just product_index ---
-        if (!isset($_POST['estimate_id']) || !isset($_POST['room_id']) || !isset($_POST['product_id'])) {
-            wp_send_json_error(['message' => __('Required parameters missing (estimate_id, room_id, product_id)', 'product-estimator')]);
+        if (!isset($_POST['estimate_id']) || !isset($_POST['room_id']) || !isset($_POST['product_index'])) {
+            wp_send_json_error(['message' => __('Required parameters missing', 'product-estimator')]);
             return;
         }
 
         $estimate_id = sanitize_text_field($_POST['estimate_id']);
         $room_id = sanitize_text_field($_POST['room_id']);
-        $product_id_to_remove = sanitize_text_field($_POST['product_id']); // Get the product ID to remove
-
-        // Optional: Keep product_index if needed elsewhere, but don't rely on it for finding
-        // $product_index_from_post = isset($_POST['product_index']) ? intval($_POST['product_index']) : null;
+        $product_index = intval($_POST['product_index']);
 
         try {
-            // Get the estimate data from the session
-            $session = SessionHandler::getInstance();
-
-            $estimate = $session->getEstimate($estimate_id);
+            // Get the estimate from session
+            $estimate = $this->session->getEstimate($estimate_id);
 
             if (!$estimate) {
-                wp_send_json_error(['message' => __('Estimate not found in session', 'product-estimator')]);
+                wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
                 return;
             }
 
-            // Check if the specified room exists within the estimate
+            // Check if the room exists
             if (!isset($estimate['rooms'][$room_id])) {
                 wp_send_json_error(['message' => __('Room not found in this estimate', 'product-estimator')]);
                 return;
             }
 
-            // Check if the room's products array exists and is actually an array
-            if (!isset($estimate['rooms'][$room_id]['products']) || !is_array($estimate['rooms'][$room_id]['products'])) {
-                wp_send_json_error(['message' => __('No products found in this room', 'product-estimator')]);
+            // Check if the product index is valid
+            if (!isset($estimate['rooms'][$room_id]['products'][$product_index])) {
+                wp_send_json_error(['message' => __('Product not found in this room', 'product-estimator')]);
                 return;
             }
 
-            $products_in_room = $estimate['rooms'][$room_id]['products'];
-
-            // --- MODIFIED: Find the actual index of the product using product_id ---
-            $actual_product_index = -1; // Initialize index as not found
-            foreach ($products_in_room as $index => $product) {
-                // Ensure the product has an 'id' key before comparing
-                // Compare IDs (use string comparison for robustness if types might differ)
-                if (isset($product['id']) && (string)$product['id'] === (string)$product_id_to_remove) {
-                    $actual_product_index = $index; // Store the found index
-                    break; // Exit the loop once the product is found
-                }
-            }
-
-            // Check if the product was found by its ID
-            if ($actual_product_index === -1) {
-                wp_send_json_error(['message' => sprintf(__('Product with ID %s not found in this room', 'product-estimator'), esc_html($product_id_to_remove))]);
-                return;
-            }
-            // --- END MODIFIED ---
-
-            // Remove the product from the session using the *found index*
-            // (Assuming $this->session->removeProductFromRoom still requires the index)
-            $removed = $session->removeProductFromRoom($estimate_id, $room_id, $actual_product_index);
+            // Remove the product
+            $removed = $this->session->removeProductFromRoom($estimate_id, $room_id, $product_index);
 
             if (!$removed) {
-                // This might indicate an issue within the session removal logic itself
-                wp_send_json_error(['message' => __('Failed to remove product from session data', 'product-estimator')]);
+                wp_send_json_error(['message' => __('Failed to remove product from room', 'product-estimator')]);
                 return;
             }
 
-            // Update estimate totals after successful removal
+            // Update totals after removing the product
             $this->updateTotals($estimate_id);
 
-            // Get the updated room data to check if any products remain (for suggestion logic)
-            $updatedRoom = $session->getRoom($estimate_id, $room_id);
+            // Check if room has products - this determines if we'll show suggestions
+            // Templates will handle the actual suggestion generation
+            $updatedRoom = $this->session->getRoom($estimate_id, $room_id);
             $show_suggestions = !empty($updatedRoom['products']);
 
-            // Send a success response
             wp_send_json_success([
                 'message' => __('Product removed successfully', 'product-estimator'),
-                'show_suggestions' => $show_suggestions, // Let frontend know if suggestions might still be relevant
-                'estimate_id' => $estimate_id,        // Return IDs to help frontend maintain state
-                'room_id' => $room_id,
-                'removed_product_id' => $product_id_to_remove // Confirm which product ID was removed
+                'show_suggestions' => $show_suggestions,
+                // Include IDs to help maintain expanded state on the frontend
+                'estimate_id' => $estimate_id,
+                'room_id' => $room_id
             ]);
 
         } catch (\Exception $e) {
-            // Catch any unexpected exceptions during the process
-            error_log("Error in removeProductFromRoom AJAX handler: " . $e->getMessage()); // Log the actual error server-side
             wp_send_json_error([
                 'message' => __('An error occurred while processing your request', 'product-estimator'),
-                'error_details' => $e->getMessage() // Optionally include details in debug mode
+                'error' => $e->getMessage()
             ]);
         }
-    }
-
-    /**
+    }    /**
      * Remove a room from an estimate
      */
     public function removeRoom()
@@ -1375,9 +850,7 @@ class AjaxHandler {
 
         try {
             // Get the estimate from session
-            $session = SessionHandler::getInstance();
-
-            $estimate = $session->getEstimate($estimate_id);
+            $estimate = $this->session->getEstimate($estimate_id);
 
             if (!$estimate) {
                 wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
@@ -1391,7 +864,7 @@ class AjaxHandler {
             }
 
             // Remove the room
-            $removed = $session->removeRoom($estimate_id, $room_id);
+            $removed = $this->session->removeRoom($estimate_id, $room_id);
 
             if (!$removed) {
                 wp_send_json_error(['message' => __('Failed to remove room from estimate', 'product-estimator')]);
@@ -1402,7 +875,7 @@ class AjaxHandler {
             $this->updateTotals($estimate_id);
 
             // Check if the estimate has any rooms left
-            $updated_estimate = $session->getEstimate($estimate_id);
+            $updated_estimate = $this->session->getEstimate($estimate_id);
             $has_rooms = !empty($updated_estimate['rooms']);
 
             wp_send_json_success([
@@ -1438,9 +911,7 @@ class AjaxHandler {
 
         try {
             // Get the estimate from session
-            $session = SessionHandler::getInstance();
-
-            $estimate = $session->getEstimate($estimate_id);
+            $estimate = $this->session->getEstimate($estimate_id);
 
             if (!$estimate) {
                 wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
@@ -1453,7 +924,7 @@ class AjaxHandler {
             }
 
             // Remove the estimate
-            $removed = $session->removeEstimate($estimate_id);
+            $removed = $this->session->removeEstimate($estimate_id);
 
             if (!$removed) {
                 wp_send_json_error(['message' => __('Failed to remove estimate', 'product-estimator')]);
@@ -1474,393 +945,242 @@ class AjaxHandler {
     }
 
     /**
-     * Update room and estimate totals in session via SessionHandler.
-     * MODIFIED: Fetches and saves estimate data through SessionHandler, avoiding direct $_SESSION access.
+     * Update room and estimate totals in session
      *
-     * @param string|int $estimate_id Estimate ID
-     * @return void
+     * @param string $estimate_id Estimate ID
      */
     private function updateTotals($estimate_id) {
-        // Get the SessionHandler instance
-        $session = SessionHandler::getInstance();
+        // Ensure session is started
+        $this->session->startSession();
 
-        // Fetch the current estimate data through the handler.
-        // This ensures the session is started correctly via ensureSessionStarted() if needed.
-        $estimate = $session->getEstimate($estimate_id); // Assumes getEstimate handles ensureSessionStarted
+        // Reference to session data for direct manipulation
+        $estimates = &$_SESSION['product_estimator']['estimates'];
 
-        if (!$estimate) {
-            // Log the error if the estimate wasn't found in the session
-            error_log("Product Estimator (AjaxHandler::updateTotals): Cannot update totals - estimate ID '{$estimate_id}' not found in session via SessionHandler.");
-            return; // Cannot proceed without estimate data
+        if (!isset($estimates[$estimate_id])) {
+            error_log("Cannot update totals - estimate $estimate_id not found");
+            return;
         }
 
-        // --- Start: Calculation Logic (operates on the local $estimate array) ---
-        $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
-        $pricing_rules = get_option('product_estimator_pricing_rules', []); // Getting options is fine
+        // Get default markup from settings
+        $default_markup = isset($estimates[$estimate_id]['default_markup'])
+            ? floatval($estimates[$estimate_id]['default_markup'])
+            : 0;
+        // Get all pricing rules
+        $pricing_rules = get_option('product_estimator_pricing_rules', []);
 
         $estimate_min_total = 0;
         $estimate_max_total = 0;
 
-        if (isset($estimate['rooms']) && is_array($estimate['rooms'])) {
-            foreach ($estimate['rooms'] as $room_id => &$room) { // Use reference to modify room directly in $estimate array
+        // Loop through rooms and calculate totals
+        if (isset($estimates[$estimate_id]['rooms'])) {
+            foreach ($estimates[$estimate_id]['rooms'] as $room_id => &$room) {
                 $room_min_total = 0;
                 $room_max_total = 0;
+
+                // Calculate room area
                 $room_width = isset($room['width']) ? floatval($room['width']) : 0;
                 $room_length = isset($room['length']) ? floatval($room['length']) : 0;
-                $room_area = ($room_width > 0 && $room_length > 0) ? ($room_width * $room_length) : 0;
+                $room_area = $room_width * $room_length;
 
                 if (isset($room['products']) && is_array($room['products'])) {
-                    foreach ($room['products'] as &$product) { // Use reference to modify product directly
+                    foreach ($room['products'] as &$product) {
+                        // Skip notes
                         if (isset($product['type']) && $product['type'] === 'note') {
-                            continue; // Skip notes
+                            continue;
                         }
 
-                        $product_id = isset($product['id']) ? intval($product['id']) : 0;
-                        $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'sqm'; // Default
+                        // Get product categories to determine pricing method
+                        $product_id = isset($product['id']) ? $product['id'] : 0;
+                        $pricing_method = isset($product['pricing_method']) ? $product['pricing_method'] : 'sqm';
 
-                        // Dynamically determine pricing method if not set and product ID exists
                         if ($product_id > 0 && !isset($product['pricing_method'])) {
+                            // Get the pricing method from rules if not already set
                             $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
-                            if (!is_wp_error($product_categories) && !empty($product_categories)) {
-                                foreach ($pricing_rules as $rule) {
-                                    if (isset($rule['categories']) && is_array($rule['categories']) && !empty(array_intersect($product_categories, $rule['categories']))) {
+
+                            // Check rules for matching categories
+                            foreach ($pricing_rules as $rule) {
+                                if (isset($rule['categories']) && is_array($rule['categories'])) {
+                                    $matching_categories = array_intersect($product_categories, $rule['categories']);
+                                    if (!empty($matching_categories)) {
                                         $pricing_method = isset($rule['pricing_method']) ? $rule['pricing_method'] : 'sqm';
-                                        break; // Found matching rule
+                                        break;
                                     }
                                 }
                             }
-                            $product['pricing_method'] = $pricing_method; // Store determined method back into the product array
+
+                            // Store the pricing method in the product data
+                            $product['pricing_method'] = $pricing_method;
                         }
 
                         // Calculate main product prices
-                        $product_min_val = 0;
-                        $product_max_val = 0;
                         if (isset($product['min_price']) && isset($product['max_price'])) {
-                            $min_price = floatval($product['min_price']); // Markup application removed as per original?
-                            $max_price = floatval($product['max_price']); // Re-add if needed: * (1 + ($default_markup / 100));
+                            // Apply markup adjustment
+//                            $min_price = floatval($product['min_price']) * (1 - ($default_markup / 100));
+//                            $max_price = floatval($product['max_price']) * (1 + ($default_markup / 100));
 
+                            // Round the unit prices
+                            $min_price = $product['min_price'];
+                            $max_price = $product['max_price'];
+
+                            // Calculate based on pricing method
                             if ($pricing_method === 'sqm' && $room_area > 0) {
-                                $product_min_val = $min_price * $room_area;
-                                $product_max_val = $max_price * $room_area;
-                            } else { // Fixed pricing or zero area
-                                $product_min_val = $min_price;
-                                $product_max_val = $max_price;
+                                $min_total = $min_price * $room_area;
+                                $max_total = $max_price * $room_area;
+
+                                $product['min_price_total'] = $min_total;
+                                $product['max_price_total'] = $max_total;
+                                $room_min_total += $min_total;
+                                $room_max_total += $max_total;
+                            } else {
+                                // Fixed pricing - already rounded above
+                                $product['min_price_total'] = $min_price;
+                                $product['max_price_total'] = $max_price;
+                                $room_min_total += $min_price;
+                                $room_max_total += $max_price;
                             }
                         } elseif (isset($product['min_price_total']) && isset($product['max_price_total'])) {
-                            // Use pre-calculated totals if unit prices aren't available
-                            $product_min_val = floatval($product['min_price_total']); // Markup application removed?
-                            $product_max_val = floatval($product['max_price_total']); // Re-add if needed
+                            // Round the totals
+                            $min_total = $product['min_price_total'];
+                            $max_total = $product['max_price_total'];
+
+                            $room_min_total += $min_total;
+                            $room_max_total += $max_total;
+
+                            // Update the product totals with the recalculated values
+                            $product['min_price_total'] = $min_total;
+                            $product['max_price_total'] = $max_total;
                         }
-
-                        // Store calculated totals back into the product array
-                        $product['min_price_total'] = $product_min_val;
-                        $product['max_price_total'] = $product_max_val;
-
-                        // Add main product totals to room totals
-                        $room_min_total += $product_min_val;
-                        $room_max_total += $product_max_val;
 
                         // Calculate additional products prices
                         if (isset($product['additional_products']) && is_array($product['additional_products'])) {
-                            foreach ($product['additional_products'] as &$additional_product) { // Use reference
-                                $add_product_id = isset($additional_product['id']) ? intval($additional_product['id']) : 0;
-                                $add_pricing_method = isset($additional_product['pricing_method']) ? $additional_product['pricing_method'] : $pricing_method; // Default to main product's method
+                            foreach ($product['additional_products'] as &$additional_product) {
+                                // Get additional product pricing method
+                                $add_product_id = isset($additional_product['id']) ? $additional_product['id'] : 0;
+                                $add_pricing_method = isset($additional_product['pricing_method']) ?
+                                    $additional_product['pricing_method'] : $pricing_method;
 
-                                // Determine pricing method for additional product if not set
                                 if ($add_product_id > 0 && !isset($additional_product['pricing_method'])) {
+                                    // Get the pricing method from rules if not already set
                                     $add_product_categories = wp_get_post_terms($add_product_id, 'product_cat', ['fields' => 'ids']);
-                                    if (!is_wp_error($add_product_categories) && !empty($add_product_categories)) {
-                                        foreach ($pricing_rules as $rule) {
-                                            if (isset($rule['categories']) && is_array($rule['categories']) && !empty(array_intersect($add_product_categories, $rule['categories']))) {
+
+                                    // Check rules for matching categories
+                                    foreach ($pricing_rules as $rule) {
+                                        if (isset($rule['categories']) && is_array($rule['categories'])) {
+                                            $matching_categories = array_intersect($add_product_categories, $rule['categories']);
+                                            if (!empty($matching_categories)) {
                                                 $add_pricing_method = isset($rule['pricing_method']) ? $rule['pricing_method'] : 'sqm';
                                                 break;
                                             }
                                         }
                                     }
+
+                                    // Store the pricing method in the additional product data
                                     $additional_product['pricing_method'] = $add_pricing_method;
                                 }
 
-                                // Calculate additional product totals
-                                $add_min_val = 0;
-                                $add_max_val = 0;
                                 if (isset($additional_product['min_price']) && isset($additional_product['max_price'])) {
-                                    $add_min_price = floatval($additional_product['min_price']);
-                                    $add_max_price = floatval($additional_product['max_price']);
+                                    // Apply markup adjustment
+//                                    $add_min_price = floatval($additional_product['min_price']) * (1 - ($default_markup / 100));
+//                                    $add_max_price = floatval($additional_product['max_price']) * (1 + ($default_markup / 100));
+
+                                    // Round the unit prices
+                                    $add_min_price = $additional_product['min_price'];
+                                    $add_max_price = $additional_product['max_price'];
+
+                                    // Calculate based on pricing method
                                     if ($add_pricing_method === 'sqm' && $room_area > 0) {
-                                        $add_min_val = $add_min_price * $room_area;
-                                        $add_max_val = $add_max_price * $room_area;
+                                        $add_min_total = $add_min_price * $room_area;
+                                        $add_max_total = $add_max_price * $room_area;
+
+                                        $additional_product['min_price_total'] = $add_min_total;
+                                        $additional_product['max_price_total'] = $add_max_total;
+                                        $room_min_total += $add_min_total;
+                                        $room_max_total += $add_max_total;
                                     } else {
-                                        $add_min_val = $add_min_price;
-                                        $add_max_val = $add_max_price;
+                                        // Fixed pricing - already rounded above
+                                        $additional_product['min_price_total'] = $add_min_price;
+                                        $additional_product['max_price_total'] = $add_max_price;
+                                        $room_min_total += $add_min_price;
+                                        $room_max_total += $add_max_price;
                                     }
                                 } elseif (isset($additional_product['min_price_total']) && isset($additional_product['max_price_total'])) {
-                                    $add_min_val = floatval($additional_product['min_price_total']);
-                                    $add_max_val = floatval($additional_product['max_price_total']);
+                                    // Round the totals
+                                    $add_min_total = $additional_product['min_price_total'];
+                                    $add_max_total = $additional_product['max_price_total'];
+
+                                    $room_min_total += $add_min_total;
+                                    $room_max_total += $add_max_total;
+
+                                    // Update with rounded values
+                                    $additional_product['min_price_total'] = $add_min_total;
+                                    $additional_product['max_price_total'] = $add_max_total;
                                 }
-
-                                // Store calculated totals back into the additional product array
-                                $additional_product['min_price_total'] = $add_min_val;
-                                $additional_product['max_price_total'] = $add_max_val;
-
-                                // Add additional product totals to room totals
-                                $room_min_total += $add_min_val;
-                                $room_max_total += $add_max_val;
-
-                            } // End foreach additional_product
-                            unset($additional_product); // Unset reference
-                        } // End if additional_products exist
-                    } // End foreach product
-                    unset($product); // Unset reference
-                } // End if room products exist
-
-                // Store calculated room totals back into the $room array (which is a reference)
-                $room['min_total'] = $room_min_total;
-                $room['max_total'] = $room_max_total;
-
-                // Add room totals to estimate totals
-                $estimate_min_total += $room_min_total;
-                $estimate_max_total += $room_max_total;
-
-            } // End foreach room
-            unset($room); // Unset reference
-        } // End if estimate rooms exist
-        // --- End: Calculation Logic ---
-
-        // Store calculated estimate totals back into the $estimate array
-        $estimate['min_total'] = $estimate_min_total;
-        $estimate['max_total'] = $estimate_max_total;
-
-        // SAVE the updated $estimate array back to the session via the SessionHandler
-        // Assumes you have added updateEstimateData() method to SessionHandler
-        if (!$session->updateEstimateData($estimate_id, $estimate)) {
-            error_log("Product Estimator (AjaxHandler::updateTotals): Failed to save updated totals for estimate ID '{$estimate_id}' via SessionHandler.");
-        } else {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Product Estimator (AjaxHandler::updateTotals): Successfully updated totals for estimate ID '{$estimate_id}'.");
-            }
-        }
-    } // End updateTotals method
-
-
-    /**
-     * AJAX handler to generate and return suggested products for a room.
-     * MODIFIED: Uses local SessionHandler instance and relies on ensureSessionStarted().
-     *
-     * @since 1.0.0
-     * @since 1.1.0 Modified to use ProductAdditionsFrontend::get_suggestions_for_room()
-     * @since x.x.x Refactored for lazy session loading.
-     */
-    public function generateSuggestions() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-        $estimate_id = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : null;
-        $room_id = isset($_POST['room_id']) ? sanitize_text_field($_POST['room_id']) : null;
-        $features = product_estimator_features(); // Get feature flags
-
-        if (!$features->suggested_products_enabled) {
-            wp_send_json_success([
-                'suggestions' => [],
-                'estimate_id' => $estimate_id,
-                'room_id' => $room_id,
-                'message' => sprintf(__('Suggestions are disabled.', 'product-estimator'))
-            ]);
-        }
-
-        // --- ENHANCED LOGGING START ---
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('--- generateSuggestions AJAX START ---');
-            error_log('Raw $_POST data: ' . print_r($_POST, true));
-            error_log('Nonce check passed.');
-        }
-        // --- ENHANCED LOGGING END ---
-
-        // Get estimate_id, room_id, and room_products from POST data
-
-        $room_products_json = isset($_POST['room_products']) ? stripslashes($_POST['room_products']) : '[]'; // Get JSON string, default to empty array JSON
-
-        // Decode the JSON string into a PHP array
-        $room_products = json_decode($room_products_json, true);
-
-        // --- ENHANCED LOGGING START ---
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Processed estimate_id: " . ($estimate_id === null ? 'null' : "'{$estimate_id}'"));
-            error_log("Processed room_id: " . ($room_id === null ? 'null' : "'{$room_id}'"));
-            error_log("Decoded room_products (first 5): " . print_r(array_slice($room_products, 0, 5), true)); // Log first few products
-            error_log("Room products count: " . count($room_products));
-        }
-        // --- ENHANCED LOGGING END ---
-
-        // Validate inputs
-        if ($estimate_id === null || $estimate_id === '' || $room_id === null || $room_id === '') {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('generateSuggestions: Missing estimate_id or room_id.');
-                error_log('--- generateSuggestions AJAX END (Validation Failed) ---');
-            }
-            wp_send_json_error(['message' => __('Missing estimate or room ID.', 'product-estimator')]);
-            return;
-        }
-
-        // Validate room_products array
-        if (!is_array($room_products)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('generateSuggestions: room_products is not a valid array after JSON decode.');
-                error_log('Raw room_products_json: ' . $room_products_json);
-                error_log('--- generateSuggestions AJAX END (Invalid Products Data) ---');
-            }
-            wp_send_json_error(['message' => __('Invalid product data received.', 'product-estimator')]);
-            return;
-        }
-
-        $products_in_room = $room_products;
-
-        if (empty($products_in_room)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("generateSuggestions: Passed room_products array is empty. No suggestions generated.");
-                error_log('--- generateSuggestions AJAX END (Empty Products Array) ---');
-            }
-            wp_send_json_success([
-                'suggestions' => [],
-                'message' => __('No products in room, no suggestions generated.', 'product-estimator')
-            ]);
-            return;
-        }
-
-        try {
-            // Get all product IDs currently in this room to avoid suggesting them
-            $room_product_ids = [];
-            foreach ($products_in_room as $product) {
-                if (isset($product['id']) && !empty($product['id']) && (!isset($product['type']) || $product['type'] !== 'note')) {
-                    $room_product_ids[] = intval($product['id']);
-                }
-                if (isset($product['additional_products']) && is_array($product['additional_products'])) {
-                    foreach($product['additional_products'] as $additional_product) {
-                        if (isset($additional_product['id']) && !empty($additional_product['id']) && (!isset($additional_product['type']) || $additional_product['type'] !== 'note')) {
-                            $room_product_ids[] = intval($additional_product['id']);
-                        }
-                    }
-                }
-            }
-            $room_product_ids = array_unique($room_product_ids);
-
-            $suggestions = [];
-
-            // Ensure ProductAdditionsFrontend class is loaded
-            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\ProductAdditionsFrontend')) {
-                $product_additions_frontend_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-product-additions-frontend.php';
-                if (file_exists($product_additions_frontend_path)) {
-                    require_once $product_additions_frontend_path;
-                } else {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('generateSuggestions: ProductAdditionsFrontend class file not found.');
-                        error_log('--- generateSuggestions AJAX END (Class Not Found) ---');
-                    }
-                    wp_send_json_error(['message' => __('Suggestion generation module not available.', 'product-estimator')]);
-                    return;
-                }
-            }
-
-            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-
-            // Determine room area (needed for pricing suggestions)
-            $room_area = 0;
-            if (!empty($products_in_room)) {
-                $first_product_with_area = reset($products_in_room);
-                if (isset($first_product_with_area['room_area'])) {
-                    $room_area = floatval($first_product_with_area['room_area']);
-                } else {
-                    // Fallback: Try to get room dimensions from session
-                    $session = SessionHandler::getInstance(); // Get session instance ONLY if needed for fallback
-                    $session_room = $session->getRoom($estimate_id, $room_id); // This will ensure session is started if needed
-                    if ($session_room && isset($session_room['width']) && isset($session_room['length'])) {
-                        $room_area = floatval($session_room['width']) * floatval($session_room['length']);
-                    }
-                }
-            }
-
-            // Use the get_suggestions_for_room method
-            $unique_raw_suggestions = $product_additions_manager->get_suggestions_for_room($products_in_room, $room_area); // Pass room_area here
-
-            // Filter out products already in the room and format for frontend
-            foreach ($unique_raw_suggestions as $suggestion_id) {
-                if (in_array(intval($suggestion_id), $room_product_ids)) {
-                    continue;
-                }
-
-                $product_obj = wc_get_product($suggestion_id);
-                if ($product_obj) {
-                    // --- Start: Replicated logic for pricing and formatting ---
-                    $pricing_method = 'sqm'; // Default
-                    $pricing_rules = get_option('product_estimator_pricing_rules', []);
-                    $product_categories = wp_get_post_terms($suggestion_id, 'product_cat', ['fields' => 'ids']);
-                    if (!is_wp_error($product_categories)) {
-                        foreach ($pricing_rules as $rule) {
-                            if (isset($rule['categories']) && is_array($rule['categories']) && !empty(array_intersect($product_categories, $rule['categories']))) {
-                                $pricing_method = isset($rule['pricing_method']) ? $rule['pricing_method'] : 'sqm';
-                                break;
                             }
                         }
                     }
+                }
 
-                    if (function_exists('product_estimator_calculate_total_price_with_additions')) {
-                        $price_data = product_estimator_calculate_total_price_with_additions($suggestion_id, $room_area);
-                        $min_total = $price_data['min_total'];
-                        $max_total = $price_data['max_total'];
-                        $has_auto_add = count($price_data['breakdown']) > 1;
+                // Store room totals
+                $room['min_total'] = $room_min_total;
+                $room['max_total'] = $room_max_total;
 
-                        $suggestions[intval($suggestion_id)] = [
-                            'id' => intval($suggestion_id),
-                            'name' => $product_obj->get_name(),
-                            'image' => wp_get_attachment_image_url($product_obj->get_image_id(), [300,300]) ?: '',
-                            'min_price_total' => $min_total,
-                            'max_price_total' => $max_total,
-                            'pricing_method' => $pricing_method,
-                            'has_auto_add' => $has_auto_add
-                        ];
-                    } else {
-                        // Fallback pricing
-                        if (defined('WP_DEBUG') && WP_DEBUG) {
-                            error_log('generateSuggestions: product_estimator_calculate_total_price_with_additions function not available.');
-                        }
-                        $suggestions[intval($suggestion_id)] = [
-                            'id' => intval($suggestion_id),
-                            'name' => $product_obj->get_name(),
-                            'image' => wp_get_attachment_image_url($product_obj->get_image_id(), [300,300]) ?: '',
-                            'min_price_total' => floatval($product_obj->get_price()),
-                            'max_price_total' => floatval($product_obj->get_price()),
-                            'pricing_method' => $pricing_method,
-                            'has_auto_add' => false
-                        ];
+                // Add to estimate totals
+                $estimate_min_total += $room_min_total;
+                $estimate_max_total += $room_max_total;
+            }
+        }
+
+        // Store estimate totals
+        $estimates[$estimate_id]['min_total'] = $estimate_min_total;
+        $estimates[$estimate_id]['max_total'] = $estimate_max_total;
+    }
+    /**
+     * This version doesn't store in session, just returns the generated suggestions
+     */
+    private function generateSuggestions($room_products) {
+        $suggestions = array();
+
+        $product_additions_manager = Loader::get_product_additions_manager_module();
+
+        if ($product_additions_manager) {
+            // Get product categories
+            $product_categories = array();
+            foreach ($room_products as $product) {
+                // Skip notes
+                if (isset($product['type']) && $product['type'] === 'note') {
+                    continue;
+                }
+
+                if (isset($product['id']) && $product['id'] > 0) {
+                    $categories = wp_get_post_terms($product['id'], 'product_cat', array('fields' => 'ids'));
+                    if (is_array($categories)) {
+                        $product_categories = array_merge($product_categories, $categories);
                     }
-                    // --- End: Replicated logic ---
                 }
             }
 
-            $suggestions = array_values($suggestions); // Convert to indexed array
+            // Remove duplicates
+            $product_categories = array_unique($product_categories);
 
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('generateSuggestions: Sending success response with ' . count($suggestions) . ' suggestions.');
-                error_log('--- generateSuggestions AJAX END (Success) ---');
+            // Check if any categories have suggestion relationships
+            $has_suggestion_relationships = false;
+            foreach ($product_categories as $category_id) {
+                $category_suggestions = $product_additions_manager->get_suggested_products_for_category($category_id);
+                if (!empty($category_suggestions)) {
+                    $has_suggestion_relationships = true;
+                    break;
+                }
             }
-            wp_send_json_success([
-                'suggestions' => $suggestions,
-                'estimate_id' => $estimate_id,
-                'room_id' => $room_id,
-                'message' => sprintf(__('%d suggestions generated.', 'product-estimator'), count($suggestions))
-            ]);
 
-        } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Exception in generateSuggestions: ' . $e->getMessage());
-                error_log('Stack trace: ' . $e->getTraceAsString());
-                error_log('--- generateSuggestions AJAX END (Exception) ---');
+            // Only generate suggestions if there are relationship rules
+            if ($has_suggestion_relationships) {
+                // Generate suggestions
+                $suggestions = $product_additions_manager->get_suggestions_for_room($room_products);
             }
-            wp_send_json_error([
-                'message' => __('An error occurred while generating suggestions.', 'product-estimator'),
-                'error' => $e->getMessage()
-            ]);
         }
-    }
 
+        return $suggestions;
+    }
 
     /**
      * Helper method to prepare product data and add to room
@@ -1898,12 +1218,10 @@ class AjaxHandler {
      * @param float $room_length Room length (optional, will use existing room data if not provided)
      * @return array Result with status and product data
      */
-    public function prepareAndAddProductToRoom($product_id, $estimate_id, $room_id, $room_width = null, $room_length = null) {
+    private function prepareAndAddProductToRoom($product_id, $estimate_id, $room_id, $room_width = null, $room_length = null) {
         try {
             // First, check if this product already exists in the room
-            $session = SessionHandler::getInstance();
-
-            $estimate = $session->getEstimate($estimate_id);
+            $estimate = $this->session->getEstimate($estimate_id);
 
             if ($estimate && isset($estimate['rooms'][$room_id]['products'])) {
                 foreach ($estimate['rooms'][$room_id]['products'] as $existing_product) {
@@ -1941,7 +1259,7 @@ class AjaxHandler {
                 $room_area = (float)$room_width * (float)$room_length;
             } else {
                 // Get room dimensions from session
-                $estimates = $session->getEstimates();
+                $estimates = $this->session->getEstimates();
                 if (isset($estimates[$estimate_id]['rooms'][$room_id])) {
                     $room_data = $estimates[$estimate_id]['rooms'][$room_id];
                     if (isset($room_data['width']) && isset($room_data['length'])) {
@@ -2093,7 +1411,7 @@ class AjaxHandler {
             }
 
             // Add product to room
-            $success = $session->addProductToRoom($estimate_id, $room_id, $product_data);
+            $success = $this->session->addProductToRoom($estimate_id, $room_id, $product_data);
 
             if (!$success) {
                 return [
@@ -2322,7 +1640,7 @@ class AjaxHandler {
         ob_start();
 
         // Include the form partial
-        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-estimate-selection-form.php';
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-estimate-selection-form.php';
 
         // Get HTML
         $html = ob_get_clean();
@@ -2339,7 +1657,7 @@ class AjaxHandler {
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
         ob_start();
-        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-new-estimate-form.php';
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-new-estimate-form.php';
         $html = ob_get_clean();
 
         wp_send_json_success(array(
@@ -2354,7 +1672,7 @@ class AjaxHandler {
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
         ob_start();
-        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-new-room-form.php';
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-new-room-form.php';
         $html = ob_get_clean();
 
         wp_send_json_success(array(
@@ -2369,7 +1687,7 @@ class AjaxHandler {
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
         ob_start();
-        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-room-selection-form.php';
+        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-room-selection-form.php';
         $html = ob_get_clean();
 
         wp_send_json_success(array(
@@ -2378,14 +1696,19 @@ class AjaxHandler {
     }
 
     /**
-     * AJAX handler to get similar products.
-     * This remains for any direct calls but is not used by addProductToRoom anymore for its primary similar product fetching.
-     * It can still be used by ModalManager.js if it needs to refresh similar products independently.
+     * Add these methods to the existing AjaxHandler class in class-ajax-handler.php
+     */
+
+    /**
+     * Handle getting similar products for display in the estimator
+     * This method should be added to the AjaxHandler class
      */
     public function get_similar_products() {
+        // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get parameters
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
-        $room_area = isset($_POST['room_area']) ? floatval($_POST['room_area']) : 0; // Get room_area
         $limit = isset($_POST['limit']) ? intval($_POST['limit']) : 5;
 
         if (!$product_id) {
@@ -2393,244 +1716,252 @@ class AjaxHandler {
             return;
         }
 
-        // Use the helper function to get the data
-        $similar_products_data = $this->fetch_and_format_similar_products($product_id, $room_area, $limit);
 
-        wp_send_json_success([
-            'products' => $similar_products_data, // Ensure key is 'products' for consistency with frontend
-            'source_product_id' => $product_id,
-            'message' => sprintf(__('%d similar products found.', 'product-estimator'), count($similar_products_data))
-        ]);
+        try {
+            // Initialize the Similar Products module
+            $similar_products_module = new SimilarProductsFrontend(
+                'product-estimator',
+                PRODUCT_ESTIMATOR_VERSION
+            );
+
+            // Get similar products
+            $similar_products = $similar_products_module->get_similar_products_for_display($product_id, $limit);
+
+            wp_send_json_success([
+                'products' => $similar_products,
+                'source_product_id' => $product_id
+            ]);
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => __('Error retrieving similar products', 'product-estimator'),
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
-     * Handle replacing a product in a room with another product.
-     * MODIFIED: Uses local SessionHandler instance, avoids direct $_SESSION access,
-     * uses local $session variable instead of removed $this->session.
+     * Handle replacing a product in a room with another product
+     * Comprehensive fix for multiple consecutive upgrades
      */
     public function replaceProductInRoom() {
-        // Verify nonce security check
+        // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
-        // Validate required inputs from the POST request
+        // Validate inputs
         if (!isset($_POST['estimate_id']) || !isset($_POST['room_id']) ||
             !isset($_POST['product_id']) || !isset($_POST['replace_product_id'])) {
             wp_send_json_error([
-                'message' => __('Required parameters missing (estimate_id, room_id, product_id, replace_product_id)', 'product-estimator')
+                'message' => __('Required parameters missing', 'product-estimator')
             ]);
             return;
         }
 
-        // Sanitize and type-cast input parameters
         $estimate_id = sanitize_text_field($_POST['estimate_id']);
         $room_id = sanitize_text_field($_POST['room_id']);
-        $new_product_id = intval($_POST['product_id']); // ID of the product to add
-        $old_product_id = intval($_POST['replace_product_id']); // ID of the product to remove
+        $new_product_id = intval($_POST['product_id']);
+        $old_product_id = intval($_POST['replace_product_id']);
         $replace_type = isset($_POST['replace_type']) ? sanitize_text_field($_POST['replace_type']) : 'main';
-        $parent_product_id_from_post = isset($_POST['parent_product_id']) ? sanitize_text_field($_POST['parent_product_id']) : null;
-
-        // Basic validation for IDs
-        if ($new_product_id <= 0 || $old_product_id <= 0) {
-            wp_send_json_error(['message' => __('Invalid product IDs provided.', 'product-estimator')]);
-            return;
-        }
 
         try {
-            // Get SessionHandler instance locally within the method
-            $session = SessionHandler::getInstance();
-
-            // Fetch the current estimate data using the SessionHandler
-            // This ensures the session is started correctly if needed.
-            $estimate = $session->getEstimate($estimate_id);
-
-            if (!$estimate) {
+            // Direct session access for debugging
+            if (!isset($_SESSION['product_estimator']['estimates'][$estimate_id])) {
                 wp_send_json_error(['message' => __('Estimate not found in session', 'product-estimator')]);
                 return;
             }
 
-            // Ensure the target room exists within the fetched estimate data
-            if (!isset($estimate['rooms'][$room_id])) {
+            if (!isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id])) {
                 wp_send_json_error(['message' => __('Room not found in this estimate', 'product-estimator')]);
                 return;
             }
 
-            // --- Logic Branch: Replacing an 'additional_product' ---
+            // If replacing an additional product, handle differently
             if ($replace_type === 'additional_products') {
-                // Validate parent_product_id is provided for this type
-                if ($parent_product_id_from_post === null || intval($parent_product_id_from_post) <= 0) {
-                    wp_send_json_error(['message' => __('Parent product ID is required and must be valid when replacing an additional product.', 'product-estimator')]);
-                    return;
-                }
-                $parent_product_id = intval($parent_product_id_from_post);
+                $products_found = false;
+                $parent_id = null;
+                $parent_index = null;
+                $add_index = null;
 
-                $parent_index = null; // Index of the main product in the room's products array
-                $add_index = null;    // Index of the additional product to replace
+                // Search through all products and their additional products
+                foreach ($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['products'] as $p_index => $product) {
+                    if (!isset($product['additional_products']) || !is_array($product['additional_products'])) {
+                        continue;
+                    }
 
-                // Find the parent product and the specific additional product index
-                if (isset($estimate['rooms'][$room_id]['products']) && is_array($estimate['rooms'][$room_id]['products'])) {
-                    foreach ($estimate['rooms'][$room_id]['products'] as $p_idx => $main_product) {
-                        if (isset($main_product['id']) && intval($main_product['id']) === $parent_product_id) {
-                            if (isset($main_product['additional_products']) && is_array($main_product['additional_products'])) {
-                                foreach ($main_product['additional_products'] as $a_idx => $add_prod) {
-                                    // Direct ID match or check replacement chain
-                                    if ((isset($add_prod['id']) && intval($add_prod['id']) === $old_product_id) ||
-                                        (isset($add_prod['replacement_chain']) && is_array($add_prod['replacement_chain']) && in_array($old_product_id, $add_prod['replacement_chain']))) {
-                                        $parent_index = $p_idx;
-                                        $add_index = $a_idx;
-                                        break 2; // Found it, exit both loops
-                                    }
-                                }
-                            }
+                    foreach ($product['additional_products'] as $a_index => $add_product) {
+                        // Check for a match with the old_product_id
+                        if (isset($add_product['id']) && intval($add_product['id']) === $old_product_id) {
+                            $products_found = true;
+                            $parent_id = $product['id'];
+                            $parent_index = $p_index;
+                            $add_index = $a_index;
+                            break 2;
+                        }
+
+                        // CRITICAL FIX: Also check for a match in the replacement_chain if it exists
+                        if (isset($add_product['replacement_chain']) && in_array($old_product_id, $add_product['replacement_chain'])) {
+                            $products_found = true;
+                            $parent_id = $product['id'];
+                            $parent_index = $p_index;
+                            $add_index = $a_index;
+                            break 2;
                         }
                     }
                 }
 
-                // If the additional product wasn't found
-                if ($parent_index === null || $add_index === null) {
+                if (!$products_found) {
                     wp_send_json_error([
-                        'message' => __('Additional product to replace not found within the specified parent product.', 'product-estimator'),
-                        'debug' => ['old_product_id' => $old_product_id, 'parent_product_id' => $parent_product_id]
+                        'message' => __('Additional product not found', 'product-estimator'),
+                        'debug' => [
+                            'old_product_id' => $old_product_id,
+                            'new_product_id' => $new_product_id,
+                            'replace_type' => $replace_type
+                        ]
                     ]);
                     return;
                 }
 
-                // Get room area for pricing
-                $room_width = isset($estimate['rooms'][$room_id]['width']) ? floatval($estimate['rooms'][$room_id]['width']) : 0;
-                $room_length = isset($estimate['rooms'][$room_id]['length']) ? floatval($estimate['rooms'][$room_id]['length']) : 0;
-                $room_area = ($room_width > 0 && $room_length > 0) ? ($room_width * $room_length) : 0;
+                // Calculate room area
+                $room_width = isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['width']) ?
+                    floatval($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['width']) : 0;
+                $room_length = isset($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['length']) ?
+                    floatval($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['length']) : 0;
+                $room_area = $room_width * $room_length;
 
-                // Get data for the NEW product that will replace the old one
-                $new_product_obj = wc_get_product($new_product_id);
-                if (!$new_product_obj) {
-                    wp_send_json_error(['message' => __('New replacement product not found', 'product-estimator')]);
+                // Get new product data
+                $product = wc_get_product($new_product_id);
+                if (!$product) {
+                    wp_send_json_error(['message' => __('New product not found', 'product-estimator')]);
                     return;
                 }
 
-                // Get pricing data for the new product
-                $pricing_data = product_estimator_get_product_price($new_product_id, $room_area, false); // Don't apply markup here
+                // Get pricing data
+                $pricing_data = product_estimator_get_product_price($new_product_id, $room_area, false);
 
-                // Prepare the data structure for the new additional product
-                $existing_add_product = $estimate['rooms'][$room_id]['products'][$parent_index]['additional_products'][$add_index];
-                $replacement_chain = isset($existing_add_product['replacement_chain']) ? $existing_add_product['replacement_chain'] : [];
-                if (!in_array($existing_add_product['id'], $replacement_chain)) { // Add the ID of the product being replaced to the chain
-                    $replacement_chain[] = $existing_add_product['id'];
+                // Get existing product data to maintain replacement chain
+                $existing_product = $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['products'][$parent_index]['additional_products'][$add_index];
+
+                // Initialize or update replacement chain
+                $replacement_chain = isset($existing_product['replacement_chain']) ? $existing_product['replacement_chain'] : [];
+
+                // Add current ID to chain if not already in it
+                if (!in_array($existing_product['id'], $replacement_chain)) {
+                    $replacement_chain[] = $existing_product['id'];
                 }
 
-                $new_add_product_data = [
+                // Prepare product data
+                $product_data = [
                     'id' => $new_product_id,
-                    'name' => $new_product_obj->get_name(),
-                    'image' => wp_get_attachment_image_url($new_product_obj->get_image_id(), 'thumbnail'),
+                    'name' => $product->get_name(),
+                    'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
                     'min_price' => $pricing_data['min_price'],
                     'max_price' => $pricing_data['max_price'],
                     'pricing_method' => $pricing_data['pricing_method'],
                     'pricing_source' => $pricing_data['pricing_source'],
-                    'replacement_chain' => $replacement_chain // Store the updated chain
+                    'replacement_chain' => $replacement_chain // Store the full chain of replacements
                 ];
-                // Calculate totals based on pricing method
+
+                // Calculate price totals
                 if ($pricing_data['pricing_method'] === 'sqm' && $room_area > 0) {
-                    $new_add_product_data['min_price_total'] = $pricing_data['min_price'] * $room_area;
-                    $new_add_product_data['max_price_total'] = $pricing_data['max_price'] * $room_area;
+                    $min_total = $pricing_data['min_price'] * $room_area;
+                    $max_total = $pricing_data['max_price'] * $room_area;
+
+                    $product_data['min_price_total'] = $min_total;
+                    $product_data['max_price_total'] = $max_total;
                 } else {
-                    $new_add_product_data['min_price_total'] = $pricing_data['min_price'];
-                    $new_add_product_data['max_price_total'] = $pricing_data['max_price'];
+                    $product_data['min_price_total'] = $pricing_data['min_price'];
+                    $product_data['max_price_total'] = $pricing_data['max_price'];
                 }
 
-                // Directly modify the $estimate array (which was fetched from session)
-                $estimate['rooms'][$room_id]['products'][$parent_index]['additional_products'][$add_index] = $new_add_product_data;
+                // Update the additional product in session
+                $_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['products'][$parent_index]['additional_products'][$add_index] = $product_data;
 
-                // Save the entire modified estimate back to the session via SessionHandler
-                if (!$session->updateEstimateData($estimate_id, $estimate)) {
-                    wp_send_json_error(['message' => __('Failed to update estimate session data after replacing additional product.', 'product-estimator')]);
-                    return;
-                }
+               // Update totals after the replacement
+                $this->updateTotals($estimate_id);
 
-                // Recalculate and update totals for the estimate
-                $this->updateTotals($estimate_id); // This will use the data just saved to session
+                // Build response
+                $response_data = [
+                    'message' => __('Product replaced successfully', 'product-estimator'),
+                    'estimate_id' => $estimate_id,
+                    'room_id' => $room_id,
+                    'old_product_id' => $old_product_id,
+                    'new_product_id' => $new_product_id,
+                    'replace_type' => $replace_type,
+                    'parent_product_id' => $parent_id,
+                    'replacement_chain' => $replacement_chain // Send chain to client for tracking
+                ];
 
-                // Send success response
-                wp_send_json_success([
-                    'message' => __('Additional product replaced successfully', 'product-estimator'),
-                    'estimate_id' => $estimate_id, 'room_id' => $room_id,
-                    'old_product_id' => $old_product_id, 'new_product_id' => $new_product_id,
-                    'replace_type' => $replace_type, 'parent_product_id' => $parent_product_id,
-                    'replacement_chain' => $replacement_chain
-                ]);
-                return; // End processing for additional_products type
-
+                wp_send_json_success($response_data);
+                return;
             }
-            // --- Logic Branch: Replacing a 'main' product ---
             else {
-                $main_product_index = null;
+                // For main products, use the existing removeProductFromRoom and addProductToRoom methods
+                $main_product_found = false;
+                $product_index = null;
 
-                // Find the index of the main product to replace
-                if (isset($estimate['rooms'][$room_id]['products']) && is_array($estimate['rooms'][$room_id]['products'])) {
-                    foreach ($estimate['rooms'][$room_id]['products'] as $index => $product) {
-                        // Check it's a main product (no 'type' or type != 'note') and ID matches
-                        if ((!isset($product['type']) || $product['type'] !== 'note') && isset($product['id']) && intval($product['id']) === $old_product_id) {
-                            $main_product_index = $index;
-                            break;
-                        }
+                // Find the main product
+                foreach ($_SESSION['product_estimator']['estimates'][$estimate_id]['rooms'][$room_id]['products'] as $index => $product) {
+                    if (isset($product['id']) && intval($product['id']) === $old_product_id) {
+                        $main_product_found = true;
+                        $product_index = $index;
+                        break;
                     }
                 }
 
-                // If the main product wasn't found by ID
-                if ($main_product_index === null) {
+                if (!$main_product_found) {
                     wp_send_json_error([
-                        'message' => __('Main product to replace not found in this room', 'product-estimator'),
-                        'debug' => ['old_product_id' => $old_product_id, 'new_product_id' => $new_product_id]
+                        'message' => __('Product not found in this room', 'product-estimator'),
+                        'debug' => [
+                            'old_product_id' => $old_product_id,
+                            'new_product_id' => $new_product_id
+                        ]
                     ]);
                     return;
                 }
 
-                // Remove the old product using SessionHandler, passing the found index
-                $removed = $session->removeProductFromRoom($estimate_id, $room_id, $main_product_index);
+                // Remove the old product
+                $removed = $this->session->removeProductFromRoom($estimate_id, $room_id, $product_index);
 
                 if (!$removed) {
-                    wp_send_json_error(['message' => __('Failed to remove old product from room via SessionHandler.', 'product-estimator')]);
+                    wp_send_json_error(['message' => __('Failed to remove old product from room', 'product-estimator')]);
                     return;
                 }
 
-                // Add the new product using the helper method (which now also uses SessionHandler)
-                // Pass room dimensions explicitly if available from the estimate data
-                $room_width = isset($estimate['rooms'][$room_id]['width']) ? floatval($estimate['rooms'][$room_id]['width']) : null;
-                $room_length = isset($estimate['rooms'][$room_id]['length']) ? floatval($estimate['rooms'][$room_id]['length']) : null;
+                // Add the new product
+                $result = $this->prepareAndAddProductToRoom($new_product_id, $estimate_id, $room_id);
 
-                $add_result = $this->prepareAndAddProductToRoom($new_product_id, $estimate_id, $room_id, $room_width, $room_length);
-
-                // Check if adding the new product was successful
-                if (!$add_result['success']) {
-                    // Adding the new product failed. Consider logging the reason.
-                    // It's tricky to automatically roll back the removal, so report the error.
+                if (!$result['success']) {
                     wp_send_json_error([
-                        'message' => $add_result['message'] ?? __('Failed to add the new product after removing the old one.', 'product-estimator'),
-                        'debug' => $add_result['debug'] ?? null
+                        'message' => $result['message'],
+                        'debug' => $result['debug'] ?? null
                     ]);
                     return;
                 }
 
-                // Note: updateTotals is called within prepareAndAddProductToRoom, so it should reflect the final state.
-
-                // Send success response
-                wp_send_json_success([
+                // Build response
+                $response_data = [
                     'message' => __('Product replaced successfully', 'product-estimator'),
-                    'estimate_id' => $estimate_id, 'room_id' => $room_id,
-                    'old_product_id' => $old_product_id, 'new_product_id' => $new_product_id,
-                    'replace_type' => $replace_type // Confirm type was 'main'
-                ]);
-            } // End 'main' product replacement logic
+                    'estimate_id' => $estimate_id,
+                    'room_id' => $room_id,
+                    'old_product_id' => $old_product_id,
+                    'new_product_id' => $new_product_id,
+                    'replace_type' => $replace_type
+                ];
+
+                wp_send_json_success($response_data);
+            }
 
         } catch (\Exception $e) {
-            // Catch any unexpected exceptions
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log("Exception in replaceProductInRoom: " . $e->getMessage());
                 error_log("Stack trace: " . $e->getTraceAsString());
             }
+
             wp_send_json_error([
                 'message' => __('An error occurred while processing your request', 'product-estimator'),
-                'error' => $e->getMessage() // Send error message only if WP_DEBUG is on?
+                'error' => $e->getMessage()
             ]);
         }
-    } // End replaceProductInRoom method
+    }
 
 
     /**
@@ -2866,7 +2197,7 @@ class AjaxHandler {
         }
 
         // Initialize the settings module
-        $upgrades_module = new \RuDigital\ProductEstimator\Includes\Frontend\ProductUpgradesFrontend(
+        $upgrades_module = new ProductUpgradesFrontend(
             'product-estimator',
             PRODUCT_ESTIMATOR_VERSION
         );
@@ -2968,9 +2299,7 @@ class AjaxHandler {
 
         try {
             // Explicitly check if the estimate exists in session
-            $session = SessionHandler::getInstance();
-
-            $estimate = $session->getEstimate($estimate_id);
+            $estimate = $this->session->getEstimate($estimate_id);
             if (!$estimate) {
                 throw new \Exception(__('Estimate not found in session', 'product-estimator'));
             }
@@ -3015,52 +2344,43 @@ class AjaxHandler {
     }
 
     /**
-     * Check if customer has valid details set in session.
-     * MODIFIED: Uses CustomerDetails class which handles lazy session loading.
-     * Removed explicit session start.
+     * Check if customer has valid details set in session
+     * Add this to the AjaxHandler class in class-ajax-handler.php
+     */
+    /**
+     * Enhanced version of the check_customer_details method for AjaxHandler
+     * This now returns the full customer details object for better handling in JavaScript
      */
     public function check_customer_details() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
-        // Get estimate ID if provided (optional, used for fallback check)
+        // Get estimate ID if provided
         $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
 
         try {
-            // Initialize customer details manager.
-            // The constructor no longer starts the session.
-            // Session will only be started if getDetails() needs to load data.
-            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\CustomerDetails')) {
-                require_once dirname(__FILE__) . '/class-customer-details.php';
-            }
-            $customer_details_manager = new CustomerDetails(); // Instantiate
+            // Ensure session is started
+            $this->session->startSession();
 
-            // Get details - this will trigger ensureDetailsLoaded() inside CustomerDetails if needed
-            $customer_details = $customer_details_manager->getDetails(); // Returns [] if none or session fails
+            // Initialize customer details manager
+            $customer_details_manager = new CustomerDetails();
+            $customer_details = $customer_details_manager->getDetails();
+            $has_email = $customer_details_manager->hasEmail();
 
-            // Check specific fields
-            $has_email = $customer_details_manager->hasEmail(); // Checks loaded details
-            $has_name = !empty($customer_details['name']);
-            $has_phone = !empty($customer_details['phone']);
-            $has_postcode = !empty($customer_details['postcode']); // Assuming postcode is essential
+            // Check for name, email and phone
+            $has_name = isset($customer_details['name']) && !empty($customer_details['name']);
+            $has_phone = isset($customer_details['phone']) && !empty($customer_details['phone']);
 
-            // Fallback: If global details lack email, check the specific estimate's details
-            // This requires getting the SessionHandler instance directly here.
-            if (!$has_email && $estimate_id !== null) {
-                $session = SessionHandler::getInstance();
-                $estimate = $session->getEstimate($estimate_id); // This ensures session is started if needed
+            // If no email in global details, check the specific estimate
+            if (!$has_email && $estimate_id) {
+                $estimate = $this->session->getEstimate($estimate_id);
+                if ($estimate && isset($estimate['customer_details']['email']) && !empty($estimate['customer_details']['email'])) {
+                    $customer_details = $estimate['customer_details'];
+                    $has_email = true;
 
-                if ($estimate && isset($estimate['customer_details']) && is_array($estimate['customer_details'])) {
-                    $estimate_customer_details = $estimate['customer_details'];
-                    if (!empty($estimate_customer_details['email'])) {
-                        // If estimate has email, update flags based on estimate's data
-                        $has_email = true;
-                        $has_name = !empty($estimate_customer_details['name']);
-                        $has_phone = !empty($estimate_customer_details['phone']);
-                        $has_postcode = !empty($estimate_customer_details['postcode']);
-                        // Optionally update the main $customer_details variable to return the estimate-specific ones
-                        // $customer_details = $estimate_customer_details;
-                    }
+                    // Update name and phone flag based on estimate data
+                    $has_name = isset($customer_details['name']) && !empty($customer_details['name']);
+                    $has_phone = isset($customer_details['phone']) && !empty($customer_details['phone']);
                 }
             }
 
@@ -3068,16 +2388,14 @@ class AjaxHandler {
                 'has_email' => $has_email,
                 'has_name' => $has_name,
                 'has_phone' => $has_phone,
-                'has_postcode' => $has_postcode, // Added postcode check flag
-                'customer_details' => $customer_details // Return the details found (global or potentially estimate-specific if logic was added)
+                'customer_details' => $customer_details
             ]);
 
-        } catch (\Exception $e) {
-            // Catch potential errors during CustomerDetails instantiation or session handling
+        } catch (Exception $e) {
             error_log('Error checking customer details: ' . $e->getMessage());
             wp_send_json_error([
-                'message' => __('An error occurred while checking customer details.', 'product-estimator'),
-                'error_details' => $e->getMessage() // Optionally include details in debug mode
+                'message' => $e->getMessage(),
+                'error' => 'session_error'
             ]);
         }
     }
@@ -3102,9 +2420,7 @@ class AjaxHandler {
 
         try {
             // Get the estimate from session
-            $session = SessionHandler::getInstance();
-
-            $estimate = $session->getEstimate($estimate_id);
+            $estimate = $this->session->getEstimate($estimate_id);
 
             if (empty($estimate)) {
                 wp_send_json_error([
@@ -3131,279 +2447,18 @@ class AjaxHandler {
     }
 
     /**
-     * Handle AJAX request to email a copy of the estimate to the customer.
-     * Uses SessionHandler and the EstimateDbHandler trait methods.
-     * Calls the global product_estimator_get_customer_email() helper.
+     * Forward request_copy_estimate AJAX request to EstimateHandler
      */
     public function request_copy_estimate() {
-        // Verify nonce security check
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        // Get the estimate ID from the POST request
-        $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
-
-        // Validate estimate_id (allow '0')
-        if (!isset($estimate_id) || $estimate_id === '') {
+        // Check if EstimateHandler is available
+        if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\EstimateHandler')) {
+            $handler = new \RuDigital\ProductEstimator\Includes\EstimateHandler();
+            $handler->request_copy_estimate();
+        } else {
             wp_send_json_error([
-                'message' => __('Estimate ID is required', 'product-estimator')
-            ]);
-            return;
-        }
-        $session_estimate_id = (string)$estimate_id; // Use this for session lookups
-
-        try {
-            // Get SessionHandler instance
-            $session = SessionHandler::getInstance();
-
-            // Get the estimate data from the session
-            $estimate_session_data = $session->getEstimate($session_estimate_id);
-
-            if (!$estimate_session_data) {
-                // Maybe it's only in the DB? Try loading it.
-                // If estimate_id *is* the DB ID (e.g., from admin view)
-                if (ctype_digit($session_estimate_id)) {
-                    $db_id_to_load = intval($session_estimate_id);
-                    // Ensure it's loaded into session (returns session ID or null)
-                    $session_estimate_id = $this->ensureEstimateInSession($db_id_to_load);
-                    if ($session_estimate_id === null) {
-                        wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
-                        return;
-                    }
-                    $estimate_session_data = $session->getEstimate($session_estimate_id);
-                    if (!$estimate_session_data) { // Double check after loading attempt
-                        wp_send_json_error(['message' => __('Estimate could not be loaded into session', 'product-estimator')]);
-                        return;
-                    }
-                } else {
-                    wp_send_json_error(['message' => __('Estimate not found in session', 'product-estimator')]);
-                    return;
-                }
-            }
-
-            // Use the globally defined helper function to get the email
-            // Pass both the estimate data and the session ID for flexibility
-            $customer_email = product_estimator_get_customer_email($estimate_session_data, $session_estimate_id);
-
-            // If no email found, return error code for frontend handling
-            if (empty($customer_email)) {
-                wp_send_json_error([
-                    'message' => __('No customer email found for this estimate.', 'product-estimator'),
-                    'code' => 'no_email' // Frontend can check this code
-                ]);
-                return;
-            }
-
-            // Check notification settings if PDF should be included
-            $options = get_option('product_estimator_settings', array());
-            $include_pdf = isset($options['notification_request_copy_include_pdf'])
-                ? (bool)$options['notification_request_copy_include_pdf']
-                : true; // Default true
-
-            $pdf_path = '';
-            $tmp_file = null;
-            $estimate_data_for_pdf = $estimate_session_data; // Use session data by default
-
-            // If including PDF, ensure estimate is saved and get DB data for PDF generation
-            if ($include_pdf) {
-                $db_id = $this->getEstimateDbId($estimate_session_data); // Use trait method
-
-                // If not saved yet, save it now
-                if (!$db_id) {
-                    $customer_details_for_save = $estimate_session_data['customer_details'] ?? [];
-                    $notes_for_save = $estimate_session_data['notes'] ?? '';
-                    $db_id = $this->storeOrUpdateEstimate($session_estimate_id, $customer_details_for_save, $notes_for_save); // Use trait method
-                }
-
-                if (!$db_id) {
-                    wp_send_json_error(['message' => __('Failed to save estimate before generating PDF.', 'product-estimator')]);
-                    return;
-                }
-
-                // Fetch potentially updated data from DB for the PDF
-                $estimate_data_for_pdf = $this->getEstimateFromDb($db_id); // Use trait method
-                if (!$estimate_data_for_pdf) {
-                    wp_send_json_error(['message' => __('Failed to retrieve estimate data from database for PDF generation.', 'product-estimator')]);
-                    return;
-                }
-
-                // Generate PDF
-                if (!class_exists(PDFGenerator::class)) {
-                    wp_send_json_error(['message' => __('PDF Generation module not available.', 'product-estimator')]);
-                    return;
-                }
-                $pdf_generator = new PDFGenerator();
-                $pdf_content = $pdf_generator->generate_pdf($estimate_data_for_pdf); // Use DB data for PDF
-
-                if (empty($pdf_content)) {
-                    wp_send_json_error(['message' => __('Failed to generate PDF content.', 'product-estimator')]);
-                    return;
-                }
-
-                // Save PDF to a temporary file
-                $tmp_file = sys_get_temp_dir() . '/estimate-' . $db_id . "-" . uniqid() . '.pdf';
-                if (file_put_contents($tmp_file, $pdf_content) === false) {
-                    error_log("Product Estimator: Failed to write temporary PDF file to {$tmp_file}");
-                    wp_send_json_error(['message' => __('Error saving PDF for email attachment.', 'product-estimator')]);
-                    return;
-                }
-                $pdf_path = $tmp_file;
-            }
-
-            // Send email using the private helper method within this class
-            // Pass the data used for the PDF (from DB if generated) or session data if no PDF
-            $email_sent = $this->send_estimate_email($estimate_data_for_pdf, $customer_email, $pdf_path);
-
-            // Clean up temporary PDF file if it was created
-            if ($tmp_file && file_exists($tmp_file)) {
-                @unlink($tmp_file);
-            }
-
-            // Check if email sending was successful
-            if (!$email_sent) {
-                wp_send_json_error(['message' => __('Error sending estimate email.', 'product-estimator')]);
-                return;
-            }
-
-            // Send success response
-            wp_send_json_success([
-                'message' => __('Estimate has been emailed to', 'product-estimator') . ' ' . esc_html($customer_email),
-                'email' => $customer_email, // Return email for confirmation
-                'pdf_included' => ($include_pdf && !empty($pdf_path)) // Confirm if PDF was actually attached
-            ]);
-
-        } catch (\Exception $e) {
-            // Log the detailed error on the server
-            error_log("Product Estimator Error in request_copy_estimate: " . $e->getMessage() . "\nStack Trace:\n" . $e->getTraceAsString());
-            // Send a generic error message to the client
-            wp_send_json_error([
-                'message' => __('An error occurred while processing your request.', 'product-estimator'),
-                // Optionally include error details only if WP_DEBUG is on
-                // 'error_details' => (defined('WP_DEBUG') && WP_DEBUG) ? $e->getMessage() : ''
+                'message' => __('Request Copy functionality is unavailable', 'product-estimator')
             ]);
         }
-    }
-
-    /**
-     * Send email with estimate details and optional PDF attachment.
-     * This is a private helper method for request_copy_estimate.
-     *
-     * @param array $estimate The estimate data array (should contain db_id if saved).
-     * @param string $email The recipient email address.
-     * @param string $pdf_path Path to the temporary PDF file (optional).
-     * @return bool True if email was sent successfully, false otherwise.
-     */
-    private function send_estimate_email(array $estimate, string $email, string $pdf_path = ''): bool {
-        // Validate email format
-        if (!is_email($email)) {
-            error_log("Product Estimator (send_estimate_email): Invalid recipient email format: {$email}");
-            return false;
-        }
-
-        // Get notification settings from WordPress options
-        $options = get_option('product_estimator_settings', array());
-
-        // Get site info for fallbacks and template tags
-        $site_name = get_bloginfo('name');
-        $site_url = home_url();
-
-        // Determine From Name and From Email from settings or defaults
-        $from_name = isset($options['from_name']) && !empty($options['from_name'])
-            ? $options['from_name']
-            : $site_name;
-        $from_email = isset($options['from_email']) && !empty($options['from_email']) && is_email($options['from_email'])
-            ? $options['from_email']
-            : get_option('admin_email'); // Fallback to WordPress admin email
-
-        // Get Subject and Content templates for the 'request_copy' type
-        $subject_template = isset($options['notification_request_copy_subject']) && !empty($options['notification_request_copy_subject'])
-            ? $options['notification_request_copy_subject']
-            : sprintf(__('%s: Your Requested Estimate', 'product-estimator'), '[site_name]'); // Default subject
-
-        $content_template = isset($options['notification_request_copy_content']) && !empty($options['notification_request_copy_content'])
-            ? $options['notification_request_copy_content']
-            : sprintf( // Default content
-                __("Hello [customer_name],\n\nThank you for your interest in our products. As requested, please find attached your estimate \"%s\".\n\nIf you have any questions or would like to discuss this estimate further, please don't hesitate to contact us.\n\nBest regards,\n%s", 'product-estimator'),
-                '[estimate_name]',
-                '[site_name]'
-            );
-
-        // Determine if PDF should be included based on settings (redundant check, but safe)
-        $include_pdf = isset($options['notification_request_copy_include_pdf'])
-            ? (bool)$options['notification_request_copy_include_pdf']
-            : true;
-
-        // Prepare data for template tag replacement
-        $customer_name = isset($estimate['customer_details']['name']) && !empty($estimate['customer_details']['name'])
-            ? $estimate['customer_details']['name']
-            : __('Customer', 'product-estimator');
-        $estimate_name = isset($estimate['name']) && !empty($estimate['name'])
-            ? $estimate['name']
-            : __('Untitled Estimate', 'product-estimator');
-        $db_id = isset($estimate['db_id']) ? $estimate['db_id'] : null; // Get DB ID if available
-
-        // Replace template tags in subject and body
-        $subject = str_replace(
-            ['[site_name]', '[estimate_name]', '[estimate_id]', '[customer_name]'],
-            [$site_name, $estimate_name, $db_id ?? __('New', 'product-estimator'), $customer_name],
-            $subject_template
-        );
-
-        $body = str_replace(
-            ['[site_name]', '[site_url]', '[estimate_name]', '[estimate_id]', '[customer_name]', '[customer_email]', '[date]'],
-            [$site_name, $site_url, $estimate_name, $db_id ?? __('New', 'product-estimator'), $customer_name, $email, date_i18n(get_option('date_format'))],
-            $content_template
-        );
-
-        // Add a link to view the estimate online if it has a DB ID
-        if ($db_id) {
-            // Generate the secure public URL (assuming product_estimator_get_pdf_url exists)
-            if (function_exists('product_estimator_get_pdf_url')) {
-                $pdf_public_url = product_estimator_get_pdf_url($db_id, true); // Get customer view URL
-                if (!empty($pdf_public_url)) {
-                    $body .= "\n\n" . sprintf( // Add a line break before the link
-                            __('You can also view your estimate online here: %s', 'product-estimator'),
-                            esc_url($pdf_public_url)
-                        );
-                }
-            }
-        }
-
-        // Format body for HTML email
-        $body_html = wpautop($body); // Use wpautop for paragraph formatting
-
-        // Prepare email headers
-        $headers = [
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . sprintf('%s <%s>', $from_name, $from_email) // Correct From header format
-        ];
-
-        // Prepare attachments array
-        $attachments = [];
-        if ($include_pdf && !empty($pdf_path) && file_exists($pdf_path)) {
-            $attachments[] = $pdf_path; // Add the temporary PDF path
-        }
-
-        // Send the email using WordPress core function
-        $sent = wp_mail($email, $subject, $body_html, $headers, $attachments);
-
-        // Log the result if debugging is enabled
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            $log_message = sprintf(
-                'Product Estimator (send_estimate_email): Attempted to send email to %s. Subject: "%s". Status: %s.',
-                $email,
-                $subject,
-                $sent ? 'Success' : 'Failed'
-            );
-            if (!empty($attachments)) {
-                $log_message .= " Included PDF: " . basename($pdf_path);
-            }
-            if (!$sent && $GLOBALS['phpmailer'] instanceof \PHPMailer\PHPMailer\PHPMailer) {
-                $log_message .= " Mailer Error: " . $GLOBALS['phpmailer']->ErrorInfo;
-            }
-            error_log($log_message);
-        }
-
-        return $sent; // Return true if sent, false otherwise
     }
 
 
@@ -3482,9 +2537,7 @@ class AjaxHandler {
 
         try {
             // Get the estimate from session or database
-            $session = SessionHandler::getInstance();
-
-            $estimate = $session->getEstimate($estimate_id);
+            $estimate = $this->session->getEstimate($estimate_id);
             $db_id = null;
 
             // If estimate exists in session, check if it's stored in DB
@@ -3581,8 +2634,6 @@ class AjaxHandler {
             ]);
         }
     }
-
-
 
     /**
      * Send contact request email to store

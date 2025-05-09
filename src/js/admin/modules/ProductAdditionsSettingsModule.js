@@ -3,8 +3,9 @@
  *
  * Handles functionality specific to the product additions settings tab.
  */
-import { ajax, dom, format, validation, log } from '@utils';
-
+import { ajax, dom, format, validation } from '@utils';
+import { createLogger } from '@utils';
+const logger = createLogger('ProductAdditionsSettingsModule');
 class ProductAdditionsSettingsModule {
   /**
    * Initialize the module
@@ -32,7 +33,7 @@ class ProductAdditionsSettingsModule {
    * Initialize the module
    */
   init() {
-    log('ProductAdditionsSettingsModule', 'Initializing Product Additions Settings Module');
+    logger.log('Initializing Product Additions Settings Module');
     // Reset form modified state on initialization
     this.formModified = false;
     this.bindEvents();
@@ -99,7 +100,7 @@ class ProductAdditionsSettingsModule {
 
     // Show form when "Add New Relationship" button is clicked
     $addButton.on('click', function() {
-      log('ProductAdditionsSettingsModule', 'Add New Relationship button clicked');
+      logger.log('Add New Relationship button clicked');
       this.resetForm();
       $('.form-title').text(this.settings.i18n.addNew || 'Add New Relationship');
       $('.save-relation').text(this.settings.i18n.saveChanges || 'Save Changes');
@@ -205,11 +206,11 @@ class ProductAdditionsSettingsModule {
       const productId = $(e.currentTarget).data('id');
       const productName = $(e.currentTarget).data('name');
 
-      log('ProductAdditionsSettingsModule', 'Product selected:', productId, productName);
+      logger.log('Product selected:', productId, productName);
 
       // Set the selected product
       $('#selected_product_id').val(productId);
-      log('ProductAdditionsSettingsModule', 'Product ID set to:', $('#selected_product_id').val());
+      logger.log('Product ID set to:', $('#selected_product_id').val());
 
       $('.selected-product-info').html(`<strong>${productName}</strong> (ID: ${productId})`);
       $('#selected-product').show();
@@ -375,7 +376,7 @@ class ProductAdditionsSettingsModule {
       note_text: noteText
     };
 
-    log('ProductAdditionsSettingsModule', 'Sending form data:', formData);
+    logger.log('Sending form data:', formData);
 
     // Send AJAX request using ajax utility
     ajax.ajaxRequest({
@@ -383,14 +384,14 @@ class ProductAdditionsSettingsModule {
       data: formData
     })
       .then(response => {
-        log('ProductAdditionsSettingsModule', 'Response received:', response);
+        logger.log('Response received:', response);
 
         // Show success message
         this.showMessage('success', response.message);
 
         // If editing an existing relation, replace the row
         if (formData.relation_id) {
-          log('ProductAdditionsSettingsModule', 'Updating existing relation:', formData.relation_id);
+          logger.log('Updating existing relation:', formData.relation_id);
           const $existingRow = $('.product-additions-list').find(`tr[data-id="${formData.relation_id}"]`);
           if ($existingRow.length) {
             $existingRow.replaceWith(this.createRelationRow(response.relation));
@@ -448,7 +449,7 @@ class ProductAdditionsSettingsModule {
       .catch(error => {
         // Show error message
         this.showMessage('error', error.message || 'Error saving relationship. Please try again.');
-        log('ProductAdditionsSettingsModule', 'Error saving relationship:', error);
+        logger.error('Error saving relationship:', error);
       })
       .finally(() => {
         // Re-enable form
@@ -470,7 +471,7 @@ class ProductAdditionsSettingsModule {
     const productId = $btn.data('product-id');
     const noteText = $btn.data('note-text');
 
-    log('ProductAdditionsSettingsModule', 'Edit relation:', relationId, sourceCategories, targetCategory, relationType, productId, noteText);
+    logger.log('Edit relation:', relationId, sourceCategories, targetCategory, relationType, productId, noteText);
 
     // Reset form
     this.resetForm();
@@ -522,7 +523,7 @@ class ProductAdditionsSettingsModule {
     const $btn = $(e.currentTarget);
     const relationId = $btn.data('id');
 
-    log('ProductAdditionsSettingsModule', 'Delete relation:', relationId);
+    logger.log('Delete relation:', relationId);
 
     if (!confirm(this.settings.i18n.confirmDelete || 'Are you sure you want to delete this relationship?')) {
       return;
@@ -541,7 +542,7 @@ class ProductAdditionsSettingsModule {
       }
     })
       .then(response => {
-        log('ProductAdditionsSettingsModule', 'Delete response:', response);
+        logger.log('Delete response:', response);
 
         // Remove row from table
         const $row = $btn.closest('tr');
@@ -562,7 +563,7 @@ class ProductAdditionsSettingsModule {
         // Show error message
         this.showMessage('error', error.message || 'Error deleting relationship. Please try again.');
         $btn.prop('disabled', false).text('Delete');
-        log('ProductAdditionsSettingsModule', 'Error deleting relationship:', error);
+        logger.error('Error deleting relationship:', error);
       });
   }
 
@@ -610,7 +611,7 @@ class ProductAdditionsSettingsModule {
         }
       })
       .catch(error => {
-        log('ProductAdditionsSettingsModule', 'AJAX error:', error);
+        logger.log('AJAX error:', error);
         $('#product-search-results').html('<p>Error searching products</p>');
       });
   }
@@ -644,11 +645,11 @@ class ProductAdditionsSettingsModule {
           $('.selected-product-info').html(`<strong>${product.name}</strong> (ID: ${product.id})`);
           $('#selected-product').show();
         } else {
-          log('ProductAdditionsSettingsModule', 'Failed to load product details:', response);
+          logger.log('Failed to load product details:', response);
         }
       })
       .catch(error => {
-        log('ProductAdditionsSettingsModule', 'AJAX error while loading product details:', error);
+        logger.log('AJAX error while loading product details:', error);
       });
   }
 
@@ -661,7 +662,7 @@ class ProductAdditionsSettingsModule {
     const $ = jQuery;
 
     if (!relation || !relation.id) {
-      log('ProductAdditionsSettingsModule', 'Invalid relation data', relation);
+      logger.log('Invalid relation data', relation);
       return $('<tr><td colspan="4">Error: Invalid relation data</td></tr>');
     }
 
@@ -759,19 +760,19 @@ class ProductAdditionsSettingsModule {
     const $ = jQuery;
 
     if (!relation || !relation.id) {
-      log('ProductAdditionsSettingsModule', 'Cannot append row: Invalid relation data', relation);
+      logger.log('Cannot append row: Invalid relation data', relation);
       return;
     }
 
     const $table = $('.product-additions-table');
     if (!$table.length) {
-      log('ProductAdditionsSettingsModule', 'Cannot append row: Table not found');
+      logger.log('Cannot append row: Table not found');
       return;
     }
 
     const $tbody = $table.find('tbody');
     if (!$tbody.length) {
-      log('ProductAdditionsSettingsModule', 'Cannot append row: Table body not found');
+      logger.log('Cannot append row: Table body not found');
       return;
     }
 
@@ -789,7 +790,7 @@ class ProductAdditionsSettingsModule {
     const $container = $('.product-estimator-additions');
 
     if (!$container.length) {
-      log('ProductAdditionsSettingsModule', 'Cannot show notice: Container not found');
+      logger.log('Cannot show notice: Container not found');
       return;
     }
 

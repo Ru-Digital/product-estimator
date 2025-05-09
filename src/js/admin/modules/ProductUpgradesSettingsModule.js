@@ -3,8 +3,9 @@
  *
  * Handles functionality specific to the product upgrades settings tab.
  */
-import { ajax, dom, validation, log } from '@utils';
-
+import { ajax, dom, validation} from '@utils';
+import { createLogger } from '@utils';
+const logger = createLogger('ProductUpgradesSettingsModule');
 class ProductUpgradesSettingsModule {
   /**
    * Initialize the module
@@ -32,7 +33,7 @@ class ProductUpgradesSettingsModule {
    * Initialize the module
    */
   init() {
-    log('ProductUpgradesSettingsModule', 'Initializing Product Upgrades Settings Module');
+    logger.log('Initializing Product Upgrades Settings Module');
     // Reset form modified state on initialization
     this.formModified = false;
     this.bindEvents();
@@ -93,7 +94,7 @@ class ProductUpgradesSettingsModule {
 
     // Show form when "Add New Upgrade Configuration" button is clicked
     $addButton.on('click', function() {
-      log('ProductUpgradesSettingsModule', 'Add New Upgrade Configuration button clicked');
+      logger.log('Add New Upgrade Configuration button clicked');
       this.resetForm();
       $('.form-title').text(this.settings.i18n.addNew || 'Add New Upgrade Configuration');
       $('.save-upgrade').text(this.settings.i18n.saveChanges || 'Save Changes');
@@ -245,7 +246,7 @@ class ProductUpgradesSettingsModule {
       upgrade_description: upgradeDescription
     };
 
-    log('ProductUpgradesSettingsModule', 'Sending form data:', formData);
+    logger.log('Sending form data:', formData);
 
     // Send AJAX request using ajax utility
     ajax.ajaxRequest({
@@ -253,14 +254,14 @@ class ProductUpgradesSettingsModule {
       data: formData
     })
       .then(response => {
-        log('ProductUpgradesSettingsModule', 'Response received:', response);
+        logger.log('Response received:', response);
 
         // Show success message
         this.showMessage('success', response.message);
 
         // If editing an existing upgrade, replace the row
         if (formData.upgrade_id) {
-          log('ProductUpgradesSettingsModule', 'Updating existing upgrade:', formData.upgrade_id);
+          logger.log('Updating existing upgrade:', formData.upgrade_id);
           const $existingRow = $('.product-upgrades-list').find(`tr[data-id="${formData.upgrade_id}"]`);
           if ($existingRow.length) {
             $existingRow.replaceWith(this.createUpgradeRow(response.upgrade));
@@ -318,7 +319,7 @@ class ProductUpgradesSettingsModule {
       .catch(error => {
         // Show error message
         this.showMessage('error', error.message || 'Error saving upgrade configuration. Please try again.');
-        log('ProductUpgradesSettingsModule', 'Error saving upgrade configuration:', error);
+        logger.error('Error saving upgrade configuration:', error);
       })
       .finally(() => {
         // Re-enable form
@@ -340,7 +341,7 @@ class ProductUpgradesSettingsModule {
     const upgradeTitle = $btn.data('title');
     const upgradeDescription = $btn.data('description');
 
-    log('ProductUpgradesSettingsModule', 'Edit upgrade:', upgradeId, baseCategories, upgradeCategories, displayMode, upgradeTitle, upgradeDescription);
+    logger.log('Edit upgrade:', upgradeId, baseCategories, upgradeCategories, displayMode, upgradeTitle, upgradeDescription);
 
     // Reset form
     this.resetForm();
@@ -379,7 +380,7 @@ class ProductUpgradesSettingsModule {
     const $btn = $(e.currentTarget);
     const upgradeId = $btn.data('id');
 
-    log('ProductUpgradesSettingsModule', 'Delete upgrade:', upgradeId);
+    logger.log('Delete upgrade:', upgradeId);
 
     if (!confirm(this.settings.i18n.confirmDelete || 'Are you sure you want to delete this upgrade configuration?')) {
       return;
@@ -400,7 +401,7 @@ class ProductUpgradesSettingsModule {
       data: data
     })
       .then(response => {
-        log('ProductUpgradesSettingsModule', 'Delete response:', response);
+        logger.log('Delete response:', response);
 
         // Remove row from table
         const $row = $btn.closest('tr');
@@ -421,7 +422,7 @@ class ProductUpgradesSettingsModule {
         // Show error message
         this.showMessage('error', error.message || 'Error deleting upgrade configuration. Please try again.');
         $btn.prop('disabled', false).text('Delete');
-        log('ProductUpgradesSettingsModule', 'Error deleting upgrade configuration:', error);
+        logger.error('Error deleting upgrade configuration:', error);
       });
   }
 
@@ -434,7 +435,7 @@ class ProductUpgradesSettingsModule {
     const $ = jQuery;
 
     if (!upgrade || !upgrade.id) {
-      log('ProductUpgradesSettingsModule', 'Invalid upgrade data', upgrade);
+      logger.log('Invalid upgrade data', upgrade);
       return $('<tr><td colspan="4">Error: Invalid upgrade data</td></tr>');
     }
 
@@ -497,19 +498,19 @@ class ProductUpgradesSettingsModule {
     const $ = jQuery;
 
     if (!upgrade || !upgrade.id) {
-      log('ProductUpgradesSettingsModule', 'Cannot append row: Invalid upgrade data', upgrade);
+      logger.log('Cannot append row: Invalid upgrade data', upgrade);
       return;
     }
 
     const $table = $('.product-upgrades-table');
     if (!$table.length) {
-      log('ProductUpgradesSettingsModule', 'Cannot append row: Table not found');
+      logger.log('Cannot append row: Table not found');
       return;
     }
 
     const $tbody = $table.find('tbody');
     if (!$tbody.length) {
-      log('ProductUpgradesSettingsModule', 'Cannot append row: Table body not found');
+      logger.log('Cannot append row: Table body not found');
       return;
     }
 
@@ -527,7 +528,7 @@ class ProductUpgradesSettingsModule {
     const $container = $('.product-estimator-upgrades');
 
     if (!$container.length) {
-      log('ProductUpgradesSettingsModule', 'Cannot show notice: Container not found');
+      logger.log('Cannot show notice: Container not found');
       return;
     }
 

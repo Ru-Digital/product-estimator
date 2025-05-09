@@ -3,7 +3,9 @@
  *
  * Handles functionality for the customer estimates admin page
  */
-import { ajax, dom, format, validation, log } from '@utils';
+import { ajax, dom, format, validation } from '@utils';
+import { createLogger } from '@utils';
+const logger = createLogger('CustomerEstimatesAdmin');
 
 class CustomerEstimatesAdmin {
   /**
@@ -27,7 +29,7 @@ class CustomerEstimatesAdmin {
   init() {
     this.bindEvents();
     this.initializeActions();
-    log('CustomerEstimatesAdmin', 'Initialized');
+    logger.log('Initialized');
   }
 
   /**

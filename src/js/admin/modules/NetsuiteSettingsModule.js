@@ -4,9 +4,10 @@
  * Handles functionality specific to the NetSuite integration settings tab.
  */
 import { showFieldError, clearFieldError } from '@utils/validation';
-import { log } from '@utils';
 import { ajaxRequest } from '@utils/ajax';
 import { createElement } from '@utils/dom';
+import { createLogger } from '@utils';
+const logger = createLogger('NetSuiteSettingsModule');
 
 class NetsuiteSettingsModule {
   /**
@@ -22,7 +23,7 @@ class NetsuiteSettingsModule {
    */
   init() {
     // Log initialization if debug mode is enabled
-    log('NetsuiteSettingsModule', 'Initializing NetSuite settings module');
+    logger.log('Initializing NetSuite settings module');
 
     this.bindEvents();
     this.setupDependentFields();
@@ -53,7 +54,7 @@ class NetsuiteSettingsModule {
     // Add handler for form submission - THIS IS THE FIX
     $('.product-estimator-form').on('submit', this.handleFormSubmit.bind(this));
 
-    // log('NetsuiteSettingsModule', 'Events bound successfully');
+    // logger.log('Events bound successfully');
   }
 
   /**
@@ -141,7 +142,7 @@ class NetsuiteSettingsModule {
     // Initial toggle of fields based on enabled state
     this.toggleNetsuiteFields();
 
-    log('NetsuiteSettingsModule', 'Dependent fields setup complete');
+    logger.log('Dependent fields setup complete');
   }
 
   /**
@@ -160,8 +161,6 @@ class NetsuiteSettingsModule {
       $fields.fadeOut(200);
       $('#test-netsuite-connection').closest('p').fadeOut(200);
     }
-
-    log('NetsuiteSettingsModule', `NetSuite fields toggled: ${enabled ? 'visible' : 'hidden'}`);
   }
 
   /**
@@ -181,7 +180,7 @@ class NetsuiteSettingsModule {
     $button.prop('disabled', true);
     $result.html(`<span style="color:#666;">${netsuiteSettings.i18n.testing || 'Testing connection...'}</span>`);
 
-    log('NetsuiteSettingsModule', 'Testing NetSuite connection');
+    logger.log('Testing NetSuite connection');
 
     // Use the new ajaxRequest utility
     ajaxRequest({
@@ -195,12 +194,12 @@ class NetsuiteSettingsModule {
       .then(response => {
         // Success case - using the response.data directly since ajaxRequest handles the success/error parsing
         $result.html(`<span style="color:green;">${response.message}</span>`);
-        log('NetsuiteSettingsModule', 'Connection test successful');
+        logger.log('Connection test successful');
       })
       .catch(error => {
         // Error case
         $result.html(`<span style="color:red;">${netsuiteSettings.i18n.error || 'Error:'} ${error.message}</span>`);
-        log('NetsuiteSettingsModule', 'Connection test failed:', error);
+        logger.log('Connection test failed:', error);
       })
       .finally(() => {
         $button.prop('disabled', false);
@@ -216,7 +215,7 @@ class NetsuiteSettingsModule {
     // If our tab becomes active, refresh dependent fields
     if (tabId === netsuiteSettings.tab_id) {
       this.toggleNetsuiteFields();
-      log('NetsuiteSettingsModule', 'Tab changed to NetSuite settings, refreshing fields');
+      logger.log('Tab changed to NetSuite settings, refreshing fields');
     }
   }
 
@@ -343,7 +342,7 @@ class NetsuiteSettingsModule {
     // Insert before the settings table
     $settingsTable.before(infoSection);
 
-    log('NetsuiteSettingsModule', 'Added info section to settings page');
+    logger.log('Added info section to settings page');
   }}
 
 // Initialize the module

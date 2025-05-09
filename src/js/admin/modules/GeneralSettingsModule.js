@@ -7,6 +7,8 @@
  */
 
 import { setupTinyMCEHTMLPreservation } from '@utils/tinymce-preserver';
+import { createLogger } from '@utils';
+const logger = createLogger('GeneralSettingsModule');
 
 class GeneralSettingsModule {
   /**
@@ -35,7 +37,7 @@ class GeneralSettingsModule {
     this.setupValidation();
     this.setupWpEditors();
 
-    console.log('GeneralSettingsModule: Initialized');
+    logger.log('Initialized');
   }
 
   /**
@@ -249,7 +251,7 @@ class GeneralSettingsModule {
     if (tabId === 'general') {
       // Make sure editors are refreshed when switching to this tab
       this.setupWpEditors();
-      console.log('GeneralSettingsModule: Tab changed to General Settings, refreshing editors');
+      logger.log('Tab changed to General Settings, refreshing editors');
     }
   }
 

@@ -116,6 +116,9 @@ class AdminScriptHandler {
                     'noEstimatesMessage' => __('No estimates found', 'product-estimator')
                 ),
                 'current_filter' => isset($_GET['status_filter']) ? sanitize_text_field($_GET['status_filter']) : 'all'
+            ),
+            'productEstimatorVars' => array(
+                'debug' => defined('WP_DEBUG') && WP_DEBUG, // Pass debug mode to JS,
             )
         );
     }

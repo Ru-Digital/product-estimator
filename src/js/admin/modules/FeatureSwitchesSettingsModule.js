@@ -4,7 +4,7 @@
  * Handles functionality specific to the feature switches settings tab.
  */
 import { createLogger } from '@utils';
-const logger = createLogger('Admin][FeatureSwitchSettingsModule');
+const logger = createLogger('FeatureSwitchSettingsModule');
 
 class FeatureSwitchesSettingsModule {
   /**

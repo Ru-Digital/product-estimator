@@ -801,6 +801,19 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
                     esc_textarea($value)
                 );
                 break;
+            case 'html': // ***** ADDED THIS CASE *****
+                $this->render_html_field($args);   // Delegate to specific method
+                break;
+            case 'file': // Delegate file fields
+                $this->render_file_field($args);
+                break;
+            case 'image': // Delegate image fields (if you have a separate one, or combine with file)
+                // Assuming 'image' is a specialized 'file' field for now.
+                // If render_image_field exists and is different, call it.
+                // For now, let it be handled by render_file_field or add render_image_field.
+                // $this->render_image_field($args);
+                $this->render_file_field($args); // Or a more specific image render method
+                break;
 
             default:
                 printf(

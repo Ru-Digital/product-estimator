@@ -150,4 +150,17 @@ abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
         // echo '<h4>' . esc_html__('Additional Information', 'product-estimator') . '</h4>';
         // echo '<p>' . esc_html__('This is a sidebar area for the vertical tabs settings.', 'product-estimator') . '</p>';
     }
+
+    protected function get_common_script_data() {
+        return [
+            'mainTabId'         => $this->get_tab_id(),
+            'ajax_url'          => admin_url('admin-ajax.php'),
+            'nonce'             => wp_create_nonce('product_estimator_settings_nonce'), // General nonce
+            // 'option_name'    => $this->get_option_name(), // JS might not need this if AJAX is handled by PHP
+            'i18n'              => [
+                'saving'      => __('Saving...', 'product-estimator'),
+                // Module-specific saveSuccess/saveError better in child's data
+            ],
+        ];
+    }
 }

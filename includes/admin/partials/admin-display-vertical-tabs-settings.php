@@ -49,19 +49,25 @@ if ( empty( $vertical_tabs ) ) {
         <div class="pe-vtabs-content-area"> <?php // Generic content wrapper ?>
             <?php foreach ( $vertical_tabs as $tab_data ) : ?>
                 <?php
-                if ( empty( $tab_data['id'] ) || $active_tab_id !== $tab_data['id'] ) {
-                    continue; // Only process the active tab's content
+                if ( empty( $tab_data['id'] ) ) {
+                    continue; // Skip tab if ID is missing
                 }
+                $is_panel_active = ( $active_tab_id === $tab_data['id'] );
                 ?>
-                <div id="<?php echo esc_attr( $tab_data['id'] ); // ID remains for direct linking/JS targeting ?>" class="pe-vtabs-tab-panel <?php echo ( $active_tab_id === $tab_data['id'] ) ? 'active' : ''; ?>">
+                <div id="<?php echo esc_attr( $tab_data['id'] ); ?>"
+                     class="pe-vtabs-tab-panel <?php echo $is_panel_active ? 'active' : ''; ?>"
+                    <?php if ( ! $is_panel_active ) echo 'style="display:none;"'; // Initially hide non-active tabs ?>
+                >
                     <h3><?php echo esc_html( $tab_data['title'] . ' ' . __( 'Settings', 'product-estimator' ) ); ?></h3>
                     <?php if ( ! empty( $tab_data['description'] ) ) : ?>
                         <p class="pe-vtabs-tab-description"><?php echo esc_html( $tab_data['description'] ); ?></p>
                     <?php endif; ?>
 
-                    <form method="post" action="javascript:void(0);" class="pe-vtabs-tab-form product-estimator-form" data-tab-id="<?php echo esc_attr( $tab_data['id'] ); ?>" data-type="<?php echo esc_attr( $tab_data['id'] ); // Keep data-type if specific JS uses it, or make it data-tab-id too ?>">
+                    <form method="post" action="javascript:void(0);" class="pe-vtabs-tab-form product-estimator-form" data-tab-id="<?php echo esc_attr( $tab_data['id'] ); ?>" data-type="<?php echo esc_attr( $tab_data['id'] ); ?>">
                         <?php
-                        settings_fields( $this->plugin_name . '_options' );
+                        // Important: settings_fields() and do_settings_sections() output content.
+                        // Ensure they are called for each tab whose content needs to be available.
+                        settings_fields( $this->plugin_name . '_options' ); // This might need adjustment if each tab has vastly different option groups. Usually shared.
                         do_settings_sections( $this->plugin_name . '_' . $this->get_tab_id() . '_' . $tab_data['id'] );
                         ?>
                         <p class="submit">

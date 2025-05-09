@@ -1,238 +1,76 @@
 /**
  * Notification Settings CSS
  *
- * Styles specific to the notification settings tab.
+ * Styles specific to the Notification Settings module.
+ * General vertical tab layout and generic sidebar panel styles are in admin-vertical-tabs.css.
  */
 
-/* Notification Settings Container */
-.notification-settings-wrapper {
-  display: flex;
-  flex-direction: row;
-  gap: 30px;
-  margin-top: 20px;
+/* Styles for the specific structure within the Notifications sidebar */
+.pe-vtabs-sidebar-panel.notification-tags-info {
+  /* If notification sidebar needs a different width than generic, set flex-basis here */
+  /* flex-basis: 290px; */
 }
 
-/* Notification Settings Container */
-.notification-settings-container {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  gap: 0;
-  background: #fff;
-  border: 1px solid #ccc;
+/* .pe-vtabs-sidebar-panel.notification-tags-info h3, p, ul, li, code
+   are mostly covered by generic .pe-vtabs-sidebar-panel styles in admin-vertical-tabs.css
+*/
+
+/* If .pe-vtabs-tags-list needs specific styling different from generic .pe-vtabs-sidebar-panel ul */
+.notification-tags-info .pe-vtabs-tags-list {
+  /* Example: list-style: none; already default in generic */
+  /* margin-left: 0; already default in generic */
+}
+
+
+/* Styling for wp_editor specifically within notification tabs if needed */
+.pe-vtabs-tab-form[data-tab-id*="notification_type_"] .wp-editor-wrap {
+  /* Example:
+  border: 1px solid #dcdcde;
   border-radius: 3px;
-}
-
-/* Vertical Tabs */
-.vertical-tabs {
-  width: 200px;
-  border-right: 1px solid #e5e5e5;
-  background-color: #f9f9f9;
-}
-
-.vertical-tabs-nav {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.vertical-tabs-nav .tab-item {
-  margin: 0;
-  padding: 0;
-  border-bottom: 1px solid #e5e5e5;
-}
-
-.vertical-tabs-nav .tab-item a {
-  display: block;
-  padding: 12px 15px;
-  text-decoration: none;
-  color: #444;
-  font-weight: 500;
-  border-left: 3px solid transparent;
-  transition: all 0.2s ease-in-out;
-}
-
-.vertical-tabs-nav .tab-item a:hover {
-  background-color: #f1f1f1;
-  color: #2271b1;
-}
-
-.vertical-tabs-nav .tab-item.active a {
-  background-color: #fff;
-  color: #2271b1;
-  border-left-color: #2271b1;
-  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.03), inset 0 -1px 0 rgba(0, 0, 0, 0.03);
-}
-
-/* Disabled tabs */
-.vertical-tabs-nav.disabled .tab-item a {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-/* Tab Content */
-.vertical-tabs-content {
-  flex: 1;
-  padding: 0;
-  min-height: 400px;
-}
-
-.vertical-tab-content {
-  display: none;
-  padding: 20px;
-}
-
-.vertical-tab-content.active {
-  display: block;
-}
-
-/* Form Elements */
-.notification-settings-form .form-table {
-  margin-top: 0;
-}
-
-.notification-settings-form .form-table th {
-  padding-top: 15px;
-  padding-bottom: 15px;
-}
-
-.notification-settings-form .form-table td {
-  padding-top: 15px;
-  padding-bottom: 15px;
-  vertical-align: middle;
-}
-
-/* Submit Buttons */
-.notification-settings-form .submit {
-  margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid #eee;
-}
-
-.notification-settings-form .spinner {
-  float: none;
-  margin: 0 5px;
-  vertical-align: middle;
-}
-
-/* Image Upload Field */
-.company-logo-field .image-preview-wrapper {
   margin-bottom: 10px;
+  */
 }
 
-.company-logo-field .image-upload-button {
+/* Styles for image upload field (e.g., company_logo) if not fully covered by base form styles */
+.pe-vtabs-tab-form .field-type-image .image-preview-wrapper img {
+  max-width: 150px;
+  max-height: 75px;
+  border: 1px solid #eee;
+  padding: 5px;
+  background: #f9f9f9;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.pe-vtabs-tab-form .field-type-image .image-upload-button,
+.pe-vtabs-tab-form .field-type-image .file-remove-button {
   margin-right: 5px !important;
 }
 
-.company-logo-field .hidden {
-  display: none !important;
+/* Disabled appearance for tab navigation if notifications are globally disabled */
+.pe-vtabs-nav-list.pe-vtabs-nav-disabled .pe-vtabs-nav-item:not(:first-child) a { /* Exclude general tab */
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: not-allowed;
+  background-color: #f9f9f9 !important; /* Keep nav area background, ensure override */
+  color: #a0a5aa !important; /* Dim text, ensure override */
+  border-left-color: transparent !important;
+}
+.pe-vtabs-nav-list.pe-vtabs-nav-disabled .pe-vtabs-nav-item:not(:first-child).active a {
+  background-color: #f9f9f9 !important; /* Ensure active state is also visually disabled */
+  border-bottom-color: transparent !important; /* For mobile view */
 }
 
-/* Email Content Textarea */
-#notification_request_copy_content,
-#notification_estimate_created_content,
-#notification_estimate_confirmation_content {
-  height: 200px;
-  font-family: monospace;
-  color: #333;
-}
 
-/* Template Tags */
-.template-tags-info {
-  flex: 0 0 250px;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  padding: 15px;
-  position: sticky;
-  top: 32px;
-  align-self: flex-start;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
-}
-
-.template-tags-info h3 {
-  margin-top: 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.template-tags-list {
-  margin: 0;
-  padding: 0 0 0 20px;
-}
-
-.template-tags-list li {
-  margin-bottom: 8px;
-}
-
-.template-tags-list code {
-  background: rgba(0, 0, 0, 0.07);
-  padding: 2px 5px;
-  border-radius: 3px;
-}
-
-/* Tab Description */
-.tab-description {
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
-  color: #666;
-}
-
-/* Responsive Adjustments */
-@media screen and (max-width: 1200px) {
-  .notification-settings-wrapper {
-    flex-direction: column;
-  }
-
-  .template-tags-info {
-    flex: 0 0 auto;
-    position: static;
-    max-height: none;
-  }
-}
-
+/* Specific responsive adjustments for notification form elements if needed */
 @media screen and (max-width: 782px) {
-  .notification-settings-container {
-    flex-direction: column;
-  }
-
-  .vertical-tabs {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #e5e5e5;
-  }
-
-  .vertical-tabs-nav {
-    display: flex;
-    flex-wrap: wrap;
-  }
-
-  .vertical-tabs-nav .tab-item {
-    border-bottom: none;
-  }
-
-  .vertical-tabs-nav .tab-item a {
-    padding: 10px;
-    border-left: none;
-    border-bottom: 3px solid transparent;
-  }
-
-  .vertical-tabs-nav .tab-item.active a {
-    border-left-color: transparent;
-    border-bottom-color: #2271b1;
-  }
-
-  .vertical-tabs-content {
-    min-height: auto;
-  }
-
-  .image-upload-button,
-  .image-remove-button {
+  .pe-vtabs-tab-form .field-type-image .image-upload-button,
+  .pe-vtabs-tab-form .field-type-image .file-remove-button {
     display: block;
-    margin-bottom: 5px !important;
-    width: 100%;
-    text-align: center;
+    width: calc(100% - 10px);
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 8px !important;
+    box-sizing: border-box;
   }
 }

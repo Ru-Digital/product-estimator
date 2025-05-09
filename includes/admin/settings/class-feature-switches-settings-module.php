@@ -192,6 +192,7 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
         );
     }
 
+
     protected function get_checkbox_fields() {
         return ['suggested_products_enabled'];
     }

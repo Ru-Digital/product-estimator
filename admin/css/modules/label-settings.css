@@ -1,91 +1,38 @@
 /**
  * Label Settings CSS
  *
- * Styles specific to the Label Settings module, primarily for the usage information sidebar.
- * General vertical tab layout styles are now in admin-vertical-tabs.css.
+ * Styles specific to the Label Settings module's sidebar content.
+ * General vertical tab layout and generic sidebar panel styles are in admin-vertical-tabs.css.
  */
 
-/* Label usage information sidebar - specific to the Labels module */
-.label-usage-info {
-  flex: 0 0 300px; /* Fixed width, doesn't grow or shrink */
-  background: #fff;
-  border: 1px solid #ccd0d4; /* WordPress admin border color */
-  border-radius: 3px;
-  padding: 20px;
-  box-shadow: 0 1px 1px rgba(0,0,0,.04);
-  align-self: flex-start; /* Align to the top of the flex container */
-
-  /* Sticky positioning for modern browsers if desired, within .pe-vtabs-wrapper */
-  position: sticky;
-  top: 48px; /* Adjust based on WordPress admin bar height and other fixed elements */
-  max-height: calc(100vh - 80px); /* Example: viewport height minus some offset */
-  overflow-y: auto; /* Allow scrolling if content exceeds max-height */
+/* Styles for the specific structure within the Labels sidebar */
+.pe-vtabs-sidebar-panel.label-usage-info {
+  /* Override generic sidebar width if needed, e.g., for labels sidebar */
+  flex-basis: 300px; /* Example: if labels sidebar needs to be wider */
 }
 
-.label-usage-info h3 {
-  margin-top: 0;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #e0e0e0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.label-usage-section {
+.label-usage-info .label-usage-section { /* Specific to the structure of labels sidebar */
   margin-bottom: 20px;
 }
 
-.label-usage-section:last-child {
+.label-usage-info .label-usage-section:last-child {
   margin-bottom: 0;
 }
 
-.label-usage-section h4 {
-  margin-top: 0;
-  margin-bottom: 8px;
-  color: #2c3338;
-  font-size: 14px;
-  font-weight: 600;
+/* .label-usage-info .label-usage-section h4 is covered by .pe-vtabs-sidebar-panel h4 */
+
+/* .label-usage-info p is covered by .pe-vtabs-sidebar-panel p */
+
+/* .label-usage-info code is covered by .pe-vtabs-sidebar-panel code */
+
+.label-usage-info ul { /* Specific list style for labels sidebar */
+  list-style-type: disc; /* Override generic if needed */
+  margin-left: 20px; /* Indent bulleted list */
+  padding-left: 0; /* Reset padding if margin is used for indent */
 }
 
-.label-usage-info p {
-  font-size: 13px;
-  color: #50575e;
-  line-height: 1.6;
-}
+/* .label-usage-info ul li is covered by .pe-vtabs-sidebar-panel ul li */
 
-.label-usage-info code {
-  display: inline-block;
-  background: #f0f0f1; /* Lighter background for code blocks */
-  padding: 3px 6px;
-  border-radius: 3px;
-  margin: 2px 0;
-  font-size: 13px;
-  color: #3c434a;
-  border: 1px solid #dcdcde;
-}
-
-.label-usage-info ul {
-  margin: 10px 0 0 20px;
-  padding-left: 0;
-  list-style-type: disc;
-}
-
-.label-usage-info ul li {
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: #50575e;
-}
-
-/* Responsive Adjustments for the sidebar if needed, complementing global responsive rules */
-@media screen and (max-width: 1200px) {
-  .pe-vtabs-wrapper .label-usage-info { /* Target sidebar when wrapper flex-direction is column */
-    flex: 0 0 auto; /* Reset flex behavior */
-    position: static; /* Non-sticky on smaller screens where layout stacks */
-    max-height: none;
-    margin-top: 30px; /* Add space when stacked */
-    width: 100%; /* Full width when stacked */
-    box-sizing: border-box;
-  }
-}
 
 /* Any other styles that are TRULY specific to the label settings form fields,
    if they differ from the generic .pe-vtabs-tab-form styling.

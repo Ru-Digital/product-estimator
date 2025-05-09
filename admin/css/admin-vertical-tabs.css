@@ -70,7 +70,6 @@
   background-color: #fff; /* White background for active tab */
   color: #135e96; /* WordPress primary color */
   border-left-color: #135e96; /* Active state indicator */
-  /* box-shadow: inset 0 1px 0 rgba(0,0,0,.03), inset 0 -1px 0 rgba(0,0,0,.03); */
 }
 
 /* Area containing the content panels for each tab */
@@ -146,12 +145,89 @@
   vertical-align: middle;
 }
 
+/* Generic Sidebar Panel for Vertical Tab Layouts */
+.pe-vtabs-sidebar-panel {
+  flex: 0 0 280px; /* Default width, can be overridden by module-specific CSS */
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-radius: 3px;
+  padding: 20px;
+  box-shadow: 0 1px 1px rgba(0,0,0,.04);
+  align-self: flex-start;
+  position: sticky;
+  top: 48px; /* Adjust based on WordPress admin bar height and other fixed elements */
+  max-height: calc(100vh - 80px); /* Example: viewport height minus some offset */
+  overflow-y: auto; /* Allow scrolling if content exceeds max-height */
+}
+
+.pe-vtabs-sidebar-panel h3 {
+  margin-top: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3338; /* Consistent heading color */
+}
+
+.pe-vtabs-sidebar-panel h4 { /* Generic styling for H4 within sidebar */
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #2c3338;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pe-vtabs-sidebar-panel p {
+  font-size: 13px;
+  color: #50575e;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.pe-vtabs-sidebar-panel p small {
+  display: block;
+  margin-top:10px;
+  color: #757575;
+}
+
+.pe-vtabs-sidebar-panel ul { /* Generic list styling */
+  margin: 10px 0 0 0; /* Default: no left margin/padding for non-bulleted lists */
+  padding-left: 0;
+  list-style: none; /* Default: no bullets */
+}
+
+.pe-vtabs-sidebar-panel ul li {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #50575e;
+}
+
+.pe-vtabs-sidebar-panel code, /* Generic code styling */
+.pe-vtabs-sidebar-panel ul li code { /* For tags lists etc. */
+  display: inline-block;
+  background: #f0f0f1;
+  padding: 3px 6px;
+  border-radius: 3px;
+  margin-right: 5px; /* For li code */
+  font-size: 13px;
+  color: #3c434a;
+  border: 1px solid #dcdcde;
+}
+
+
 /* Responsive Adjustments for the vertical tab layout */
 @media screen and (max-width: 1200px) {
   .pe-vtabs-wrapper {
     flex-direction: column; /* Stack main content and sidebar */
   }
-  /* Sidebar specific adjustments would go in the module's CSS or a generic sidebar CSS */
+  .pe-vtabs-wrapper .pe-vtabs-sidebar-panel { /* Target sidebar when wrapper flex-direction is column */
+    flex: 0 0 auto; /* Reset flex behavior */
+    position: static; /* Non-sticky on smaller screens where layout stacks */
+    max-height: none;
+    margin-top: 30px; /* Add space when stacked */
+    width: 100%; /* Full width when stacked */
+    box-sizing: border-box;
+  }
 }
 
 @media screen and (max-width: 782px) { /* WordPress mobile breakpoint */
@@ -178,7 +254,6 @@
   .pe-vtabs-nav-item:not(:last-child) {
     border-right: 1px solid #dcdcde;
   }
-
 
   .pe-vtabs-nav-item a {
     padding: 10px 12px;

@@ -807,7 +807,10 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
                 );
         }
 
-        if (isset($args['description'])) {
+        if (isset($args['description']) && $args['type'] == "checkbox") {
+            printf(' <span class="description">%s</span>', esc_html($args['description']));
+
+        } else if(isset($args['description'])) {
             printf('<p class="description">%s</p>', esc_html($args['description']));
         }
     }

@@ -123,8 +123,25 @@ class ProductEstimatorSettings {
     const $ = jQuery;
     const $form = $(e.target);
     const tabId = $form.closest('.tab-content').attr('id');
-    const formData = $form.serialize();
+    let formData = $form.serialize();
     console.log('Serialized form data:', formData);
+
+    const checkboxFields = $form.find('input[type="checkbox"]');
+    checkboxFields.each(function() {
+      const $checkbox = $(this);
+      const checkboxName = $checkbox.attr('name');
+
+      // Ensure the checkbox has a name and is unchecked.
+      // Also, check if it's NOT already in the formData (which it won't be if unchecked).
+      if ($checkbox.length && checkboxName && !$checkbox.is(':checked') && !formData.includes(checkboxName + '=')) {
+        // Append the checkbox name with a value of 0 to the formData string.
+        // Add an '&' separator if formData is not empty.
+        if (formData.length > 0) {
+          formData += '&';
+        }
+        formData += encodeURIComponent(checkboxName) + '=0';
+      }
+    });
 
 
     // Show loading state

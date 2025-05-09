@@ -633,29 +633,6 @@ class LabelsSettingsModule extends SettingsModuleBase implements SettingsModuleI
     public function enqueue_scripts() {
         // Enqueue WordPress editor functionality
         wp_enqueue_editor();
-
-        // Enqueue the labels settings script
-        wp_enqueue_script(
-            $this->plugin_name . '-label-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/admin/label-settings.js',
-            ['jquery', $this->plugin_name . '-admin'],
-            $this->version,
-            true
-        );
-
-        // Localize script
-        wp_localize_script(
-            $this->plugin_name . '-label-settings',
-            'labelSettings',
-            [
-                'tab_id' => $this->tab_id,
-                'label_types' => array_keys($this->label_types),
-                'i18n' => [
-                    'saveSuccess' => __('Label settings saved successfully', 'product-estimator'),
-                    'saveError' => __('Error saving label settings', 'product-estimator')
-                ]
-            ]
-        );
     }
 
     /**

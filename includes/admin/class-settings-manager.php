@@ -120,6 +120,7 @@ class SettingsManager {
             'SimilarProductsSettingsModule',
             'ProductUpgradesSettingsModule',
             'LabelsSettingsModule',
+            'FeatureSwitchesSettingsModule',
         ];
 
         // Load and initialize each module

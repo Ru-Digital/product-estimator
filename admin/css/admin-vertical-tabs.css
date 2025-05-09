@@ -1,0 +1,214 @@
+/**
+ * Admin Vertical Tabs CSS
+ *
+ * General styles for a vertical tab layout in the WordPress admin.
+ * These styles are intended to be reusable across different settings modules.
+ */
+
+/* Wrapper for the entire vertical tabs interface */
+.pe-vtabs-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 30px; /* Space between main content and sidebar */
+  margin-top: 20px;
+}
+
+/* Main container for navigation and content panels */
+.pe-vtabs-main-container {
+  flex: 1; /* Takes up available space */
+  display: flex;
+  flex-direction: row;
+  gap: 0; /* No gap between nav and content */
+  background: #fff;
+  border: 1px solid #ccd0d4; /* WordPress admin border color */
+  border-radius: 3px;
+  box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+/* Area containing the vertical navigation tabs */
+.pe-vtabs-nav-area {
+  width: 200px; /* Default width for the navigation area */
+  border-right: 1px solid #dcdcde; /* Separator line */
+  background-color: #f6f7f7; /* Slightly off-white background */
+}
+
+/* List holding the navigation tab items */
+.pe-vtabs-nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Individual navigation tab item */
+.pe-vtabs-nav-item {
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid #dcdcde; /* Separator between tabs */
+}
+
+.pe-vtabs-nav-item:last-child {
+  border-bottom: none; /* No border for the last item */
+}
+
+.pe-vtabs-nav-item a {
+  display: block;
+  padding: 12px 15px;
+  text-decoration: none;
+  color: #2c3338; /* WordPress admin text color */
+  font-weight: 500;
+  border-left: 3px solid transparent; /* For active state indicator */
+  transition: all 0.2s ease-in-out;
+}
+
+.pe-vtabs-nav-item a:hover {
+  background-color: #f0f0f1; /* Hover background */
+  color: #135e96; /* WordPress primary color for hover */
+}
+
+/* Active navigation tab item */
+.pe-vtabs-nav-item.active a {
+  background-color: #fff; /* White background for active tab */
+  color: #135e96; /* WordPress primary color */
+  border-left-color: #135e96; /* Active state indicator */
+  /* box-shadow: inset 0 1px 0 rgba(0,0,0,.03), inset 0 -1px 0 rgba(0,0,0,.03); */
+}
+
+/* Area containing the content panels for each tab */
+.pe-vtabs-content-area {
+  flex: 1; /* Takes remaining space */
+  padding: 0; /* Padding will be on individual panels */
+  min-height: 400px; /* Minimum height to maintain layout */
+}
+
+/* Individual content panel for a tab */
+.pe-vtabs-tab-panel {
+  display: none; /* Hidden by default */
+  padding: 25px; /* Padding inside each content panel */
+}
+
+.pe-vtabs-tab-panel.active {
+  display: block; /* Show active panel */
+}
+
+/* Description text at the top of a tab panel */
+.pe-vtabs-tab-description {
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0; /* Lighter separator */
+  color: #50575e; /* WordPress secondary text color */
+  font-size: 14px;
+}
+
+/* Form specific adjustments within a tab panel */
+.pe-vtabs-tab-form .form-table {
+  margin-top: 0; /* Remove default WordPress margin if any */
+}
+
+.pe-vtabs-tab-form .form-table th {
+  padding-top: 15px;
+  padding-bottom: 15px;
+  width: 220px; /* Adjusted width for section titles */
+}
+
+.pe-vtabs-tab-form .form-table td {
+  padding-top: 15px;
+  padding-bottom: 15px;
+  vertical-align: middle;
+}
+
+.pe-vtabs-tab-form input[type="text"],
+.pe-vtabs-tab-form input[type="email"],
+.pe-vtabs-tab-form input[type="number"],
+.pe-vtabs-tab-form input[type="url"],
+.pe-vtabs-tab-form input[type="search"],
+.pe-vtabs-tab-form textarea,
+.pe-vtabs-tab-form select {
+  width: 100%;
+  max-width: 450px; /* Max width for form inputs */
+}
+
+.pe-vtabs-tab-form textarea {
+  min-height: 100px;
+}
+
+/* Submit button area within a form */
+.pe-vtabs-tab-form .submit {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0; /* Separator above submit */
+}
+
+/* Spinner next to submit button */
+.pe-vtabs-tab-form .spinner {
+  float: none; /* WordPress default is float:left */
+  margin: 4px 5px 0 5px; /* Adjust vertical alignment */
+  vertical-align: middle;
+}
+
+/* Responsive Adjustments for the vertical tab layout */
+@media screen and (max-width: 1200px) {
+  .pe-vtabs-wrapper {
+    flex-direction: column; /* Stack main content and sidebar */
+  }
+  /* Sidebar specific adjustments would go in the module's CSS or a generic sidebar CSS */
+}
+
+@media screen and (max-width: 782px) { /* WordPress mobile breakpoint */
+  .pe-vtabs-main-container {
+    flex-direction: column; /* Stack nav and content */
+  }
+
+  .pe-vtabs-nav-area {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #dcdcde;
+  }
+
+  .pe-vtabs-nav-list {
+    display: flex; /* Horizontal scroll or wrap for tabs */
+    flex-wrap: wrap; /* Allow tabs to wrap on small screens */
+  }
+
+  .pe-vtabs-nav-item {
+    border-bottom: none; /* Remove bottom border for horizontal layout */
+    flex-grow: 1; /* Allow items to grow and fill space if needed */
+    text-align: center;
+  }
+  .pe-vtabs-nav-item:not(:last-child) {
+    border-right: 1px solid #dcdcde;
+  }
+
+
+  .pe-vtabs-nav-item a {
+    padding: 10px 12px;
+    border-left: none; /* Remove left border */
+    border-bottom: 3px solid transparent; /* Use bottom border for active state */
+  }
+
+  .pe-vtabs-nav-item.active a {
+    border-left-color: transparent; /* Reset left border */
+    border-bottom-color: #135e96; /* Active state on bottom */
+    background-color: #f0f0f1;
+  }
+
+  .pe-vtabs-content-area {
+    min-height: auto; /* Adjust min-height for stacked layout */
+  }
+
+  .pe-vtabs-tab-panel {
+    padding: 20px; /* Slightly reduce padding on mobile */
+  }
+
+  .pe-vtabs-tab-form .form-table th,
+  .pe-vtabs-tab-form .form-table td {
+    padding: 10px 0;
+    display: block; /* Stack th and td */
+    width: 100%;
+  }
+
+  .pe-vtabs-tab-form .form-table th {
+    padding-bottom: 5px; /* Reduce space after th */
+    font-weight: 600;
+  }
+}

@@ -206,6 +206,15 @@ class AdminScriptHandler {
                 $this->version
             );
         }
+
+        if (strpos($hook_suffix, $this->plugin_name . '-settings') !== false) {
+            wp_enqueue_style(
+                $this->plugin_name . '-vertical-tabs-layout',
+                PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/admin-vertical-tabs.css',
+                array($this->plugin_name . '-settings'),
+                $this->version
+            );
+        }
     }
 
     /**

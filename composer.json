@@ -69,6 +69,7 @@
             "includes/admin/settings/interface-settings-module.php",
             "includes/admin/settings/class-feature-switches-settings-module.php",
             "includes/admin/settings/class-settings-module-base.php",
+            "includes/admin/settings/class-settings-module-with-vertical-tabs-base.php",
             "includes/admin/settings/class-general-settings-module.php",
             "includes/admin/settings/class-pricing-rules-settings-module.php",
             "includes/admin/settings/class-netsuite-settings-module.php",

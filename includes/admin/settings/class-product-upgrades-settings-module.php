@@ -293,13 +293,4 @@ class ProductUpgradesSettingsModule extends SettingsModuleBase implements Settin
         // Clear any caches or perform other post-save operations
         delete_transient('product_estimator_upgrade_options');
     }
-
 }
-
-// Initialize and register the module
-add_action('plugins_loaded', function() {
-    $module = new ProductUpgradesSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
-        $manager->register_module($module);
-    });
-});

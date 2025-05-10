@@ -125,6 +125,7 @@ class SettingsManager {
 
         // Load and initialize each module
         foreach ($module_classes as $class_name) {
+
             $file_name = 'class-' . strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $class_name)) . '.php';
             $file_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/' . $file_name;
 
@@ -137,8 +138,6 @@ class SettingsManager {
                 if (class_exists($full_class_name)) {
                     // Instantiate the module
                     $module = new $full_class_name($this->plugin_name, $this->version);
-
-                    // Register it directly
                     $this->register_module($module);
                 }
             }

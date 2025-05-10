@@ -13,36 +13,13 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  */
 class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements SettingsModuleInterface {
 
-    /**
-     * Option name for storing label settings.
-     * All labels, regardless of their tab, will be stored under this single option.
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @var      string $option_name Option name for settings
-     */
     protected $option_name = 'product_estimator_labels';
-
-    /**
-     * Available label types (used to define vertical tabs).
-     * This structure will be used by get_vertical_tabs().
-     *
-     * @since    1.2.0
-     * @access   private
-     * @var      array    $defined_label_types    Array of label types with their details.
-     */
     private $defined_label_types = [];
 
-    /**
-     * Set the tab and section details.
-     *
-     * @since    1.1.0
-     * @access   protected
-     */
     protected function set_tab_details() {
         $this->tab_id    = 'labels';
         $this->tab_title = __( 'Labels', 'product-estimator' );
-        $this->section_id = 'labels_settings_section'; // Base for section IDs
+        $this->section_id = 'labels_settings_section';
 
         $this->defined_label_types = [
             'labels-general' => [
@@ -64,13 +41,6 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
         ];
     }
 
-    /**
-     * Defines the vertical tabs for the settings page.
-     *
-     * @since    X.X.X
-     * @access   protected
-     * @return   array Array of vertical tab definitions.
-     */
     protected function get_vertical_tabs() {
         $tabs = [];
         foreach ( $this->defined_label_types as $id => $details ) {
@@ -83,19 +53,10 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
         return $tabs;
     }
 
-    /**
-     * Registers settings sections and fields for a specific vertical tab.
-     *
-     * @since    X.X.X
-     * @access   protected
-     * @param    string $vertical_tab_id The ID of the current vertical tab.
-     * @param    string $page_slug       The page slug for this tab.
-     */
     protected function register_vertical_tab_fields( $vertical_tab_id, $page_slug_for_wp_api ) {
-        $type_fields = $this->get_label_fields_for_type( $vertical_tab_id ); // Your existing method to get fields
+        $type_fields = $this->get_label_fields_for_type( $vertical_tab_id );
         $sections = [];
 
-        // Group fields by section (from your existing logic)
         foreach ( $type_fields as $field_id => $field_details ) {
             $section_slug = $field_details['section'] ?? 'default_section_' . $vertical_tab_id;
             $sections[ $section_slug ][ $field_id ] = $field_details;
@@ -103,13 +64,13 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
 
         foreach ( $sections as $section_slug => $section_fields ) {
             $current_section_id_for_wp_api = $this->section_id . '_' . $vertical_tab_id . '_' . $section_slug;
-            $section_title_display = $this->get_section_title_display( $section_slug, $vertical_tab_id );
+            $section_title_display = $this->get_section_title_display( $section_slug );
 
             add_settings_section(
                 $current_section_id_for_wp_api,
                 $section_title_display,
-                [$this, 'render_dynamic_section_description_callback'], // WordPress callback
-                $page_slug_for_wp_api // Page slug for this sub-tab
+                [$this, 'render_dynamic_section_description_callback'],
+                $page_slug_for_wp_api
             );
 
             foreach ( $section_fields as $field_id => $field_details ) {
@@ -118,22 +79,18 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
                     'type'        => $field_details['type'] ?? 'text',
                     'description' => $field_details['description'] ?? '',
                     'default'     => $field_details['default'] ?? '',
-                    'label_for'   => $field_id, // Important for WordPress
-                    // Add other relevant args like 'options' for select, 'min', 'max' for number
+                    'label_for'   => $field_id,
                 ];
                 if (isset($field_details['options'])) $callback_args['options'] = $field_details['options'];
-
 
                 add_settings_field(
                     $field_id,
                     $field_details['title'],
-                    [$this, 'render_field_callback_proxy'], // Proxy to parent::render_field
+                    [$this, 'render_field_callback_proxy'],
                     $page_slug_for_wp_api,
                     $current_section_id_for_wp_api,
                     $callback_args
                 );
-
-                // **** CRUCIAL STEP: Store the field definition for contextual handling ****
                 $this->store_field_for_sub_tab($vertical_tab_id, $field_id, $callback_args);
             }
         }
@@ -144,20 +101,9 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
     }
 
     public function render_dynamic_section_description_callback( $args ) {
-        // $args contains 'id', 'title', 'callback'.
-        // You can add more specific descriptions here if needed, based on $args['id'].
-        // Example:
-        // $section_data = $this->get_section_data_by_id($args['id']); // You'd need to implement this
-        // if (isset($section_data['description'])) { echo '<p>' . esc_html($section_data['description']) . '</p>'; }
+        // Placeholder
     }
-    /**
-     * Get a display title for a given section slug.
-     *
-     * @since    X.X.X
-     * @access   private
-     * @param    string $section_slug The slug of the section.
-     * @return   string The display title.
-     */
+
     private function get_section_title_display( $section_slug ) {
         $titles = [
             'estimate_action_buttons' => __( 'Estimate Action Buttons', 'product-estimator' ),
@@ -169,23 +115,15 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
             'success_messages'        => __( 'Success Messages', 'product-estimator' ),
             'pdf_specific_labels'     => __( 'PDF Specific Labels', 'product-estimator' ),
             'other_general_labels'    => __( 'Other General Labels', 'product-estimator' ),
-            'default_section'         => '',
         ];
+        $default_section_key_prefix = 'default_section_';
+        if (strpos($section_slug, $default_section_key_prefix) === 0) {
+            return '';
+        }
         return $titles[ $section_slug ] ?? ucwords( str_replace( '_', ' ', $section_slug ) );
     }
 
-    /**
-     * Get fields for a specific label type (vertical tab).
-     *
-     * @since    1.2.0
-     * @access   private
-     * @param    string $type Label type (e.g., 'labels-general', 'pdf').
-     * @return   array     Fields for the label type.
-     */
     private function get_label_fields_for_type( $type ) {
-        // [Content of this method remains the same as your provided file]
-        // For brevity, I'm not repeating the full switch statement here.
-        // Ensure your field definitions are correct as per your file.
         $fields = [];
         switch ( $type ) {
             case 'labels-general':
@@ -223,25 +161,7 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
         return $fields;
     }
 
-    /**
-     * Render a settings field callback.
-     */
-    public function render_field_callback( $args ) {
-        parent::render_field( $args );
-    }
-
-    /**
-     * Render the description for a settings section.
-     */
-    public function render_dynamic_section_description( $args ) {
-        // Optional: Add specific descriptions based on $args['id'] or $args['title']
-    }
-
-    /**
-     * Renders the sidebar content for the vertical tabs settings page.
-     */
     public function render_vertical_tabs_sidebar() {
-        // Your existing sidebar content from class-labels-settings-module.php
         ?>
         <div class="pe-vtabs-sidebar-panel label-usage-info">
             <h3><?php esc_html_e( 'Label Usage Information', 'product-estimator' ); ?></h3>
@@ -255,51 +175,36 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
         <?php
     }
 
-    /**
-     * Enqueue module-specific scripts.
-     */
     public function enqueue_scripts() {
-        // wp_enqueue_editor(); // Uncomment if HTML fields are used for labels
-
         $commonData = $this->get_common_script_data();
         $module_specific_data = [
-            'defaultSubTabId'   => 'labels-general', // First tab ID
-            'ajax_action'       => 'save_settings_for_' . $this->tab_id, // e.g. save_settings_for_labels
-            'option_name'       => $this->option_name, // 'product_estimator_labels'
-            'defined_label_types' => array_keys($this->defined_label_types), // This should be fine
+            'defaultSubTabId'   => 'labels-general',
+            'option_name'       => $this->option_name,
+            'mainTabId'         => $this->tab_id,
+            'ajaxActionPrefix'  => 'save_labels',
+            'defined_label_types' => array_keys($this->defined_label_types),
             'i18n' => [
                 'saveSuccess' => __('Label settings saved successfully.', 'product-estimator'),
                 'saveError'   => __('Error saving label settings.', 'product-estimator'),
             ],
         ];
         $actual_data_for_js_object = array_replace_recursive($commonData, $module_specific_data);
-        $this->add_script_data('labelsSettings', $actual_data_for_js_object); // Unique global JS object
+        $this->add_script_data('labelsSettings', $actual_data_for_js_object);
     }
 
-    /**
-     * Enqueue module-specific styles.
-     */
     public function enqueue_styles() {
         wp_enqueue_style(
             $this->plugin_name . '-label-settings',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/label-settings.css',
-            [ $this->plugin_name . '-settings', $this->plugin_name . '-vertical-tabs-layout' ], // Added dependency
+            [ $this->plugin_name . '-settings', $this->plugin_name . '-vertical-tabs-layout' ],
             $this->version
         );
     }
 
-    /**
-     * Get defined label types.
-     */
     public function get_defined_label_types() {
         return $this->defined_label_types;
     }
 }
 
-add_action(
-    'plugins_loaded',
-    function() {
-        $version = defined( 'PRODUCT_ESTIMATOR_VERSION' ) ? PRODUCT_ESTIMATOR_VERSION : '1.0.0';
-        $module  = new LabelsSettingsModule( 'product-estimator', $version );
-    }
-);
+// The SettingsManager is responsible for instantiating this module.
+// NO add_action('plugins_loaded', ...) block here.

@@ -114,70 +114,117 @@ class ProductEstimatorSettings {
    */
   bindEvents() {
     const $ = jQuery;
+    const logger = window.createLogger ? window.createLogger('ProductEstimatorSettings') : console; // Use your logger
 
     // Tab switching
     $('.nav-tab-wrapper').on('click', '.nav-tab', this.handleTabClick.bind(this));
 
-    // Form submission - convert to AJAX
-    $('.product-estimator-form').on('submit', this.handleAjaxFormSubmit.bind(this));
+    // Form submission - MODIFIED TO BE AWARE OF VERTICAL TAB FORMS
+    // Use a more specific selector if possible, or ensure this is the only primary handler for general forms.
+    // We are binding to document to catch all forms with '.product-estimator-form'
+    $(document).on('submit', 'form.product-estimator-form', (e) => { // Changed to an arrow function to maintain 'this' from ProductEstimatorSettings if needed later, though not strictly necessary for this specific logic.
+      const $form = $(e.currentTarget); // Use e.currentTarget for delegated events
+
+      // Check if this form is specifically a vertical tab form
+      // which should be handled by VerticalTabbedModule.js
+      if ($form.hasClass('pe-vtabs-tab-form') && $form.attr('data-tab')) {
+        logger.log('Generic handler (ProductEstimatorSettings.js): Form has .pe-vtabs-tab-form and data-tab. Letting VerticalTabbedModule handle it.', $form[0]);
+        // DO NOT call e.preventDefault() or e.stopImmediatePropagation() here for these forms.
+        // Simply return, allowing the VerticalTabbedModule's more specific handler to proceed.
+        return;
+      }
+
+      // If it's not a vertical tab form, then this generic handler should process it.
+      logger.log('Generic handler (ProductEstimatorSettings.js): Processing form submission.', $form[0]);
+      e.preventDefault(); // Prevent default for forms this handler IS responsible for.
+
+      // Call the original AJAX form submission logic
+      // Ensure 'this' context is correct if handleAjaxFormSubmit uses 'this' to refer to ProductEstimatorSettings instance
+      this.handleAjaxFormSubmit(e, $form); // Pass $form to avoid re-selecting
+    });
 
     // Window beforeunload for unsaved changes warning
     $(window).on('beforeunload', this.handleBeforeUnload.bind(this));
 
-    log('ProductEstimatorSettings', 'Events bound');
+    logger.log('ProductEstimatorSettings: Events bound');
   }
 
   /**
    * Handle AJAX form submission
    * @param {Event} e - Submit event
+   * @param {jQuery} [$form] - Optional: The form element if already known.
    */
-  handleAjaxFormSubmit(e) {
-    e.preventDefault();
+  handleAjaxFormSubmit(e, $form) { // Added $form parameter
+    // If e is directly passed, e.target will be the form.
+    // If $form is passed, use it directly.
     const $ = jQuery;
-    const $form = $(e.target);
-    const tabId = $form.closest('.tab-content').attr('id');
-    const formData = $form.serialize();
-    console.log('Serialized form data:', formData);
+    $form = $form || $(e.target); // Ensure $form is defined
 
+    const tabId = $form.closest('.tab-content').attr('id') || $form.data('tab'); // Fallback to data-tab if not in .tab-content
+    let formData = $form.serialize();
+    const logger = window.createLogger ? window.createLogger(`PES:${tabId || 'unknown_tab'}`) : console;
 
-    // Show loading state
-    this.showFormLoading($form);
+    logger.log('Serialized form data (generic handler):', formData);
 
-    log('ProductEstimatorSettings', `Submitting form for tab: ${tabId}`);
-
-    // Make the AJAX request to save settings
-    ajax.ajaxRequest({
-      url: productEstimatorSettings.ajax_url,
-      type: 'POST',
-      data: {
-        action: 'save_' + tabId + '_settings',
-        nonce: productEstimatorSettings.nonce,
-        form_data: formData
+    // Handle unchecked checkboxes
+    $form.find('input[type="checkbox"]').each(function() {
+      const $cb = $(this);
+      if (!$cb.is(':checked')) {
+        const name = $cb.attr('name');
+        if (name) { // Ensure name attribute exists
+          const paramRegex = new RegExp(`(^|&)${encodeURIComponent(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:=[^&]*)?`);
+          if (formData.match(paramRegex) === null) { // Only add if not present at all
+            formData += `&${encodeURIComponent(name)}=0`;
+          }
+          // Note: Modifying formData like this can be tricky.
+          // It's often better to build an object and then serialize, or let server handle missing as false.
+        }
       }
+    });
+    formData = formData.replace(/^&+/, '').replace(/&&+/g, '&');
+
+
+    this.showFormLoading($form);
+    logger.log(`Submitting form for tab: ${tabId}`);
+
+    // Determine the correct AJAX action. For general tabs, it might be based on tabId.
+    // For vertical tabs, this handler should ideally not be reached, but if it were,
+    // it wouldn't have sub_tab_id.
+    const ajaxAction = `save_${tabId}_settings`; // This assumes each general tab has a unique AJAX action.
+
+    const localizedData = window.productEstimatorSettings || { nonce: '', ajax_url: ajaxurl, i18n: {} };
+
+    const ajaxDataPayload = {
+      action: ajaxAction,
+      nonce: localizedData.nonce, // Use a general settings nonce
+      form_data: formData
+      // NO 'sub_tab_id' here, as this is the generic handler
+    };
+
+    logger.log('Generic handler (ProductEstimatorSettings.js) sending AJAX with payload:', ajaxDataPayload);
+
+    ajax.ajaxRequest({
+      url: localizedData.ajax_url,
+      type: 'POST',
+      data: ajaxDataPayload
     })
       .then(response => {
-        // Show success message
-        validation.showNotice(response.message || productEstimatorSettings.i18n.saveSuccess, 'success');
-
-        // Reset the change flags for this tab's form
+        validation.showNotice(response.message || localizedData.i18n.saveSuccess, 'success');
         this.formChangeTrackers[tabId] = false;
-
-        // If this is the current tab, reset the main formChanged flag
         if (tabId === this.currentTab) {
           this.formChanged = false;
         }
-
-        log('ProductEstimatorSettings', `Settings saved successfully for tab: ${tabId}`);
+        logger.log(`Settings saved successfully for tab: ${tabId} (via generic handler)`);
       })
       .catch(error => {
-        // Show error message
-        validation.showNotice(error.message || productEstimatorSettings.i18n.saveError, 'error');
-        log('ProductEstimatorSettings', `Error saving settings for tab ${tabId}:`, error);
+        validation.showNotice(error.message || localizedData.i18n.saveError, 'error');
+        logger.error(`Error saving settings for tab ${tabId} (via generic handler):`, error);
       })
       .finally(() => {
         this.hideFormLoading($form);
       });
   }
+
 
   /**
    * Show loading state for form

@@ -179,11 +179,3 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
         return ['suggested_products_enabled'];
     }
 }
-
-
-add_action('plugins_loaded', function() {
-    $module = new FeatureSwitchesSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
-        $manager->register_module($module);
-    });
-});

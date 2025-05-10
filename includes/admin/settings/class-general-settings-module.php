@@ -448,11 +448,3 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
         echo '<p>' . esc_html__('Configure settings for PDF estimate exports.', 'product-estimator') . '</p>';
     }
 }
-
-// Initialize and register the module
-add_action('plugins_loaded', function() {
-    $module = new GeneralSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
-        $manager->register_module($module);
-    });
-});

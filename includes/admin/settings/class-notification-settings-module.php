@@ -84,18 +84,17 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 $section_id_for_wp_api,
                 $callback_args
             );
-            // **** CRUCIAL STEP: Store the field definition ****
             $this->store_field_for_sub_tab($current_sub_tab_id, $id, $callback_args);
         }
     }
 
     private function register_single_notification_type_fields( $type_key, $current_sub_tab_id, $page_slug_for_wp_api ) {
         $type_data = $this->defined_notification_types[ $type_key ];
-        $section_id_for_wp_api = $this->section_id . '_' . $type_key . '_section'; // Unique section ID
+        $section_id_for_wp_api = $this->section_id . '_' . $type_key . '_section';
         add_settings_section(
             $section_id_for_wp_api,
-            null, // No title for the section itself
-            null, // No callback for section description
+            null,
+            null,
             $page_slug_for_wp_api
         );
 
@@ -117,7 +116,6 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 $section_id_for_wp_api,
                 $callback_args
             );
-            // **** CRUCIAL STEP: Store the field definition ****
             $this->store_field_for_sub_tab($current_sub_tab_id, $id, $callback_args);
         }
     }
@@ -144,7 +142,7 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
     public function render_vertical_tabs_sidebar() {
         ?>
-        <div class="pe-vtabs-sidebar-panel notification-tags-info"> <?php // CORRECTED CLASS ?>
+        <div class="pe-vtabs-sidebar-panel notification-tags-info">
             <h3><?php esc_html_e( 'Available Template Tags', 'product-estimator' ); ?></h3>
             <p><?php esc_html_e( 'You can use these tags in the Email Subject and Email Content fields. They will be replaced with actual values when the email is sent.', 'product-estimator' ); ?></p>
             <ul class="pe-vtabs-tags-list">
@@ -178,27 +176,18 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
     }
 
     public function validate_settings($input, $context_field_definitions = null) {
-        // The parent::validate_settings method will use the 'type' defined in $context_field_definitions
-        // (which we populated via store_field_for_sub_tab) to apply appropriate sanitization.
         $validated = parent::validate_settings($input, $context_field_definitions);
-
         if (is_wp_error($validated)) {
             return $validated;
         }
-
-        // Example of additional specific validation for this module, if needed:
         if (isset($validated['from_email']) && !empty($validated['from_email']) && !is_email($validated['from_email'])) {
             add_settings_error(
-                $this->option_name, // settings group
-                'invalid_from_email', // error code
-                __('The "From Email" in Notification General Settings is not a valid email address.', 'product-estimator'), // message
-                'error' // type
+                $this->option_name,
+                'invalid_from_email',
+                __('The "From Email" in Notification General Settings is not a valid email address.', 'product-estimator'),
+                'error'
             );
-            // Optionally, revert to old value or a safe default
-            // $options = get_option($this->option_name);
-            // $validated['from_email'] = $options['from_email'] ?? get_option('admin_email');
         }
-
         return $validated;
     }
 
@@ -206,19 +195,19 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         wp_enqueue_media();
         wp_enqueue_editor();
 
-        $commonData = $this->get_common_script_data(); // Assumes get_common_script_data() is in SettingsModuleWithVerticalTabsBase
+        $commonData = $this->get_common_script_data();
         $module_specific_data = [
-            'defaultSubTabId'   => 'notifications-general', // First sub-tab ID
-            'ajax_action'       => 'save_settings_for_' . $this->tab_id, // e.g., 'save_settings_for_notifications'
-            'option_name'       => $this->option_name, // 'product_estimator_settings'
-            'mainTabId'       => $this->tab_id,
+            'defaultSubTabId'   => 'notifications-general',
+            'option_name'       => $this->option_name,
+            'mainTabId'         => $this->tab_id,
+            'ajaxActionPrefix'  => 'save_notifications',
             'defined_notification_types' => array_keys($this->defined_notification_types),
             'i18n'               => [
                 'selectImage'          => __( 'Select or Upload Logo', 'product-estimator' ),
                 'useThisImage'         => __( 'Use this image', 'product-estimator' ),
                 'validationErrorEmail' => __( 'Please enter a valid From Email address.', 'product-estimator' ),
-                'saveSuccess'          => __( 'Notification settings saved successfully.', 'product-estimator' ), // Overrides common
-                'saveError'            => __( 'Error saving notification settings.', 'product-estimator' ),   // Overrides common
+                'saveSuccess'          => __( 'Notification settings saved successfully.', 'product-estimator' ),
+                'saveError'            => __( 'Error saving notification settings.', 'product-estimator' ),
             ],
         ];
 
@@ -230,16 +219,11 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         wp_enqueue_style(
             $this->plugin_name . '-notification-settings',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/notification-settings.css',
-            [ $this->plugin_name . '-settings', $this->plugin_name . '-vertical-tabs-layout' ], // Added dependency
+            [ $this->plugin_name . '-settings', $this->plugin_name . '-vertical-tabs-layout' ],
             $this->version
         );
     }
 }
 
-add_action(
-    'plugins_loaded',
-    function() {
-        $version = defined( 'PRODUCT_ESTIMATOR_VERSION' ) ? PRODUCT_ESTIMATOR_VERSION : '1.0.0';
-        $module  = new NotificationSettingsModule( 'product-estimator', $version );
-    }
-);
+// The SettingsManager is responsible for instantiating this module.
+// NO add_action('plugins_loaded', ...) block here.

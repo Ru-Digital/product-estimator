@@ -433,11 +433,3 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
         return ['netsuite_enabled'];
     }
 }
-
-// Initialize and register the module
-add_action('plugins_loaded', function() {
-    $module = new NetsuiteSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
-        $manager->register_module($module);
-    });
-});

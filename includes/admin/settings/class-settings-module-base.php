@@ -267,6 +267,29 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @access   public
      */
     public function handle_ajax_save() { // Removed $override_option_name parameter
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('--- AJAX SAVE START (' . get_class($this) . ') ---');
+            error_log('REQUEST_METHOD: ' . (isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : 'Not Set'));
+            error_log('$_POST CONTENTS: ' . print_r($_POST, true));
+            // error_log('$_GET CONTENTS: ' . print_r($_GET, true)); // Usually not relevant for POST save
+
+            if (isset($_POST['sub_tab_id'])) {
+                error_log('RAW $_POST["sub_tab_id"] IS SET. Value: "' . $_POST['sub_tab_id'] . '"');
+                $st_id_debug = sanitize_key($_POST['sub_tab_id']);
+                error_log('Sanitized $_POST["sub_tab_id"] (debug): "' . $st_id_debug . '"');
+                if (empty($st_id_debug)) {
+                    error_log('Sanitized $_POST["sub_tab_id"] (debug) IS EMPTY.');
+                } else {
+                    error_log('Sanitized $_POST["sub_tab_id"] (debug) IS NOT EMPTY.');
+                }
+            } else {
+                error_log('RAW $_POST["sub_tab_id"] IS NOT SET.');
+            }
+            error_log('Module class: ' . get_class($this));
+            error_log('Module tab_id: ' . ($this->tab_id ?? 'NOT SET'));
+            error_log('Module option_name: ' . ($this->option_name ?? 'NOT SET'));
+        }
+
         // Verify nonce and permissions
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_settings_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed', 'product-estimator')));
@@ -280,99 +303,170 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
         // Parse form data
         if (!isset($_POST['form_data'])) {
+            if (defined('WP_DEBUG') && WP_DEBUG) { error_log('form_data not in POST.'); }
             wp_send_json_error(array('message' => __('No form data received', 'product-estimator')));
             exit;
         }
 
         parse_str(wp_unslash($_POST['form_data']), $parsed_form_data);
+        if (defined('WP_DEBUG') && WP_DEBUG) { error_log('Parsed form_data: ' . print_r($parsed_form_data, true)); }
 
         // Determine the key for this module's settings in the form data using $this->option_name
         $settings_from_form = $parsed_form_data[$this->option_name] ?? [];
 
         $current_context_id = null;
         if ($this instanceof SettingsModuleWithVerticalTabsBase) {
+            if (defined('WP_DEBUG') && WP_DEBUG) { error_log('This module is an instance of SettingsModuleWithVerticalTabsBase.'); }
             // For vertical tab modules, sub_tab_id is crucial for scoping.
-            // Ensure your JS sends 'sub_tab_id' in the AJAX POST data.
+            // JS sends 'sub_tab_id' in the AJAX POST data.
             $current_context_id = isset($_POST['sub_tab_id']) ? sanitize_key($_POST['sub_tab_id']) : null;
+            if (defined('WP_DEBUG') && WP_DEBUG) { error_log('Attempted to read "sub_tab_id" from POST. Value for $current_context_id: "' . ($current_context_id === null ? 'NULL' : $current_context_id) . '"'); }
+
             if (empty($current_context_id)) {
+                // This is the error specific to vertical tab modules if sub_tab_id is missing.
                 if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log(get_class($this) . ': AJAX save error - sub_tab_id is missing for vertical tab module. Cannot scope settings correctly. Tab ID: ' . $this->tab_id);
+                    error_log(get_class($this) . ': AJAX save error - $current_context_id is empty. Sub-tab ID is missing for vertical tab module. Cannot scope settings correctly. Tab ID: ' . ($this->tab_id ?? 'N/A'));
                 }
                 wp_send_json_error(['message' => __('Error: Sub-tab context is missing.', 'product-estimator')]);
-                return;
+                exit;
+            }
+        } else {
+            if (defined('WP_DEBUG') && WP_DEBUG) { error_log('This module is NOT an instance of SettingsModuleWithVerticalTabsBase. $current_context_id remains null.'); }
+            // For modules that are *not* SettingsModuleWithVerticalTabsBase,
+            // they don't use sub-tabs, so $current_context_id remains null.
+            // The JS for these modules should NOT be sending a 'sub_tab_id'.
+            // If it does, it might be ignored here, or you could add a check if unexpected.
+            if (isset($_POST['sub_tab_id']) && defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(get_class($this) . ': Warning - "sub_tab_id" was present in POST for a non-vertical tab module. Value: ' . sanitize_key($_POST['sub_tab_id']));
             }
         }
 
         // For non-vertical tab modules, $current_context_id remains null.
         // get_fields_for_context(null) will fetch appropriate fields.
 
-        $fields_for_current_context = $this->get_fields_for_context($current_context_id);
 
-        if (empty($fields_for_current_context) && $current_context_id) {
+        if (defined('WP_DEBUG') && WP_DEBUG) { error_log('Calling get_fields_for_context with $current_context_id: "' . ($current_context_id === null ? 'NULL' : $current_context_id) . '"');}
+        $fields_for_current_context = $this->get_fields_for_context($current_context_id);
+        if (defined('WP_DEBUG') && WP_DEBUG) { error_log('Fields for current context: ' . print_r($fields_for_current_context, true));}
+
+        // This check was a bit problematic. If $current_context_id is null (for non-vertical tabs),
+        // and fields are registered without a sub_tab_id, $fields_for_current_context should NOT be empty.
+        // The critical error is if $current_context_id was EXPECTED (for vertical tabs) but was empty *earlier*.
+        // if (empty($fields_for_current_context) && $current_context_id) { // Original check
+        // Let's refine this: this condition means a sub-tab ID was provided, but no fields were found for it.
+        if ($current_context_id && empty($fields_for_current_context) && !empty($settings_from_form)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(get_class($this) . ": AJAX save warning - No fields registered for context/sub-tab: '" . esc_html($current_context_id) . "' in module with option_name: '" . esc_html($this->option_name) . "'.");
+                error_log(get_class($this) . ": AJAX save warning - No fields registered for specific sub-tab: '" . esc_html($current_context_id) . "' in module with option_name: '" . esc_html($this->option_name) . "', but form data was present for this option_name.");
             }
-            // If no fields are registered for this specific sub-tab, there's nothing to process for it.
-            // We can send a success message as technically no operation failed.
-            // Or, if this is unexpected, an error. Let's assume it's not an error for now.
+            // This might be an error or just mean this sub-tab has no settings itself but is a container.
+            // However, if settings_from_form IS NOT empty, it implies data was submitted that can't be mapped.
+            // For now, let's proceed, as validation will only use known fields.
+            // If this situation (sub_tab ID given, but no fields for it, yet data submitted) is always an error,
+            // then you might send wp_send_json_error here.
         }
 
         $processed_data_for_context = $settings_from_form;
-// Default checkboxes *only* for the current context
+        // Default checkboxes *only* for the fields identified in the current context
         foreach ($fields_for_current_context as $field_id => $args) {
             if (isset($args['type']) && $args['type'] === 'checkbox') {
+                // The $processed_data_for_context comes from $parsed_form_data[$this->option_name].
+                // Its keys are the field IDs directly.
                 if (!isset($processed_data_for_context[$field_id])) {
                     $processed_data_for_context[$field_id] = '0'; // Default unchecked
                 }
             }
         }
 
-        // Filter $processed_data_for_context to include ONLY fields belonging to the current context.
-        // This ensures we only validate and save what's expected from this specific form submission.
         $scoped_data_to_validate = [];
-        foreach ($fields_for_current_context as $field_id => $args) {
-            if (array_key_exists($field_id, $processed_data_for_context)) {
-                $scoped_data_to_validate[$field_id] = $processed_data_for_context[$field_id];
+        if (!empty($fields_for_current_context)) {
+            foreach ($fields_for_current_context as $field_id => $args) {
+                if (array_key_exists($field_id, $processed_data_for_context)) {
+                    $scoped_data_to_validate[$field_id] = $processed_data_for_context[$field_id];
+                } else if (isset($args['type']) && $args['type'] === 'checkbox') {
+                    // If a checkbox field defined for the context wasn't in processed_data at all (e.g. not in form POST)
+                    // ensure it's included for validation as '0'
+                    $scoped_data_to_validate[$field_id] = '0';
+                }
             }
-            // For non-checkboxes not in form, they are simply not included here.
+        } else if (!$current_context_id && empty($fields_for_current_context) && !empty($processed_data_for_context)) {
+            // This is a non-vertical tab module that has no fields registered AT ALL via store_registered_field.
+            // But it received data. We should probably try to validate what we received based on type.
+            // Or, this indicates a configuration error for this simple module.
+            // For now, we'll pass $processed_data_for_context, and validate_settings will warn about unknown fields.
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(get_class($this) . ": No fields explicitly registered for this non-vertical tab module, but data was received. Proceeding with direct validation of received data.");
+            }
+            $scoped_data_to_validate = $processed_data_for_context;
         }
 
+        // If $fields_for_current_context is empty, AND $current_context_id was set (vertical tab case),
+        // then $scoped_data_to_validate will be empty. This is fine if that sub-tab truly has no fields.
+
+        if (defined('WP_DEBUG') && WP_DEBUG) { error_log('Data scoped for validation: ' . print_r($scoped_data_to_validate, true));}
         $validated_data = $this->validate_settings($scoped_data_to_validate, $fields_for_current_context);
+        if (defined('WP_DEBUG') && WP_DEBUG) { error_log('Data after validation: ' . print_r($validated_data, true));}
+
         if (is_wp_error($validated_data)) {
-            wp_send_json_error(['message' => $validated_data->get_error_message()]);
-            return;
+            // Collect all settings errors if any were added by add_settings_error in validate_settings
+            $errors = get_settings_errors();
+            $error_messages = [];
+            if (!empty($errors)) {
+                foreach ($errors as $error) {
+                    if ($error['setting'] === $this->option_name) { // Check if error pertains to current option group
+                        $error_messages[] = $error['message'];
+                    }
+                }
+            }
+            // Prepend the WP_Error message if it exists
+            if (!empty($validated_data->get_error_message())) {
+                array_unshift($error_messages, $validated_data->get_error_message());
+            }
+            $final_error_message = !empty($error_messages) ? implode('<br>', $error_messages) : __('Validation failed.', 'product-estimator');
+
+            if (defined('WP_DEBUG') && WP_DEBUG) { error_log('Validation returned WP_Error or settings errors found: ' . $final_error_message); }
+            wp_send_json_error(['message' => $final_error_message]);
+            exit;
         }
 
-
-        // Fetch all current settings for this module's option_name
         $current_db_options = get_option($this->option_name, []);
-        $new_db_options = $current_db_options; // Start with existing options
+        if (!is_array($current_db_options)) { // Ensure it's an array
+            $current_db_options = [];
+        }
+        $new_db_options = $current_db_options;
 
-        // Merge validated data for the current context into the new options array
+        // Merge validated data into the new options array.
+        // $validated_data now contains only the keys relevant to the current context (or all data if no fields were registered for a simple module).
         foreach ($validated_data as $key => $value) {
-            // Ensure we only update keys that were actually part of the current context's validated data
-            if (array_key_exists($key, $fields_for_current_context)) {
-                $new_db_options[$key] = $value;
+            // For vertical tab modules, ensure we only update keys that were actually part of the current context's validated data.
+            // For simple modules, if $fields_for_current_context was empty but $scoped_data_to_validate was not,
+            // this check might be too restrictive if we intend to save all validated data.
+            // The crucial part is that $validated_data should only contain what's meant to be saved for $this->option_name.
+            if (!empty($fields_for_current_context)) { // If we have a defined context of fields
+                if (array_key_exists($key, $fields_for_current_context)) {
+                    $new_db_options[$key] = $value;
+                }
+            } else { // No specific field context (e.g., simple module with no fields formally registered but data came through)
+                $new_db_options[$key] = $value; // Save all validated items
             }
         }
 
-// The $this->process_form_data method from your original code seemed to do HTML decoding.
-        // That kind of specific processing should ideally be part of the validation for those field types.
-        // Let's assume validate_settings now handles all necessary transformations.
-        // If $this->process_form_data is still needed for other global processing on $new_db_options,
-        // it would be called here. For now, removing the direct call to it as its role is covered.
+        if (defined('WP_DEBUG') && WP_DEBUG) { error_log('Old DB options for ' . $this->option_name . ': ' . print_r($current_db_options, true)); }
+        if (defined('WP_DEBUG') && WP_DEBUG) { error_log('New DB options to be saved for ' . $this->option_name . ': ' . print_r($new_db_options, true)); }
 
-        update_option($this->option_name, $new_db_options);
-        wp_cache_delete($this->option_name, 'options'); // Clear cache for this option
+        $update_result = update_option($this->option_name, $new_db_options);
+        if (defined('WP_DEBUG') && WP_DEBUG) { error_log('update_option result for ' . $this->option_name . ': ' . ($update_result ? 'true (changed)' : 'false (not changed or failed)'));}
+        wp_cache_delete($this->option_name, 'options');
 
-        $this->after_save_actions($parsed_form_data); // Pass original parsed form data if needed for actions
+        $this->after_save_actions($parsed_form_data);
 
+        if (defined('WP_DEBUG') && WP_DEBUG) { error_log('--- AJAX SAVE SUCCESS (' . get_class($this) . ') ---');}
         wp_send_json_success([
             'message' => sprintf(
-                __('%s settings saved successfully', 'product-estimator'),
+                __('%s settings saved successfully.', 'product-estimator'), // Changed to singular for consistency
                 $this->tab_title
             )
         ]);
+        exit; // Ensure termination after success
     }
 
     /**

@@ -28,18 +28,6 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase implements Setti
     }
 
     /**
-     * Register module with the settings manager
-     *
-     * @since    1.2.0
-     * @access   public
-     */
-    public function register() {
-        add_action('product_estimator_register_settings_modules', function($manager) {
-            $manager->register_module($this);
-        });
-    }
-
-    /**
      * Check if this module handles a specific setting
      *
      * @since    1.2.0
@@ -508,11 +496,3 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase implements Setti
         ));
     }
 }
-
-// Initialize and register the module
-add_action('plugins_loaded', function() {
-    $module = new ProductAdditionsSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
-        $manager->register_module($module);
-    });
-});

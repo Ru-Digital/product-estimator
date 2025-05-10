@@ -486,11 +486,3 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
         return $attributes;
     }
 }
-
-// Initialize and register the module
-add_action('plugins_loaded', function() {
-    $module = new SimilarProductsSettingsModule('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-    add_action('product_estimator_register_settings_modules', function($manager) use ($module) {
-        $manager->register_module($module);
-    });
-});

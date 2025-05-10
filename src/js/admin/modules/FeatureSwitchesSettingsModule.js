@@ -69,6 +69,10 @@ class FeatureSwitchesSettingsModule {
       // You can call setup functions here if needed when the tab becomes visible
       // this.setupFeatureSwitchFields();
     }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('sub_tab');
+    window.history.replaceState({}, '', url);
   }
 
   // Add other methods as needed for client-side functionality

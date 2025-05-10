@@ -281,6 +281,10 @@ class GeneralSettingsModule {
       this.setupWpEditors();
       logger.log('Tab changed to General Settings, refreshing editors');
     }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('sub_tab');
+    window.history.replaceState({}, '', url);
   }
 
   /**

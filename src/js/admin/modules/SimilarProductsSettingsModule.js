@@ -78,6 +78,10 @@ class SimilarProductsSettingsModule {
       logger.log('Tab changed to Similar Products, re-initializing rules.');
       this.initializeExistingRules(); // Re-initialize rules when tab becomes active
     }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('sub_tab');
+    window.history.replaceState({}, '', url);
   }
 
   /**

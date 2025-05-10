@@ -26,28 +26,6 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
     }
 
     /**
-     * Check if this module handles a specific setting
-     *
-     * @since    1.1.0
-     * @access   public
-     * @param    string $key Setting key
-     * @return   bool Whether this module handles the setting
-     */
-    public function has_setting($key) {
-        $module_settings = [
-            'netsuite_enabled',
-            'netsuite_client_id',
-            'netsuite_client_secret',
-            'netsuite_api_url',
-            'netsuite_token_url',
-            'netsuite_request_limit',
-            'netsuite_cache_time'
-        ];
-
-        return in_array($key, $module_settings);
-    }
-
-    /**
      * Register the module-specific settings fields.
      *
      * @since    1.1.0
@@ -174,96 +152,6 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
         return $validated;
     }
 
-    /**
-     * Process form data specific to NetSuite settings
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    array    $form_data    The form data to process
-     * @return   true|\WP_Error    True on success, WP_Error on failure
-     */
-    protected function process_form_data($form_data) {
-        if (!isset($form_data['product_estimator_settings'])) {
-            return new \WP_Error('missing_data', __('No settings data received', 'product-estimator'));
-        }
-
-        $settings = $form_data['product_estimator_settings'];
-
-        // Fix for checkbox fields - ensure they're properly set to 0 when unchecked
-        $checkbox_fields = ['netsuite_enabled'];
-
-        foreach ($checkbox_fields as $field) {
-            if (!isset($settings[$field])) {
-                $settings[$field] = 0;
-            }
-        }
-
-        // If NetSuite integration is enabled, validate the required fields
-        if (isset($settings['netsuite_enabled']) && $settings['netsuite_enabled']) {
-            // Check client ID
-            if (empty($settings['netsuite_client_id'])) {
-                return new \WP_Error(
-                    'missing_client_id',
-                    __('Client ID is required when NetSuite integration is enabled', 'product-estimator')
-                );
-            }
-
-            // Check client secret - only validate if it's not empty (to allow keeping existing value)
-            if (isset($settings['netsuite_client_secret']) && empty($settings['netsuite_client_secret'])) {
-                // Get existing secret to see if we already have one
-                $existing_settings = get_option('product_estimator_settings', array());
-                if (empty($existing_settings['netsuite_client_secret'])) {
-                    return new \WP_Error(
-                        'missing_client_secret',
-                        __('Client Secret is required when NetSuite integration is enabled', 'product-estimator')
-                    );
-                }
-            }
-
-            // Validate API URL
-            if (empty($settings['netsuite_api_url']) || !filter_var($settings['netsuite_api_url'], FILTER_VALIDATE_URL)) {
-                return new \WP_Error(
-                    'invalid_api_url',
-                    __('A valid API Endpoint URL is required', 'product-estimator')
-                );
-            }
-
-            // Validate token URL
-            if (empty($settings['netsuite_token_url']) || !filter_var($settings['netsuite_token_url'], FILTER_VALIDATE_URL)) {
-                return new \WP_Error(
-                    'invalid_token_url',
-                    __('A valid OAuth Token URL is required', 'product-estimator')
-                );
-            }
-
-            // Validate request limit
-            if (isset($settings['netsuite_request_limit'])) {
-                $limit = intval($settings['netsuite_request_limit']);
-                if ($limit < 1 || $limit > 100) {
-                    return new \WP_Error(
-                        'invalid_request_limit',
-                        __('API Request Limit must be between 1 and 100', 'product-estimator')
-                    );
-                }
-            }
-
-            // Validate cache time
-            if (isset($settings['netsuite_cache_time'])) {
-                $cache_time = intval($settings['netsuite_cache_time']);
-                if ($cache_time < 0) {
-                    return new \WP_Error(
-                        'invalid_cache_time',
-                        __('Cache Duration must be at least 0', 'product-estimator')
-                    );
-                }
-            }
-        }
-
-        // Update the settings array in the form data
-        $form_data['product_estimator_settings'] = $settings;
-
-        return true;
-    }
 
     /**
      * Additional actions after saving NetSuite settings

@@ -153,6 +153,10 @@ class ProductUpgradesSettingsModule {
         }
       }
     }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('sub_tab');
+    window.history.replaceState({}, '', url);
   }
 
   /**

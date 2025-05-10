@@ -54,6 +54,7 @@ class NetsuiteSettingsModule {
    */
   bindEvents() {
     const $ = jQuery;
+    $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
 
     // Test connection button
     $('#test-netsuite-connection').on('click', this.testNetsuiteConnection.bind(this));
@@ -67,92 +68,6 @@ class NetsuiteSettingsModule {
     // Number range validation
     $('#netsuite_request_limit').on('change', this.validateRequestLimit.bind(this));
     $('#netsuite_cache_time').on('change', this.validateCacheTime.bind(this));
-
-    // Listen for tab changes
-    $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
-
-    // Add handler for form submission - THIS IS THE FIX
-    $('.product-estimator-form').on('submit', this.handleFormSubmit.bind(this));
-
-    // logger.log('Events bound successfully');
-  }
-
-  /**
-   * Handle form submission - THIS IS THE NEW METHOD
-   * @param {Event} e Submit event
-   */
-  handleFormSubmit(e) {
-    // Only handle if this is our tab's form
-    const $ = jQuery;
-    const $form = $(e.currentTarget);
-
-    // Make sure we're on the netsuite tab
-    if ($form.closest('#netsuite').length === 0) {
-      return; // Let the default handler process it
-    }
-
-    e.preventDefault();
-
-    // Get the serialized form data
-    let formData = $form.serialize();
-
-    // Fix for checkbox fields - add unchecked checkboxes to the data
-    const checkboxFields = $form.find('input[type="checkbox"]');
-    checkboxFields.each(function() {
-      const checkboxName = $(this).attr('name');
-      if (!$(this).is(':checked') && !formData.includes(checkboxName)) {
-        formData += '&' + checkboxName + '=0';
-      }
-    });
-
-    // Show loading state
-    const $submitBtn = $form.find(':submit');
-    $submitBtn.prop('disabled', true);
-    $submitBtn.data('original-text', $submitBtn.val());
-    $submitBtn.val('Saving...');
-
-    // Send the AJAX request
-    ajaxRequest({
-      url: netsuiteSettings.ajax_url,
-      type: 'POST',
-      data: {
-        action: 'save_netsuite_settings',
-        nonce: netsuiteSettings.nonce,
-        form_data: formData
-      }
-    })
-      .then(response => {
-        // Show success message
-        if (typeof ProductEstimatorSettings !== 'undefined' &&
-          typeof ProductEstimatorSettings.showNotice === 'function') {
-          ProductEstimatorSettings.showNotice(response.message || 'Settings saved successfully', 'success');
-        } else {
-          showNotice(response.message || 'Settings saved successfully', 'success');
-        }
-
-        // Reset form change state
-        if (typeof ProductEstimatorSettings !== 'undefined') {
-          ProductEstimatorSettings.formChanged = false;
-
-          if (ProductEstimatorSettings.formChangeTrackers) {
-            ProductEstimatorSettings.formChangeTrackers['netsuite'] = false;
-          }
-        }
-      })
-      .catch(error => {
-        // Show error message
-        if (typeof ProductEstimatorSettings !== 'undefined' &&
-          typeof ProductEstimatorSettings.showNotice === 'function') {
-          ProductEstimatorSettings.showNotice(error.message || 'Error saving settings', 'error');
-        } else {
-          showNotice(error.message || 'Error saving settings', 'error');
-        }
-      })
-      .finally(() => {
-        // Reset button
-        $submitBtn.prop('disabled', false);
-        $submitBtn.val($submitBtn.data('original-text'));
-      });
   }
 
   /**
@@ -237,6 +152,10 @@ class NetsuiteSettingsModule {
       this.toggleNetsuiteFields();
       logger.log('Tab changed to NetSuite settings, refreshing fields');
     }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('sub_tab');
+    window.history.replaceState({}, '', url);
   }
 
   /**

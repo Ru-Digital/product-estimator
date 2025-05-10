@@ -497,6 +497,9 @@ jQuery(document).ready(function ($) {
         // Use a small timeout to ensure the tab content is fully rendered and visible by WordPress/other scripts
         setTimeout(initProductAdditionsModule, 50);
       }
+      const url = new URL(window.location.href);
+      url.searchParams.delete('sub_tab');
+      window.history.replaceState({}, '', url);
     });
   } else {
     createLogger('ProductAdditionsInit').warn(`Main container #${mainTabId} not found. ProductAdditionsSettingsModule will not be initialized.`);

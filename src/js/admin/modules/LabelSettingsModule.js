@@ -45,6 +45,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
     // Any specific setup for Labels when its main tab is shown,
     // e.g., initializing a specific type of editor if one was used for labels.
     logger.log('Labels main tab activated - specific setup can go here.');
+
   }
 
   // Example of a module-specific handler, if needed:

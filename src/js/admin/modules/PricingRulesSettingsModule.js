@@ -138,6 +138,10 @@ class PricingRulesSettingsModule {
     if (tabId === this.settings.tab_id) {
       this.init();
     }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('sub_tab');
+    window.history.replaceState({}, '', url);
   }
 
   /**

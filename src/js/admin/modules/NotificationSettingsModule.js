@@ -108,13 +108,12 @@ class NotificationSettingsModule extends VerticalTabbedModule {
     const $ = jQuery;
     const isChecked = $toggleCheckbox.is(':checked');
     const formDataType = $toggleCheckbox.attr('id').replace('notification_', '').replace('_enabled', '');
-    const $form = this.$container.find(`.pe-vtabs-tab-form[data-tab-id="notification_type_${formDataType}"]`);
+    const $form = this.$container.find(`.pe-vtabs-tab-form[data-tab="notification-type-${formDataType}"]`);
 
     if (!$form.length) {
       logger.warn(`Form for notification type ${formDataType} not found.`);
       return;
     }
-    logger.log(`Toggling fields for notification type ${formDataType}: ${isChecked}`);
 
     // Only proceed if global notifications are enabled
     const $globalEnableCheckbox = this.$container.find('#enable_notifications');

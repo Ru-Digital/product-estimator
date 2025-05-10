@@ -55,6 +55,16 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      * @access   protected
      */
     public function register_fields() {
+        $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
+
+
+        add_settings_section(
+            $this->section_id,
+            null, // Section title can be omitted if fields are self-explanatory or tab title is enough
+            [$this, 'render_section_description'],
+            $page_slug_for_wp_api
+        );
+
         $fields = array(
             'suggested_products_enabled' => array(
                 'title' => __('Suggested Products', 'product-estimator'),
@@ -64,44 +74,23 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
 
         );
 
-        foreach ($fields as $id => $field) {
-            $args = array(
-                'id' => $id,
-                'type' => $field['type'],
-                'description' => $field['description']
-            );
-
-            // Add additional parameters if they exist
-            if (isset($field['default'])) {
-                $args['default'] = $field['default'];
-            }
-            if (isset($field['min'])) {
-                $args['min'] = $field['min'];
-            }
-            if (isset($field['max'])) {
-                $args['max'] = $field['max'];
-            }
-
+        foreach ($fields as $id => $field_args) {
+            $callback_args = array_merge($field_args, ['id' => $id, 'label_for' => $id]);
             add_settings_field(
                 $id,
-                $field['title'],
-                array($this, 'render_field_callback'),
-                $this->plugin_name . '_' . $this->tab_id,
+                $field_args['title'],
+                [$this, 'render_field_callback_proxy'],
+                $page_slug_for_wp_api,
                 $this->section_id,
-                $args
+                $callback_args
             );
+            // **** CRUCIAL STEP: Store the field definition ****
+            $this->store_registered_field($id, $callback_args);
         }
     }
 
-    /**
-     * Render a settings field.
-     *
-     * @since    1.1.0
-     * @access   public
-     * @param    array    $args    Field arguments.
-     */
-    public function render_field_callback($args) {
-        $this->render_field($args);
+    public function render_field_callback_proxy($args) {
+        parent::render_field($args);
     }
 
     /**
@@ -112,15 +101,13 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      * @param    array $input The settings to validate
      * @return   array The validated settings
      */
-    public function validate_settings($input) {
-        $valid = [];
+    public function validate_settings($input, $context_field_definitions = null) {
+        // Use the parent's validation. It will correctly handle checkboxes
+        // based on the 'type' => 'checkbox' stored during field registration.
+        $validated = parent::validate_settings($input, $context_field_definitions);
 
-        // Validate suggested_products_enabled
-        if (isset($input['suggested_products_enabled'])) {
-            $valid['suggested_products_enabled'] = !empty($input['suggested_products_enabled']) ? 1 : 0;
-        }
-
-        return $valid;
+        // Add any specific validation for feature switches if needed after parent validation
+        return $validated;
     }
 
     /**
@@ -130,16 +117,12 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      * @access   protected
      * @param    array    $form_data    The processed form data
      */
+
     protected function after_save_actions($form_data) {
-        // Clear Feature Switch related caches and transients
-        global $wpdb;
-
-        // Check if we need to invalidate product price caches
-        $settings = isset($form_data['product_estimator_settings']) ? $form_data['product_estimator_settings'] : array();
-        $current_settings = get_option( $this->option_name, array());
-
-        // If the integration was just enabled or the API URL changed, we need to invalidate caches
-        $integration_enabled = isset($settings['suggested_products_enabled']) && $settings['suggested_products_enabled'];
+        // Your existing after_save_actions logic can remain if relevant
+        // global $wpdb;
+        // $settings = $form_data[$this->option_name] ?? []; // Use $this->option_name
+        // ...
     }
 
     /**
@@ -162,19 +145,18 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      * @access   public
      */
     public function enqueue_scripts() {
-
-
-        // Localize script
-        wp_localize_script(
-            $this->plugin_name . '-feature-switches',
-            'featureSwitches',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('product_estimator_settings_nonce'),
-                'tab_id' => $this->tab_id,
-                'i18n' => array()
-            )
-        );
+        $actual_data_for_js_object = [
+            $this->plugin_name . '-admin',
+            'featureSwitchesSettings',
+            'nonce' => wp_create_nonce('product_estimator_feature_switches_nonce'),
+            'tab_id' => $this->tab_id,
+            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
+            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
+            'option_name'   => $this->option_name,
+            'i18n' => []
+        ];
+        // Use $this->add_script_data for consistency
+        $this->add_script_data('featureSwitchesSettings', $actual_data_for_js_object);
     }
 
     /**

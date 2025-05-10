@@ -13,6 +13,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  */
 abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
 
+
     /**
      * Defines the vertical tabs for the settings page.
      *
@@ -63,28 +64,61 @@ abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
      */
     public function register_settings() {
         $vertical_tabs = $this->get_vertical_tabs();
-
-        if (empty($vertical_tabs)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-                error_log(get_class($this) . ': No vertical tabs defined. Settings registration might be incomplete.');
-            }
-            return;
-        }
+        if (empty($vertical_tabs)) { return; }
 
         foreach ($vertical_tabs as $tab) {
-            if (empty($tab['id'])) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-                    error_log(get_class($this) . ': A vertical tab is missing an ID.');
-                }
-                continue;
-            }
-            $page_slug_for_tab = $this->plugin_name . '_' . $this->tab_id . '_' . $tab['id'];
-            $this->register_vertical_tab_fields($tab['id'], $page_slug_for_tab);
+            if (empty($tab['id'])) { continue; }
+            // The page slug for WordPress settings API (do_settings_sections)
+            $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id . '_' . $tab['id'];
+            // Child's register_vertical_tab_fields is responsible for calling add_settings_section,
+            // add_settings_field, and $this->store_field_for_sub_tab().
+            $this->register_vertical_tab_fields($tab['id'], $page_slug_for_wp_api);
         }
     }
 
+    /**
+     * Stores a field definition, associating it with a specific sub-tab.
+     * Child modules (extending this class) MUST call this method from within
+     * their register_vertical_tab_fields method for every field they register.
+     *
+     * @since    X.X.X (Refactored version)
+     * @param    string $sub_tab_id The ID of the vertical tab (sub-tab) the field belongs to.
+     * @param    string $field_id   The ID of the field.
+     * @param    array  $field_args The arguments array for the field (must include 'type').
+     */
+    public function store_field_for_sub_tab($sub_tab_id, $field_id, $field_args) {
+        // Calls the parent's method to store in the main $this->registered_fields array,
+        // passing the $sub_tab_id.
+        parent::store_registered_field($field_id, $field_args, $sub_tab_id);
+    }
+
+    /**
+     * Get fields (all types) that are registered for the given sub-tab context.
+     * Overrides the parent method to correctly filter from the main $this->registered_fields
+     * based on the 'sub_tab_id' stored in field arguments.
+     *
+     * @since    X.X.X (Refactored version)
+     * @access   protected
+     * @param    string|null $context_id The sub_tab_id.
+     * @return   array    Field definitions [field_id => args] for the specified sub-tab.
+     */
+    protected function get_fields_for_context($context_id = null) {
+        $context_fields = [];
+        if ($context_id === null) {
+            // This should ideally not happen for vertical tab modules if JS always sends sub_tab_id.
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(get_class($this) . ': get_fields_for_context called with null context_id for a vertical tab module. Sub-tab ID is expected.');
+            }
+            return []; // Return empty if context is missing for a vertical tab module
+        }
+
+        foreach ($this->registered_fields as $field_id => $args) {
+            if (isset($args['sub_tab_id']) && $args['sub_tab_id'] === $context_id) {
+                $context_fields[$field_id] = $args;
+            }
+        }
+        return $context_fields;
+    }
     /**
      * Render the module content with vertical tabs using a partial.
      * This overrides the render_module_content() method from SettingsModuleBase.
@@ -94,45 +128,27 @@ abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
      */
     public function render_module_content() {
         $vertical_tabs = $this->get_vertical_tabs();
-
         if (empty($vertical_tabs)) {
-            echo '<p>' . esc_html__('No vertical tabs defined for this module.', 'product-estimator') . '</p>';
+            echo '<p>' . esc_html__('No vertical tabs defined.', 'product-estimator') . '</p>';
             return;
         }
 
-        // Determine active tab from URL query parameter 'sub_tab'
-        // phpcs:disable WordPress.Security.NonceVerification.Recommended -- Reading GET param for UI state, not for data processing.
-        // phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitize_key is used.
-        $active_tab_id = isset($_GET['sub_tab']) ? sanitize_key($_GET['sub_tab']) : $vertical_tabs[0]['id'];
-        // phpcs:enable WordPress.Security.NonceVerification.Recommended
-        // phpcs:enable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-
-        // Ensure the active sub-tab is valid, default to the first tab if not
+        $active_tab_id = isset($_GET['sub_tab']) ? sanitize_key($_GET['sub_tab']) : ($vertical_tabs[0]['id'] ?? '');
         $valid_tab_ids = wp_list_pluck($vertical_tabs, 'id');
-        if (!in_array($active_tab_id, $valid_tab_ids, true)) {
-            $active_tab_id = !empty($valid_tab_ids) ? $valid_tab_ids[0] : '';
+        if (!in_array($active_tab_id, $valid_tab_ids, true) && !empty($valid_tab_ids)) {
+            $active_tab_id = $valid_tab_ids[0];
         }
 
-        // Get the base URL for tab navigation
-        $base_url = remove_query_arg(array('settings-updated', 'error', 'message', '_wpnonce', 'action'), wp_unslash($_SERVER['REQUEST_URI'])); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- $_SERVER variable.
+        $base_url = remove_query_arg(['settings-updated', 'error', 'message', '_wpnonce', 'action'], wp_unslash($_SERVER['REQUEST_URI']));
 
-        // Path to the partial file. Adjust this path as needed.
-        // Assumes the partial is in a 'partials' subdirectory within the same directory as this class.
-        // Or, more commonly, within your plugin's admin views/partials directory.
-        // Example: PRODUCT_ESTIMATOR_PLUGIN_DIR . 'admin/partials/admin-display-vertical-tabs-settings.php'
-//        $partial_path = plugin_dir_path(__FILE__) . 'includes/admin/partials/admin-display-vertical-tabs-settings.php'; // Adjust this path
+        // Path to your partial for rendering vertical tabs
+        // Ensure PRODUCT_ESTIMATOR_PLUGIN_DIR is correctly defined.
         $partial_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/partials/admin-display-vertical-tabs-settings.php';
 
-
-
         if (file_exists($partial_path)) {
-            // These variables will be available in the scope of the included partial:
-            // $vertical_tabs, $active_tab_id, $base_url
-            // $this (the instance of SettingsModuleWithVerticalTabsBase)
-            include $partial_path;
+            include $partial_path; // $this, $vertical_tabs, $active_tab_id, $base_url are available
         } else {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
                 error_log('Vertical tabs settings partial not found at: ' . $partial_path);
             }
             echo '<p>' . esc_html__('Error: Display template for vertical tabs not found.', 'product-estimator') . '</p>';
@@ -152,14 +168,15 @@ abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
     }
 
     protected function get_common_script_data() {
+        // Ensure this method exists and provides necessary common data for JS.
         return [
-            'mainTabId'         => $this->get_tab_id(),
+            'mainTabId'         => $this->get_tab_id(), // The ID of the main settings page tab (e.g., 'labels', 'notifications')
             'ajax_url'          => admin_url('admin-ajax.php'),
-            'nonce'             => wp_create_nonce('product_estimator_settings_nonce'), // General nonce
-            // 'option_name'    => $this->get_option_name(), // JS might not need this if AJAX is handled by PHP
+            'nonce'             => wp_create_nonce('product_estimator_settings_nonce'),
             'i18n'              => [
                 'saving'      => __('Saving...', 'product-estimator'),
-                // Module-specific saveSuccess/saveError better in child's data
+                'saveSuccess' => __('Settings saved successfully.', 'product-estimator'), // Generic success
+                'saveError'   => __('Error saving settings.', 'product-estimator'),       // Generic error
             ],
         ];
     }

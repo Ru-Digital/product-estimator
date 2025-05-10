@@ -8,24 +8,43 @@
 
 import { setupTinyMCEHTMLPreservation } from '@utils/tinymce-preserver';
 import { createLogger } from '@utils';
-const logger = createLogger('GeneralSettingsModule');
+const logger = createLogger('GeneralSettings');
 
 class GeneralSettingsModule {
   /**
    * Initialize the module
    */
   constructor() {
-    // Bind methods to ensure 'this' context is preserved
-    this.validateMarkup = this.validateMarkup.bind(this);
-    this.validateExpiryDays = this.validateExpiryDays.bind(this);
-    this.showFieldError = this.showFieldError.bind(this);
-    this.clearFieldError = this.clearFieldError.bind(this);
-    this.handleTabChanged = this.handleTabChanged.bind(this);
-    this.saveEditorContent = this.saveEditorContent.bind(this);
-    this.validateAllFields = this.validateAllFields.bind(this);
+    $ = jQuery; // Make jQuery available as this.$
 
-    // Wait for document ready
-    jQuery(document).ready(() => this.init());
+    // before this script runs or at least before init() is called.
+    const localizedSettings = window.generalSettings || {};
+
+    this.settings = {
+      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
+      nonce: localizedSettings.nonce || '', // Fallback
+      i18n: localizedSettings.i18n || {},   // Fallback
+      tab_id: localizedSettings.tab_id || 'genaral', // Fallback
+    };
+
+    // Defer initialization to document.ready to ensure DOM is loaded
+    $(document).ready(() => {
+      // Re-check localizedSettings in case they are defined by another script in document.ready
+      const updatedLocalizedSettingsOnReady = window.generalSettings || {};
+      if (updatedLocalizedSettingsOnReady.nonce) {
+        this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
+      }
+
+      this.validateMarkup = this.validateMarkup.bind(this);
+      this.validateExpiryDays = this.validateExpiryDays.bind(this);
+      this.showFieldError = this.showFieldError.bind(this);
+      this.clearFieldError = this.clearFieldError.bind(this);
+      this.handleTabChanged = this.handleTabChanged.bind(this);
+      this.saveEditorContent = this.saveEditorContent.bind(this);
+      this.validateAllFields = this.validateAllFields.bind(this);
+
+      this.init();
+    });
   }
 
   /**

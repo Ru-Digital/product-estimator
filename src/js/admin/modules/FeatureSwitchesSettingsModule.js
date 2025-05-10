@@ -4,24 +4,35 @@
  * Handles functionality specific to the feature switches settings tab.
  */
 import { createLogger } from '@utils';
-const logger = createLogger('FeatureSwitchSettingsModule');
+const logger = createLogger('FeatureSwitchSettings');
 
 class FeatureSwitchesSettingsModule {
   /**
    * Initialize the module
    */
   constructor() {
-    // Access localized data (defined in PHP and localized)
-    const settingsData = window.featureSwitchesSettings || {}; // Assumes JS variable name convention
+    $ = jQuery; // Make jQuery available as this.$
 
-    // Create a safe reference to the settings object
+    // before this script runs or at least before init() is called.
+    const localizedSettings = window.featureSwitchesSettings || {};
+
     this.settings = {
-      tab_id: settingsData.tab_id || 'feature_switches'
-      // Include other data like ajaxUrl, nonce, i18n if needed for specific AJAX calls
+      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
+      nonce: localizedSettings.nonce || '', // Fallback
+      i18n: localizedSettings.i18n || {},   // Fallback
+      tab_id: localizedSettings.tab_id || 'feature_switches', // Fallback
     };
 
-    // Initialize when document is ready
-    jQuery(document).ready(() => this.init());
+    // Defer initialization to document.ready to ensure DOM is loaded
+    $(document).ready(() => {
+      // Re-check localizedSettings in case they are defined by another script in document.ready
+      const updatedLocalizedSettingsOnReady = window.featureSwitchesSettings || {};
+      if (updatedLocalizedSettingsOnReady.nonce) {
+        this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
+      }
+
+      this.init();
+    });
   }
 
   /**

@@ -26,18 +26,6 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
     }
 
     /**
-     * Register module with the settings manager
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function register() {
-        add_action('product_estimator_register_settings_modules', function($manager) {
-            $manager->register_module($this);
-        });
-    }
-
-    /**
      * Check if this module handles a specific setting
      *
      * @since    1.1.0
@@ -66,6 +54,15 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
      * @access   protected
      */
     public function register_fields() {
+        $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
+
+        add_settings_section(
+            $this->section_id,
+            null, // Section title
+            [$this, 'render_section_description'],
+            $page_slug_for_wp_api
+        );
+
         $fields = array(
             'netsuite_enabled' => array(
                 'title' => __('Enable NetSuite Integration', 'product-estimator'),
@@ -111,32 +108,18 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
             )
         );
 
-        foreach ($fields as $id => $field) {
-            $args = array(
-                'id' => $id,
-                'type' => $field['type'],
-                'description' => $field['description']
-            );
-
-            // Add additional parameters if they exist
-            if (isset($field['default'])) {
-                $args['default'] = $field['default'];
-            }
-            if (isset($field['min'])) {
-                $args['min'] = $field['min'];
-            }
-            if (isset($field['max'])) {
-                $args['max'] = $field['max'];
-            }
-
+        foreach ($fields as $id => $field_args) {
+            $callback_args = array_merge($field_args, ['id' => $id, 'label_for' => $id]);
             add_settings_field(
                 $id,
-                $field['title'],
-                array($this, 'render_field_callback'),
-                $this->plugin_name . '_' . $this->tab_id,
+                $field_args['title'],
+                [$this, 'render_field_callback_proxy'],
+                $page_slug_for_wp_api,
                 $this->section_id,
-                $args
+                $callback_args
             );
+            // **** CRUCIAL STEP: Store the field definition ****
+            $this->store_registered_field($id, $callback_args);
         }
     }
 
@@ -147,67 +130,55 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
      * @access   public
      * @param    array    $args    Field arguments.
      */
-    public function render_field_callback($args) {
-        $this->render_field($args);
+    public function render_field_callback_proxy($args) {
+        // Special handling for password to not show existing value directly
+        if ($args['type'] === 'password' && $args['id'] === 'netsuite_client_secret') {
+            $options = get_option($this->option_name);
+            $current_value = !empty($options[$args['id']]) ? '********' : ''; // Mask existing
+            printf(
+                '<input type="password" id="%s" name="%s" value="" placeholder="%s" class="regular-text" />%s',
+                esc_attr($args['id']),
+                esc_attr($this->option_name . '[' . $args['id'] . ']'),
+                $current_value ? esc_attr__('Leave blank to keep current secret', 'product-estimator') : '',
+                isset($args['description']) ? '<p class="description">' . esc_html($args['description']) . '</p>' : ''
+            );
+        } else {
+            parent::render_field($args);
+        }
     }
 
-    /**
-     * Validate module-specific settings
-     *
-     * @since    1.1.0
-     * @access   public
-     * @param    array $input The settings to validate
-     * @return   array The validated settings
-     */
-    public function validate_settings($input) {
-        $valid = [];
+    public function validate_settings($input, $context_field_definitions = null) {
+        $validated = parent::validate_settings($input, $context_field_definitions);
 
-        // Validate netsuite_enabled
-        if (isset($input['netsuite_enabled'])) {
-            $valid['netsuite_enabled'] = !empty($input['netsuite_enabled']) ? 1 : 0;
+        if (is_wp_error($validated)) {
+            return $validated;
         }
 
-        // Validate client ID
-        if (isset($input['netsuite_client_id'])) {
-            $valid['netsuite_client_id'] = sanitize_text_field($input['netsuite_client_id']);
-        }
-
-        // Validate client secret - preserve if empty to keep existing secret
-        if (isset($input['netsuite_client_secret'])) {
-            if (!empty($input['netsuite_client_secret'])) {
-                $valid['netsuite_client_secret'] = sanitize_text_field($input['netsuite_client_secret']);
-            } else {
-                // Get existing value to preserve
-                $current_settings = get_option('product_estimator_settings', []);
-                if (!empty($current_settings['netsuite_client_secret'])) {
-                    $valid['netsuite_client_secret'] = $current_settings['netsuite_client_secret'];
-                }
+        // Handle netsuite_client_secret: if input is empty, retain existing value.
+        // The parent::validate_settings would have sanitized it to an empty string if submitted empty.
+        if (isset($input['netsuite_client_secret']) && $input['netsuite_client_secret'] === '') {
+            $current_options = get_option($this->option_name);
+            if (isset($current_options['netsuite_client_secret'])) {
+                $validated['netsuite_client_secret'] = $current_options['netsuite_client_secret'];
             }
         }
 
-        // Validate API URL
-        if (isset($input['netsuite_api_url'])) {
-            $valid['netsuite_api_url'] = esc_url_raw($input['netsuite_api_url']);
+        // Specific validation for NetSuite when enabled
+        if (!empty($validated['netsuite_enabled']) && $validated['netsuite_enabled'] === '1') {
+            if (empty($validated['netsuite_client_id'])) {
+                add_settings_error($this->option_name, 'missing_client_id', __('Client ID is required when NetSuite integration is enabled.', 'product-estimator'));
+            }
+            if (empty($validated['netsuite_client_secret'])) { // Check after potentially restoring it
+                add_settings_error($this->option_name, 'missing_client_secret', __('Client Secret is required when NetSuite integration is enabled.', 'product-estimator'));
+            }
+            if (empty($validated['netsuite_api_url']) || !filter_var($validated['netsuite_api_url'], FILTER_VALIDATE_URL)) {
+                add_settings_error($this->option_name, 'invalid_api_url', __('A valid API Endpoint URL is required.', 'product-estimator'));
+            }
+            if (empty($validated['netsuite_token_url']) || !filter_var($validated['netsuite_token_url'], FILTER_VALIDATE_URL)) {
+                add_settings_error($this->option_name, 'invalid_token_url', __('A valid OAuth Token URL is required.', 'product-estimator'));
+            }
         }
-
-        // Validate token URL
-        if (isset($input['netsuite_token_url'])) {
-            $valid['netsuite_token_url'] = esc_url_raw($input['netsuite_token_url']);
-        }
-
-        // Validate request limit
-        if (isset($input['netsuite_request_limit'])) {
-            $limit = intval($input['netsuite_request_limit']);
-            $valid['netsuite_request_limit'] = max(1, min(100, $limit));
-        }
-
-        // Validate cache time
-        if (isset($input['netsuite_cache_time'])) {
-            $time = intval($input['netsuite_cache_time']);
-            $valid['netsuite_cache_time'] = max(0, $time);
-        }
-
-        return $valid;
+        return $validated;
     }
 
     /**
@@ -371,24 +342,19 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
      * @access   public
      */
     public function enqueue_scripts() {
-
-
-        // Localize script
-        wp_localize_script(
-            $this->plugin_name . '-netsuite-settings',
-            'netsuiteSettings',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('product_estimator_netsuite_nonce'),
-                'tab_id' => $this->tab_id,
-                'i18n' => array(
-                    'testing' => __('Testing connection...', 'product-estimator'),
-                    'success' => __('Connection successful!', 'product-estimator'),
-                    'error' => __('Connection failed:', 'product-estimator'),
-                    'invalidUrl' => __('Please enter a valid URL', 'product-estimator')
-                )
-            )
-        );
+        $actual_data_for_js_object = [
+            'nonce' => wp_create_nonce('product_estimator_netsuite_nonce'),
+            'tab_id' => $this->tab_id,
+            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
+            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
+            'option_name'   => $this->option_name,
+            'i18n' => [
+                'testing' => __('Testing connection...', 'product-estimator'),
+                'success' => __('Connection successful!', 'product-estimator'),
+                'error'   => __('Connection failed:', 'product-estimator'),
+            ]
+        ];
+        $this->add_script_data('netsuiteSettings', $actual_data_for_js_object);
     }
 
     /**

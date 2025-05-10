@@ -5,18 +5,19 @@
  * Extends VerticalTabbedModule for common vertical tab and form handling.
  */
 import VerticalTabbedModule from './VerticalTabbedModule'; // Adjust path as needed
-import { validation, createLogger } from '@utils'; // Assuming @utils provides these
+import { validation } from '@utils'; // Assuming @utils provides these
 
 // Note: showFieldError, clearFieldError, showNotice are inherited or use global ProductEstimatorSettings
-
+import { createLogger } from '@utils';
+const logger = createLogger('LabelSettings');
 class LabelSettingsModule extends VerticalTabbedModule {
   constructor() {
+
     super({
       mainTabId: 'labels',
       defaultSubTabId: 'labels-general', // Default vertical tab for labels
       ajaxActionPrefix: 'save_labels',   // Results in 'save_labels_settings'
-      localizedDataName: 'labelSettingsData', // Global object with nonce, i18n etc. for labels
-      loggerName: 'LabelSettingsModule',
+      localizedDataName: 'labelSettingsData' // Global object with nonce, i18n etc. for labels
     });
     // Specific properties for LabelSettingsModule can be initialized here if needed
   }
@@ -33,7 +34,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
 
     // Example: Email validation if labels module had email fields directly
     // this.$container.on('change', 'input[type="email"]', this.handleEmailValidation.bind(this));
-    this.logger.log('LabelSettingsModule specific events bound (if any).');
+    logger.log('LabelSettingsModule specific events bound (if any).');
   }
 
   /**
@@ -43,7 +44,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
     super.onMainTabActivated(); // Good practice to call parent
     // Any specific setup for Labels when its main tab is shown,
     // e.g., initializing a specific type of editor if one was used for labels.
-    this.logger.log('Labels main tab activated - specific setup can go here.');
+    logger.log('Labels main tab activated - specific setup can go here.');
   }
 
   // Example of a module-specific handler, if needed:

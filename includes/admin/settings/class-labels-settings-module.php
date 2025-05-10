@@ -91,47 +91,65 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
      * @param    string $vertical_tab_id The ID of the current vertical tab.
      * @param    string $page_slug       The page slug for this tab.
      */
-    protected function register_vertical_tab_fields( $vertical_tab_id, $page_slug ) {
-        $type_fields = $this->get_label_fields_for_type( $vertical_tab_id );
+    protected function register_vertical_tab_fields( $vertical_tab_id, $page_slug_for_wp_api ) {
+        $type_fields = $this->get_label_fields_for_type( $vertical_tab_id ); // Your existing method to get fields
         $sections = [];
+
+        // Group fields by section (from your existing logic)
         foreach ( $type_fields as $field_id => $field_details ) {
-            $section_slug             = isset( $field_details['section'] ) ? $field_details['section'] : 'default_section';
+            $section_slug = $field_details['section'] ?? 'default_section_' . $vertical_tab_id;
             $sections[ $section_slug ][ $field_id ] = $field_details;
         }
 
         foreach ( $sections as $section_slug => $section_fields ) {
-            $current_section_id_for_tab = $this->section_id . '_' . $vertical_tab_id . '_' . $section_slug;
-            $section_title_display      = $this->get_section_title_display( $section_slug );
+            $current_section_id_for_wp_api = $this->section_id . '_' . $vertical_tab_id . '_' . $section_slug;
+            $section_title_display = $this->get_section_title_display( $section_slug, $vertical_tab_id );
 
             add_settings_section(
-                $current_section_id_for_tab,
+                $current_section_id_for_wp_api,
                 $section_title_display,
-                [ $this, 'render_dynamic_section_description' ],
-                $page_slug
+                [$this, 'render_dynamic_section_description_callback'], // WordPress callback
+                $page_slug_for_wp_api // Page slug for this sub-tab
             );
 
             foreach ( $section_fields as $field_id => $field_details ) {
-                $args = [
+                $callback_args = [
                     'id'          => $field_id,
-                    'type'        => $field_details['type'],
-                    'description' => $field_details['description'],
-                    'label_for'   => $field_id,
+                    'type'        => $field_details['type'] ?? 'text',
+                    'description' => $field_details['description'] ?? '',
+                    'default'     => $field_details['default'] ?? '',
+                    'label_for'   => $field_id, // Important for WordPress
+                    // Add other relevant args like 'options' for select, 'min', 'max' for number
                 ];
-                if ( isset( $field_details['default'] ) ) {
-                    $args['default'] = $field_details['default'];
-                }
+                if (isset($field_details['options'])) $callback_args['options'] = $field_details['options'];
+
+
                 add_settings_field(
                     $field_id,
                     $field_details['title'],
-                    [ $this, 'render_field_callback' ],
-                    $page_slug,
-                    $current_section_id_for_tab,
-                    $args
+                    [$this, 'render_field_callback_proxy'], // Proxy to parent::render_field
+                    $page_slug_for_wp_api,
+                    $current_section_id_for_wp_api,
+                    $callback_args
                 );
+
+                // **** CRUCIAL STEP: Store the field definition for contextual handling ****
+                $this->store_field_for_sub_tab($vertical_tab_id, $field_id, $callback_args);
             }
         }
     }
 
+    public function render_field_callback_proxy($args) {
+        parent::render_field($args);
+    }
+
+    public function render_dynamic_section_description_callback( $args ) {
+        // $args contains 'id', 'title', 'callback'.
+        // You can add more specific descriptions here if needed, based on $args['id'].
+        // Example:
+        // $section_data = $this->get_section_data_by_id($args['id']); // You'd need to implement this
+        // if (isset($section_data['description'])) { echo '<p>' . esc_html($section_data['description']) . '</p>'; }
+    }
     /**
      * Get a display title for a given section slug.
      *
@@ -223,34 +241,15 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
      * Renders the sidebar content for the vertical tabs settings page.
      */
     public function render_vertical_tabs_sidebar() {
+        // Your existing sidebar content from class-labels-settings-module.php
         ?>
-        <div class="pe-vtabs-sidebar-panel label-usage-info"> <?php // CORRECTED CLASS ?>
+        <div class="pe-vtabs-sidebar-panel label-usage-info">
             <h3><?php esc_html_e( 'Label Usage Information', 'product-estimator' ); ?></h3>
             <p><?php esc_html_e( 'Labels are used throughout the Product Estimator plugin to customize the text displayed to users.', 'product-estimator' ); ?></p>
-
             <div class="label-usage-section">
                 <h4><?php esc_html_e( 'Using Labels in Templates', 'product-estimator' ); ?></h4>
                 <p><?php esc_html_e( 'In PHP templates, use the following function to display labels (assuming your retrieval function is product_estimator_get_label()):', 'product-estimator' ); ?></p>
                 <code>product_estimator_get_label('label_key');</code>
-                <p><small><?php esc_html_e( "Replace 'label_key' with the actual key of the label (e.g., 'label_print_estimate').", 'product-estimator' ); ?></small></p>
-            </div>
-
-            <div class="label-usage-section">
-                <h4><?php esc_html_e( 'Using Labels in JavaScript', 'product-estimator' ); ?></h4>
-                <p><?php esc_html_e( 'If labels are localized to JavaScript (e.g., via wp_localize_script), you might access them like this:', 'product-estimator' ); ?></p>
-                <code>productEstimatorGlobal.labels.label_key</code>
-                <p><small><?php esc_html_e( "The exact object path depends on how you've localized them.", 'product-estimator' ); ?></small></p>
-            </div>
-
-            <div class="label-usage-section">
-                <h4><?php esc_html_e( 'Placeholder Variables', 'product-estimator' ); ?></h4>
-                <p><?php esc_html_e( 'Some labels might support placeholder variables that get replaced dynamically. Refer to documentation for specific labels.', 'product-estimator' ); ?></p>
-                <ul>
-                    <li><code>{product_name}</code> - <?php esc_html_e( 'The name of the product', 'product-estimator' ); ?></li>
-                    <li><code>{estimate_name}</code> - <?php esc_html_e( 'The name of the estimate', 'product-estimator' ); ?></li>
-                    <li><code>{customer_name}</code> - <?php esc_html_e( 'The customer\'s name', 'product-estimator' ); ?></li>
-                    <li><code>{price}</code> - <?php esc_html_e( 'The formatted price', 'product-estimator' ); ?></li>
-                </ul>
             </div>
         </div>
         <?php
@@ -262,24 +261,19 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
     public function enqueue_scripts() {
         // wp_enqueue_editor(); // Uncomment if HTML fields are used for labels
 
-        $commonData = $this->get_common_script_data(); // Assumes get_common_script_data() is in SettingsModuleWithVerticalTabsBase
+        $commonData = $this->get_common_script_data();
         $module_specific_data = [
-            'defaultSubTabId'   => 'labels-general',
-            'ajaxActionPrefix'  => 'save_labels',
-            'localizedDataName' => 'labelSettingsData', // This is the key for the JS `window[config.localizedDataName]`
-            'defined_label_types' => array_keys($this->defined_label_types), // Module-specific data
-            'i18n' => [ // Module-specific i18n, will merge with common i18n
+            'defaultSubTabId'   => 'labels-general', // First tab ID
+            'ajax_action'       => 'save_settings_for_' . $this->tab_id, // e.g. save_settings_for_labels
+            'option_name'       => $this->option_name, // 'product_estimator_labels'
+            'defined_label_types' => array_keys($this->defined_label_types),
+            'i18n' => [
                 'saveSuccess' => __('Label settings saved successfully.', 'product-estimator'),
                 'saveError'   => __('Error saving label settings.', 'product-estimator'),
             ],
-            // Add other label-specific data needed by JS here
         ];
-
-        // Merge common data with module-specific data. Module-specific i18n will override common if keys conflict.
         $final_script_data = array_replace_recursive($commonData, $module_specific_data);
-
-        // Add the combined data under the key specified by localizedDataName.
-        $this->add_script_data($module_specific_data['localizedDataName'], $final_script_data);
+        $this->add_script_data('labelsSettingsData', $final_script_data); // Unique global JS object
     }
 
     /**

@@ -18,3 +18,4 @@ import './modules/FeatureSwitchesSettingsModule';
 // The admin modules are imported separately due to code splitting in webpack
 
 // Frontend functionality can be added here
+

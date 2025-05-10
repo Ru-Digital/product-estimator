@@ -4,9 +4,8 @@
  * Handles common functionality for the settings page.
  * Modified to work with separate forms for each tab.
  */
-import { ajax, dom, validation } from '@utils';
-import { createLogger } from '@utils';
-const logger = createLogger('ProductEstimatorSettings');
+import { ajax, dom, validation, log } from '@utils';
+
 class ProductEstimatorSettings {
   /**
    * Initialize the Settings Manager
@@ -26,8 +25,13 @@ class ProductEstimatorSettings {
    * Ensure all required global variables exist to prevent reference errors
    */
   ensureGlobalVariables() {
+
+    window.featureSwitchesSettings = window.featureSwitchesSettings || {
+      tab_id: 'feature_switches',
+      i18n: {}
+    };
     // Create fallbacks for all settings data objects that might be referenced
-    window.generalSettingsData = window.generalSettingsData || {
+    window.generalSettings = window.generalSettings || {
       tab_id: 'general',
       i18n: {}
     };
@@ -42,18 +46,13 @@ class ProductEstimatorSettings {
       i18n: {}
     };
 
-    window.productAdditionsSettings = window.productAdditionsSettings || {
-      tab_id: 'product_additions',
-      i18n: {}
-    };
-
     window.pricingRulesSettings = window.pricingRulesSettings || {
       tab_id: 'pricing_rules',
       i18n: {}
     };
 
-    window.similarProducts = window.similarProducts || {
-      tab_id: 'similar_products',
+    window.productAdditionsSettings = window.productAdditionsSettings || {
+      tab_id: 'product_additions',
       i18n: {}
     };
 
@@ -61,6 +60,19 @@ class ProductEstimatorSettings {
       tab_id: 'product_upgrades',
       i18n: {}
     };
+
+    window.similarProductsSettings = window.similarProductsSettings || {
+      tab_id: 'similar_products',
+      i18n: {}
+    };
+
+
+
+    window.labelSettings = window.labelSettings || {
+      tab_id: 'labels',
+      i18n: {}
+    };
+
 
     // Ensure productEstimatorSettings exists
     window.productEstimatorSettings = window.productEstimatorSettings || {
@@ -94,7 +106,7 @@ class ProductEstimatorSettings {
     this.initFormChangeTracking();
     this.initializeValidation();
 
-    logger.log('Settings manager initialized with tab:', this.currentTab);
+    log('ProductEstimatorSettings', 'Settings manager initialized with tab:', this.currentTab);
   }
 
   /**
@@ -112,7 +124,7 @@ class ProductEstimatorSettings {
     // Window beforeunload for unsaved changes warning
     $(window).on('beforeunload', this.handleBeforeUnload.bind(this));
 
-    // logger.log('Events bound');
+    log('ProductEstimatorSettings', 'Events bound');
   }
 
   /**
@@ -124,31 +136,14 @@ class ProductEstimatorSettings {
     const $ = jQuery;
     const $form = $(e.target);
     const tabId = $form.closest('.tab-content').attr('id');
-    let formData = $form.serialize();
-    logger.log('Serialized form data:', formData);
-
-    const checkboxFields = $form.find('input[type="checkbox"]');
-    checkboxFields.each(function() {
-      const $checkbox = $(this);
-      const checkboxName = $checkbox.attr('name');
-
-      // Ensure the checkbox has a name and is unchecked.
-      // Also, check if it's NOT already in the formData (which it won't be if unchecked).
-      if ($checkbox.length && checkboxName && !$checkbox.is(':checked') && !formData.includes(checkboxName + '=')) {
-        // Append the checkbox name with a value of 0 to the formData string.
-        // Add an '&' separator if formData is not empty.
-        if (formData.length > 0) {
-          formData += '&';
-        }
-        formData += encodeURIComponent(checkboxName) + '=0';
-      }
-    });
+    const formData = $form.serialize();
+    console.log('Serialized form data:', formData);
 
 
     // Show loading state
     this.showFormLoading($form);
 
-    logger.log(`Submitting form for tab: ${tabId}`);
+    log('ProductEstimatorSettings', `Submitting form for tab: ${tabId}`);
 
     // Make the AJAX request to save settings
     ajax.ajaxRequest({
@@ -172,12 +167,12 @@ class ProductEstimatorSettings {
           this.formChanged = false;
         }
 
-        logger.log(`Settings saved successfully for tab: ${tabId}`);
+        log('ProductEstimatorSettings', `Settings saved successfully for tab: ${tabId}`);
       })
       .catch(error => {
         // Show error message
         validation.showNotice(error.message || productEstimatorSettings.i18n.saveError, 'error');
-        logger.log(`Error saving settings for tab ${tabId}:`, error);
+        log('ProductEstimatorSettings', `Error saving settings for tab ${tabId}:`, error);
       })
       .finally(() => {
         this.hideFormLoading($form);
@@ -228,7 +223,7 @@ class ProductEstimatorSettings {
       });
     });
 
-    logger.log('Form change tracking initialized');
+    log('ProductEstimatorSettings', 'Form change tracking initialized');
   }
 
   /**
@@ -271,7 +266,7 @@ class ProductEstimatorSettings {
       });
     });
 
-    logger.log('Form validation initialized');
+    log('ProductEstimatorSettings', 'Form validation initialized');
   }
 
   /**
@@ -331,7 +326,7 @@ class ProductEstimatorSettings {
     // Trigger tab changed event for modules
     $(document).trigger('product_estimator_tab_changed', [tabId, previousTab]);
 
-    logger.log(`Switched to tab: ${tabId} from ${previousTab}`);
+    log('ProductEstimatorSettings', `Switched to tab: ${tabId} from ${previousTab}`);
   }
 
   /**

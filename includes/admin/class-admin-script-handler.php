@@ -133,41 +133,46 @@ class AdminScriptHandler {
         // Only load on plugin admin pages or WooCommerce product pages
         $is_plugin_page = strpos($hook_suffix, $this->plugin_name) !== false;
         $is_product_page = in_array($hook_suffix, array('post.php', 'post-new.php')) &&
-            isset($_GET['post_type']) &&
-            $_GET['post_type'] === 'product';
+            (isset($_GET['post_type']) && $_GET['post_type'] === 'product'); // Shortened condition
 
         if (!$is_plugin_page && !$is_product_page) {
             return;
         }
 
+        do_action('product_estimator_before_localize_scripts', $this, $hook_suffix);
+        $common_bundle_dir_path = defined('PRODUCT_ESTIMATOR_PLUGIN_DIR') ? PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/js/common.bundle.js' : '';
+        $common_bundle_url_path = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/common.bundle.js' : '';
+        $admin_bundle_dir_path = defined('PRODUCT_ESTIMATOR_PLUGIN_DIR') ? PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/js/admin/product-estimator-admin.bundle.js' : '';
+        $admin_bundle_url_path = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/admin/product-estimator-admin.bundle.js' : '';
+
         // Enqueue common bundle if it exists
-        if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/js/common.bundle.js')) {
+        if ($common_bundle_dir_path && file_exists($common_bundle_dir_path)) {
             wp_enqueue_script(
                 $this->plugin_name . '-admin-common',
-                PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/common.bundle.js',
+                $common_bundle_url_path,
                 array('jquery'),
                 $this->version,
-                true
+                true // Load in footer
             );
         }
 
         // Enqueue admin bundle - check if file exists first to prevent errors
-        $admin_bundle_path = 'public/js/admin/product-estimator-admin.bundle.js';
-        if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . $admin_bundle_path)) {
+        if ($admin_bundle_dir_path && file_exists($admin_bundle_dir_path)) {
             wp_enqueue_script(
-                $this->plugin_name . '-admin',
-                PRODUCT_ESTIMATOR_PLUGIN_URL . $admin_bundle_path,
-                array('jquery'),
+                $this->plugin_name . '-admin', // This is the main handle to localize against
+                $admin_bundle_url_path,
+                array('jquery', $this->plugin_name . '-admin-common'), // Add dependency if common bundle is always needed
                 $this->version,
-                true
+                true // Load in footer
             );
 
-            // Localize scripts with stored data
+            // Localize scripts with all collected data AFTER the main script is enqueued
+            // and AFTER modules have had a chance to add their data via the 'product_estimator_before_localize_scripts' action.
             $this->localize_scripts($hook_suffix);
         } else {
             // Log error if the file doesn't exist
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Admin bundle not found: ' . PRODUCT_ESTIMATOR_PLUGIN_DIR . $admin_bundle_path);
+                error_log('Product Estimator: Admin bundle not found at ' . $admin_bundle_dir_path);
             }
         }
     }
@@ -181,39 +186,47 @@ class AdminScriptHandler {
         // Only load on plugin admin pages or WooCommerce product pages
         $is_plugin_page = strpos($hook_suffix, $this->plugin_name) !== false;
         $is_product_page = in_array($hook_suffix, array('post.php', 'post-new.php')) &&
-            isset($_GET['post_type']) &&
-            $_GET['post_type'] === 'product';
+            (isset($_GET['post_type']) && $_GET['post_type'] === 'product');
 
         if (!$is_plugin_page && !$is_product_page) {
             return;
         }
 
-        // Enqueue the admin styles
-        wp_enqueue_style(
-            $this->plugin_name . '-admin',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/product-estimator-admin.css',
-            array(),
-            $this->version,
-            'all'
-        );
+        // Ensure PRODUCT_ESTIMATOR_PLUGIN_URL is defined
+        $admin_css_url = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/product-estimator-admin.css' : '';
+        $settings_css_url = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/product-estimator-settings.css' : '';
+        $vertical_tabs_css_url = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/admin-vertical-tabs.css' : '';
 
-        // Enqueue settings-specific styles if on settings page
-        if (strpos($hook_suffix, $this->plugin_name . '-settings') !== false) {
+        // Enqueue the admin styles
+        if ($admin_css_url) {
             wp_enqueue_style(
-                $this->plugin_name . '-settings',
-                PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/product-estimator-settings.css',
+                $this->plugin_name . '-admin',
+                $admin_css_url,
                 array(),
-                $this->version
+                $this->version,
+                'all'
             );
         }
 
+
+        // Enqueue settings-specific styles if on settings page
         if (strpos($hook_suffix, $this->plugin_name . '-settings') !== false) {
-            wp_enqueue_style(
-                $this->plugin_name . '-vertical-tabs-layout',
-                PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/admin-vertical-tabs.css',
-                array($this->plugin_name . '-settings'),
-                $this->version
-            );
+            if ($settings_css_url) {
+                wp_enqueue_style(
+                    $this->plugin_name . '-settings',
+                    $settings_css_url,
+                    array($this->plugin_name . '-admin'), // Depend on main admin styles
+                    $this->version
+                );
+            }
+            if ($vertical_tabs_css_url) {
+                wp_enqueue_style(
+                    $this->plugin_name . '-vertical-tabs-layout',
+                    $vertical_tabs_css_url,
+                    array($this->plugin_name . '-settings'), // Depend on settings styles
+                    $this->version
+                );
+            }
         }
     }
 
@@ -232,7 +245,7 @@ class AdminScriptHandler {
 
         // If data is an array, merge it with existing data
         if (is_array($data)) {
-            $this->script_data[$context] = array_merge($this->script_data[$context], $data);
+            $this->script_data[$context] = array_replace_recursive($this->script_data[$context], $data);
         } else {
             // For backwards compatibility or simple values
             $this->script_data[$context] = $data;
@@ -249,7 +262,8 @@ class AdminScriptHandler {
      * @param    mixed     $value      Value to store
      */
     public function add_script_data_value($context, $key, $value) {
-        if (!isset($this->script_data[$context])) {
+        if (!isset($this->script_data[$context]) || !is_array($this->script_data[$context])) {
+            // Ensure the context exists as an array before adding a key to it
             $this->script_data[$context] = array();
         }
         $this->script_data[$context][$key] = $value;
@@ -261,7 +275,7 @@ class AdminScriptHandler {
      * @since    1.2.0
      * @access   public
      * @param    string    $context    Context key for data
-     * @return   mixed     Data for this context
+     * @return   mixed     Data for this context or an empty array if not set.
      */
     public function get_script_data($context) {
         return isset($this->script_data[$context]) ? $this->script_data[$context] : array();
@@ -280,49 +294,52 @@ class AdminScriptHandler {
 
     /**
      * Localize scripts with stored data.
+     * This method is now called after all modules have had a chance to add their data.
      *
      * @since    1.2.0
      * @access   public
      * @param    string    $hook_suffix    The current admin page hook suffix.
      */
     public function localize_scripts($hook_suffix) {
-        // First, ensure ajax_url is set in the main script data
+        // Ensure ajax_url is set in the main script data
         if (!isset($this->script_data['main']['ajax_url'])) {
             $this->script_data['main']['ajax_url'] = admin_url('admin-ajax.php');
         }
-
         // Also ensure it's set in the settings data
         if (!isset($this->script_data['settings']['ajax_url'])) {
-            if (!isset($this->script_data['settings'])) {
+            if (!isset($this->script_data['settings']) || !is_array($this->script_data['settings'])) {
                 $this->script_data['settings'] = array();
             }
             $this->script_data['settings']['ajax_url'] = admin_url('admin-ajax.php');
         }
 
-        // Localize main script data
+        // Localize main script data to `productEstimatorAdmin`
         if (isset($this->script_data['main'])) {
             wp_localize_script(
-                $this->plugin_name . '-admin',
-                'productEstimatorAdmin',
+                $this->plugin_name . '-admin', // Main script handle
+                'productEstimatorAdmin',      // JS Object name
                 $this->script_data['main']
             );
         }
 
-        // Localize settings script data if on settings page
+        // Localize settings script data if on settings page to `productEstimatorSettings`
         if (strpos($hook_suffix, $this->plugin_name . '-settings') !== false && isset($this->script_data['settings'])) {
             wp_localize_script(
-                $this->plugin_name . '-admin',
-                'productEstimatorSettings',
+                $this->plugin_name . '-admin',   // Main script handle
+                'productEstimatorSettings',     // JS Object name
                 $this->script_data['settings']
             );
+        }
 
-            // Add this line to define ajaxurl if it doesn't exist
-            wp_add_inline_script(
+        // Localize productEstimatorVars
+        if (isset($this->script_data['productEstimatorVars'])) {
+            wp_localize_script(
                 $this->plugin_name . '-admin',
-                'if (typeof ajaxurl === "undefined") { var ajaxurl = "' . admin_url('admin-ajax.php') . '"; }',
-                'before'
+                'productEstimatorVars', // JS Object name for debug flags etc.
+                $this->script_data['productEstimatorVars']
             );
         }
+
 
         // Localize customer estimates script data if on estimates page
         if (strpos($hook_suffix, $this->plugin_name . '-estimates') !== false && isset($this->script_data['customer_estimates'])) {
@@ -335,26 +352,40 @@ class AdminScriptHandler {
 
         // If on product edit page, add product-specific data
         if (in_array($hook_suffix, array('post.php', 'post-new.php')) &&
-            isset($_GET['post_type']) && $_GET['post_type'] === 'product') {
+            (isset($_GET['post_type']) && $_GET['post_type'] === 'product')) {
 
             $post_id = isset($_GET['post']) ? intval($_GET['post']) : 0;
 
             if ($post_id > 0) {
+                $product_data = array(
+                    'product_id' => $post_id,
+                    'enable_estimator' => get_post_meta($post_id, '_enable_estimator', true) ? true : false,
+                    'estimator_settings' => $this->get_product_estimator_settings($post_id) // Ensure this method exists
+                );
                 wp_localize_script(
                     $this->plugin_name . '-admin',
                     'productEstimatorProductData',
-                    array(
-                        'product_id' => $post_id,
-                        'enable_estimator' => get_post_meta($post_id, '_enable_estimator', true) ? true : false,
-                        'estimator_settings' => $this->get_product_estimator_settings($post_id)
-                    )
+                    $product_data
                 );
             }
         }
 
-        // Localize module-specific data
+        // Localize all other module-specific data.
+        // The $context will be the JS object name.
         $this->localize_module_data();
+
+
+        // It's generally better to ensure `ajaxurl` is available via `productEstimatorAdmin.ajax_url`
+        // or `productEstimatorSettings.ajax_url` rather than adding it inline,
+        // as `wp_localize_script` handles escaping.
+        // If you still need a global `ajaxurl`:
+        // wp_add_inline_script(
+        // $this->plugin_name . '-admin',
+        // 'if (typeof ajaxurl === "undefined") { var ajaxurl = "' . esc_url(admin_url('admin-ajax.php')) . '"; }',
+        // 'before'
+        // );
     }
+
 
     /**
      * Localize any module-specific script data.
@@ -363,50 +394,54 @@ class AdminScriptHandler {
      * @access   private
      */
     private function localize_module_data() {
-        // Localize module data for all registered modules
         foreach ($this->script_data as $context => $data) {
-            // Skip main, settings, and customer_estimates data which are handled separately
-            if ($context === 'main' || $context === 'settings' || $context === 'customer_estimates') {
+            // Skip data already handled by localize_scripts()
+            if (in_array($context, ['main', 'settings', 'customer_estimates', 'productEstimatorProductData', 'productEstimatorVars'])) {
                 continue;
             }
 
-            // Localize module-specific data
+            // Ensure data is an array, as wp_localize_script expects an array for the $l10n parameter.
+            if (!is_array($data)) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Product Estimator: Data for context "' . $context . '" is not an array and cannot be localized.');
+                }
+                continue;
+            }
+
+            // If the data for a context (e.g., 'similarProductsSettings') was an array
+            // where the first two elements were intended as handle and object name by the module,
+            // those are now just data elements 0 and 1.
+            // The $context itself is used as the JavaScript object name.
             wp_localize_script(
-                $this->plugin_name . '-admin',
-                $context,
-                $data
+                $this->plugin_name . '-admin', // Localize against the main admin script
+                $context,                      // Use the context key as the JavaScript object name
+                $data                          // The data collected for this context
             );
         }
     }
 
+
     /**
-     * Get product estimator settings
+     * Get product estimator settings (placeholder, ensure this is implemented if used)
      *
      * @param int $product_id The product ID
      * @return array The estimator settings
      */
     private function get_product_estimator_settings($product_id) {
-        // Get any product-specific estimator settings
+        // Example implementation - fetch your actual product-specific settings
         $settings = array();
-
-        // Example: pricing method
         $pricing_method = get_post_meta($product_id, '_estimator_pricing_method', true);
         if ($pricing_method) {
             $settings['pricing_method'] = $pricing_method;
         }
-
-        // Example: minimum size
         $min_size = get_post_meta($product_id, '_estimator_min_size', true);
         if ($min_size) {
             $settings['min_size'] = floatval($min_size);
         }
-
-        // Example: maximum size
         $max_size = get_post_meta($product_id, '_estimator_max_size', true);
         if ($max_size) {
             $settings['max_size'] = floatval($max_size);
         }
-
         return $settings;
     }
 }

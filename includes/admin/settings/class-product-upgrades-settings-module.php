@@ -32,9 +32,8 @@ class ProductUpgradesSettingsModule extends SettingsModuleBase implements Settin
         parent::__construct($plugin_name, $version);
 
         // Register this module with the settings manager
-        add_action('product_estimator_register_settings_modules', function($manager) {
-            $manager->register_module($this);
-        });
+        add_action('wp_ajax_save_product_upgrade', array($this, 'ajax_save_product_upgrade'));
+        add_action('wp_ajax_delete_product_upgrade', array($this, 'ajax_delete_product_upgrade'));
     }
 
     /**
@@ -78,7 +77,7 @@ class ProductUpgradesSettingsModule extends SettingsModuleBase implements Settin
      * @param array $input The settings to validate
      * @return array The validated settings
      */
-    public function validate_settings($input) {
+    public function validate_settings($input, $context_field_definitions = null) {
         // This module manages its own option separately
         return $input;
     }
@@ -135,29 +134,29 @@ class ProductUpgradesSettingsModule extends SettingsModuleBase implements Settin
     public function enqueue_scripts() {
         // Enqueue Select2 for multiple select functionality if needed (external library)
         wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), '4.1.0-rc.0', true);
-        wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0-rc.0');
 
         // Localize script with module data
-        wp_localize_script(
-            $this->plugin_name . '-admin',
-            'productUpgradesSettings',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('product_estimator_product_upgrades_nonce'),
-                'i18n' => array(
-                    'confirmDelete' => __('Are you sure you want to delete this upgrade configuration?', 'product-estimator'),
-                    'addNew' => __('Add New Upgrade Configuration', 'product-estimator'),
-                    'saveChanges' => __('Save Changes', 'product-estimator'),
-                    'cancel' => __('Cancel', 'product-estimator'),
-                    'selectBaseCategories' => __('Please select at least one base category', 'product-estimator'),
-                    'selectUpgradeCategories' => __('Please select at least one upgrade category', 'product-estimator'),
-                    'error' => __('Error occurred during the operation', 'product-estimator'),
-                    'saveSuccess' => __('Upgrade configuration saved successfully', 'product-estimator'),
-                    'deleteSuccess' => __('Upgrade configuration deleted successfully', 'product-estimator')
-                ),
-                'tab_id' => $this->tab_id
-            )
-        );
+        $actual_data_for_js_object = [
+            'nonce' => wp_create_nonce('product_estimator_product_upgrades_nonce'),
+            'tab_id' => $this->tab_id,
+            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
+            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
+            'option_name'   => $this->option_name,
+            'i18n' => [
+                'confirmDelete' => __('Are you sure you want to delete this upgrade configuration?', 'product-estimator'),
+                'addNew' => __('Add New Upgrade Configuration', 'product-estimator'),
+                'saveChanges' => __('Save Changes', 'product-estimator'),
+                'cancel' => __('Cancel', 'product-estimator'),
+                'selectBaseCategories' => __('Please select at least one base category', 'product-estimator'),
+                'selectUpgradeCategories' => __('Please select at least one upgrade category', 'product-estimator'),
+                'error' => __('Error occurred during the operation', 'product-estimator'),
+                'saveSuccess' => __('Upgrade configuration saved successfully', 'product-estimator'),
+                'deleteSuccess' => __('Upgrade configuration deleted successfully', 'product-estimator')
+            ]
+        ];
+        // Use $this->add_script_data for consistency
+        $this->add_script_data('productUpgradesSettings', $actual_data_for_js_object);
+
     }
 
     /**
@@ -167,26 +166,14 @@ class ProductUpgradesSettingsModule extends SettingsModuleBase implements Settin
      * @access   public
      */
     public function enqueue_styles() {
+        wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0-rc.0');
+
         wp_enqueue_style(
             $this->plugin_name . '-product-upgrades',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/product-upgrades-settings.css',
             array($this->plugin_name . '-settings'),
             $this->version
         );
-    }
-
-    /**
-     * Register module hooks.
-     *
-     * @since    1.1.0
-     * @access   protected
-     */
-    protected function register_hooks() {
-        parent::register_hooks();
-
-        // Register AJAX handlers
-        add_action('wp_ajax_save_product_upgrade', array($this, 'ajax_save_product_upgrade'));
-        add_action('wp_ajax_delete_product_upgrade', array($this, 'ajax_delete_product_upgrade'));
     }
 
     /**
@@ -258,34 +245,7 @@ class ProductUpgradesSettingsModule extends SettingsModuleBase implements Settin
         // Save upgrades
         update_option($this->option_name, $upgrades);
 
-        // Get category names for response
-        $base_cat_names = array();
-        foreach ($base_categories as $cat_id) {
-            $term = get_term($cat_id, 'product_cat');
-            if (!is_wp_error($term) && $term) {
-                $base_cat_names[] = $term->name;
-            }
-        }
-
-        $upgrade_cat_names = array();
-        foreach ($upgrade_categories as $cat_id) {
-            $term = get_term($cat_id, 'product_cat');
-            if (!is_wp_error($term) && $term) {
-                $upgrade_cat_names[] = $term->name;
-            }
-        }
-
-        // Prepare response data
-        $response_data = array(
-            'id' => $upgrade_id,
-            'base_categories' => $base_categories,
-            'base_category_names' => implode(', ', $base_cat_names),
-            'upgrade_categories' => $upgrade_categories,
-            'upgrade_category_names' => implode(', ', $upgrade_cat_names),
-            'display_mode' => $display_mode,
-            'title' => $upgrade_title,
-            'description' => $upgrade_description
-        );
+        $response_data = array_merge(['id' => $upgrade_id], $upgrade_data);
 
         wp_send_json_success(array(
             'message' => __('Upgrade configuration saved successfully.', 'product-estimator'),
@@ -297,41 +257,26 @@ class ProductUpgradesSettingsModule extends SettingsModuleBase implements Settin
      * AJAX handler for deleting a product upgrade configuration
      */
     public function ajax_delete_product_upgrade() {
-        // Check nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_product_upgrades_nonce')) {
             wp_send_json_error(['message' => __('Security check failed.', 'product-estimator')]);
             return;
         }
-
-        // Check permissions
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('You do not have permission to perform this action.', 'product-estimator')]);
             return;
         }
-
-        // Get upgrade ID
         $upgrade_id = isset($_POST['upgrade_id']) ? sanitize_text_field($_POST['upgrade_id']) : '';
-
         if (empty($upgrade_id)) {
             wp_send_json_error(['message' => __('Invalid upgrade configuration ID.', 'product-estimator')]);
             return;
         }
-
-        // Get current upgrades
         $upgrades = get_option($this->option_name, array());
-
-        // Check if upgrade exists
         if (!isset($upgrades[$upgrade_id])) {
             wp_send_json_error(['message' => __('Upgrade configuration not found.', 'product-estimator')]);
             return;
         }
-
-        // Remove upgrade
         unset($upgrades[$upgrade_id]);
-
-        // Save upgrades
         update_option($this->option_name, $upgrades);
-
         wp_send_json_success(array(
             'message' => __('Upgrade configuration deleted successfully.', 'product-estimator'),
         ));

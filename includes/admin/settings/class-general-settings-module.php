@@ -109,181 +109,107 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @access   protected
      */
     public function register_fields() {
-        // First, register the Estimator Settings section
+        $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
+
+        // Estimator Settings Section
         add_settings_section(
-            $this->section_id,
+            $this->section_id, // Use the one defined in set_tab_details
             $this->section_title,
-            array($this, 'render_section_description'),
-            $this->plugin_name . '_' . $this->tab_id
+            [$this, 'render_section_description'],
+            $page_slug_for_wp_api
         );
 
-        // Register the general fields
-        $fields = array(
-            'default_markup' => array(
+        $estimator_fields = [
+            'default_markup' => [
                 'title' => __('Default Markup (%)', 'product-estimator'),
-                'type' => 'number',
-                'description' => __('Default markup percentage for price ranges', 'product-estimator'),
-                'default' => 10,
-                'min' => 0,
-                'max' => 100
-            ),
-            'estimate_expiry_days' => array(
+                'type' => 'number', 'description' => __('Default markup percentage for price ranges', 'product-estimator'),
+                'default' => 10, 'min' => 0, 'max' => 100,
+            ],
+            'estimate_expiry_days' => [
                 'title' => __('Estimate Validity (Days)', 'product-estimator'),
-                'type' => 'number',
-                'description' => __('Number of days an estimate remains valid', 'product-estimator'),
-                'default' => 30,
-                'min' => 1,
-                'max' => 365
-            ),
-        );
+                'type' => 'number', 'description' => __('Number of days an estimate remains valid', 'product-estimator'),
+                'default' => 30, 'min' => 1, 'max' => 365,
+            ],
+            // Add the 'enable_email_notifications' if it's truly a general setting
+            // and not part of the 'notifications_general' sub-tab in NotificationSettingsModule.
+            // If it's managed by NotificationSettingsModule, it should NOT be here.
+            // For this example, I'll assume it's managed by NotificationSettingsModule.
+            // 'enable_global_feature_x' => [ // Example from your previous GeneralSettingsModule
+            //     'title' => __('Enable Global Feature X', 'product-estimator'),
+            //     'type' => 'checkbox', 'description' => __('This enables Feature X across the plugin.', 'product-estimator'),
+            //     'default' => '0',
+            // ],
+        ];
 
-        foreach ($fields as $id => $field) {
-            $args = array(
-                'id' => $id,
-                'type' => $field['type'],
-                'description' => $field['description']
-            );
-
-            // Add additional parameters if they exist
-            if (isset($field['default'])) {
-                $args['default'] = $field['default'];
-            }
-            if (isset($field['min'])) {
-                $args['min'] = $field['min'];
-            }
-            if (isset($field['max'])) {
-                $args['max'] = $field['max'];
-            }
-            if (isset($field['options'])) {
-                $args['options'] = $field['options'];
-            }
-
+        foreach ($estimator_fields as $id => $field_args) {
+            // Ensure 'id' and 'label_for' are in $callback_args if render_field relies on them directly
+            $callback_args = array_merge($field_args, ['id' => $id, 'label_for' => $id]);
             add_settings_field(
                 $id,
-                $field['title'],
-                array($this, 'render_field_callback'),
-                $this->plugin_name . '_' . $this->tab_id,
-                $this->section_id,
-                $args
+                $field_args['title'],
+                [$this, 'render_field_callback_proxy'],
+                $page_slug_for_wp_api,
+                $this->section_id, // Fields for the 'estimator_settings_main_section'
+                $callback_args
             );
+            // **** CRUCIAL STEP: Store the field definition ****
+            // No sub_tab_id for modules directly extending SettingsModuleBase (unless they internally manage contexts)
+            $this->store_registered_field($id, $callback_args);
         }
 
-        // Now, add PDF Settings section
+        // PDF Settings Section
+        $pdf_section_id = 'pdf_settings_section';
         add_settings_section(
-            'pdf_settings',
+            $pdf_section_id,
             __('PDF Settings', 'product-estimator'),
-            array($this, 'render_pdf_section_description'),
-            $this->plugin_name . '_' . $this->tab_id
+            [$this, 'render_pdf_section_description'],
+            $page_slug_for_wp_api
         );
 
-        // PDF Settings fields
-        $pdf_fields = array(
-            'pdf_template' => array(
-                'title' => __('PDF Template', 'product-estimator'),
-                'type' => 'file',
+        $pdf_fields = [
+            'pdf_template' => [
+                'title' => __('PDF Template', 'product-estimator'), 'type' => 'file',
                 'description' => __('Upload a PDF template file (optional)', 'product-estimator'),
-                'accept' => 'application/pdf',
-                'required' => true
-            ),
-            'pdf_margin_top' => array(
-                'title' => __('Margin Top (mm)', 'product-estimator'),
-                'type' => 'number',
+                'accept' => 'application/pdf', // For file input 'accept' attribute
+                // 'required' => true, // Validation can handle this
+            ],
+            'pdf_margin_top' => [
+                'title' => __('Margin Top (mm)', 'product-estimator'), 'type' => 'number',
                 'description' => __('Top margin for PDF in millimeters', 'product-estimator'),
-                'default' => 15,
-                'min' => 0,
-                'max' => 200
-            ),
-            'pdf_margin_bottom' => array(
-                'title' => __('Margin Bottom (mm)', 'product-estimator'),
-                'type' => 'number',
+                'default' => 15, 'min' => 0, 'max' => 200,
+            ],
+            'pdf_margin_bottom' => [
+                'title' => __('Margin Bottom (mm)', 'product-estimator'), 'type' => 'number',
                 'description' => __('Bottom margin for PDF in millimeters', 'product-estimator'),
-                'default' => 15,
-                'min' => 0,
-                'max' => 200
-            ),
-            'pdf_footer_text' => array(
-                'title' => __('Footer Text', 'product-estimator'),
-                'type' => 'html',
-                'description' => __('Text to display in the footer of PDF estimates', 'product-estimator')
-            ),
-            'pdf_footer_contact_details_content' => array(
-                'title' => __('Footer Contact Details', 'product-estimator'),
-                'type' => 'html',
-                'description' => __('Contact details to display in the footer of PDF estimates', 'product-estimator')
-            ),
-        );
+                'default' => 15, 'min' => 0, 'max' => 200,
+            ],
+            'pdf_footer_text' => [
+                'title' => __('Footer Text', 'product-estimator'), 'type' => 'html',
+                'description' => __('Text to display in the footer of PDF estimates', 'product-estimator'),
+            ],
+            'pdf_footer_contact_details_content' => [
+                'title' => __('Footer Contact Details', 'product-estimator'), 'type' => 'html',
+                'description' => __('Contact details to display in the footer of PDF estimates', 'product-estimator'),
+            ],
+        ];
 
-        foreach ($pdf_fields as $id => $field) {
-            $args = array(
-                'id' => $id,
-                'type' => $field['type'],
-                'description' => $field['description']
-            );
-
-            // Add additional parameters if they exist
-            if (isset($field['default'])) {
-                $args['default'] = $field['default'];
-            }
-            if (isset($field['min'])) {
-                $args['min'] = $field['min'];
-            }
-            if (isset($field['max'])) {
-                $args['max'] = $field['max'];
-            }
-            if (isset($field['accept'])) {
-                $args['accept'] = $field['accept'];
-            }
-            if (isset($field['required'])) {
-                $args['required'] = $field['required'];
-            }
-
+        foreach ($pdf_fields as $id => $field_args) {
+            $callback_args = array_merge($field_args, ['id' => $id, 'label_for' => $id]);
             add_settings_field(
                 $id,
-                $field['title'],
-                array($this, 'render_field_callback'),
-                $this->plugin_name . '_' . $this->tab_id,
-                'pdf_settings',
-                $args
+                $field_args['title'],
+                [$this, 'render_field_callback_proxy'],
+                $page_slug_for_wp_api,
+                $pdf_section_id, // Fields for the 'pdf_settings_section'
+                $callback_args
             );
+            // **** CRUCIAL STEP: Store the field definition ****
+            $this->store_registered_field($id, $callback_args);
         }
     }
 
-    /**
-     * Render a settings field.
-     *
-     * @since    1.1.0
-     * @access   public
-     * @param    array    $args    Field arguments.
-     */
-    public function render_field_callback($args) {
-        // First validate that all required parameters are present
-        if (!isset($args['id']) || !isset($args['type'])) {
-            echo '<p class="error">' . esc_html__('Invalid field configuration', 'product-estimator') . '</p>';
-            return;
-        }
-
-        // Handle different field types with specific renderers
-        switch ($args['type']) {
-            case 'file':
-                $this->render_file_field($args);
-                break;
-            case 'select':
-                if (isset($args['options'])) {
-                    $this->render_select_field($args);
-                } else {
-                    echo '<p class="error">' . esc_html__('Select field missing options', 'product-estimator') . '</p>';
-                }
-                break;
-            case 'textarea':
-                $this->render_textarea_field($args);
-                break;
-            case 'html':
-                $this->render_html_field($args);
-                break;
-            default:
-                $this->render_field($args);
-                break;
-        }
+    public function render_field_callback_proxy($args) {
+        parent::render_field($args);
     }
 
     /**
@@ -310,47 +236,14 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @param    array    $input    Settings to validate
      * @return   array    Validated settings
      */
-    public function validate_settings($input) {
-        $valid = [];
+    public function validate_settings($input, $context_field_definitions = null) {
+        $validated = parent::validate_settings($input, $context_field_definitions);
 
-        // Validate default markup
-        if (isset($input['default_markup'])) {
-            $markup = intval($input['default_markup']);
-            if ($markup < 0 || $markup > 100) {
-                add_settings_error(
-                    'product_estimator_settings',
-                    'invalid_markup',
-                    __('Default markup must be between 0 and 100', 'product-estimator')
-                );
-                $valid['default_markup'] = 10; // Default value
-            } else {
-                $valid['default_markup'] = $markup;
-            }
+        if (is_wp_error($validated)) {
+            return $validated;
         }
 
-        // Validate expiry days
-        if (isset($input['estimate_expiry_days'])) {
-            $days = intval($input['estimate_expiry_days']);
-            if ($days < 1 || $days > 365) {
-                add_settings_error(
-                    'product_estimator_settings',
-                    'invalid_expiry',
-                    __('Estimate validity must be between 1 and 365 days', 'product-estimator')
-                );
-                $valid['estimate_expiry_days'] = 30; // Default value
-            } else {
-                $valid['estimate_expiry_days'] = $days;
-            }
-        }
-
-        // IMPORTANT: Pass through all other settings that we didn't explicitly validate
-        foreach ($input as $key => $value) {
-            if (!isset($valid[$key])) {
-                $valid[$key] = $value;
-            }
-        }
-
-        return $valid;
+        return $validated;
     }
 
     /**
@@ -413,17 +306,13 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @access   protected
      * @param    array    $form_data    The processed form data
      */
+    // perform actions beyond standard validation and saving (e.g., cache clearing).
     protected function after_save_actions($form_data) {
-        // Call parent method if it exists
         if (method_exists(parent::class, 'after_save_actions')) {
             parent::after_save_actions($form_data);
         }
-
-        // Clear any caches
         delete_transient('product_estimator_general_settings');
-
-        // Verify HTML content is stored correctly
-        $this->verify_html_content_storage();
+        // $this->verify_html_content_storage(); // This might be redundant if validation/saving is correct
     }
 
     /**
@@ -509,6 +398,7 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
         echo '<p>' . esc_html__('Configure general estimator settings and defaults.', 'product-estimator') . '</p>';
     }
 
+
     /**
      * Enqueue module-specific scripts.
      *
@@ -518,37 +408,18 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
     // Add this to your class-general-settings-module.php file in the enqueue_scripts method
 
     public function enqueue_scripts() {
-        // Get global script handler
-        global $product_estimator_script_handler;
+        $actual_data_for_js_object = [
+            $this->plugin_name . '-admin',
+            'generalSettings',
+            'nonce' => wp_create_nonce('product_estimator_settings_nonce'),
+            'tab_id' => $this->tab_id,
+            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
+            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
+            'option_name'   => $this->option_name,
+            'i18n' => []
+        ];
 
-        if ($product_estimator_script_handler) {
-            // Properly register general settings data
-            $generalSettingsData = array(
-                'tab_id' => $this->tab_id,
-                'nonce' => wp_create_nonce('product_estimator_general_settings_nonce'),
-                'i18n' => array(
-                    'validationErrorMarkup' => __('Markup percentage must be between 0 and 100', 'product-estimator'),
-                    'validationErrorExpiry' => __('Expiry days must be between 1 and 365', 'product-estimator')
-                )
-            );
-
-            // Add data using the script handler
-            $product_estimator_script_handler->add_script_data('generalSettingsData', $generalSettingsData);
-        } else {
-            // Fallback: Add data directly using wp_localize_script
-            wp_localize_script(
-                $this->plugin_name . '-admin',
-                'generalSettingsData',
-                array(
-                    'tab_id' => $this->tab_id,
-                    'nonce' => wp_create_nonce('product_estimator_general_settings_nonce'),
-                    'i18n' => array(
-                        'validationErrorMarkup' => __('Markup percentage must be between 0 and 100', 'product-estimator'),
-                        'validationErrorExpiry' => __('Expiry days must be between 1 and 365', 'product-estimator')
-                    )
-                )
-            );
-        }
+        $this->add_script_data('generalSettings', $actual_data_for_js_object);
     }
 
     /**

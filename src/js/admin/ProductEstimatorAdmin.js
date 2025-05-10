@@ -1,7 +1,7 @@
 /**
  * Admin JavaScript functionality
  *
- * General admin functionality for the Product Estimator plugin
+ * General admin functionality for the Product Estimator plugin in the ADMIN
  * Note: Tab management functionality has been moved to ProductEstimatorSettings.js
  */
 import { showNotice, showFieldError, clearFieldError, validateEmail } from '@utils';

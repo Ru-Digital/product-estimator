@@ -5,28 +5,37 @@
  */
 import { ajax, dom, format, validation } from '@utils';
 import { createLogger } from '@utils';
-const logger = createLogger('ProductAdditionsSettingsModule');
+const logger = createLogger('ProductAdditionsSettings');
 class ProductAdditionsSettingsModule {
   /**
    * Initialize the module
    */
   constructor() {
-    // Access localized data with a fallback mechanism
-    const adminSettings = window.productAdditionsSettings || {};
+    $ = jQuery; // Make jQuery available as this.$
 
-    // Create a safe reference to the settings object
+    // Access localized data with a fallback mechanism
+    const localizedSettings = window.productAdditionsSettings || {};
+
     this.settings = {
-      ajaxUrl: adminSettings.ajax_url || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
-      nonce: adminSettings.nonce || '',
-      i18n: adminSettings.i18n || {},
-      tab_id: adminSettings.tab_id || 'product_additions'
+      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
+      nonce: localizedSettings.nonce || '', // Fallback
+      i18n: localizedSettings.i18n || {},   // Fallback
+      tab_id: localizedSettings.tab_id || 'product_additions', // Fallback
     };
 
     // Add a variable to track if the form has been modified
     this.formModified = false;
 
     // Initialize when document is ready
-    jQuery(document).ready(() => this.init());
+    $(document).ready(() => {
+      // Re-check localizedSettings in case they are defined by another script in document.ready
+      const updatedLocalizedSettingsOnReady = window.productAdditionsSettings || {};
+      if (updatedLocalizedSettingsOnReady.nonce) {
+        this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
+      }
+
+      this.init();
+    });
   }
 
   /**

@@ -37,9 +37,10 @@ interface SettingsModuleInterface {
      * Validate module-specific settings
      *
      * @param array $input The settings input to validate
-     * @return array The validated settings
+     * @param array|null $content_field_definitions Optional, Definitions of fields in $input, including their type and args.
+     * @return array|\WP_Error The validated settings or a WP_Error on failure.
      */
-    public function validate_settings($input);
+    public function validate_settings($input, $content_field_definitions = null);
 
     /**
      * Render the module content

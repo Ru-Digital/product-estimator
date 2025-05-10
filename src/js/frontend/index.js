@@ -2,7 +2,7 @@
  * index.js
  *
  * Main entry point for the Product Estimator plugin.
- * This file initializes the application and loads required modules.
+ * This file initializes the application and loads required modules in the FRONTEND.
  */
 
 import EstimatorCore from './EstimatorCore';

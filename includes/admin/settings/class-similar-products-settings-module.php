@@ -32,12 +32,6 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
     public function __construct($plugin_name, $version) {
         parent::__construct($plugin_name, $version);
 
-        // Register this module with the settings manager
-        add_action('product_estimator_register_settings_modules', function($manager) {
-            $manager->register_module($this);
-        });
-
-        // Add AJAX handlers specific to this module
         $this->register_ajax_handlers();
     }
 
@@ -67,36 +61,30 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
     }
 
     /**
-     * Register module hooks.
-     *
-     * @since    1.1.0
-     * @access   protected
-     */
-    protected function register_hooks() {
-        parent::register_hooks();
-
-        // Register settings
-        add_action('admin_init', array($this, 'register_settings'));
-    }
-
-    /**
      * Register the module's settings
      *
      * @since    1.0.5
      * @access   public
      */
     public function register_settings() {
-        // Register the main option
+        // This registers the 'product_estimator_similar_products' option directly with WordPress.
+        // It will be saved if a form submits to options.php for the 'product_estimator_settings' group.
+        // However, this module's UI saves rules via custom AJAX.
+        // If there are no standard fields on this tab saved via the main AJAX flow, this is fine.
+        parent::register_settings(); // Call parent to ensure it can do its setup if any.
+
         register_setting(
-            'product_estimator_settings',
-            $this->option_name,
+            'product_estimator_settings', // This is the option group used on the main settings page.
+            // If this option is saved independently, it might need its own group.
+            $this->option_name,          // The actual option name being saved.
             array(
                 'type' => 'array',
                 'description' => 'Product Estimator Similar Products Settings',
-                'sanitize_callback' => array($this, 'sanitize_settings')
+                'sanitize_callback' => array($this, 'sanitize_settings_callback') // Renamed to avoid conflict
             )
         );
     }
+
 
     /**
      * Register the module-specific settings fields.
@@ -129,7 +117,7 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
      * @since    1.1.0
      * @access   public
      */
-    public function validate_settings($input) {
+    public function validate_settings($input, $context_field_definitions = null) {
         // For this module, settings are stored in a separate option
         // so we don't need to validate individual settings here
         return $input;
@@ -143,43 +131,29 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
      * @since    1.0.5
      * @access   public
      */
-    public function sanitize_settings($settings) {
-        // Ensure settings is an array
+    public function sanitize_settings_callback($settings) {
         if (!is_array($settings)) {
             return array();
         }
-
-        // Sanitize each rule
-        foreach ($settings as $id => &$rule) {
-            // Handle source categories (new multi-selection)
+        foreach ($settings as $id => &$rule) { // Pass $rule by reference
             if (isset($rule['source_categories']) && is_array($rule['source_categories'])) {
-                $sanitized_categories = array();
-                foreach ($rule['source_categories'] as $category_id) {
-                    $sanitized_categories[] = absint($category_id);
-                }
-                $rule['source_categories'] = $sanitized_categories;
-            } else if (isset($rule['source_category'])) {
-                // For backward compatibility
+                $rule['source_categories'] = array_map('absint', $rule['source_categories']);
+            } elseif (isset($rule['source_category'])) { // Backward compatibility
                 $rule['source_categories'] = array(absint($rule['source_category']));
-                // Remove old format
                 unset($rule['source_category']);
             } else {
                 $rule['source_categories'] = array();
             }
 
             if (isset($rule['attributes']) && is_array($rule['attributes'])) {
-                $sanitized_attributes = array();
-                foreach ($rule['attributes'] as $attribute) {
-                    $sanitized_attributes[] = sanitize_text_field($attribute);
-                }
-                $rule['attributes'] = $sanitized_attributes;
+                $rule['attributes'] = array_map('sanitize_text_field', $rule['attributes']);
             } else {
                 $rule['attributes'] = array();
             }
         }
-
         return $settings;
     }
+
 
     /**
      * Process form data specific to this module
@@ -211,16 +185,8 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
      * @access   public
      */
     public function render_module_content() {
-        // Get current settings
         $settings = get_option($this->option_name, array());
-
-        // Get all product categories
-        $categories = get_terms(array(
-            'taxonomy' => 'product_cat',
-            'hide_empty' => false,
-        ));
-
-        // Include the admin partial with proper variables
+        $categories = get_terms(array('taxonomy' => 'product_cat', 'hide_empty' => false));
         include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/partials/similar-products-admin-display.php';
     }
 
@@ -232,11 +198,13 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
      */
     public function enqueue_scripts() {
         // Localize script with module data
-        wp_localize_script(
-            $this->plugin_name . '-admin',
-            'similarProducts',
-            array(
-                'nonce' => wp_create_nonce('product_estimator_similar_products_nonce'),
+        $actual_data_for_js_object = array(
+            'nonce' => wp_create_nonce('product_estimator_similar_products_nonce'),
+            'tab_id' => $this->tab_id,
+            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
+            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
+            'option_name'   => $this->option_name,
+            'i18n' => array(
                 'loading_attributes' => __('Loading attributes...', 'product-estimator'),
                 'select_category' => __('Please select categories first.', 'product-estimator'),
                 'no_attributes' => __('No product attributes found for these categories.', 'product-estimator'),
@@ -250,7 +218,9 @@ class SimilarProductsSettingsModule extends SettingsModuleBase implements Settin
                 'select_attributes_error' => __('Please select at least one attribute.', 'product-estimator')
             )
         );
+        $this->add_script_data('similarProductsSettings', $actual_data_for_js_object); // Unique global JS object
     }
+
 
     /**
      * Enqueue module-specific styles.

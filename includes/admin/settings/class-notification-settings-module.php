@@ -47,20 +47,25 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         return $tabs;
     }
 
-    protected function register_vertical_tab_fields( $vertical_tab_id, $page_slug ) {
+    protected function register_vertical_tab_fields( $vertical_tab_id, $page_slug_for_wp_api ) {
         if ( $vertical_tab_id === 'notifications_general' ) {
-            $this->register_general_notification_fields( $page_slug );
+            $this->register_general_notification_fields( $vertical_tab_id, $page_slug_for_wp_api );
         } elseif ( strpos( $vertical_tab_id, 'notification_type_' ) === 0 ) {
             $type_key = substr( $vertical_tab_id, strlen( 'notification_type_' ) );
             if ( isset( $this->defined_notification_types[ $type_key ] ) ) {
-                $this->register_single_notification_type_fields( $type_key, $page_slug );
+                $this->register_single_notification_type_fields( $type_key, $vertical_tab_id, $page_slug_for_wp_api );
             }
         }
     }
 
-    private function register_general_notification_fields( $page_slug ) {
-        $section_id_general = $this->section_id . '_general';
-        add_settings_section( $section_id_general, null, null, $page_slug );
+    private function register_general_notification_fields( $current_sub_tab_id, $page_slug_for_wp_api ) {
+        $section_id_for_wp_api = $this->section_id . '_general_section'; // Unique section ID
+        add_settings_section(
+            $section_id_for_wp_api,
+            null, // No title for the section itself, fields have titles
+            null, // No callback for section description
+            $page_slug_for_wp_api
+        );
 
         $general_fields = [
             'enable_notifications' => ['title' => __( 'Enable Email Notifications', 'product-estimator' ), 'type' => 'checkbox', 'description' => __( 'Globally enable or disable all email notifications from the estimator.', 'product-estimator' ), 'default' => true],
@@ -69,17 +74,30 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             'company_logo'         => ['title' => __( 'Company Logo for Emails', 'product-estimator' ), 'type' => 'image', 'description' => __( 'Upload a logo to be included in email templates. (Optional)', 'product-estimator' )],
         ];
 
-        foreach ( $general_fields as $id => $field ) {
-            $args = ['id' => $id, 'type' => $field['type'], 'description' => $field['description'], 'label_for' => $id];
-            if ( isset( $field['default'] ) ) $args['default'] = $field['default'];
-            add_settings_field( $id, $field['title'], [ $this, 'render_field_callback' ], $page_slug, $section_id_general, $args );
+        foreach ( $general_fields as $id => $field_args ) {
+            $callback_args = array_merge($field_args, ['id' => $id, 'label_for' => $id]);
+            add_settings_field(
+                $id,
+                $field_args['title'],
+                [$this, 'render_field_callback_proxy'],
+                $page_slug_for_wp_api,
+                $section_id_for_wp_api,
+                $callback_args
+            );
+            // **** CRUCIAL STEP: Store the field definition ****
+            $this->store_field_for_sub_tab($current_sub_tab_id, $id, $callback_args);
         }
     }
 
-    private function register_single_notification_type_fields( $type_key, $page_slug ) {
+    private function register_single_notification_type_fields( $type_key, $current_sub_tab_id, $page_slug_for_wp_api ) {
         $type_data = $this->defined_notification_types[ $type_key ];
-        $section_id_for_type = $this->section_id . '_' . $type_key;
-        add_settings_section( $section_id_for_type, null, null, $page_slug );
+        $section_id_for_wp_api = $this->section_id . '_' . $type_key . '_section'; // Unique section ID
+        add_settings_section(
+            $section_id_for_wp_api,
+            null, // No title for the section itself
+            null, // No callback for section description
+            $page_slug_for_wp_api
+        );
 
         $fields = [];
         $fields[ 'notification_' . $type_key . '_enabled' ] = ['title' => __( 'Enable This Notification', 'product-estimator' ), 'type' => 'checkbox', 'description' => sprintf( __( 'Enable the "%s" email notification.', 'product-estimator' ), $type_data['title'] ), 'default' => true];
@@ -89,14 +107,22 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         $fields[ 'notification_' . $type_key . '_subject' ] = ['title' => __( 'Email Subject', 'product-estimator' ), 'type' => 'text', 'description' => __( 'Subject line for this email notification. Use template tags from the sidebar.', 'product-estimator' ), 'default' => $this->get_default_subject( $type_key )];
         $fields[ 'notification_' . $type_key . '_content' ] = ['title' => __( 'Email Content', 'product-estimator' ), 'type' => 'html', 'description' => __( 'Main content for this email. HTML is allowed. Use template tags from the sidebar.', 'product-estimator' ), 'default' => $this->get_default_content( $type_key )];
 
-        foreach ( $fields as $id => $field ) {
-            $args = ['id' => $id, 'type' => $field['type'], 'description' => $field['description'], 'label_for' => $id];
-            if ( isset( $field['default'] ) ) $args['default'] = $field['default'];
-            add_settings_field( $id, $field['title'], [ $this, 'render_field_callback' ], $page_slug, $section_id_for_type, $args );
+        foreach ( $fields as $id => $field_args ) {
+            $callback_args = array_merge($field_args, ['id' => $id, 'label_for' => $id]);
+            add_settings_field(
+                $id,
+                $field_args['title'],
+                [$this, 'render_field_callback_proxy'],
+                $page_slug_for_wp_api,
+                $section_id_for_wp_api,
+                $callback_args
+            );
+            // **** CRUCIAL STEP: Store the field definition ****
+            $this->store_field_for_sub_tab($current_sub_tab_id, $id, $callback_args);
         }
     }
 
-    public function render_field_callback( $args ) {
+    public function render_field_callback_proxy( $args ) {
         parent::render_field( $args );
     }
 
@@ -151,23 +177,29 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         return in_array( $key, $module_settings, true );
     }
 
-    public function validate_settings( $input ) {
-        $valid = [];
-        $valid['enable_notifications'] = ! empty( $input['enable_notifications'] ) ? 1 : 0;
-        if ( isset( $input['from_name'] ) ) $valid['from_name'] = sanitize_text_field( $input['from_name'] );
-        if ( isset( $input['from_email'] ) ) $valid['from_email'] = sanitize_email( $input['from_email'] );
-        if ( isset( $input['company_logo'] ) ) $valid['company_logo'] = absint( $input['company_logo'] );
+    public function validate_settings($input, $context_field_definitions = null) {
+        // The parent::validate_settings method will use the 'type' defined in $context_field_definitions
+        // (which we populated via store_field_for_sub_tab) to apply appropriate sanitization.
+        $validated = parent::validate_settings($input, $context_field_definitions);
 
-        foreach ( $this->defined_notification_types as $type_id => $type_data ) {
-            $prefix = 'notification_' . $type_id . '_';
-            $valid[ $prefix . 'enabled' ] = ! empty( $input[ $prefix . 'enabled' ] ) ? 1 : 0;
-            if ( isset( $input[ $prefix . 'subject' ] ) ) $valid[ $prefix . 'subject' ] = sanitize_text_field( $input[ $prefix . 'subject' ] );
-            if ( isset( $input[ $prefix . 'content' ] ) ) $valid[ $prefix . 'content' ] = wp_kses_post( $input[ $prefix . 'content' ] );
-            if ( $type_id === 'request_copy' && isset( $input[ $prefix . 'include_pdf' ] ) ) {
-                $valid[ $prefix . 'include_pdf' ] = ! empty( $input[ $prefix . 'include_pdf' ] ) ? 1 : 0;
-            }
+        if (is_wp_error($validated)) {
+            return $validated;
         }
-        return $valid;
+
+        // Example of additional specific validation for this module, if needed:
+        if (isset($validated['from_email']) && !empty($validated['from_email']) && !is_email($validated['from_email'])) {
+            add_settings_error(
+                $this->option_name, // settings group
+                'invalid_from_email', // error code
+                __('The "From Email" in Notification General Settings is not a valid email address.', 'product-estimator'), // message
+                'error' // type
+            );
+            // Optionally, revert to old value or a safe default
+            // $options = get_option($this->option_name);
+            // $validated['from_email'] = $options['from_email'] ?? get_option('admin_email');
+        }
+
+        return $validated;
     }
 
     public function enqueue_scripts() {
@@ -176,16 +208,17 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
         $commonData = $this->get_common_script_data(); // Assumes get_common_script_data() is in SettingsModuleWithVerticalTabsBase
         $module_specific_data = [
-            'defaultSubTabId'   => 'notifications_general', // Corrected
-            'ajaxActionPrefix'  => 'save_notifications',    // Corrected
-            'localizedDataName' => 'notificationSettingsData', // Corrected
+            'mainTabId'       => $this->tab_id,
+            'defaultSubTabId'   => 'notifications_general', // First sub-tab ID
+            'ajax_action'       => 'save_settings_for_' . $this->tab_id, // e.g., 'save_settings_for_notifications'
+            'option_name'       => $this->option_name, // 'product_estimator_settings'
             'notification_types' => array_keys($this->defined_notification_types),
             'i18n'               => [
                 'selectImage'          => __( 'Select or Upload Logo', 'product-estimator' ),
                 'useThisImage'         => __( 'Use this image', 'product-estimator' ),
                 'validationErrorEmail' => __( 'Please enter a valid From Email address.', 'product-estimator' ),
-                'saveSuccess'          => __( 'Notification settings saved successfully.', 'product-estimator' ),
-                'saveError'            => __( 'Error saving notification settings.', 'product-estimator' ),
+                'saveSuccess'          => __( 'Notification settings saved successfully.', 'product-estimator' ), // Overrides common
+                'saveError'            => __( 'Error saving notification settings.', 'product-estimator' ),   // Overrides common
             ],
         ];
 

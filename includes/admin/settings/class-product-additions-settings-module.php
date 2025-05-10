@@ -12,6 +12,8 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  */
 class ProductAdditionsSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
+    protected $option_name = 'product_estimator_product_additions'; // Explicitly define its own option name
+
     /**
      * Set the tab and section details.
      *
@@ -70,7 +72,7 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase implements Setti
      * @param    array $input The settings to validate
      * @return   array The validated settings
      */
-    public function validate_settings($input) {
+    public function validate_settings($input, $context_field_definitions = null) {
         // This module uses custom validation for its AJAX handlers
         // No standard settings to validate
         return $input;
@@ -128,31 +130,30 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase implements Setti
     public function enqueue_scripts() {
         // Enqueue Select2 for multiple select functionality if needed (external library)
         wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), '4.1.0-rc.0', true);
-        wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0-rc.0');
 
-        // Localize script with module data
-        wp_localize_script(
-            $this->plugin_name . '-admin',
-            'productAdditionsSettings',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('product_estimator_product_additions_nonce'),
-                'i18n' => array(
-                    'confirmDelete' => __('Are you sure you want to delete this relationship?', 'product-estimator'),
-                    'addNew' => __('Add New Relationship', 'product-estimator'),
-                    'saveChanges' => __('Save Changes', 'product-estimator'),
-                    'cancel' => __('Cancel', 'product-estimator'),
-                    'selectAction' => __('Please select an action type', 'product-estimator'),
-                    'selectSourceCategories' => __('Please select at least one source category', 'product-estimator'),
-                    'selectTargetCategory' => __('Please select a target category', 'product-estimator'),
-                    'selectProduct' => __('Please select a product', 'product-estimator'),
-                    'searching' => __('Searching...', 'product-estimator'),
-                    'noProductsFound' => __('No products found', 'product-estimator'),
-                    'errorSearching' => __('Error searching products', 'product-estimator')
-                ),
-                'tab_id' => $this->tab_id
-            )
-        );
+        $actual_data_for_js_object = [
+            'nonce' => wp_create_nonce('product_estimator_product_additions_nonce'),
+            'tab_id' => $this->tab_id,
+            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
+            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
+            'option_name'   => $this->option_name,
+            'i18n' => [
+                'confirmDelete' => __('Are you sure you want to delete this relationship?', 'product-estimator'),
+                'addNew' => __('Add New Relationship', 'product-estimator'),
+                'saveChanges' => __('Save Changes', 'product-estimator'),
+                'cancel' => __('Cancel', 'product-estimator'),
+                'selectAction' => __('Please select an action type', 'product-estimator'),
+                'selectSourceCategories' => __('Please select at least one source category', 'product-estimator'),
+                'selectTargetCategory' => __('Please select a target category', 'product-estimator'),
+                'selectProduct' => __('Please select a product', 'product-estimator'),
+                'searching' => __('Searching...', 'product-estimator'),
+                'noProductsFound' => __('No products found', 'product-estimator'),
+                'errorSearching' => __('Error searching products', 'product-estimator')
+            ]
+        ];
+        // Use $this->add_script_data for consistency
+        $this->add_script_data('productAdditionsSettingsData', $actual_data_for_js_object);
+
     }
 
     /**
@@ -162,6 +163,8 @@ class ProductAdditionsSettingsModule extends SettingsModuleBase implements Setti
      * @access   public
      */
     public function enqueue_styles() {
+        wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0-rc.0');
+
         wp_enqueue_style(
             $this->plugin_name . '-product-additions',
             PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/product-additions-settings.css',

@@ -13,7 +13,7 @@ export function closeMainPluginLogGroup() {
 
 let pluginLogGroupHasStarted = false;
 
-function ensureMainPluginLogGroupIsStarted(startCollapsed = true) {
+function ensureMainPluginLogGroupIsStarted(startCollapsed = false) {
   // (Keep the version with diagnostic logs from above for testing)
   if (!pluginLogGroupHasStarted && window.productEstimatorVars?.debug) {
     if (startCollapsed) {

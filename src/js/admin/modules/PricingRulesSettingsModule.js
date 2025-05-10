@@ -12,20 +12,30 @@ class PricingRulesSettingsModule {
    * Initialize the module
    */
   constructor() {
+    $ = jQuery; // Make jQuery available as this.$
+
     // Access localized data with a fallback mechanism
-    const settingsData = window.pricingRulesSettings || {};
+    const localizedSettings = window.pricingRulesSettings || {};
 
     // Create a safe reference to the settings object
     this.settings = {
-      ajaxUrl: settingsData.ajax_url || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
-      nonce: settingsData.nonce || '',
-      i18n: settingsData.i18n || {},
-      tab_id: settingsData.tab_id || 'pricing_rules'
+      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
+      nonce: localizedSettings.nonce, // Will be populated from PHP
+      i18n: localizedSettings.i18n,
+      tab_id: localizedSettings.tab_id, // Will be populated
     };
 
     // Initialize when document is ready
-    jQuery(document).ready(() => this.init());
+    $(document).ready(() => {
+      // Re-check localizedSettings in case they are defined by another script in document.ready
+      const updatedLocalizedSettings = window.similarProducts || {};
+      this.settings.nonce = updatedLocalizedSettings.nonce || this.settings.nonce;
+      // Update other settings if necessary
+
+      this.init();
+    });
   }
+
 
   /**
    * Initialize the module

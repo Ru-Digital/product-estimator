@@ -77,6 +77,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @var      string    $option_name    The WordPress option name where settings for this module are stored.
      */
     protected $option_name = "product_estimator_settings";
+    protected $registered_fields = [];
 
     /**
      * Initialize the class and set its properties.
@@ -97,16 +98,14 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         $this->register_hooks();
 
         // Register this module with the manager
-        add_action('product_estimator_register_settings_modules', [$this, 'register_with_manager']);
+        add_action('product_estimator_before_localize_scripts', array($this, 'collect_module_script_data'), 10, 2);
     }
 
-    /**
-     * Register this module with the settings manager
-     *
-     * @param \RuDigital\ProductEstimator\Includes\Admin\SettingsManager $manager The settings manager
-     */
-    public function register_with_manager($manager) {
-        $manager->register_module($this);
+    // Add a new method in SettingsModuleBase
+    public function collect_module_script_data($script_handler_instance, $hook_suffix) {
+        // Call maybe_enqueue_assets to perform its checks and then enqueue_scripts (which calls add_script_data)
+        // The $script_handler_instance is passed if needed, but add_script_data uses the global.
+        $this->maybe_enqueue_assets($hook_suffix); // This will lead to $this->enqueue_scripts() being called
     }
 
     /**
@@ -127,17 +126,80 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @access   public
      */
     public function register_settings() {
-        // Register settings section
-        add_settings_section(
-            $this->section_id,
-            $this->section_title,
-            array($this, 'render_section_description'),
-            $this->plugin_name . '_' . $this->tab_id
-        );
-
-        // Register fields - implemented by child classes
-        $this->register_fields();
+        // For modules NOT using SettingsModuleWithVerticalTabsBase,
+        // this is where they would typically call add_settings_section for their primary section.
+        // And then call $this->register_fields() which in turn calls add_settings_field
+        // and $this->store_registered_field().
+        // Example for a simple module:
+        // add_settings_section(
+        //     $this->section_id,
+        //     $this->section_title,
+        //     [$this, 'render_section_description'],
+        //     $this->plugin_name . '_' . $this->tab_id
+        // );
+        $this->register_fields(); // Child class defines fields and calls store_registered_field
     }
+
+    /**
+     * Stores a registered field's definition for internal use (contextual saving, validation).
+     * Child modules MUST call this for every field they register via add_settings_field.
+     *
+     * @since    X.X.X (Refactored version)
+     * @access   protected
+     * @param    string $field_id The unique ID of the field.
+     * @param    array  $args The arguments array for the field (must include 'type', 'id').
+     * @param    string|null $sub_tab_id Optional. The ID of the sub-tab this field belongs to (for vertical tab modules).
+     */
+    protected function store_registered_field($field_id, $args, $sub_tab_id = null) {
+        if (!isset($args['id'])) {
+            $args['id'] = $field_id; // Ensure ID is present in args
+        }
+        $this->registered_fields[$field_id] = $args;
+        if ($sub_tab_id !== null) {
+            $this->registered_fields[$field_id]['sub_tab_id'] = $sub_tab_id;
+        }
+    }
+
+
+    /**
+     * Get fields (all types) that are registered for the given context.
+     *
+     * @since    X.X.X (Refactored version)
+     * @access   protected
+     * @param    string|null $context_id Identifier for the current context (e.g., sub_tab_id).
+     * If null, returns all fields not associated with a sub-tab
+     * or all fields if the module doesn't use sub-tabs.
+     * @return   array    Field definitions [field_id => args] for the specified context.
+     */
+    protected function get_fields_for_context($context_id = null) {
+        $context_fields = [];
+        if ($context_id === null) { // No specific sub-tab context
+            // For modules that don't use sub_tabs, or for fields not assigned to a sub_tab
+            foreach ($this->registered_fields as $field_id => $args) {
+                if (!isset($args['sub_tab_id'])) {
+                    $context_fields[$field_id] = $args;
+                }
+            }
+            // If context_fields is empty here and this module *does* have registered_fields,
+            // it implies all fields are expected to be under a sub_tab_id.
+            // If $this->registered_fields is also empty, then no fields are registered.
+            // If $context_fields is empty but $this->registered_fields is not, and we expected some non-sub-tab fields,
+            // this might indicate an issue or that all fields are indeed sub-tabbed.
+            // For a simple module (not SettingsModuleWithVerticalTabsBase), this should return all its fields.
+            if (empty($context_fields) && !($this instanceof SettingsModuleWithVerticalTabsBase) && !empty($this->registered_fields)) {
+                return $this->registered_fields;
+            }
+
+        } else { // Specific sub-tab context_id provided
+            foreach ($this->registered_fields as $field_id => $args) {
+                if (isset($args['sub_tab_id']) && $args['sub_tab_id'] === $context_id) {
+                    $context_fields[$field_id] = $args;
+                }
+            }
+        }
+        return $context_fields;
+    }
+
 
     /**
      * Register the module-specific settings fields.
@@ -150,16 +212,6 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      */
     public abstract function register_fields();
 
-    /**
-     * Render the section description.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function render_section_description() {
-        // Child classes can override this to provide a section description
-        echo '';
-    }
 
     /**
      * Enqueue module-specific styles.
@@ -232,101 +284,95 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             exit;
         }
 
-        parse_str($_POST['form_data'], $form_data);
+        parse_str(wp_unslash($_POST['form_data']), $parsed_form_data);
 
         // Determine the key for this module's settings in the form data using $this->option_name
-        $settings_data_key = $this->option_name;
+        $settings_from_form = $parsed_form_data[$this->option_name] ?? [];
 
-        // Ensure the settings array for this module exists in form_data.
-        // This is crucial if all settings for the module (e.g., all checkboxes) are unchecked,
-        // as unchecked checkboxes are not typically sent by browsers.
-        if (!isset($form_data[$settings_data_key])) {
-            $form_data[$settings_data_key] = array();
-        }
-
-        // Handle checkbox fields: if a checkbox is not in the submitted data for this module,
-        // it means it was unchecked. Set its value to 0.
-        $checkbox_fields = $this->get_checkbox_fields(); // Method in child class
-        foreach ($checkbox_fields as $field) {
-            if (!isset($form_data[$settings_data_key][$field])) {
-                $form_data[$settings_data_key][$field] = 0;
+        $current_context_id = null;
+        if ($this instanceof SettingsModuleWithVerticalTabsBase) {
+            // For vertical tab modules, sub_tab_id is crucial for scoping.
+            // Ensure your JS sends 'sub_tab_id' in the AJAX POST data.
+            $current_context_id = isset($_POST['sub_tab_id']) ? sanitize_key($_POST['sub_tab_id']) : null;
+            if (empty($current_context_id)) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log(get_class($this) . ': AJAX save error - sub_tab_id is missing for vertical tab module. Cannot scope settings correctly. Tab ID: ' . $this->tab_id);
+                }
+                wp_send_json_error(['message' => __('Error: Sub-tab context is missing.', 'product-estimator')]);
+                return;
             }
         }
 
-        // Process the settings specific to this module (pass $form_data by reference)
-        $result = $this->process_form_data($form_data);
+        // For non-vertical tab modules, $current_context_id remains null.
+        // get_fields_for_context(null) will fetch appropriate fields.
 
-        if (is_wp_error($result)) {
-            wp_send_json_error(array('message' => $result->get_error_message()));
-            exit;
+        $fields_for_current_context = $this->get_fields_for_context($current_context_id);
+
+        if (empty($fields_for_current_context) && $current_context_id) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(get_class($this) . ": AJAX save warning - No fields registered for context/sub-tab: '" . esc_html($current_context_id) . "' in module with option_name: '" . esc_html($this->option_name) . "'.");
+            }
+            // If no fields are registered for this specific sub-tab, there's nothing to process for it.
+            // We can send a success message as technically no operation failed.
+            // Or, if this is unexpected, an error. Let's assume it's not an error for now.
         }
 
-        // Update settings using $this->option_name
-        // $form_data[$settings_data_key] should now be correctly populated.
-        if (isset($form_data[$settings_data_key])) {
-            global $wpdb;
-
-            // Get current settings for this specific option name
-            $current_settings = get_option($this->option_name, array());
-
-            // Validate the new settings for the current module
-            $validated_settings = $this->validate_settings($form_data[$settings_data_key]);
-
-            // Special handling for HTML fields (ensure this logic is appropriate or adapted for your needs)
-            $html_fields = array(
-                'pdf_footer_text',
-                'pdf_footer_contact_details_content',
-                'notification_request_copy_content',
-                'notification_estimate_approved_content',
-                'notification_estimate_rejected_content'
-            );
-
-            foreach ($html_fields as $field) {
-                if (isset($validated_settings[$field])) {
-                    $html_content = stripslashes($validated_settings[$field]);
-                    $current_settings[$field] = $html_content;
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log("Setting $field to: " . $html_content);
-                    }
+        $processed_data_for_context = $settings_from_form;
+// Default checkboxes *only* for the current context
+        foreach ($fields_for_current_context as $field_id => $args) {
+            if (isset($args['type']) && $args['type'] === 'checkbox') {
+                if (!isset($processed_data_for_context[$field_id])) {
+                    $processed_data_for_context[$field_id] = '0'; // Default unchecked
                 }
             }
-
-            // Merge all other settings
-            foreach ($validated_settings as $key => $value) {
-                if (!in_array($key, $html_fields)) {
-                    $current_settings[$key] = $value;
-                }
-            }
-
-            $serialized_data = serialize($current_settings);
-            $option_name_to_save = $this->option_name; // Use the module's specific option name
-
-
-            error_log("[DEBUG][OPTION_NAME]" . $option_name_to_save);
-            error_log("[DEBUG][OPTION_VALUE]" . print_r($current_settings, true));
-            error_log("[DEBUG][OPTION_VALUE][SERIALIZED]" . print_r($serialized_data, true));
-            $update_result = update_option($option_name_to_save, $current_settings);
-
-            wp_cache_delete($option_name_to_save, 'options');
-
-            error_log('update_option result for ' . $option_name_to_save . ': ' . ($update_result ? 'true (changed/added)' : 'false (not changed or error)'));
-
         }
-        // else: This part might be reached if process_form_data had an issue, or if no actual settings fields
-        // were defined/submitted for the module (even after checkbox handling).
-        // The error for "No settings data received" is primarily handled by process_form_data now.
+
+        // Filter $processed_data_for_context to include ONLY fields belonging to the current context.
+        // This ensures we only validate and save what's expected from this specific form submission.
+        $scoped_data_to_validate = [];
+        foreach ($fields_for_current_context as $field_id => $args) {
+            if (array_key_exists($field_id, $processed_data_for_context)) {
+                $scoped_data_to_validate[$field_id] = $processed_data_for_context[$field_id];
+            }
+            // For non-checkboxes not in form, they are simply not included here.
+        }
+
+        $validated_data = $this->validate_settings($scoped_data_to_validate, $fields_for_current_context);
+        if (is_wp_error($validated_data)) {
+            wp_send_json_error(['message' => $validated_data->get_error_message()]);
+            return;
+        }
 
 
-        // Allow modules to perform additional actions after saving
-        $this->after_save_actions($form_data); // $form_data contains all parsed data
+        // Fetch all current settings for this module's option_name
+        $current_db_options = get_option($this->option_name, []);
+        $new_db_options = $current_db_options; // Start with existing options
 
-        wp_send_json_success(array(
+        // Merge validated data for the current context into the new options array
+        foreach ($validated_data as $key => $value) {
+            // Ensure we only update keys that were actually part of the current context's validated data
+            if (array_key_exists($key, $fields_for_current_context)) {
+                $new_db_options[$key] = $value;
+            }
+        }
+
+// The $this->process_form_data method from your original code seemed to do HTML decoding.
+        // That kind of specific processing should ideally be part of the validation for those field types.
+        // Let's assume validate_settings now handles all necessary transformations.
+        // If $this->process_form_data is still needed for other global processing on $new_db_options,
+        // it would be called here. For now, removing the direct call to it as its role is covered.
+
+        update_option($this->option_name, $new_db_options);
+        wp_cache_delete($this->option_name, 'options'); // Clear cache for this option
+
+        $this->after_save_actions($parsed_form_data); // Pass original parsed form data if needed for actions
+
+        wp_send_json_success([
             'message' => sprintf(
                 __('%s settings saved successfully', 'product-estimator'),
                 $this->tab_title
             )
-        ));
-        exit;
+        ]);
     }
 
     /**
@@ -337,62 +383,110 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    array    $input    Settings to validate
      * @return   array    Validated settings
      */
-    public function validate_settings($input) {
+    public function validate_settings($input, $context_field_definitions = null) {
         // Base implementation - child classes should override for specific validation
         $valid = array();
 
-        foreach ($input as $key => $value) {
-            // Default sanitization for common field types
-            switch (true) {
-                // Boolean fields
-                case $this->is_checkbox_field($key):
-                    $valid[$key] = isset($value) && $value ? 1 : 0;
-                    break;
 
+        if ($context_field_definitions === null) {
+            // Fallback if called without context (e.g. direct WordPress settings API)
+            // This should ideally not happen in the AJAX flow.
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(get_class($this) . ": validate_settings called without context_field_definitions. Validation might be incomplete.");
+            }
+            // Attempt to get all fields for this module to perform some basic validation.
+            $context_field_definitions = $this->get_fields_for_context(null);
+        }
+
+        foreach ($input as $key => $value) {
+            $field_args = $context_field_definitions[$key] ?? null;
+            $field_type = $field_args['type'] ?? 'text'; // Default if type not specified or field not registered
+
+            if (!$field_args) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log(get_class($this) . ": Warning - Validating field '$key' which has no registered definition in the current context.");
+                }
+                // Sanitize as basic text if field definition is missing
+                $valid[$key] = is_array($value) ? map_deep($value, 'sanitize_text_field') : sanitize_text_field(stripslashes($value));
+                continue;
+            }
+
+            $unslashed_value = is_array($value) ? $value : stripslashes($value); // Common operation
+
+
+            // Default sanitization for common field types
+            switch ($field_type) {
+                // Boolean fields
+                case 'checkbox':
+                    $valid[$key] = ($unslashed_value == '1' || $unslashed_value === true || $unslashed_value === 1) ? '1' : '0';
+                    break;
                 // Email fields
-                case $this->is_email_field($key):
-                    if (!empty($value) && !is_email($value)) {
-                        add_settings_error(
-                            'product_estimator_settings',
-                            'invalid_email',
-                            sprintf(__('"%s" is not a valid email address', 'product-estimator'), $value)
-                        );
-                    } else {
-                        $valid[$key] = sanitize_email($value);
+                case 'email':
+                    $valid[$key] = sanitize_email($unslashed_value);
+                    if (!empty($unslashed_value) && !is_email($unslashed_value)) {
+                        // Optionally add_settings_error() or return WP_Error
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log(get_class($this) . ": Invalid email for field '$key': " . $unslashed_value);
+                        }
                     }
                     break;
 
                 // Number fields
-                case $this->is_number_field($key):
-                    $valid[$key] = $this->validate_number_field($key, $value);
+                case 'number':
+                    $valid[$key] = $this->validate_number_field_internal($key, $unslashed_value, $field_args);
                     break;
-
+                case 'textarea':
+                    $valid[$key] = sanitize_textarea_field($unslashed_value);
+                    break;
                 // File upload fields
-                case $this->is_file_field($key):
-                    $args = $this->get_file_fields()[$key] ?? [];
-                    $valid[$key] = $this->validate_file_field($key, $value, $args);
+                case 'file': // Assuming file field stores an attachment ID or URL
+                    // Basic validation, can be expanded. $value here is likely an ID.
+                    $valid[$key] = $this->validate_file_field_internal($key, $unslashed_value, $field_args);
                     break;
-
-                // HTML content fields
-                case $this->is_html_content_field($key):
-                    // For HTML fields, especially the footer content
-                    if (in_array($key, ['pdf_footer_text', 'pdf_footer_contact_details_content'])) {
-                        // Preserve HTML exactly as submitted without any filtering
-                         $value = html_entity_decode($value, ENT_QUOTES);
-
-                        $valid[$key] = $value;
+                case 'url':
+                    $valid[$key] = esc_url_raw($unslashed_value);
+                    break;
+                default: // 'text', 'password', etc.
+                    if (is_array($unslashed_value)) {
+                        $valid[$key] = map_deep($unslashed_value, 'sanitize_text_field');
                     } else {
-                        // For other HTML content fields
-                        $valid[$key] = wp_kses_post($value);
+                        $valid[$key] = sanitize_text_field($unslashed_value);
                     }
-                    break;
-
-                    default:
-                    $valid[$key] = sanitize_text_field($value);
             }
         }
 
         return $valid;
+    }
+
+
+    protected function validate_number_field_internal($key, $value, $field_args = []) {
+        $number = is_numeric($value) ? ($value + 0) : 0; // Convert to int/float
+        if (isset($field_args['min']) && is_numeric($field_args['min']) && $number < $field_args['min']) {
+            $number = $field_args['min'];
+        }
+        if (isset($field_args['max']) && is_numeric($field_args['max']) && $number > $field_args['max']) {
+            $number = $field_args['max'];
+        }
+        return $number;
+    }
+
+    protected function validate_file_field_internal($key, $value, $field_args = []) {
+        // $value is expected to be an attachment ID.
+        $attachment_id = absint($value);
+        if (empty($attachment_id)) {
+            if (!empty($field_args['required'])) {
+                // add_settings_error or return WP_Error
+            }
+            return ''; // No file, or invalid ID.
+        }
+        if (get_post_type($attachment_id) !== 'attachment') {
+            if (!empty($field_args['required'])) {
+                // add_settings_error or return WP_Error
+            }
+            return ''; // Not an attachment.
+        }
+        // Further validation for file type (MIME or extension) based on $field_args['accept'] can be added here.
+        return $attachment_id;
     }
 
     /**
@@ -683,12 +777,14 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    string    $hook_suffix    The current admin page.
      */
     public function maybe_enqueue_assets($hook_suffix) {
-        // Only load on the plugin's admin page
-        if (strpos($hook_suffix, $this->plugin_name) !== false) {
+        // Only load on the plugin's admin page (assuming hook_suffix contains plugin_name)
+        // A more robust check might be to compare against a specific page slug.
+        if (strpos($hook_suffix, $this->plugin_name) !== false || strpos($hook_suffix, 'page_' . $this->tab_id) !== false) {
             $this->enqueue_styles();
             $this->enqueue_scripts();
         }
     }
+
 
     /**
      * Get the tab ID.
@@ -712,6 +808,10 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         return $this->tab_title;
     }
 
+    public function render_section_description() {
+        echo ''; // Child classes can override.
+    }
+
     /**
      * Check if this module handles a specific setting
      *
@@ -733,21 +833,26 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @access   public
      */
     public function render_module_content() {
-        // Default implementation uses standard form
+        // Default implementation for simple modules (not using vertical tabs)
         ?>
-        <form method="post" action="javascript:void(0);" class="product-estimator-form">
+        <form method="post" action="javascript:void(0);" class="product-estimator-form" data-tab-id="<?php echo esc_attr($this->tab_id); ?>">
             <?php
-            settings_fields($this->plugin_name . '_options');
+            // settings_fields() outputs nonces for the 'option_group' which is usually $this->option_name
+            // However, our AJAX save is custom. We use a custom nonce.
+            // For do_settings_sections, the $page_slug is $this->plugin_name . '_' . $this->tab_id
+            settings_fields($this->option_name); // Use $this->option_name for the option group
             do_settings_sections($this->plugin_name . '_' . $this->tab_id);
             ?>
             <p class="submit">
-                <button type="submit" class="button button-primary">
+                <button type="submit" class="button button-primary save-settings">
                     <?php esc_html_e('Save Settings', 'product-estimator'); ?>
                 </button>
+                <span class="spinner"></span>
             </p>
         </form>
         <?php
     }
+
 
     /**
      * Render a settings field.
@@ -759,81 +864,108 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    array    $args    Field arguments.
      */
     protected function render_field($args) {
-
         $options = get_option($this->option_name);
-
-        $id = $args['id'];
-
-        // Get value with fallback to default if provided
-        $value = isset($options[$id]) ? $options[$id] : '';
-        if ($value === '' && isset($args['default'])) {
-            $value = $args['default'];
+        $id = $args['id'] ?? ''; // Ensure ID is set
+        if (empty($id)) {
+            if(defined('WP_DEBUG') && WP_DEBUG) { error_log("Field ID missing in render_field args: " . print_r($args, true)); }
+            return;
         }
 
-        $extra_attrs = '';
-        if (isset($args['type']) && $args['type'] === 'number') {
-            if (isset($args['min'])) {
-                $extra_attrs .= ' min="' . esc_attr($args['min']) . '"';
-            }
-            if (isset($args['max'])) {
-                $extra_attrs .= ' max="' . esc_attr($args['max']) . '"';
-            }
-            if (isset($args['step'])) {
-                $extra_attrs .= ' step="' . esc_attr($args['step']) . '"';
-            }
+        $value = $options[$id] ?? ($args['default'] ?? '');
+        $type = $args['type'] ?? 'text';
+        $field_name = esc_attr($this->option_name . '[' . $id . ']');
+        $field_id_attr = esc_attr($id);
+        $description = isset($args['description']) ? '<p class="description">' . esc_html($args['description']) . '</p>' : '';
+        if (isset($args['description']) && $type === "checkbox" ) { // Checkbox description is often beside it
+            $description = isset($args['description']) ? ' <span class="description">' . esc_html($args['description']) . '</span>' : '';
         }
 
-        switch ($args['type']) {
+
+        switch ($type) {
             case 'checkbox':
                 printf(
-                    '<input type="checkbox" id="%1$s" name="%2$s[%1$s]" value="1" %3$s />',
-                    esc_attr($id),
-                    esc_attr($this->option_name), // Uses correct option name
-                    checked($value, 1, false)
+                    '<input type="checkbox" id="%s" name="%s" value="1" %s />%s',
+                    $field_id_attr, $field_name, checked($value, '1', false), $description
                 );
                 break;
-
             case 'textarea':
                 printf(
-                    '<textarea id="%1$s" name="%2$s[%1$s]" rows="5" cols="50">%3$s</textarea>',
-                    esc_attr($id),
-                    esc_attr($this->option_name), // Uses correct option name
-                    esc_textarea($value)
+                    '<textarea id="%s" name="%s" rows="5" cols="50" class="large-text code">%s</textarea>%s',
+                    $field_id_attr, $field_name, esc_textarea($value), $description
                 );
                 break;
-            case 'html': // ***** ADDED THIS CASE *****
-                $this->render_html_field($args);   // Delegate to specific method
+            case 'html':
+                wp_editor(
+                    $value,
+                    $field_id_attr,
+                    [
+                        'textarea_name' => $field_name,
+                        'textarea_rows' => $args['rows'] ?? 10,
+                        'teeny'         => $args['teeny'] ?? false,
+                        'media_buttons' => $args['media_buttons'] ?? true,
+                    ]
+                );
+                echo $description;
                 break;
-            case 'file': // Delegate file fields
-                $this->render_file_field($args);
+            case 'file':
+            case 'image': // Treat image similar to file for now, can be specialized
+                $this->render_file_field_internal($id, $value, $field_name, $args); // Pass $field_name
+                echo $description;
                 break;
-            case 'image': // Delegate image fields (if you have a separate one, or combine with file)
-                // Assuming 'image' is a specialized 'file' field for now.
-                // If render_image_field exists and is different, call it.
-                // For now, let it be handled by render_file_field or add render_image_field.
-                // $this->render_image_field($args);
-                $this->render_file_field($args); // Or a more specific image render method
-                break;
-
-            default:
+            case 'number':
+                $min_attr = isset($args['min']) ? ' min="' . esc_attr($args['min']) . '"' : '';
+                $max_attr = isset($args['max']) ? ' max="' . esc_attr($args['max']) . '"' : '';
+                $step_attr = isset($args['step']) ? ' step="' . esc_attr($args['step']) . '"' : 'any';
                 printf(
-                    '<input type="%1$s" id="%2$s" name="%3$s[%2$s]" value="%4$s" class="regular-text"%5$s />',
-                    esc_attr($args['type']),
-                    esc_attr($id),
-                    esc_attr($this->option_name), // Uses correct option name
-                    esc_attr($value),
-                    $extra_attrs
+                    '<input type="number" id="%s" name="%s" value="%s" class="small-text"%s%s%s />%s',
+                    $field_id_attr, $field_name, esc_attr($value), $min_attr, $max_attr, $step_attr, $description
                 );
-        }
-
-        if (isset($args['description']) && $args['type'] == "checkbox") {
-            printf(' <span class="description">%s</span>', esc_html($args['description']));
-
-        } else if(isset($args['description'])) {
-            printf('<p class="description">%s</p>', esc_html($args['description']));
+                break;
+            case 'select':
+                if (!empty($args['options']) && is_array($args['options'])) {
+                    echo '<select id="' . $field_id_attr . '" name="' . $field_name . '">';
+                    foreach ($args['options'] as $opt_val => $opt_label) {
+                        printf('<option value="%s" %s>%s</option>',
+                            esc_attr($opt_val), selected($value, $opt_val, false), esc_html($opt_label)
+                        );
+                    }
+                    echo '</select>';
+                    echo $description;
+                }
+                break;
+            default: // text, password, email, url etc.
+                printf(
+                    '<input type="%s" id="%s" name="%s" value="%s" class="regular-text" />%s',
+                    esc_attr($type), $field_id_attr, $field_name, esc_attr($value), $description
+                );
         }
     }
 
+
+    protected function render_file_field_internal($id, $current_value_att_id, $field_name, $args) {
+        $file_url = $current_value_att_id ? wp_get_attachment_url($current_value_att_id) : '';
+        $file_exists = $file_url && get_post_status($current_value_att_id); // Check if post exists
+
+        echo '<div class="file-upload-wrapper" data-field-id="' . esc_attr($id) . '">';
+        echo '<input type="hidden" id="' . esc_attr($id) . '" name="' . esc_attr($field_name) . '" value="' . esc_attr($current_value_att_id) . '" />';
+        echo '<div class="file-preview-area">';
+        if ($file_exists) {
+            $file_type = get_post_mime_type($current_value_att_id);
+            if (strpos($file_type, 'image') !== false) {
+                echo wp_get_attachment_image($current_value_att_id, 'medium');
+            } else {
+                echo '<a href="' . esc_url($file_url) . '" target="_blank">' . esc_html(basename(get_attached_file($current_value_att_id))) . '</a>';
+            }
+        } else {
+            echo '<span>' . __('No file selected.', 'product-estimator') . '</span>';
+        }
+        echo '</div>';
+        echo '<button type="button" class="button select-file-button">' . ($file_exists ? __('Replace File', 'product-estimator') : __('Upload File', 'product-estimator')) . '</button>';
+        if ($file_exists) {
+            echo '<button type="button" class="button remove-file-button">' . __('Remove File', 'product-estimator') . '</button>';
+        }
+        echo '</div>';
+    }
 
 
     /**
@@ -1018,24 +1150,15 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    string    $context    Script data context (name of the JS global variable)
      * @param    mixed     $data       Data to add to the script
      */
+
     protected function add_script_data($context, $data) {
         global $product_estimator_script_handler;
-
-        // Check if script handler is available
         if (isset($product_estimator_script_handler) && method_exists($product_estimator_script_handler, 'add_script_data')) {
-            // Use the script handler to add data
             $product_estimator_script_handler->add_script_data($context, $data);
         } else {
-            // Fallback: Localize script directly if script handler is not available
-            wp_localize_script(
-                $this->plugin_name . '-admin',
-                $context,
-                $data
-            );
-
-            // Log warning in debug mode
+            wp_localize_script($this->plugin_name . '-admin', $context, $data);
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Warning: Script handler not available, falling back to direct script localization for: ' . $context);
+                error_log('Warning: Script handler not available for ' . $this->plugin_name . '-admin' . ', falling back to direct script localization for: ' . $context);
             }
         }
     }

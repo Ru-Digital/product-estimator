@@ -7,15 +7,35 @@ import { showFieldError, clearFieldError } from '@utils/validation';
 import { ajaxRequest } from '@utils/ajax';
 import { createElement } from '@utils/dom';
 import { createLogger } from '@utils';
-const logger = createLogger('NetSuiteSettingsModule');
+const logger = createLogger('NetSuiteSettings');
 
 class NetsuiteSettingsModule {
   /**
    * Initialize the module
    */
   constructor() {
-    // Initialize when document is ready
-    jQuery(document).ready(() => this.init());
+    $ = jQuery; // Make jQuery available as this.$
+
+    // before this script runs or at least before init() is called.
+    const localizedSettings = window.netsuiteSettings || {};
+
+    this.settings = {
+      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
+      nonce: localizedSettings.nonce || '', // Fallback
+      i18n: localizedSettings.i18n || {},   // Fallback
+      tab_id: localizedSettings.tab_id || 'netsuite', // Fallback
+    };
+
+    // Defer initialization to document.ready to ensure DOM is loaded
+    $(document).ready(() => {
+      // Re-check localizedSettings in case they are defined by another script in document.ready
+      const updatedLocalizedSettingsOnReady = window.netsuiteSettings || {};
+      if (updatedLocalizedSettingsOnReady.nonce) {
+        this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
+      }
+
+      this.init();
+    });
   }
 
   /**

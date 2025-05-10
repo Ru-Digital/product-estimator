@@ -4,7 +4,7 @@
  * Handles functionality specific to the label settings tab.
  * Extends VerticalTabbedModule for common vertical tab and form handling.
  */
-import VerticalTabbedModule from './VerticalTabbedModule'; // Adjust path as needed
+import VerticalTabbedModule from '../common/VerticalTabbedModule'; // Adjust path as needed
 import { validation } from '@utils'; // Assuming @utils provides these
 
 // Note: showFieldError, clearFieldError, showNotice are inherited or use global ProductEstimatorSettings

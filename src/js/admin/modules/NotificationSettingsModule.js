@@ -2,7 +2,7 @@
  * Notification Settings JavaScript
  * Extends VerticalTabbedModule for common vertical tab and form handling.
  */
-import VerticalTabbedModule from './VerticalTabbedModule'; // Adjust path as needed
+import VerticalTabbedModule from '../common/VerticalTabbedModule'; // Adjust path as needed
 import { validation } from '@utils'; // Assuming @utils provides these
 // import { setupTinyMCEHTMLPreservation } from '@utils/tinymce-preserver'; // If still needed specifically here
 import { createLogger } from '@utils';

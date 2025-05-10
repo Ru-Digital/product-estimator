@@ -13,18 +13,30 @@ import { createLogger } from '@utils';
 class ProductAdditionsSettingsModule extends AdminTableManager {
   /**
    * Constructor for ProductAdditionsSettingsModule.
-   * @param {Object} moduleSettings - Localized settings from PHP.
-   * @param {jQuery} $mainContainer - The main jQuery container for this module.
    */
-  constructor(moduleSettings, $mainContainer) {
-    super(moduleSettings, $mainContainer);
-    this.logger = createLogger(`ProductAdditions`);
+  constructor() {
+    // Configuration for AdminTableManager base class
+    const config = {
+      mainTabId: 'product_additions', // Matches the main container ID and PHP tab_id
+      localizedDataName: 'productAdditionsSettings' // Name of the global JS object from PHP
+    };
+    super(config); // Pass config to AdminTableManager
+
+    // this.logger is already initialized by AdminTableManager with 'AdminTableManager:product_additions'
+    // If you need an additional, distinct logger for pure ProductAdditions messages:
+    // this.paLogger = createLogger('ProductAdditions');
 
     this.productSearchTimeout = null;
 
-    this._bindSpecificEvents();
-    this._initializeSelect2();
-    this.logger.log('ProductAdditionsSettingsModule initialized.');
+    // Defer DOM-dependent specific initializations until the base class signals it's ready
+    this.$(document).on(`admin_table_manager_ready_${this.config.mainTabId}`, () => {
+      this.logger.log('Base AdminTableManager is ready. Initializing ProductAdditions specifics.');
+      this._bindSpecificEvents();
+      this._initializeSelect2();
+      this.logger.log('ProductAdditionsSettingsModule specific features initialized.');
+    });
+
+    this.logger.log('ProductAdditionsSettingsModule constructor completed.');
   }
 
   /**
@@ -32,7 +44,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
    * @private
    */
   _bindSpecificEvents() {
-    this.$mainContainer.on('click.productAdditions', '.product-result-item', this._handleProductResultClick.bind(this));
+    // Ensure DOM elements are available (they are cached by base class's init -> cacheDOM)
+    this.dom.form?.on('click.productAdditions', '.product-result-item', this._handleProductResultClick.bind(this));
     this.dom.relationTypeSelect?.on('change.productAdditions', this._handleRelationTypeChange.bind(this));
     this.dom.targetCategorySelect?.on('change.productAdditions', this._handleTargetCategoryChange.bind(this));
     this.dom.productSearchInput?.on('keyup.productAdditions', this._handleProductSearchKeyup.bind(this));
@@ -50,7 +63,7 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
         $element.select2({
           placeholder: placeholderText,
           width: '100%',
-          allowClear: true, // Allow clearing for single selects if needed
+          allowClear: true,
           dropdownCssClass: 'product-estimator-dropdown'
         }).val(null).trigger('change'); // Ensure it's cleared initially
       } else if ($element && !$element.length) {
@@ -60,7 +73,7 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
     initSelect2(this.dom.sourceCategorySelect, this.settings.i18n.selectSourceCategories || 'Select source categories');
     initSelect2(this.dom.targetCategorySelect, this.settings.i18n.selectTargetCategory || 'Select a category');
-    this.logger.log('Select2 components initialized.');
+    this.logger.log('Select2 components initialized for Product Additions.');
   }
 
   /**
@@ -74,17 +87,22 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     this.dom.productSearchRow?.hide();
     this.dom.noteRow?.hide();
 
-    // Reset fields that depend on actionType
     this.dom.targetCategorySelect?.val(null).trigger('change.select2');
-    this._clearProductSelectionFields(); // Helper to clear product search related fields
+    this._clearProductSelectionFields();
     this.dom.noteTextInput?.val('');
 
     if (actionType === 'auto_add_by_category') {
       this.dom.targetCategoryRow?.show();
+      // Product search row visibility is handled by _handleTargetCategoryChange
     } else if (actionType === 'auto_add_note_by_category') {
       this.dom.noteRow?.show();
     } else if (actionType === 'suggest_products_by_category') {
-      this.dom.targetCategoryRow?.show();
+      // Only show if feature is enabled
+      if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {
+        this.dom.targetCategoryRow?.show();
+      } else {
+        this.logger.warn('Suggest products feature is disabled, target category row for this type will not be shown.');
+      }
     }
   }
 
@@ -119,7 +137,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
   /**
    * Handles keyup event on the product search input.
-   * @param {Event} e - Keyup event.
    */
   _handleProductSearchKeyup(e) {
     const searchTerm = this.$(e.target).val()?.trim() || '';
@@ -140,41 +157,34 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   }
 
   /**
-   * Performs AJAX search for products.
-   * @param {string} searchTerm
-   * @param {string|number} categoryId
-   * @private
+   * Performs AJAX search for products. Uses ProductAdditions-specific AJAX action.
    */
   _searchProducts(searchTerm, categoryId) {
     this.logger.log('Searching products with term:', searchTerm, 'in category:', categoryId);
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl,
       data: {
-        action: this.settings.actions.search_products,
+        action: this.settings.actions.search_products, // Specific action from localized data
         nonce: this.settings.nonce,
         search: searchTerm,
         category: categoryId,
-        option_name: this.settings.option_name, // Pass option_name if PHP needs it
-        tab_id: this.settings.tab_id,           // Pass tab_id if PHP needs it
+        // option_name and tab_id are available in this.settings if PHP needs them
       }
     })
       .then(response => {
         if (response.success && response.data && response.data.products) {
+          let resultsHtml = '';
           if (response.data.products.length > 0) {
-            let resultsHtml = '<ul class="product-results-list">';
+            resultsHtml = '<ul class="product-results-list">';
             response.data.products.forEach(product => {
-              // Ensure names are properly escaped for HTML attributes if they contain special characters
               const escapedName = this.$('<div>').text(product.name || '').html();
-              resultsHtml += `
-                            <li class="product-result-item" data-id="${product.id}" data-name="${escapedName}">
-                                ${product.name || 'Unnamed Product'} (ID: ${product.id})
-                            </li>`;
+              resultsHtml += `<li class="product-result-item" data-id="${product.id}" data-name="${escapedName}">${product.name || 'Unnamed Product'} (ID: ${product.id})</li>`;
             });
             resultsHtml += '</ul>';
-            this.dom.productSearchResults?.html(resultsHtml).show();
           } else {
-            this.dom.productSearchResults?.html(`<p>${this.settings.i18n.noProductsFound || 'No products found'}</p>`).show();
+            resultsHtml = `<p>${this.settings.i18n.noProductsFound || 'No products found'}</p>`;
           }
+          this.dom.productSearchResults?.html(resultsHtml).show();
         } else {
           this.logger.error('Product search failed or returned invalid data:', response);
           this.dom.productSearchResults?.html(`<p>${this.settings.i18n.errorSearching || 'Error searching products'}</p>`).show();
@@ -188,13 +198,11 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
   /**
    * Handles click on a product search result item.
-   * @param {Event} e - Click event.
-   * @private
    */
   _handleProductResultClick(e) {
     const $item = this.$(e.currentTarget);
     const productId = $item.data('id');
-    const productName = $item.data('name'); // Name is already HTML escaped if needed from _searchProducts
+    const productName = $item.data('name');
 
     this.logger.log('Product selected from search:', productId, productName);
 
@@ -202,14 +210,13 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     this.dom.selectedProductDisplay?.find('.selected-product-info').html(`<strong>${productName}</strong> (ID: ${productId})`);
     this.dom.selectedProductDisplay?.show();
 
-    this.dom.productSearchInput?.val('');
+    this.dom.productSearchInput?.val(''); // Clear search input
     this.dom.productSearchResults?.empty().hide();
     this.formModified = true;
   }
 
   /**
    * Handles click on the "Clear Product" button.
-   * @private
    */
   _handleClearProduct() {
     this.logger.log('Clear product selection.');
@@ -222,122 +229,92 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
    * Overrides AdminTableManager.resetForm.
    */
   resetForm() {
-    super.resetForm();
+    super.resetForm(); // Calls base method (resets form, clears ID input, edit mode flags)
 
-    this.dom.relationTypeSelect?.val('').trigger('change.productAdditions'); // Trigger specific handler
+    this.dom.relationTypeSelect?.val('').trigger('change.productAdditions'); // Resets and triggers visibility logic
     this.dom.sourceCategorySelect?.val(null).trigger('change.select2');
     this.dom.targetCategorySelect?.val(null).trigger('change.select2');
     this._clearProductSelectionFields();
     this.dom.noteTextInput?.val('');
 
+    // Ensure conditional fields are hidden after full reset
     this.dom.targetCategoryRow?.hide();
     this.dom.productSearchRow?.hide();
     this.dom.noteRow?.hide();
 
-    this.logger.log('Product Additions form fields reset.');
+    this.logger.log('Product Additions form fields fully reset.');
   }
 
   /**
    * Overrides AdminTableManager.populateFormWithData.
-   * @param {Object} dataForRow - Data for the row, usually from edit button's data attributes.
-   * For Product Additions, the 'get_item' AJAX fetches product details, not the full relation.
-   * So, we primarily use the data attributes from the clicked edit button.
+   * @param {Object} itemData - Full data for the item/relation, typically from AJAX 'get_item'.
    */
-  populateFormWithData(dataForRow) {
-    // `dataForRow` in this module's context comes from the edit button's data attributes,
-    // because `actions.get_item` (get_product_details) fetches product info, not full relation.
-    // The AdminTableManager's handleEdit method passes $button.data() if get_item is not used,
-    // or response.item if get_item is used. Here, we assume it's the button data.
-    this.logger.log('Populating Product Additions form with data from button attributes:', dataForRow);
+  populateFormWithData(itemData) {
+    super.populateFormWithData(itemData); // Sets hidden ID input
+    this.logger.log('Populating Product Additions form with full item data:', itemData);
 
-    // The AdminTableManager's populateFormWithData already handles setting the hidden ID input
-    // if dataForRow.id is present and this.dom.idInput exists.
-    // this.dom.idInput.val(dataForRow.id || this.currentItemId);
-    super.populateFormWithData({ id: dataForRow.id || this.currentItemId });
+    const relationType = itemData.relation_type || '';
+    const sourceCategories = itemData.source_category || []; // Expect array from PHP
+    const targetCategory = itemData.target_category || '';
+    const productId = itemData.product_id || '';
+    const noteText = itemData.note_text || '';
 
+    this.dom.relationTypeSelect?.val(relationType).trigger('change.productAdditions'); // This will show/hide relevant sections
 
-    const relationType = dataForRow.type || '';
-    const sourceCategories = (dataForRow.source || '').toString().split(',').filter(id => id.trim() !== '');
-    const targetCategory = dataForRow.target || '';
-    const productId = dataForRow.productId || '';
-    const noteText = dataForRow.noteText || '';
-
-    this.dom.relationTypeSelect?.val(relationType).trigger('change.productAdditions');
-
-    // Use setTimeout to allow conditional sections to become visible before setting values
+    // Use setTimeout to ensure conditional sections are visible before populating them
     setTimeout(() => {
       this.dom.sourceCategorySelect?.val(sourceCategories).trigger('change.select2');
 
       if (relationType === 'auto_add_by_category') {
         this.dom.targetCategorySelect?.val(targetCategory).trigger('change.select2');
-        if (productId) {
-          this._loadProductDetailsForEditForm(productId);
+        if (productId && itemData.product_name) { // product_name should come from get_item
+          this.dom.selectedProductIdInput?.val(productId);
+          this.dom.selectedProductDisplay?.find('.selected-product-info').html(`<strong>${itemData.product_name}</strong> (ID: ${productId})`);
+          this.dom.selectedProductDisplay?.show();
+        } else if (productId) {
+          // If product_name wasn't in itemData, you might need a separate fetch or indicate loading
+          this.logger.warn("Product ID present but product_name missing in data for edit form population.");
+          this.dom.selectedProductIdInput?.val(productId);
+          this.dom.selectedProductDisplay?.find('.selected-product-info').html(`Product ID: ${productId} (Name not available)`);
+          this.dom.selectedProductDisplay?.show();
         }
       } else if (relationType === 'suggest_products_by_category') {
-        this.dom.targetCategorySelect?.val(targetCategory).trigger('change.select2');
+        if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {
+          this.dom.targetCategorySelect?.val(targetCategory).trigger('change.select2');
+        }
       } else if (relationType === 'auto_add_note_by_category') {
         this.dom.noteTextInput?.val(noteText);
       }
       this.formModified = false; // Reset after populating
-    }, 150); // Increased delay slightly
+    }, 150);
   }
 
-  /**
-   * Fetches product details to display product name in the form when editing.
-   * @param {string|number} productId
-   * @private
-   */
-  _loadProductDetailsForEditForm(productId) {
-    this.logger.log('Loading product details for edit form, product ID:', productId);
-    // No need for separate loading spinner here, form is already visible.
-    ajax.ajaxRequest({
-      url: this.settings.ajaxUrl,
-      data: {
-        action: this.settings.actions.get_item, // This is 'get_product_details'
-        nonce: this.settings.nonce,
-        item_id: productId,
-        option_name: this.settings.option_name,
-        tab_id: this.settings.tab_id,
-      }
-    })
-      .then(response => {
-        if (response.success && response.data && response.data.item && response.data.item.name) {
-          this.dom.selectedProductIdInput?.val(productId);
-          this.dom.selectedProductDisplay?.find('.selected-product-info')
-            .html(`<strong>${response.data.item.name}</strong> (ID: ${productId})`);
-          this.dom.selectedProductDisplay?.show();
-        } else {
-          this.logger.warn('Could not load product name for edit form:', response);
-          this._clearProductSelectionFields(); // Clear if product not found
-        }
-      })
-      .catch(error => {
-        this.logger.error('Error loading product details for edit form:', error);
-        this.showNotice(this.settings.i18n.errorLoadingProduct || 'Error loading product details.', 'error');
-        this._clearProductSelectionFields();
-      });
-  }
 
   /**
    * Overrides AdminTableManager.validateForm.
    * @returns {boolean}
    */
   validateForm() {
-    if (!super.validateForm()) return false; // Basic required field check from parent
+    // First, run base validation (e.g., for fields with 'is-required' class if any)
+    // For this module, explicit validation is more comprehensive.
+    // super.validateForm(); // Call if base has meaningful validation for this form
 
     let isValid = true;
+    this.logger.log('Validating Product Additions form.');
+
     const actionType = this.dom.relationTypeSelect?.val();
-    const sourceCategories = this.dom.sourceCategorySelect?.val();
+    const sourceCategories = this.dom.sourceCategorySelect?.val(); // This will be an array for multi-select
     const targetCategory = this.dom.targetCategorySelect?.val();
-    const productId = this.dom.selectedProductIdInput?.val();
+    const productId = this.dom.selectedProductIdInput?.val(); // Actual selected product ID
     const noteText = this.dom.noteTextInput?.val()?.trim() || '';
 
     // Clear previous specific errors
     this.clearFieldError(this.dom.relationTypeSelect);
-    this.clearFieldError(this.dom.sourceCategorySelect?.next('.select2-container'));
+    this.clearFieldError(this.dom.sourceCategorySelect?.next('.select2-container')); // Target Select2 container for error display
     this.clearFieldError(this.dom.targetCategorySelect?.next('.select2-container'));
-    this.clearFieldError(this.dom.selectedProductDisplay); // Error near selected product or search input
+    this.clearFieldError(this.dom.productSearchInput); // Error near product search
     this.clearFieldError(this.dom.noteTextInput);
+
 
     if (!actionType) {
       this.showFieldError(this.dom.relationTypeSelect, this.settings.i18n.selectAction);
@@ -354,13 +331,17 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
         isValid = false;
       }
       if (!productId) {
-        this.showFieldError(this.dom.selectedProductDisplay.is(':visible') ? this.dom.selectedProductDisplay : this.dom.productSearchInput, this.settings.i18n.selectProduct);
+        // Show error near the product search input or the display area if visible
+        const $productErrorTarget = this.dom.selectedProductDisplay?.is(':visible') ? this.dom.selectedProductDisplay : this.dom.productSearchInput;
+        this.showFieldError($productErrorTarget, this.settings.i18n.selectProduct);
         isValid = false;
       }
     } else if (actionType === 'suggest_products_by_category') {
-      if (!targetCategory) {
-        this.showFieldError(this.dom.targetCategorySelect?.next('.select2-container'), this.settings.i18n.selectTargetCategory);
-        isValid = false;
+      if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {
+        if (!targetCategory) {
+          this.showFieldError(this.dom.targetCategorySelect?.next('.select2-container'), this.settings.i18n.selectTargetCategory);
+          isValid = false;
+        }
       }
     } else if (actionType === 'auto_add_note_by_category') {
       if (!noteText) {
@@ -374,63 +355,63 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
   /**
    * Overrides AdminTableManager.createTableRow.
-   * @param {Object} itemData - Data for the relation.
-   * @returns {jQuery}
+   * @param {Object} itemData - Data for the relation. This is the response from PHP's prepare_item_for_response.
+   * @returns {jQuery} The new table row.
    */
   createTableRow(itemData) {
     this.logger.log('Creating Product Additions table row with data:', itemData);
     if (!itemData || !itemData.id) {
       this.logger.error('Cannot create table row: itemData or itemData.id is missing.');
-      return this.$('<tr><td colspan="4">Error: Invalid item data.</td></tr>');
+      return this.$('<tr><td colspan="4">Error: Invalid item data.</td></tr>'); // Ensure colspan matches columns
     }
 
     const $row = this.$(`<tr data-id="${itemData.id}"></tr>`);
 
+    // Column 1: Source Categories
     $row.append(this.$('<td></td>').text(itemData.source_name || 'N/A'));
 
+    // Column 2: Action Type
     const $actionTypeCell = this.$('<td></td>');
     const $actionTypeSpan = this.$('<span></span>')
-      .addClass(`relation-type ${itemData.relation_type || ''}`)
+      .addClass(`relation-type ${itemData.relation_type || ''}`) // For styling based on type
       .text(itemData.relation_type_label || itemData.relation_type || 'N/A');
     $actionTypeCell.append($actionTypeSpan);
     $row.append($actionTypeCell);
 
-    let targetNoteContent = 'N/A';
-    if (itemData.relation_type === 'auto_add_by_category') {
-      targetNoteContent = itemData.product_name || (itemData.target_name ? `${itemData.target_name} (Category)` : 'N/A');
-    } else if (itemData.relation_type === 'auto_add_note_by_category') {
-      targetNoteContent = itemData.note_text ? format.truncateText(itemData.note_text, 50) : 'N/A';
-    } else if (itemData.relation_type === 'suggest_products_by_category') {
-      // Only show if feature is enabled (row should be filtered out by PHP if not)
-      if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {
-        targetNoteContent = itemData.target_name ? `${itemData.target_name} (Category)` : 'N/A';
-      } else {
-        targetNoteContent = '(Feature Disabled)';
-      }
-    }
-    $row.append(this.$('<td></td>').text(targetNoteContent));
+    // Column 3: Target/Note (uses itemData.target_details_display from PHP)
+    $row.append(this.$('<td></td>').text(itemData.target_details_display || 'N/A'));
 
+    // Column 4: Actions (Edit/Delete buttons)
     const $actionsCell = this.$('<td></td>').addClass('actions');
+    // Data for edit button should match what populateFormWithData expects from AJAX get_item if used,
+    // or enough to populate if get_item isn't used.
+    // Since populateFormWithData now expects the full item from get_item,
+    // we only strictly need data-id for the edit button if get_item is always used.
+    // However, including all data for direct population fallback can be useful.
     const sourceCatIds = Array.isArray(itemData.source_category) ? itemData.source_category.join(',') : (itemData.source_category || '');
 
     const $editButton = this.$('<button></button>')
       .attr('type', 'button')
       .addClass('button button-small')
-      .addClass(this.settings.selectors.editButton.substring(1)) // Remove leading dot for class name
+      .addClass(this.settings.selectors.editButton.substring(1)) // Get class name from selector
       .text(this.settings.i18n.editButtonLabel || 'Edit')
-      .data({ // Data attributes for populating form on edit
-        id: itemData.id,
-        source: sourceCatIds,
-        target: itemData.target_category || '',
-        productId: itemData.product_id || '',
-        type: itemData.relation_type || '',
-        noteText: itemData.note_text || ''
-      });
+      .data('id', itemData.id); // Essential for handleEdit to fetch full item data
+    // Optionally, add all data here if NOT using get_item for populating edit form:
+    // .data({
+    //   id: itemData.id,
+    //   source_category: sourceCatIds, // Send as comma-separated string if needed by form
+    //   target_category: itemData.target_category || '',
+    //   product_id: itemData.product_id || '',
+    //   relation_type: itemData.relation_type || '',
+    //   note_text: itemData.note_text || '',
+    //   product_name: itemData.product_name || '' // If available and needed for direct population
+    // });
+
 
     const $deleteButton = this.$('<button></button>')
       .attr('type', 'button')
       .addClass('button button-small')
-      .addClass(this.settings.selectors.deleteButton.substring(1)) // Remove leading dot
+      .addClass(this.settings.selectors.deleteButton.substring(1)) // Get class name from selector
       .text(this.settings.i18n.deleteButtonLabel || 'Delete')
       .data('id', itemData.id);
 
@@ -441,31 +422,49 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   }
 }
 
-// Initialization logic
+// Revised Initialization logic at the end of the file
 jQuery(document).ready(function($) {
   const mainTabId = 'product_additions';
-  const $mainContainer = $(`#${mainTabId}`);
+  const localizedDataObjectName = 'productAdditionsSettings';
 
-  if ($mainContainer.length) {
-    const initModule = () => {
-      // Ensure ProductEstimatorSettings is initialized and currentTab is set
-      if (window.ProductEstimatorSettings && window.ProductEstimatorSettings.currentTab === mainTabId) {
-        if (window.productAdditionsSettingsData) { // Localized data from PHP
-          if (!window.ProductAdditionsTableManagerInstance) { // Prevent re-initialization
-            window.ProductAdditionsTableManagerInstance = new ProductAdditionsSettingsModule(window.productAdditionsSettingsData, $mainContainer);
+  const initProductAdditionsModule = () => {
+    // Check if the main settings object is available and if this is the current active tab
+    if (window.ProductEstimatorSettings && window.ProductEstimatorSettings.currentTab === mainTabId) {
+      if (window[localizedDataObjectName]) {
+        if (!window.ProductAdditionsTableManagerInstance) { // Prevent re-initialization
+          try {
+            // Instantiate the module-specific JS class. AdminTableManager's constructor will handle its own init.
+            window.ProductAdditionsTableManagerInstance = new ProductAdditionsSettingsModule();
+            createLogger('ProductAdditionsInit').log('ProductAdditionsSettingsModule instance initiated.');
+          } catch (error) {
+            createLogger('ProductAdditionsInit').error('Error instantiating ProductAdditionsSettingsModule:', error);
+            if (window.ProductEstimatorSettings && typeof window.ProductEstimatorSettings.showNotice === 'function') {
+              window.ProductEstimatorSettings.showNotice('Failed to initialize Product Additions settings. Check console for errors.', 'error');
+            }
           }
-        } else {
-          createLogger(`ProductAdditionsInit`).error('Localized data (productAdditionsSettingsData) not found for tab:', mainTabId);
+        }
+      } else {
+        createLogger('ProductAdditionsInit').error(`Localized data object "${localizedDataObjectName}" not found for tab: ${mainTabId}. Cannot initialize module.`);
+        if (window.ProductEstimatorSettings && typeof window.ProductEstimatorSettings.showNotice === 'function') {
+          window.ProductEstimatorSettings.showNotice(`Configuration data for Product Additions ("${localizedDataObjectName}") is missing.`, 'error');
         }
       }
-    };
+    }
+  };
 
-    initModule(); // Attempt init on ready
+  // Ensure the container for this specific module/tab exists before attempting anything
+  if ($(`#${mainTabId}`).length) {
+    initProductAdditionsModule(); // Attempt initialization on document ready if tab is active
+
+    // Also listen for global tab change events to initialize if this tab becomes active later
     $(document).on('product_estimator_tab_changed', function(e, newTabId) {
       if (newTabId === mainTabId) {
-        setTimeout(initModule, 50); // Initialize when tab becomes active
+        // Use a small timeout to ensure the tab content is fully rendered and visible by WordPress/other scripts
+        setTimeout(initProductAdditionsModule, 50);
       }
     });
+  } else {
+    createLogger('ProductAdditionsInit').warn(`Main container #${mainTabId} not found. ProductAdditionsSettingsModule will not be initialized.`);
   }
 });
 

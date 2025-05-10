@@ -33,7 +33,7 @@ $add_button_class = 'pe-add-new-item-button button button-primary';
 $list_container_class = 'pe-admin-list-table-wrapper'; // Wrapper for the table and "no items" message
 $table_class = 'pe-admin-list-table wp-list-table widefat fixed striped';
 $no_items_class = 'pe-no-items-message';
-$form_title_class = 'form-title';
+$form_title_class = 'pe-form-title';
 $id_input_name = 'item_id'; // Default name for the hidden ID field in the form, JS can target this.
 
 // Get module-specific selectors from JS localization if available, to allow overrides

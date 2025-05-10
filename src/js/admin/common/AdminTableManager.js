@@ -13,104 +13,144 @@ import { createLogger } from '@utils'; // Assuming this exists
 class AdminTableManager {
   /**
    * Constructor for AdminTableManager.
-   * @param {Object} moduleSettings - Localized settings for this specific table manager instance.
-   * Expected properties: ajaxUrl, nonce, actions (save_item, delete_item, get_item),
-   * selectors (formContainer, form, addButton, etc.), i18n, option_name, tab_id.
-   * @param {jQuery} $mainContainer - The main jQuery container element for this module's UI.
+   * @param {Object} config - Configuration object for the module.
+   * @param {string} config.mainTabId - The ID of the main horizontal tab this table manager belongs to.
+   * @param {string} config.localizedDataName - The name of the global JS object holding localized data.
    */
-  constructor(moduleSettings, $mainContainer) {
-    this.$ = jQuery; // Make jQuery available as this.$
-    this.settings = moduleSettings;
-    this.$mainContainer = $mainContainer;
+  constructor(config) {
+    this.$ = jQuery;
+    this.config = config;
+    this.logger = createLogger(`AdminTableManager:${this.config.mainTabId || 'Generic'}`);
 
-    if (!this.settings || !this.$mainContainer || !this.$mainContainer.length) {
-      const errorLogger = createLogger('AdminTableManager:CriticalError');
-      errorLogger.error('AdminTableManager: Critical settings or main container missing.', { settings: this.settings, containerExists: !!(this.$mainContainer && this.$mainContainer.length) });
-      throw new Error('AdminTableManager: Initialization failed due to missing settings or container.');
+    if (!this.config.mainTabId || !this.config.localizedDataName) {
+      this.logger.error('AdminTableManager: Missing critical configuration: mainTabId or localizedDataName.', this.config);
+      // Defer throwing error until document.ready when we try to use these.
     }
-    this.logger = createLogger(`AdminTableManager:${this.settings.tab_id || 'Generic'}`);
+
+    // Fetch localized settings immediately.
+    this.settings = window[this.config.localizedDataName] || {};
 
     this.formModified = false;
     this.isEditMode = false;
     this.currentItemId = null;
+    this.$mainContainer = null; // Will be assigned in document.ready
 
-    this._validateSettings(); // Validate essential settings
-    this.init();
+    // Defer DOM-dependent initialization until document is ready
+    this.$(document).ready(() => {
+      if (!this.config.mainTabId) {
+        this.logger.error('AdminTableManager: mainTabId missing in config during document.ready. Cannot initialize.');
+        // Display a more prominent error if possible
+        if (window.ProductEstimatorSettings && typeof window.ProductEstimatorSettings.showNotice === 'function') {
+          window.ProductEstimatorSettings.showNotice('Critical error: Table manager configuration incomplete.', 'error');
+        }
+        return; // Prevent further execution
+      }
+
+      this.$mainContainer = this.$(`#${this.config.mainTabId}`);
+      if (!this.$mainContainer || !this.$mainContainer.length) {
+        this.logger.error(`AdminTableManager: Main container #${this.config.mainTabId} not found. Module will not initialize.`);
+        return; // Stop initialization
+      }
+
+      try {
+        this._validateSettings(); // Validate essential settings (now in this.settings)
+        this.init(); // Call init which will cache DOM and bind events
+      } catch (error) {
+        this.logger.error(`AdminTableManager: Initialization failed for tab "${this.config.mainTabId}".`, error);
+        if (window.ProductEstimatorSettings && typeof window.ProductEstimatorSettings.showNotice === 'function') {
+          window.ProductEstimatorSettings.showNotice(
+            `Error initializing table manager for ${this.config.mainTabId}. Check console.`, 'error'
+          );
+        }
+      }
+    });
   }
 
   /**
-   * Validates that essential settings are provided.
+   * Validates that essential settings (fetched from localizedData) are provided.
    * @private
    */
   _validateSettings() {
+    if (Object.keys(this.settings).length === 0 && this.config.localizedDataName) {
+      this.logger.error(`Localized data object "${this.config.localizedDataName}" not found or is empty.`);
+      throw new Error(`AdminTableManager: Localized data "${this.config.localizedDataName}" is missing or empty.`);
+    }
+
     const required = {
-      settings: ['ajaxUrl', 'nonce', 'actions', 'selectors', 'i18n', 'option_name', 'tab_id'],
-      actions: ['save_item', 'delete_item'], // get_item is optional
+      topLevel: ['ajaxUrl', 'nonce', 'actions', 'selectors', 'i18n', 'option_name', 'tab_id'],
+      // Ensure actions required by handleSubmit are listed.
+      actions: ['add_item', 'update_item', 'delete_item'], // get_item is optional. 'save_item' is no longer primary.
       selectors: ['formContainer', 'form', 'addButton', 'listTableBody', 'editButton', 'deleteButton', 'idInput', 'saveButton', 'cancelButton', 'noItemsMessage', 'formTitle', 'listItemRow', 'listTableContainer', 'listTable'],
       i18n: ['confirmDelete', 'itemSavedSuccess', 'itemDeletedSuccess', 'errorSavingItem', 'errorDeletingItem', 'addItemButtonLabel', 'editItemFormTitle', 'addItemFormTitle', 'saving', 'deleting', 'editButtonLabel', 'deleteButtonLabel']
     };
 
     let allValid = true;
-    for (const key of required.settings) {
+    for (const key of required.topLevel) {
       if (this.settings[key] === undefined) {
-        this.logger.error(`Missing required setting: settings.${key}`);
+        this.logger.error(`Missing required setting: ${key} (expected in ${this.config.localizedDataName})`);
         allValid = false;
       }
     }
+
     if (this.settings.actions) {
       for (const key of required.actions) {
         if (this.settings.actions[key] === undefined) {
-          this.logger.error(`Missing required action: actions.${key}`);
+          this.logger.error(`Missing required action: actions.${key} (expected in ${this.config.localizedDataName})`);
           allValid = false;
         }
       }
     } else {
-      this.logger.error(`Missing required setting: settings.actions`);
+      this.logger.error(`Missing required setting: actions (expected in ${this.config.localizedDataName})`);
       allValid = false;
     }
 
     if (this.settings.selectors) {
       for (const key of required.selectors) {
         if (this.settings.selectors[key] === undefined) {
-          this.logger.error(`Missing required selector: selectors.${key}`);
+          this.logger.error(`Missing required selector: selectors.${key} (expected in ${this.config.localizedDataName})`);
           allValid = false;
         }
       }
     } else {
-      this.logger.error(`Missing required setting: settings.selectors`);
+      this.logger.error(`Missing required setting: selectors (expected in ${this.config.localizedDataName})`);
       allValid = false;
     }
 
     if (this.settings.i18n) {
       for (const key of required.i18n) {
         if (this.settings.i18n[key] === undefined) {
-          this.logger.warn(`Potentially missing i18n string: i18n.${key}`);
-          // Not throwing an error for i18n, but it's important.
+          this.logger.warn(`Potentially missing i18n string: i18n.${key} (in ${this.config.localizedDataName})`);
         }
       }
     } else {
-      this.logger.error(`Missing required setting: settings.i18n`);
-      allValid = false;
+      this.logger.warn(`Setting: i18n is missing (in ${this.config.localizedDataName}). Some UI text may not appear.`);
+      // Not making i18n strictly a failure point for throwing error, but logging it.
     }
-
 
     if (!allValid) {
       throw new Error('AdminTableManager: Initialization failed due to missing critical settings. Check console for details.');
     }
+    this.logger.log('Settings validated successfully for tab:', this.config.mainTabId);
   }
 
   /**
-   * Initializes the table manager.
+   * Initializes the table manager. Called after DOM is ready and settings are validated.
    */
   init() {
-    this.logger.log('Initializing with settings:', this.settings);
+    this.logger.log('Initializing AdminTableManager DOM and events for tab:', this.config.mainTabId);
     this.cacheDOM();
     if(this._checkEssentialDOM()) {
       this.bindEvents();
       this.updateNoItemsMessageVisibility();
-      this.logger.log('AdminTableManager initialized successfully.');
+      this.logger.log('AdminTableManager initialized successfully for tab:', this.config.mainTabId);
+      this.$(document).trigger(`admin_table_manager_ready_${this.config.mainTabId}`, [this]);
     } else {
-      this.logger.error('AdminTableManager initialization failed due to missing essential DOM elements. Manager will not function correctly.');
+      this.logger.error('AdminTableManager initialization failed: missing essential DOM elements for tab:', this.config.mainTabId);
+      if (window.ProductEstimatorSettings && typeof window.ProductEstimatorSettings.showNotice === 'function') {
+        window.ProductEstimatorSettings.showNotice(
+          `Error initializing UI components for ${this.settings.tab_id || 'table manager'}. Some parts may not work.`, 'error'
+        );
+      }
     }
   }
 
@@ -120,7 +160,7 @@ class AdminTableManager {
    */
   _checkEssentialDOM() {
     let essentialFound = true;
-    const essentialSelectors = ['formContainer', 'form', 'addButton', 'listTableBody', 'listTableContainer', 'listTable', 'noItemsMessage'];
+    const essentialSelectors = ['formContainer', 'form', 'addButton', 'listTableBody', 'listTableContainer', 'listTable', 'noItemsMessage', 'formTitle', 'idInput', 'saveButton', 'cancelButton'];
     for (const key of essentialSelectors) {
       if (!this.dom[key] || !this.dom[key].length) {
         this.logger.error(`Essential DOM element not found for selector key '${key}':`, this.settings.selectors[key]);
@@ -130,7 +170,6 @@ class AdminTableManager {
     return essentialFound;
   }
 
-
   /**
    * Caches frequently accessed DOM elements.
    */
@@ -139,11 +178,16 @@ class AdminTableManager {
     if (this.settings.selectors) {
       for (const key in this.settings.selectors) {
         if (Object.prototype.hasOwnProperty.call(this.settings.selectors, key)) {
-          this.dom[key] = this.$mainContainer.find(this.settings.selectors[key]);
+          // Ensure $mainContainer is valid before finding within it
+          if (this.$mainContainer && this.$mainContainer.length) {
+            this.dom[key] = this.$mainContainer.find(this.settings.selectors[key]);
+          } else {
+            this.dom[key] = this.$(); // Empty jQuery object if no container
+          }
         }
       }
     }
-    this.logger.log('DOM elements cached.');
+    this.logger.log('DOM elements cached for tab:', this.config.mainTabId, this.dom);
   }
 
   /**
@@ -151,12 +195,11 @@ class AdminTableManager {
    */
   bindEvents() {
     this.dom.addButton?.on('click.adminTableManager', this.handleAddNew.bind(this));
-    // Ensure listTableBody exists before binding events to its children
     if (this.dom.listTableBody && this.dom.listTableBody.length) {
       this.dom.listTableBody.on('click.adminTableManager', this.settings.selectors.editButton, this.handleEdit.bind(this));
       this.dom.listTableBody.on('click.adminTableManager', this.settings.selectors.deleteButton, this.handleDelete.bind(this));
     } else {
-      this.logger.warn('listTableBody not found, edit/delete events not bound.');
+      this.logger.warn('listTableBody not found for tab:', this.config.mainTabId, '- edit/delete events not bound.');
     }
     this.dom.form?.on('submit.adminTableManager', this.handleSubmit.bind(this));
     this.dom.cancelButton?.on('click.adminTableManager', this.handleCancel.bind(this));
@@ -164,40 +207,37 @@ class AdminTableManager {
     this.dom.form?.on('change.adminTableManager input.adminTableManager', ':input', () => {
       this.formModified = true;
     });
-    this.logger.log('Common events bound.');
+    this.logger.log('Common events bound for tab:', this.config.mainTabId);
   }
 
   /**
    * Handles the "Add New" button click.
-   * @param {Event} e - Click event.
    */
   handleAddNew(e) {
     e.preventDefault();
-    this.logger.log('Add New clicked.');
+    this.logger.log('Add New clicked for tab:', this.config.mainTabId);
     this.isEditMode = false;
     this.currentItemId = null;
     this.resetForm();
     this.dom.formTitle?.text(this.settings.i18n.addItemFormTitle);
-    this.dom.saveButton?.text(this.settings.i18n.saveChangesButton || 'Save Changes');
+    this.dom.saveButton?.text(this.settings.i18n.saveChangesButton || 'Save Changes'); // Use specific i18n for add
     this.dom.formContainer?.slideDown();
     this.dom.addButton?.hide();
   }
 
   /**
    * Handles the "Edit" button click on a table row.
-   * @param {Event} e - Click event.
    */
   handleEdit(e) {
     e.preventDefault();
     const $button = this.$(e.currentTarget);
-    // Ensure listItemRow selector is valid and $button is its descendant or itself
     const $row = $button.closest(this.settings.selectors.listItemRow);
     const itemId = $row.data('id');
 
-    this.logger.log('Edit clicked for item ID:', itemId);
+    this.logger.log('Edit clicked for item ID:', itemId, 'on tab:', this.config.mainTabId);
 
     if (!itemId) {
-      this.logger.error('Could not find item ID for editing. Ensure rows have data-id and selector is correct.');
+      this.logger.error('Could not find item ID for editing on tab:', this.config.mainTabId);
       return;
     }
 
@@ -205,10 +245,10 @@ class AdminTableManager {
     this.currentItemId = itemId;
     this.resetForm();
     this.dom.formTitle?.text(this.settings.i18n.editItemFormTitle);
-    this.dom.saveButton?.text(this.settings.i18n.updateChangesButton || 'Update Changes');
+    this.dom.saveButton?.text(this.settings.i18n.updateChangesButton || 'Update Changes'); // Use specific i18n for edit
 
     if (this.settings.actions.get_item) {
-      this.showFormLoadingSpinner(true, this.dom.saveButton); // Show spinner on save button
+      this.showFormLoadingSpinner(true, this.dom.saveButton);
       ajax.ajaxRequest({
         url: this.settings.ajaxUrl,
         data: {
@@ -238,11 +278,9 @@ class AdminTableManager {
           this.showFormLoadingSpinner(false, this.dom.saveButton);
         });
     } else {
-      // Fallback: Populate from data attributes on the edit button itself
-      // This requires all necessary data to be on the button.
-      this.logger.log('No get_item action defined, attempting to populate from button data attributes.');
-      const itemData = $button.data(); // Gets all data attributes
-      itemData.id = itemId; // Ensure ID is included
+      this.logger.log('No get_item action defined, attempting to populate from button data attributes for tab:', this.config.mainTabId);
+      const itemData = $button.data();
+      itemData.id = itemId;
       this.populateFormWithData(itemData);
       this.dom.formContainer?.slideDown();
       this.dom.addButton?.hide();
@@ -251,17 +289,16 @@ class AdminTableManager {
 
   /**
    * Handles the "Delete" button click on a table row.
-   * @param {Event} e - Click event.
    */
   handleDelete(e) {
     e.preventDefault();
     const $button = this.$(e.currentTarget);
     const $row = $button.closest(this.settings.selectors.listItemRow);
     const itemId = $row.data('id');
-    this.logger.log('Delete clicked for item ID:', itemId);
+    this.logger.log('Delete clicked for item ID:', itemId, 'on tab:', this.config.mainTabId);
 
     if (!itemId) {
-      this.logger.error('Could not find item ID for deletion.');
+      this.logger.error('Could not find item ID for deletion on tab:', this.config.mainTabId);
       return;
     }
 
@@ -303,51 +340,54 @@ class AdminTableManager {
 
   /**
    * Handles the form submission (Add or Edit).
-   * @param {Event} e - Submit event.
    */
   handleSubmit(e) {
     e.preventDefault();
-    this.logger.log('Form submitted. Edit mode:', this.isEditMode, 'Item ID:', this.currentItemId);
+    this.logger.log('Form submitted for tab:', this.config.mainTabId, 'Edit mode:', this.isEditMode, 'Item ID:', this.currentItemId);
 
     if (!this.validateForm()) {
-      this.logger.warn('Form validation failed.');
+      this.logger.warn('Form validation failed for tab:', this.config.mainTabId);
       return;
     }
 
-    const formDataArray = this.dom.form.serializeArray();
+    const determinedAction = this.isEditMode ? this.settings.actions.update_item : this.settings.actions.add_item;
+
+    if (!determinedAction) {
+      this.logger.error('Form submission action (add_item or update_item) is not defined in settings.actions for tab:', this.config.mainTabId);
+      this.showNotice(this.settings.i18n.errorSavingItem || 'Configuration error: Save action not defined.', 'error');
+      this.showFormLoadingSpinner(false, this.dom.saveButton);
+      return;
+    }
+
     const dataPayload = {
-      action: this.settings.actions.save_item,
+      action: determinedAction,
       nonce: this.settings.nonce,
       option_name: this.settings.option_name,
       tab_id: this.settings.tab_id,
+      item_data: {}
     };
 
-    formDataArray.forEach(field => {
-      if (dataPayload[field.name]) {
-        if (!Array.isArray(dataPayload[field.name])) {
-          dataPayload[field.name] = [dataPayload[field.name]];
+    const formFields = this.dom.form.serializeArray();
+    formFields.forEach(field => {
+      const fieldName = field.name;
+      const fieldValue = field.value;
+      if (fieldName.endsWith('[]')) {
+        const actualName = fieldName.slice(0, -2);
+        if (!dataPayload.item_data[actualName]) {
+          dataPayload.item_data[actualName] = [];
         }
-        dataPayload[field.name].push(field.value);
+        dataPayload.item_data[actualName].push(fieldValue);
       } else {
-        dataPayload[field.name] = field.value;
+        dataPayload.item_data[fieldName] = fieldValue;
       }
     });
 
-    // Ensure item_id is correctly set from the hidden input this.dom.idInput
-    // The name of this.dom.idInput is defined in selectors.idInput (e.g., 'input[name="item_id"]')
-    // So, dataPayload[this.dom.idInput.attr('name')] should get its value.
-    // If creating a new item, this.currentItemId is null.
-    // If editing, this.currentItemId has the ID. The hidden input should also have this ID.
     if (this.isEditMode && this.currentItemId) {
-      // Ensure the ID being submitted matches this.currentItemId
-      // The hidden input 'item_id' (or whatever it's named) should be populated by populateFormWithData
-      dataPayload[this.dom.idInput.attr('name')] = this.currentItemId;
-    }
-    // If the PHP handler specifically expects 'item_id' regardless of the input's name:
-    if (this.isEditMode && this.currentItemId && !dataPayload.item_id) {
       dataPayload.item_id = this.currentItemId;
+      if (this.dom.idInput && dataPayload.item_data.hasOwnProperty(this.dom.idInput.attr('name'))) {
+        delete dataPayload.item_data[this.dom.idInput.attr('name')];
+      }
     }
-
 
     this.logger.log('AJAX data payload for save:', dataPayload);
     this.showFormLoadingSpinner(true, this.dom.saveButton);
@@ -366,16 +406,19 @@ class AdminTableManager {
           }
           this.dom.formContainer?.slideUp();
           this.dom.addButton?.show();
-          this.resetForm(); // Resets isEditMode and currentItemId
+          this.resetForm();
           this.updateNoItemsMessageVisibility();
           this.formModified = false;
         } else {
-          this.showNotice((response.data && response.data.message) || this.settings.i18n.errorSavingItem, 'error');
+          const errorMsg = (response.data && response.data.message) || this.settings.i18n.errorSavingItem;
+          const errorsDetail = (response.data && response.data.errors) ? `<br><pre>${JSON.stringify(response.data.errors, null, 2)}</pre>` : '';
+          this.showNotice(errorMsg + errorsDetail, 'error');
           this.logger.error('Error saving item or item data missing in response:', response);
         }
       })
       .catch(error => {
-        this.showNotice(error.message || this.settings.i18n.errorSavingItem, 'error');
+        const errorMsg = error.message || this.settings.i18n.errorSavingItem;
+        this.showNotice(errorMsg, 'error');
         this.logger.error('AJAX error saving item:', error);
       })
       .finally(() => {
@@ -385,11 +428,10 @@ class AdminTableManager {
 
   /**
    * Handles the "Cancel" button click in the form.
-   * @param {Event} e - Click event.
    */
   handleCancel(e) {
     e.preventDefault();
-    this.logger.log('Cancel form clicked.');
+    this.logger.log('Cancel form clicked for tab:', this.config.mainTabId);
     this.dom.formContainer?.slideUp();
     this.dom.addButton?.show();
     this.resetForm();
@@ -397,50 +439,43 @@ class AdminTableManager {
 
   /**
    * Resets the form to its initial state.
-   * Child classes should override to handle specific fields (e.g., Select2).
    */
   resetForm() {
-    this.dom.form[0]?.reset(); // Native reset
-    this.dom.idInput?.val(''); // Clear hidden ID field by selector
+    this.dom.form[0]?.reset();
+    if (this.dom.idInput && this.dom.idInput.length) { // Check if idInput was found
+      this.dom.idInput.val('');
+    }
     this.isEditMode = false;
     this.currentItemId = null;
     this.formModified = false;
-
     this.dom.form?.find('.error').removeClass('error');
     this.dom.form?.find('.field-error').remove();
-    this.logger.log('Form reset.');
+    this.logger.log('Form reset for tab:', this.config.mainTabId);
   }
 
   /**
    * Populates the form with data for editing.
-   * Child classes MUST override this to handle their specific form fields.
-   * @param {Object} itemData - The data of the item to edit.
    */
   populateFormWithData(itemData) {
-    this.logger.log('Populating form with data (base method, override in child):', itemData);
-    if (itemData.id && this.dom.idInput) {
-      this.dom.idInput.val(itemData.id); // Populate hidden ID field
+    this.logger.log('Populating form with data for tab:', this.config.mainTabId, itemData);
+    if (itemData.id && this.dom.idInput && this.dom.idInput.length) {
+      this.dom.idInput.val(itemData.id);
     }
+    // Child classes will override to populate their specific fields.
   }
 
   /**
    * Validates the form before submission.
-   * Child classes can override to add specific validation rules.
-   * @returns {boolean} True if the form is valid, false otherwise.
    */
   validateForm() {
-    this.logger.log('Validating form (base method).');
+    this.logger.log('Validating form (base method) for tab:', this.config.mainTabId);
     let isValid = true;
-    // Clear previous errors
     this.dom.form?.find('.error').removeClass('error');
     this.dom.form?.find('.field-error').remove();
-
-    // Example: Check for required fields with a common class (e.g., 'is-required')
-    this.dom.form?.find('.is-required').each((index, el) => { // Use a more specific class if needed
+    this.dom.form?.find('.is-required').each((index, el) => {
       const $field = this.$(el);
       let value = $field.val();
       if (typeof value === 'string') value = value.trim();
-
       if (!value || ($field.is('select') && !value)) {
         this.showFieldError($field, this.settings.i18n.fieldRequired || 'This field is required.');
         isValid = false;
@@ -451,58 +486,52 @@ class AdminTableManager {
 
   /**
    * Adds a new row to the HTML table.
-   * Child classes MUST override this to render their specific table row HTML.
-   * @param {Object} itemData - The data of the item to add.
    */
   addTableRow(itemData) {
-    this.logger.log('Adding table row (base method, override in child):', itemData);
-    const $row = this.createTableRow(itemData);
-    if ($row && this.dom.listTableBody) {
+    this.logger.log('Adding table row for tab:', this.config.mainTabId, itemData);
+    const $row = this.createTableRow(itemData); // Must be implemented by child
+    if ($row && this.dom.listTableBody && this.dom.listTableBody.length) {
       this.dom.listTableBody.append($row);
       this.updateNoItemsMessageVisibility();
     } else {
-      this.logger.error('Failed to add table row: createTableRow returned null or listTableBody not found.');
+      this.logger.error('Failed to add table row: createTableRow invalid or listTableBody not found for tab:', this.config.mainTabId);
     }
   }
 
   /**
    * Updates an existing row in the HTML table.
-   * Child classes MUST override this to render their specific table row HTML.
-   * @param {Object} itemData - The updated data of the item.
    */
   updateTableRow(itemData) {
-    this.logger.log('Updating table row (base method, override in child):', itemData);
+    this.logger.log('Updating table row for tab:', this.config.mainTabId, itemData);
     if (!itemData.id) {
-      this.logger.error('Cannot update table row: itemData is missing an ID.', itemData);
+      this.logger.error('Cannot update table row: itemData missing ID for tab:', this.config.mainTabId, itemData);
       return;
     }
     const $existingRow = this.dom.listTableBody?.find(`${this.settings.selectors.listItemRow}[data-id="${itemData.id}"]`);
     if ($existingRow && $existingRow.length) {
-      const $newRow = this.createTableRow(itemData);
+      const $newRow = this.createTableRow(itemData); // Must be implemented by child
       if ($newRow) {
         $existingRow.replaceWith($newRow);
       } else {
-        this.logger.error('Failed to update table row: createTableRow returned null.');
+        this.logger.error('Failed to update table row: createTableRow returned null for tab:', this.config.mainTabId);
       }
     } else {
-      this.logger.warn('Could not find row to update with ID:', itemData.id, '- Appending as new row instead.');
-      this.addTableRow(itemData); // Fallback to add if not found
+      this.logger.warn('Could not find row to update with ID:', itemData.id, '- Appending as new for tab:', this.config.mainTabId);
+      this.addTableRow(itemData);
     }
   }
 
   /**
-   * Creates the HTML for a single table row.
-   * Child classes MUST override this.
-   * @param {Object} itemData - The data for the row.
-   * @returns {jQuery|null} A jQuery object representing the new row, or null.
+   * Creates the HTML for a single table row. Child classes MUST override this.
    */
   createTableRow(itemData) {
     this.logger.error('createTableRow() must be implemented by the child class.', itemData);
+    // Example: return this.$(`<tr><td colspan="100">Implement createTableRow in child class for ${this.config.mainTabId}</td></tr>`);
     return null;
   }
 
   /**
-   * Shows or hides the "No items" message based on table content.
+   * Shows or hides the "No items" message.
    */
   updateNoItemsMessageVisibility() {
     if (this.dom.noItemsMessage && this.dom.noItemsMessage.length && this.dom.listTableBody && this.dom.listTable) {
@@ -514,16 +543,14 @@ class AdminTableManager {
         this.dom.noItemsMessage.show();
         this.dom.listTable.hide();
       }
-      this.logger.log('"No items" message visibility updated. Has items:', hasItems);
+      this.logger.log('"No items" message visibility updated for tab:', this.config.mainTabId, 'Has items:', hasItems);
     } else {
-      this.logger.warn('Cannot update "no items" message visibility: noItemsMessage, listTableBody, or listTable DOM element not found.');
+      this.logger.warn('Cannot update "no items" message visibility: DOM elements missing for tab:', this.config.mainTabId);
     }
   }
 
   /**
    * Shows a generic success/error notice.
-   * @param {string} message - The message to display.
-   * @param {string} type - 'success' or 'error'.
    */
   showNotice(message, type = 'success') {
     if (window.ProductEstimatorSettings && typeof window.ProductEstimatorSettings.showNotice === 'function') {
@@ -531,15 +558,13 @@ class AdminTableManager {
     } else if (typeof validation !== 'undefined' && typeof validation.showNotice === 'function') {
       validation.showNotice(message, type);
     } else {
+      this.logger.info(`Notice (${type}): ${message}`); // Use info for notices
       alert((type === 'success' ? 'SUCCESS: ' : 'ERROR: ') + message);
     }
-    this.logger.log(`Notice shown (${type}):`, message);
   }
 
   /**
    * Shows a field-specific error message.
-   * @param {jQuery} $field - The jQuery object of the field.
-   * @param {string} message - The error message.
    */
   showFieldError($field, message) {
     if (window.ProductEstimatorSettings && typeof window.ProductEstimatorSettings.showFieldError === 'function') {
@@ -555,7 +580,6 @@ class AdminTableManager {
 
   /**
    * Clears a field-specific error message.
-   * @param {jQuery} $field - The jQuery object of the field.
    */
   clearFieldError($field) {
     if (window.ProductEstimatorSettings && typeof window.ProductEstimatorSettings.clearFieldError === 'function') {
@@ -568,27 +592,23 @@ class AdminTableManager {
   }
 
   /**
-   * Shows/hides a loading spinner on a button or form.
-   * @param {boolean} isLoading - True to show spinner, false to hide.
-   * @param {jQuery} [$button] - Optional button to show spinner on. If not provided, uses form's save button.
+   * Shows/hides a loading spinner on a button.
    */
   showFormLoadingSpinner(isLoading, $button) {
     const $btn = $button || this.dom.saveButton;
     if (!$btn || !$btn.length) return;
 
     if (isLoading) {
-      $btn.prop('disabled', true).addClass('pe-loading'); // Add a class for spinner styling
+      $btn.prop('disabled', true).addClass('pe-loading');
       if (!$btn.data('original-text')) {
-        $btn.data('original-text', $btn.text() || $btn.val()); // Handles <button> and <input type="submit">
+        $btn.data('original-text', $btn.text() || $btn.val());
       }
-      $btn.text(this.settings.i18n.saving); // Use .text() for <button>, .val() for <input>
-      if ($btn.is('input')) $btn.val(this.settings.i18n.saving);
-
+      const savingText = (this.settings.i18n && this.settings.i18n.saving) || 'Saving...';
+      if ($btn.is('input')) $btn.val(savingText); else $btn.text(savingText);
     } else {
       $btn.prop('disabled', false).removeClass('pe-loading');
       if ($btn.data('original-text')) {
-        $btn.text($btn.data('original-text'));
-        if ($btn.is('input')) $btn.val($btn.data('original-text'));
+        if ($btn.is('input')) $btn.val($btn.data('original-text')); else $btn.text($btn.data('original-text'));
       }
     }
   }

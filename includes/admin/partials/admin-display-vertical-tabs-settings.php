@@ -24,9 +24,16 @@ if ( empty( $vertical_tabs ) ) {
     return;
 }
 ?>
+
+    <?php if($this->get_section_title()): ?>  <h2 class="section-title"><?= $this->get_section_title() ?></h2> <?php endif ?>
+    <?php if($this->render_section_description()): ?>  <div class="section-description"><?php $this->render_section_description() ?></div> <?php endif ?>
+
 <div class="pe-vtabs-wrapper"> <?php // Generic outer wrapper ?>
+
     <div class="pe-vtabs-main-container"> <?php // Generic inner container for tabs and content area ?>
+
         <div class="pe-vtabs-nav-area"> <?php // Generic navigation wrapper ?>
+
             <ul class="pe-vtabs-nav-list"> <?php // Generic navigation list ?>
                 <?php foreach ( $vertical_tabs as $index => $tab_data ) : ?>
                     <?php

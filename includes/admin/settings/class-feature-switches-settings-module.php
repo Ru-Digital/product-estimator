@@ -57,14 +57,6 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
     public function register_fields() {
         $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
 
-
-        add_settings_section(
-            $this->section_id,
-            null, // Section title can be omitted if fields are self-explanatory or tab title is enough
-            [$this, 'render_section_description'],
-            $page_slug_for_wp_api
-        );
-
         $fields = array(
             'suggested_products_enabled' => array(
                 'title' => __('Suggested Products', 'product-estimator'),
@@ -132,10 +124,7 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      * @access   public
      */
     public function render_section_description() {
-        echo '<p>' . esc_html__('Configure Feature Switches for the Product Estimator', 'product-estimator') . '</p>';
-
-        // Add test connection button if credentials are configured
-        $settings = get_option($this->option_name);
+        echo 'This admin section enables toggling key website functionalities on or off with ease. Use feature switches to control the rollout of new components, disable experimental features, or tailor the user experience without deploying new code. Ideal for staged releases and quick adjustments.';
     }
 
     /**

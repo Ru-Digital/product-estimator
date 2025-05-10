@@ -16,8 +16,8 @@ class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase impleme
 
     protected function get_items_for_table()
     {
-        $relations = get_option($this->option_name, array());
-        return is_array($relations) ? $relations : [];
+        $items = get_option($this->option_name, array());
+        return is_array($items) ? $items : [];
     }
 
     protected function get_table_columns()
@@ -78,6 +78,31 @@ class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase impleme
                 <?php
                 break;
         }
+    }
+
+    protected function prepare_item_for_form_population(array $item_data) {
+        // Ensure $item_data is always an array, even if it came in malformed (though the base class check should catch non-arrays now)
+        if (!is_array($item_data)) {
+            error_log('[ProductAdditions] prepare_item_for_form_population received non-array: ' . gettype($item_data));
+            return []; // Return an empty array to prevent fatal errors further down
+        }
+
+        // Add product_name if product_id exists and it's for auto_add_by_category type
+        if (!empty($item_data['product_id']) && isset($item_data['relation_type']) && $item_data['relation_type'] === 'auto_add_by_category') {
+            $product = wc_get_product($item_data['product_id']);
+            if ($product) {
+                $item_data['product_name'] = $product->get_name();
+            } else {
+                $item_data['product_name'] = __('Product not found', 'product-estimator');
+            }
+        }
+        // You might also want to ensure all expected keys are present, even if empty, for the JS form population.
+        // Example:
+        // $item_data['source_category'] = $item_data['source_category'] ?? [];
+        // $item_data['target_category'] = $item_data['target_category'] ?? '';
+        // $item_data['note_text'] = $item_data['note_text'] ?? '';
+
+        return $item_data;
     }
 
     public function render_form_fields($item = null)
@@ -289,6 +314,19 @@ class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase impleme
         add_action('wp_ajax_get_product_details', array($this, 'ajax_get_product_details'));
     }
 
+    /**
+     * Render the settings section description.
+     * This content appears after the section title and before the module's main content.
+     */
+    public function render_section_description()
+    {
+        // You can add any HTML content you want here.
+        // For example, a paragraph explaining what this section is for.
+        echo 'Manage rules for automatically adding or suggesting products and notes based on product categories in the cart. Use the table below to create, view, edit, or delete these relationships.';
+
+        // If you need more complex content, you can include a partial file or build more HTML.
+    }
+
     // OLD ajax_save_category_relation and ajax_delete_category_relation should be REMOVED.
     // Their logic is now in validate_item_data, prepare_item_for_response, etc.
 
@@ -385,7 +423,7 @@ class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase impleme
         }
         return $features_obj;
     }
-    
+
     private function get_relation_type_label($relation_type_key) {
         $labels = [
             'auto_add_by_category' => __('Auto-Add Product with Category', 'product-estimator'),
@@ -412,7 +450,7 @@ class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase impleme
 
     protected function get_item_management_capability()
     {
-        return 'manage_product_terms';
+        return 'manage_options';
     }
 
 }

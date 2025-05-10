@@ -131,13 +131,19 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         // And then call $this->register_fields() which in turn calls add_settings_field
         // and $this->store_registered_field().
         // Example for a simple module:
-        // add_settings_section(
-        //     $this->section_id,
-        //     $this->section_title,
-        //     [$this, 'render_section_description'],
-        //     $this->plugin_name . '_' . $this->tab_id
-        // );
+        if ($this->section_id && $this->section_title) {
+            add_settings_section(
+                $this->section_id,                  // As defined in your child module (e.g., ProductAdditionsSettingsModule)
+                $this->section_title,               // As defined in your child module
+                [$this, 'render_section_description'], // WordPress will call this method on the module instance
+                $this->plugin_name . '_' . $this->tab_id // The page slug for this settings section
+            );
+        }
         $this->register_fields(); // Child class defines fields and calls store_registered_field
+    }
+
+    public function get_section_title() {
+        return $this->section_title;
     }
 
     /**
@@ -795,7 +801,6 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
     }
 
     public function render_section_description() {
-        echo ''; // Child classes can override.
     }
 
     /**
@@ -812,6 +817,10 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         return false;
     }
 
+    public function get_plugin_name() {
+        return $this->plugin_name;
+    }
+
     /**
      * Render the module content.
      *
@@ -820,6 +829,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      */
     public function render_module_content() {
         // Default implementation for simple modules (not using vertical tabs)
+
         ?>
         <form method="post" action="javascript:void(0);" class="product-estimator-form" data-tab-id="<?php echo esc_attr($this->tab_id); ?>">
             <?php

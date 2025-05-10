@@ -35,7 +35,7 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
         $this->tab_id = 'general';
         $this->tab_title = __('General Settings', 'product-estimator');
         $this->section_id = 'estimator_settings';
-        $this->section_title = __('Estimator Settings', 'product-estimator');
+        $this->section_title = __('General Settings', 'product-estimator');
     }
 
     /**
@@ -110,14 +110,6 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      */
     public function register_fields() {
         $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
-
-        // Estimator Settings Section
-        add_settings_section(
-            $this->section_id, // Use the one defined in set_tab_details
-            $this->section_title,
-            [$this, 'render_section_description'],
-            $page_slug_for_wp_api
-        );
 
         $estimator_fields = [
             'default_markup' => [
@@ -395,7 +387,7 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @access   public
      */
     public function render_section_description() {
-        echo '<p>' . esc_html__('Configure general estimator settings and defaults.', 'product-estimator') . '</p>';
+        echo 'Configure general estimator settings and defaults.';
     }
 
 

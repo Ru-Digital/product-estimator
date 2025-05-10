@@ -27,6 +27,7 @@ if (empty($active_tab) || !isset($modules[$active_tab])) {
 ?>
 
 <div class="wrap">
+
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
     <?php settings_errors(); ?>
@@ -44,21 +45,26 @@ if (empty($active_tab) || !isset($modules[$active_tab])) {
         </nav>
 
         <!-- Tab Content -->
-        <?php foreach ($modules as $tab_id => $module): ?>
+        <?php foreach ($modules as $tab_id => $module): // <-- $module is the instance here ?>
             <div id="<?php echo esc_attr($tab_id); ?>" class="tab-content" style="display: <?php echo $active_tab === $tab_id ? 'block' : 'none'; ?>;">
                 <?php
+
+
                 // For modules with custom content rendering
-                if (method_exists($module, 'render_module_content')) {
+                if (is_object($module) && method_exists($module, 'render_module_content')) {
                     // Custom rendering for modules with special UI
                     $module->render_module_content();
-                } else {
-                    // Standard settings form
+                } else if (is_object($module)) { // Fallback for standard settings form if render_module_content doesn't exist but it's a module
                     ?>
                     <form method="post" action="javascript:void(0);" class="product-estimator-form" data-tab="<?php echo esc_attr($tab_id); ?>">
                         <?php
-                        // Output section heading and fields
-                        settings_fields($this->plugin_name . '_options');
-                        do_settings_sections($this->plugin_name . '_' . $tab_id);
+                        // Ensure $this->plugin_name is accessible here. This context ($this) is SettingsManager.
+                        settings_fields($this->plugin_name . '_options'); // $this->plugin_name is from SettingsManager context
+                        // The page slug for do_settings_sections in this fallback should also use the module's properties if available
+                        $fallback_page_slug = (method_exists($module, 'get_plugin_name') && method_exists($module, 'get_tab_id'))
+                            ? $module->get_plugin_name() . '_' . $module->get_tab_id()
+                            : $this->plugin_name . '_' . $tab_id; // Fallback to SettingsManager context if methods missing
+                        do_settings_sections($fallback_page_slug);
                         ?>
                         <p class="submit">
                             <button type="submit" class="button button-primary save-settings">
@@ -71,6 +77,5 @@ if (empty($active_tab) || !isset($modules[$active_tab])) {
                 }
                 ?>
             </div>
-        <?php endforeach; ?>
-    </div>
+        <?php endforeach; ?>    </div>
 </div>

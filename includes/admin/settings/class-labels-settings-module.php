@@ -20,6 +20,8 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
         $this->tab_id    = 'labels';
         $this->tab_title = __( 'Labels', 'product-estimator' );
         $this->section_id = 'labels_settings_section';
+        $this->section_title = __( 'Manage Labels', 'product-estimator' );
+
 
         $this->defined_label_types = [
             'labels-general' => [
@@ -39,6 +41,11 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
                 'description' => __( 'Miscellaneous labels.', 'product-estimator' ),
             ],
         ];
+    }
+
+    public function render_section_description()
+    {
+        echo "This section allows administrators to configure and manage custom labels used throughout the website. Whether updating button text, renaming headings, or adjusting field titles, this central interface provides an easy way to ensure consistent, on-brand terminology across all pages without touching the code.";
     }
 
     protected function get_vertical_tabs() {

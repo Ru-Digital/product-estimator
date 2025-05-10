@@ -103,7 +103,7 @@ class ProductUpgradesSettingsModule extends SettingsModuleBase implements Settin
      * @access   public
      */
     public function render_section_description() {
-        echo '<p>' . esc_html__('Manage product upgrades based on product categories.', 'product-estimator') . '</p>';
+        echo 'Manage product upgrades based on product categories.', 'product-estimator';
     }
 
     /**

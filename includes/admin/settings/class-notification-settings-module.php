@@ -19,6 +19,7 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
     protected function set_tab_details() {
         $this->tab_id    = 'notifications';
         $this->tab_title = __( 'Notifications', 'product-estimator' );
+        $this->section_title = __( 'Manage Notifications', 'product-estimator' );
         $this->section_id = 'notification_settings_section';
 
         $this->defined_notification_types = [
@@ -222,6 +223,10 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             [ $this->plugin_name . '-settings', $this->plugin_name . '-vertical-tabs-layout' ],
             $this->version
         );
+    }
+
+    public function render_section_description() {
+        echo 'This section allows administrators to manage system-generated notifications displayed to users across the site. Customize message content to ensure clear, timely, and relevant communication with users.';
     }
 }
 

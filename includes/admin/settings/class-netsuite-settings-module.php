@@ -54,14 +54,7 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
      * @access   protected
      */
     public function register_fields() {
-        $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
-
-        add_settings_section(
-            $this->section_id,
-            null, // Section title
-            [$this, 'render_section_description'],
-            $page_slug_for_wp_api
-        );
+        $page_slug_for_wp_api = $this->get_plugin_name() . '_' . $this->get_tab_id();
 
         $fields = array(
             'netsuite_enabled' => array(

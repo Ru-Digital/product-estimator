@@ -46,7 +46,8 @@ $id_input_name = 'item_id'; // Default name for the hidden ID field in the form,
 
 ?>
 <div class="<?php echo esc_attr( $module->get_tab_id() ); ?>-settings-module-wrapper pe-admin-table-container">
-
+    <?php if($module->get_section_title()): ?>  <h2 class="section-title"><?= $module->get_section_title() ?></h2> <?php endif ?>
+    <?php if($module->render_section_description()): ?>  <div class="section-description"><?= $module->render_section_description() ?></div> <?php endif ?>
     <?php
     // Hook for content before the "Add New" button and form
     do_action( "product_estimator_before_table_module_ui_{$module->get_tab_id()}", $module );

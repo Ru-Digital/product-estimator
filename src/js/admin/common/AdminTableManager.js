@@ -227,6 +227,7 @@ class AdminTableManager {
 
   /**
    * Handles the "Edit" button click on a table row.
+   * @param {Event} e - Click event.
    */
   handleEdit(e) {
     e.preventDefault();
@@ -241,33 +242,48 @@ class AdminTableManager {
       return;
     }
 
+    // Set edit mode and current item ID *before* resetting the form
     this.isEditMode = true;
     this.currentItemId = itemId;
-    this.resetForm();
+
+    this.resetForm(); // Call resetForm - it should NOT clear currentItemId or isEditMode
+
+    // Ensure the hidden ID input in the form is populated with the currentItemId
+    if (this.dom.idInput && this.dom.idInput.length) {
+      this.dom.idInput.val(this.currentItemId);
+    }
+
     this.dom.formTitle?.text(this.settings.i18n.editItemFormTitle);
-    this.dom.saveButton?.text(this.settings.i18n.updateChangesButton || 'Update Changes'); // Use specific i18n for edit
+    this.dom.saveButton?.text(this.settings.i18n.updateChangesButton || 'Update Changes');
 
     if (this.settings.actions.get_item) {
       this.showFormLoadingSpinner(true, this.dom.saveButton);
       ajax.ajaxRequest({
         url: this.settings.ajaxUrl,
+        // Ensure this is POST if PHP's handle_ajax_get_item expects $_POST
+        // type: 'POST', // Assuming ajax.ajaxRequest defaults to POST or is configured for it
         data: {
           action: this.settings.actions.get_item,
           nonce: this.settings.nonce,
-          item_id: itemId,
+          item_id: itemId, // Send the item ID to fetch
           option_name: this.settings.option_name,
           tab_id: this.settings.tab_id,
         }
       })
         .then(response => {
-          if (response.success && response.data && response.data.item) {
-            this.populateFormWithData(response.data.item);
+          this.logger.log('Get Item AJAX response received by .then():', JSON.stringify(response));
+          if (response && response.item && typeof response.item === 'object') {
+            this.logger.log('SUCCESS BLOCK: Item data found. Populating form.');
+            this.populateFormWithData(response.item); // This should also fill the hidden item_id input
             this.dom.formContainer?.slideDown();
             this.dom.addButton?.hide();
           } else {
-            const errorMsg = (response.data && response.data.message) || this.settings.i18n.errorLoadingItem || 'Error loading item details.';
+            this.logger.log('ELSE BLOCK: Condition failed.');
+            const errorMsg = (response && response.message)
+              ? response.message
+              : (this.settings.i18n.errorLoadingItem || 'Error loading item details or unexpected data structure.');
             this.showNotice(errorMsg, 'error');
-            this.logger.error('Error loading item details for editing:', response);
+            this.logger.error('Error loading item details: Unexpected response structure or item key missing. Response:', response);
           }
         })
         .catch(error => {
@@ -279,8 +295,8 @@ class AdminTableManager {
         });
     } else {
       this.logger.log('No get_item action defined, attempting to populate from button data attributes for tab:', this.config.mainTabId);
-      const itemData = $button.data();
-      itemData.id = itemId;
+      const itemData = $button.data(); // jQuery's .data() retrieves all data-* attributes
+      itemData.id = itemId; // Ensure 'id' is present if it wasn't a data attribute named 'id'
       this.populateFormWithData(itemData);
       this.dom.formContainer?.slideDown();
       this.dom.addButton?.hide();
@@ -321,12 +337,20 @@ class AdminTableManager {
     })
       .then(response => {
         if (response.success) {
-          this.showNotice( (response.data && response.data.message) || this.settings.i18n.itemDeletedSuccess, 'success');
+          this.showNotice((response.data && response.data.message) || this.settings.i18n.itemDeletedSuccess, 'success');
           $row.fadeOut(300, () => {
             $row.remove();
             this.updateNoItemsMessageVisibility();
           });
-        } else {
+        } else if (response && response.itemId) { // And assuming 'message' is also present for success
+          this.showNotice(response.message || this.settings.i18n.itemDeletedSuccess, 'success');
+          this.logger.log('Attempting to remove row for item ID (response was data part):', response.itemId, $row);
+          $row.fadeOut(300, () => {
+            $row.remove();
+            this.updateNoItemsMessageVisibility();
+            this.logger.log('Row removed (response was data part).');
+          });
+      }else {
           this.showNotice((response.data && response.data.message) || this.settings.i18n.errorDeletingItem, 'error');
           $button.prop('disabled', false).text(originalButtonText);
         }
@@ -340,10 +364,11 @@ class AdminTableManager {
 
   /**
    * Handles the form submission (Add or Edit).
+   * @param {Event} e - Submit event.
    */
   handleSubmit(e) {
     e.preventDefault();
-    this.logger.log('Form submitted for tab:', this.config.mainTabId, 'Edit mode:', this.isEditMode, 'Item ID:', this.currentItemId);
+    this.logger.log('Form submitted. Edit mode:', this.isEditMode, 'Current Item ID:', this.currentItemId);
 
     if (!this.validateForm()) {
       this.logger.warn('Form validation failed for tab:', this.config.mainTabId);
@@ -364,13 +389,14 @@ class AdminTableManager {
       nonce: this.settings.nonce,
       option_name: this.settings.option_name,
       tab_id: this.settings.tab_id,
-      item_data: {}
+      item_data: {} // All form fields will go under 'item_data'
     };
 
     const formFields = this.dom.form.serializeArray();
     formFields.forEach(field => {
       const fieldName = field.name;
       const fieldValue = field.value;
+
       if (fieldName.endsWith('[]')) {
         const actualName = fieldName.slice(0, -2);
         if (!dataPayload.item_data[actualName]) {
@@ -378,16 +404,21 @@ class AdminTableManager {
         }
         dataPayload.item_data[actualName].push(fieldValue);
       } else {
+        // If the form field is named 'item_id' (the hidden input),
+        // its value will be included in item_data. This is fine,
+        // but the PHP update handler uses the top-level item_id.
         dataPayload.item_data[fieldName] = fieldValue;
       }
     });
 
+    // If in edit mode, add the currentItemId to the top level of the payload.
+    // PHP's handle_ajax_update_item expects $_POST['item_id'].
     if (this.isEditMode && this.currentItemId) {
       dataPayload.item_id = this.currentItemId;
-      if (this.dom.idInput && dataPayload.item_data.hasOwnProperty(this.dom.idInput.attr('name'))) {
-        delete dataPayload.item_data[this.dom.idInput.attr('name')];
-      }
     }
+    // Note: The hidden input `name="item_id"` from `render_form_fields` will be in `dataPayload.item_data.item_id`.
+    // The PHP `handle_ajax_update_item` specifically looks for `$_POST['item_id']` (which `dataPayload.item_id` becomes).
+    // The `dataPayload.item_data.item_id` (if present) will be part of the data passed to `validate_item_data` in PHP.
 
     this.logger.log('AJAX data payload for save:', dataPayload);
     this.showFormLoadingSpinner(true, this.dom.saveButton);
@@ -396,47 +427,39 @@ class AdminTableManager {
       url: this.settings.ajaxUrl,
       data: dataPayload
     })
-      .then(response => { // 'response' here IS LIKELY the 'data' part of the WP AJAX response
+      .then(response => {
         this.logger.log('AJAX save response received:', response);
-
-        // If ajax.ajaxRequest returns the 'data' part directly,
-        // then a successful response from our PHP handlers will have an 'item' property.
-        if (response && response.item) { // <<<< MODIFIED CHECK
+        if (response && response.item) {
           this.showNotice(response.message || this.settings.i18n.itemSavedSuccess, 'success');
           if (this.isEditMode) {
-            this.updateTableRow(response.item); // Use response.item
+            this.updateTableRow(response.item);
           } else {
-            this.addTableRow(response.item);    // Use response.item
+            this.addTableRow(response.item);
           }
           this.dom.formContainer?.slideUp();
           this.dom.addButton?.show();
-          this.resetForm();
+          this.resetForm(); // Call after successful operation
+          // Explicitly reset edit mode flags after successful save/update & form reset
+          this.isEditMode = false;
+          this.currentItemId = null;
           this.updateNoItemsMessageVisibility();
           this.formModified = false;
         } else {
-          // This block is hit if response.item is not present,
-          // or if 'response' itself is falsy (e.g. ajax.ajaxRequest resolved with undefined or null on error)
-          // The message from response might still be useful if it's an error message from PHP
           const errorMsg = (response && response.message) ? response.message : this.settings.i18n.errorSavingItem;
           const errorsDetail = (response && response.errors) ? `<br><pre>${JSON.stringify(response.errors, null, 2)}</pre>` : '';
           this.showNotice(errorMsg + errorsDetail, 'error');
-          this.logger.error('Error saving item or item data missing in successful-looking response structure:', response);
+          this.logger.error('Error saving item or item data missing in response structure:', response);
         }
       })
       .catch(error => {
-        // This .catch is for network errors or if ajax.ajaxRequest explicitly rejects
         const errorMsg = error.message || this.settings.i18n.errorSavingItem;
         this.showNotice(errorMsg, 'error');
         this.logger.error('AJAX error during save operation:', error);
       })
       .finally(() => {
         this.showFormLoadingSpinner(false, this.dom.saveButton);
-      })
-      .finally(() => {
-        this.showFormLoadingSpinner(false, this.dom.saveButton);
       });
   }
-
   /**
    * Handles the "Cancel" button click in the form.
    */
@@ -452,25 +475,32 @@ class AdminTableManager {
    * Resets the form to its initial state.
    */
   resetForm() {
-    this.dom.form[0]?.reset();
-    if (this.dom.idInput && this.dom.idInput.length) { // Check if idInput was found
+    this.dom.form[0]?.reset(); // Native form reset
+    // Clear the hidden ID input. It will be repopulated by populateFormWithData if in edit mode.
+    if (this.dom.idInput && this.dom.idInput.length) {
       this.dom.idInput.val('');
     }
-    this.isEditMode = false;
-    this.currentItemId = null;
+    // DO NOT reset isEditMode and currentItemId here.
+    // They should be managed by handleAddNew, handleEdit, and the success part of handleSubmit.
     this.formModified = false;
+
     this.dom.form?.find('.error').removeClass('error');
     this.dom.form?.find('.field-error').remove();
     this.logger.log('Form reset for tab:', this.config.mainTabId);
+    // Child class should override to reset its specific fields (like Select2, conditional visibility)
   }
 
   /**
    * Populates the form with data for editing.
    */
   populateFormWithData(itemData) {
-    this.logger.log('Populating form with data for tab:', this.config.mainTabId, itemData);
-    if (itemData.id && this.dom.idInput && this.dom.idInput.length) {
-      this.dom.idInput.val(itemData.id);
+    this.logger.log('Populating form with data (base method) for tab:', this.config.mainTabId, 'Item Data:', itemData);
+    if (itemData && itemData.id && this.dom.idInput && this.dom.idInput.length) {
+      this.dom.idInput.val(itemData.id); // Populate hidden ID field
+      this.currentItemId = itemData.id; // Also ensure currentItemId is set if called directly
+      this.isEditMode = true; // If we are populating with an item, it's for editing
+    } else if (itemData && !itemData.id) {
+      this.logger.warn('populateFormWithData called with itemData lacking an ID. Cannot set hidden ID input or currentItemId reliably from this data alone.', itemData)
     }
     // Child classes will override to populate their specific fields.
   }

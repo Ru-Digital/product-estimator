@@ -133,7 +133,11 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleBase {
      * @access   protected
      * @return   array An array of items. Each item is typically an associative array or an object.
      */
-    abstract protected function get_items_for_table();
+    protected function get_items_for_table()
+    {
+        $items = get_option($this->option_name, array());
+        return is_array($items) ? $items : [];
+    }
 
     /**
      * Generates a unique ID for a new item.
@@ -230,6 +234,8 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleBase {
     protected function get_item_updated_message() { return __('Item updated successfully.', 'product-estimator'); }
 
     public function handle_ajax_delete_item() {
+        error_log('[SMWTBase] handle_ajax_delete_item REACHED for action: ' . $_POST['action'] . ' - Item ID: ' . $_POST['item_id']);
+
         $this->verify_item_ajax_request();
         $item_id = isset($_POST['item_id']) ? sanitize_text_field(wp_unslash($_POST['item_id'])) : '';
 
@@ -239,6 +245,7 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleBase {
         }
 
         $items = $this->get_items_for_table();
+
         if (!is_array($items) || !isset($items[$item_id])) {
             wp_send_json_error(['message' => __('Item to delete not found.', 'product-estimator')], 404);
             exit;
@@ -253,28 +260,57 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleBase {
 
     protected function get_item_deleted_message() { return __('Item deleted successfully.', 'product-estimator'); }
 
+// In class-settings-module-with-tables-base.php
     public function handle_ajax_get_item() {
         $this->verify_item_ajax_request();
-        $item_id = isset($_GET['item_id']) ? sanitize_text_field(wp_unslash($_GET['item_id'])) : '';
+
+        $item_id = isset($_POST['item_id']) ? sanitize_text_field(wp_unslash($_POST['item_id'])) : '';
 
         if (empty($item_id)) {
             wp_send_json_error(['message' => __('Invalid item ID for retrieval.', 'product-estimator')], 400);
             exit;
         }
 
-        $items = $this->get_items_for_table();
-        if (!is_array($items) || !isset($items[$item_id])) {
-            wp_send_json_error(['message' => __('Item not found.', 'product-estimator')], 404);
+        error_log('[SMWTBase] handle_ajax_get_item: Attempting to retrieve item_id: ' . $item_id);
+
+        $items = $this->get_items_for_table(); // Fetches the entire collection
+
+        if (!is_array($items)) { // Should not happen if get_items_for_table returns [] by default
+            error_log('[SMWTBase] handle_ajax_get_item: Items collection is not an array. Option: ' . $this->option_name);
+            wp_send_json_error(['message' => __('Internal error: Item collection not found.', 'product-estimator')], 500);
             exit;
         }
 
-        // Allow child class to format for form population if necessary
-        $item_for_form = $this->prepare_item_for_form_population($items[$item_id]);
+        if (!array_key_exists($item_id, $items)) { // More robust check than isset for this case
+            error_log('[SMWTBase] handle_ajax_get_item: Item ID "' . $item_id . '" does not exist in items collection. Keys: ' . implode(', ', array_keys($items)));
+            wp_send_json_error(['message' => __('Item not found (key missing).', 'product-estimator')], 404);
+            exit;
+        }
+
+        $item_data_from_collection = $items[$item_id];
+        error_log('[SMWTBase] handle_ajax_get_item: Raw item data from collection for ID "' . $item_id . '": ' . print_r($item_data_from_collection, true));
+
+        // Check if the retrieved item data is actually an array, as expected by prepare_item_for_form_population
+        if (!is_array($item_data_from_collection)) {
+            error_log('[SMWTBase] CRITICAL: Item data for ID "' . $item_id . '" is NOT AN ARRAY. Data type: ' . gettype($item_data_from_collection));
+            // This is the most likely point of failure given the fatal error.
+            // It means the item was stored incorrectly (e.g., as null, or some other scalar/object type not expected).
+            wp_send_json_error(['message' => __('Error: Item data is corrupt or in an unexpected format.', 'product-estimator')], 500);
+            exit;
+        }
+
+        // Now we are sure $item_data_from_collection is an array.
+        $item_for_form = $this->prepare_item_for_form_population($item_data_from_collection);
+
+        // ProductAdditionsSettingsModule needs 'product_name' if it's an auto_add_by_category item
+        // The prepare_item_for_form_population in the child class should handle this.
+        // Let's ensure the child's method is called if it exists.
+        // This logic is already in SettingsModuleWithTableBase, where prepare_item_for_form_population
+        // is called on $this, so it will call the overridden child method if present.
 
         wp_send_json_success(['item' => $item_for_form]);
         exit;
     }
-
     /**
      * Formats the item data for populating an edit form.
      * Child classes can override if specific formatting is needed before sending to JS.

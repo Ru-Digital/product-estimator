@@ -7,8 +7,8 @@
  * Extends AdminTableManager for common table and form management.
  */
 import AdminTableManager from '../common/AdminTableManager'; // Adjust path as needed
-import { ajax, dom, format, validation } from '@utils'; // Assuming @utils provides these
-import { createLogger } from '@utils';
+import {ajax, dom, format, validation} from '@utils'; // Assuming @utils provides these
+import {createLogger} from '@utils';
 
 class ProductAdditionsSettingsModule extends AdminTableManager {
   /**
@@ -226,7 +226,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
           }
         }
       })
-      .catch(error => { /* ... */ });
+      .catch(error => { /* ... */
+      });
   }
 
   /**
@@ -262,9 +263,10 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
    * Overrides AdminTableManager.resetForm.
    */
   resetForm() {
-    super.resetForm(); // Calls base method (resets form, clears ID input, edit mode flags)
+    super.resetForm(); // Calls base method (which handles generic form reset and flags)
 
-    this.dom.relationTypeSelect?.val('').trigger('change.productAdditions'); // Resets and triggers visibility logic
+    // Now reset ProductAdditions-specific fields
+    this.dom.relationTypeSelect?.val('').trigger('change.productAdditions');
     this.dom.sourceCategorySelect?.val(null).trigger('change.select2');
     this.dom.targetCategorySelect?.val(null).trigger('change.select2');
     this._clearProductSelectionFields();
@@ -275,7 +277,7 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     this.dom.productSearchRow?.hide();
     this.dom.noteRow?.hide();
 
-    this.logger.log('Product Additions form fields fully reset.');
+    this.logger.log('Product Additions form fields specifically reset.');
   }
 
   /**
@@ -456,7 +458,7 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 }
 
 // Revised Initialization logic at the end of the file
-jQuery(document).ready(function($) {
+jQuery(document).ready(function ($) {
   const mainTabId = 'product_additions';
   const localizedDataObjectName = 'productAdditionsSettings';
 
@@ -490,7 +492,7 @@ jQuery(document).ready(function($) {
     initProductAdditionsModule(); // Attempt initialization on document ready if tab is active
 
     // Also listen for global tab change events to initialize if this tab becomes active later
-    $(document).on('product_estimator_tab_changed', function(e, newTabId) {
+    $(document).on('product_estimator_tab_changed', function (e, newTabId) {
       if (newTabId === mainTabId) {
         // Use a small timeout to ensure the tab content is fully rendered and visible by WordPress/other scripts
         setTimeout(initProductAdditionsModule, 50);

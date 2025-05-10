@@ -266,14 +266,14 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
             'defaultSubTabId'   => 'labels-general', // First tab ID
             'ajax_action'       => 'save_settings_for_' . $this->tab_id, // e.g. save_settings_for_labels
             'option_name'       => $this->option_name, // 'product_estimator_labels'
-            'defined_label_types' => array_keys($this->defined_label_types),
+            'defined_label_types' => array_keys($this->defined_label_types), // This should be fine
             'i18n' => [
                 'saveSuccess' => __('Label settings saved successfully.', 'product-estimator'),
                 'saveError'   => __('Error saving label settings.', 'product-estimator'),
             ],
         ];
-        $final_script_data = array_replace_recursive($commonData, $module_specific_data);
-        $this->add_script_data('labelsSettingsData', $final_script_data); // Unique global JS object
+        $actual_data_for_js_object = array_replace_recursive($commonData, $module_specific_data);
+        $this->add_script_data('labelsSettings', $actual_data_for_js_object); // Unique global JS object
     }
 
     /**

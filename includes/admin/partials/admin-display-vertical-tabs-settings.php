@@ -38,7 +38,7 @@ if ( empty( $vertical_tabs ) ) {
                     $li_class  = 'pe-vtabs-nav-item' . ( $is_active ? ' active' : '' ); // Generic class for li element
                     ?>
                     <li class="<?php echo esc_attr( $li_class ); ?>">
-                        <a href="<?php echo esc_url( $tab_url ); ?>" data-tab-id="<?php echo esc_attr( $tab_data['id'] ); // data-tab can be kept for JS hooks ?>">
+                        <a href="<?php echo esc_url( $tab_url ); ?>" data-tab="<?php echo esc_attr( $tab_data['id'] ); // data-tab can be kept for JS hooks ?>">
                             <?php echo esc_html( $tab_data['title'] ); ?>
                         </a>
                     </li>
@@ -63,7 +63,7 @@ if ( empty( $vertical_tabs ) ) {
                         <p class="pe-vtabs-tab-description"><?php echo esc_html( $tab_data['description'] ); ?></p>
                     <?php endif; ?>
 
-                    <form method="post" action="javascript:void(0);" class="pe-vtabs-tab-form product-estimator-form" data-tab-id="<?php echo esc_attr( $tab_data['id'] ); ?>" data-type="<?php echo esc_attr( $tab_data['id'] ); ?>">
+                    <form method="post" action="javascript:void(0);" class="pe-vtabs-tab-form product-estimator-form" data-tab="<?php echo esc_attr( $tab_data['id'] ); ?>" data-type="<?php echo esc_attr( $tab_data['id'] ); ?>">
                         <?php
                         // Important: settings_fields() and do_settings_sections() output content.
                         // Ensure they are called for each tab whose content needs to be available.

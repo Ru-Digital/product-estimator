@@ -145,8 +145,8 @@ class VerticalTabbedModule {
 
     // --- Enhanced logging for sub_tab_id derivation ---
     logger.log(`Form element being submitted (DOM):`, $form[0]);
-    const formTabIdAttr = $form.attr('data-tab-id');
-    logger.log(`Raw 'data-tab-id' attribute from form: "${formTabIdAttr}" (Type: ${typeof formTabIdAttr})`);
+    const formTabIdAttr = $form.attr('data-tab');
+    logger.log(`Raw 'data-tab' attribute from form: "${formTabIdAttr}" (Type: ${typeof formTabIdAttr})`);
 
     let currentSubTabId = $form.data('tab-id'); // jQuery's .data() method
     logger.log(`Value from $form.data('tab-id'): "${currentSubTabId}" (Type: ${typeof currentSubTabId})`);
@@ -154,9 +154,9 @@ class VerticalTabbedModule {
     if (typeof currentSubTabId === 'undefined' || currentSubTabId === null || String(currentSubTabId).trim() === '') {
       const rawVal = String(currentSubTabId).trim();
       if (rawVal === '') {
-        logger.warn(`Form data-tab-id was present but an empty string. Falling back to defaultSubTabId: "${this.config.defaultSubTabId}"`);
+        logger.warn(`Form data-tab was present but an empty string. Falling back to defaultSubTabId: "${this.config.defaultSubTabId}"`);
       } else { // Was undefined or null
-        logger.warn(`Form data-tab-id was undefined/null. Falling back to defaultSubTabId: "${this.config.defaultSubTabId}"`);
+        logger.warn(`Form data-tab was undefined/null. Falling back to defaultSubTabId: "${this.config.defaultSubTabId}"`);
       }
       currentSubTabId = this.config.defaultSubTabId;
     }

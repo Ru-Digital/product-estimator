@@ -17,7 +17,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
       mainTabId: 'labels',
       defaultSubTabId: 'labels-general', // Default vertical tab for labels
       ajaxActionPrefix: 'save_labels',   // Results in 'save_labels_settings'
-      localizedDataName: 'labelSettingsData' // Global object with nonce, i18n etc. for labels
+      localizedDataName: 'labelSettings' // Global object with nonce, i18n etc. for labels
     });
     // Specific properties for LabelSettingsModule can be initialized here if needed
   }

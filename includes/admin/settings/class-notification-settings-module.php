@@ -33,13 +33,13 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
     protected function get_vertical_tabs() {
         $tabs = [];
         $tabs[] = [
-            'id'          => 'notifications_general',
+            'id'          => 'notifications-general',
             'title'       => __( 'General Settings', 'product-estimator' ),
             'description' => __( 'Configure global notification settings and sender details.', 'product-estimator' ),
         ];
         foreach ( $this->defined_notification_types as $id => $details ) {
             $tabs[] = [
-                'id'          => 'notification_type_' . $id,
+                'id'          => 'notification-type-' . $id,
                 'title'       => $details['title'],
                 'description' => $details['description'] ?? '',
             ];
@@ -48,10 +48,10 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
     }
 
     protected function register_vertical_tab_fields( $vertical_tab_id, $page_slug_for_wp_api ) {
-        if ( $vertical_tab_id === 'notifications_general' ) {
+        if ( $vertical_tab_id === 'notifications-general' ) {
             $this->register_general_notification_fields( $vertical_tab_id, $page_slug_for_wp_api );
-        } elseif ( strpos( $vertical_tab_id, 'notification_type_' ) === 0 ) {
-            $type_key = substr( $vertical_tab_id, strlen( 'notification_type_' ) );
+        } elseif ( strpos( $vertical_tab_id, 'notification-type-' ) === 0 ) {
+            $type_key = substr( $vertical_tab_id, strlen( 'notification-type-' ) );
             if ( isset( $this->defined_notification_types[ $type_key ] ) ) {
                 $this->register_single_notification_type_fields( $type_key, $vertical_tab_id, $page_slug_for_wp_api );
             }
@@ -208,11 +208,11 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
         $commonData = $this->get_common_script_data(); // Assumes get_common_script_data() is in SettingsModuleWithVerticalTabsBase
         $module_specific_data = [
-            'mainTabId'       => $this->tab_id,
-            'defaultSubTabId'   => 'notifications_general', // First sub-tab ID
+            'defaultSubTabId'   => 'notifications-general', // First sub-tab ID
             'ajax_action'       => 'save_settings_for_' . $this->tab_id, // e.g., 'save_settings_for_notifications'
             'option_name'       => $this->option_name, // 'product_estimator_settings'
-            'notification_types' => array_keys($this->defined_notification_types),
+            'mainTabId'       => $this->tab_id,
+            'defined_notification_types' => array_keys($this->defined_notification_types),
             'i18n'               => [
                 'selectImage'          => __( 'Select or Upload Logo', 'product-estimator' ),
                 'useThisImage'         => __( 'Use this image', 'product-estimator' ),
@@ -222,8 +222,8 @@ class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             ],
         ];
 
-        $final_script_data = array_replace_recursive($commonData, $module_specific_data);
-        $this->add_script_data($module_specific_data['localizedDataName'], $final_script_data);
+        $actual_data_for_js_object = array_replace_recursive($commonData, $module_specific_data);
+        $this->add_script_data('notificationSettings', $actual_data_for_js_object);
     }
 
     public function enqueue_styles() {

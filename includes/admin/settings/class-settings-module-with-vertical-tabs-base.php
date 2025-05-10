@@ -172,7 +172,7 @@ abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
         return [
             'mainTabId'         => $this->get_tab_id(), // The ID of the main settings page tab (e.g., 'labels', 'notifications')
             'ajax_url'          => admin_url('admin-ajax.php'),
-            'nonce'             => wp_create_nonce('product_estimator_settings_nonce'),
+            'nonce'             => wp_create_nonce('product_estimator_settings_nonce'), // General settings nonce
             'i18n'              => [
                 'saving'      => __('Saving...', 'product-estimator'),
                 'saveSuccess' => __('Settings saved successfully.', 'product-estimator'), // Generic success

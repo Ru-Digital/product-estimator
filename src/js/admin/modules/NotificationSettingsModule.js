@@ -12,9 +12,9 @@ class NotificationSettingsModule extends VerticalTabbedModule {
   constructor() {
     super({
       mainTabId: 'notifications',
-      defaultSubTabId: 'notifications_general', // Default vertical tab
+      defaultSubTabId: 'notifications-general', // Default vertical tab
       ajaxActionPrefix: 'save_notifications', // Results in 'save_notifications_settings'
-      localizedDataName: 'notificationSettingsData'
+      localizedDataName: 'notificationSettings'
     });
 
     this.mediaFrame = null; // Specific to notifications for image uploads

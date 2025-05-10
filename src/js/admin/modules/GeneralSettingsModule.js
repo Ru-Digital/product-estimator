@@ -67,8 +67,8 @@ class GeneralSettingsModule {
 
     // Listen for tab changes
     $(document).on('product_estimator_tab_changed', this.handleTabChanged);
-    $('.file-upload-button').on('click', this.handleFileUpload.bind(this));
-    $('.file-remove-button').on('click', this.handleFileRemove.bind(this));
+    $('.select-file-button').on('click', this.handleFileUpload.bind(this));
+    $('.remove-file-button').on('click', this.handleFileRemove.bind(this));
   }
 
 
@@ -119,16 +119,25 @@ class GeneralSettingsModule {
     // When a file is selected, run a callback
     this.mediaFrame.on('select', () => {
       const attachment = this.mediaFrame.state().get('selection').first().toJSON();
+      console.log('Selected attachment:', attachment);
+
 
       // Set the attachment ID in the hidden input
-      $(`#${fieldId}`).val(attachment.id).trigger('change');
+      if (attachment && attachment.id) {
+        console.log(`Setting # ${fieldId} to value: ${attachment.id}`);
+        $(`#${fieldId}`).val(attachment.id).trigger('change'); // fieldId should be 'pdf_template'
 
+        // Verify the value was set
+        console.log(`Value of #${fieldId} after setting:`, $(`#${fieldId}`).val());
+      } else {
+        console.error('Attachment or attachment.id is missing!', attachment);
+      }
       // Update the file preview
       const $previewWrapper = button.siblings('.file-preview-wrapper');
       $previewWrapper.html(`<p class="file-preview"><a href="${attachment.url}" target="_blank">${attachment.filename}</a></p>`);
 
       // Show the remove button
-      button.siblings('.file-remove-button').removeClass('hidden');
+      button.siblings('.remove-file-button').removeClass('hidden');
     });
 
     // Open the modal

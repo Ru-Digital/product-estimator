@@ -564,36 +564,91 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         return $number;
     }
 
+    // Inside class SettingsModuleBase
+
     protected function validate_file_field_internal($key, $value, $field_args = []) {
-        // $value is expected to be an attachment ID.
-        $attachment_id = absint($value);
-        if (empty($attachment_id)) {
+        // Log the initial value for debugging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("validate_file_field_internal for '$key' - initial value: " . print_r($value, true));
+        }
+
+        // Trim whitespace just in case
+        $trimmed_value = is_string($value) ? trim($value) : $value;
+
+        // Check if the trimmed value is numeric and greater than 0 before absint
+        if (!is_numeric($trimmed_value) || $trimmed_value <= 0) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("validate_file_field_internal for '$key' - value '$trimmed_value' is not a positive number.");
+            }
+            // If it's not required, an empty string is acceptable.
+            // If it IS required, this is where you might set an error with add_settings_error().
+            // For now, we'll assume it might not be required and allow an empty string.
             if (!empty($field_args['required'])) {
-                // add_settings_error or return WP_Error
+                // add_settings_error($this->option_name, 'missing_required_file', "Field $key is required."); // Example error
+            }
+            return ''; // No valid file ID.
+        }
+
+        $attachment_id = absint($trimmed_value);
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("validate_file_field_internal for '$key' - after absint: " . $attachment_id);
+        }
+
+        if (empty($attachment_id)) { // This check might be redundant if the above check for $trimmed_value <= 0 is in place
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("validate_file_field_internal for '$key' - attachment_id is empty after absint.");
+            }
+            if (!empty($field_args['required'])) {
+                // add_settings_error($this->option_name, 'missing_required_file', "Field $key is required and became empty.");
             }
             return ''; // No file, or invalid ID.
         }
-        if (get_post_type($attachment_id) !== 'attachment') {
+
+        $post_type = get_post_type($attachment_id);
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("validate_file_field_internal for '$key' - post_type for ID $attachment_id: " . $post_type);
+        }
+
+        if ($post_type !== 'attachment') {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("validate_file_field_internal for '$key' - ID $attachment_id is not an attachment. Post type: $post_type");
+            }
             if (!empty($field_args['required'])) {
-                // add_settings_error or return WP_Error
+                // add_settings_error($this->option_name, 'invalid_attachment_type', "Field $key is not a valid attachment type.");
             }
             return ''; // Not an attachment.
         }
-        // Further validation for file type (MIME or extension) based on $field_args['accept'] can be added here.
-        return $attachment_id;
-    }
 
-    /**
-     * Check if a field is a checkbox
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    string    $key    Field key
-     * @return   bool    Whether the field is a checkbox
-     */
-    protected function is_checkbox_field($key) {
-        $checkbox_fields = $this->get_checkbox_fields();
-        return in_array($key, $checkbox_fields);
+        // Optional: Further validation for file type (MIME or extension) based on $field_args['accept']
+        if (!empty($field_args['accept'])) {
+            $accepted_types = array_map('trim', explode(',', $field_args['accept']));
+            $file_mime_type = get_post_mime_type($attachment_id);
+            $attachment_meta = wp_get_attachment_metadata($attachment_id);
+            $file_extension = isset($attachment_meta['file']) ? strtolower(pathinfo($attachment_meta['file'], PATHINFO_EXTENSION)) : null;
+
+
+            $type_match = false;
+            foreach($accepted_types as $accepted_type) {
+                if ($accepted_type === $file_mime_type) {
+                    $type_match = true;
+                    break;
+                }
+                if ($file_extension && str_ends_with($accepted_type, $file_extension) && str_starts_with($accepted_type, '.')) {
+                    $type_match = true;
+                    break;
+                }
+            }
+
+            if (!$type_match) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("validate_file_field_internal for '$key' - MIME type '$file_mime_type' or extension '$file_extension' not in accepted types: " . $field_args['accept']);
+                }
+                // return ''; // Optionally invalidate if MIME type doesn't match
+            }
+        }
+
+        return $attachment_id;
     }
 
     /**
@@ -609,19 +664,6 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
     }
 
     /**
-     * Check if a field is an email field
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    string    $key    Field key
-     * @return   bool    Whether the field is an email field
-     */
-    protected function is_email_field($key) {
-        $email_fields = $this->get_email_fields();
-        return in_array($key, $email_fields);
-    }
-
-    /**
      * Get all email fields for this module
      *
      * @since    1.1.0
@@ -631,19 +673,6 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
     protected function get_email_fields() {
         // Override in child classes to define email fields
         return [];
-    }
-
-    /**
-     * Check if a field is a number field
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    string    $key    Field key
-     * @return   bool    Whether the field is a number field
-     */
-    protected function is_number_field($key) {
-        $number_fields = $this->get_number_fields();
-        return array_key_exists($key, $number_fields);
     }
 
     /**
@@ -657,143 +686,6 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         // Override in child classes to define number fields and their constraints
         // Format: ['field_name' => ['min' => 0, 'max' => 100]]
         return [];
-    }
-
-    /**
-     * Validate a number field
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    string    $key     Field key
-     * @param    mixed     $value   Field value
-     * @return   int|float Validated number
-     */
-    protected function validate_number_field($key, $value) {
-        $number_fields = $this->get_number_fields();
-
-        if (isset($number_fields[$key])) {
-            $constraints = $number_fields[$key];
-            $number = is_numeric($value) ? $value + 0 : 0; // Convert to int/float
-
-            // Apply min/max constraints
-            if (isset($constraints['min']) && $number < $constraints['min']) {
-                $number = $constraints['min'];
-            }
-            if (isset($constraints['max']) && $number > $constraints['max']) {
-                $number = $constraints['max'];
-            }
-
-            return $number;
-        }
-
-        // Default fallback
-        return intval($value);
-    }
-
-    /**
-     * Validate file upload fields
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    string    $key      Field key
-     * @param    mixed     $value    Field value (attachment ID)
-     * @param    array     $args     Field arguments
-     * @return   mixed     Validated value or empty string if invalid
-     */
-    protected function validate_file_field($key, $value, $args = []) {
-        // Check if this is a required field
-        $is_required = isset($args['required']) && $args['required'];
-
-        // If no value provided
-        if (empty($value)) {
-            if ($is_required) {
-                add_settings_error(
-                    'product_estimator_settings',
-                    'missing_required_file',
-                    sprintf(__('A file is required for "%s"', 'product-estimator'), $key)
-                );
-                return '';
-            }
-            return '';
-        }
-
-        // Ensure the attachment exists and is the correct type
-        $attachment = get_post($value);
-        if (!$attachment || $attachment->post_type !== 'attachment') {
-            add_settings_error(
-                'product_estimator_settings',
-                'invalid_attachment',
-                sprintf(__('Invalid file attachment for "%s"', 'product-estimator'), $key)
-            );
-            return '';
-        }
-
-        // If accept type is specified, verify the file type matches
-        if (!empty($args['accept'])) {
-            $file_type = get_post_mime_type($attachment);
-            $accept_types = explode(',', str_replace(' ', '', $args['accept']));
-
-            $type_matches = false;
-            foreach ($accept_types as $accept_type) {
-                // Handle application/pdf style types
-                if (strpos($accept_type, '/') !== false) {
-                    if ($file_type === $accept_type) {
-                        $type_matches = true;
-                        break;
-                    }
-                }
-                // Handle .pdf style types
-                else if (substr($accept_type, 0, 1) === '.') {
-                    $extension = strtolower(pathinfo(get_attached_file($value), PATHINFO_EXTENSION));
-                    if ('.' . $extension === strtolower($accept_type)) {
-                        $type_matches = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!$type_matches) {
-                add_settings_error(
-                    'product_estimator_settings',
-                    'invalid_file_type',
-                    sprintf(__('File type does not match accepted type(s) for "%s"', 'product-estimator'), $key)
-                );
-                return '';
-            }
-        }
-
-        // All checks passed, return the attachment ID
-        return $value;
-    }
-
-    /**
-     * Check if a field is an HTML content field
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    string    $key    Field key
-     * @return   bool    Whether the field is an HTML content field
-     */
-    protected function is_html_content_field($key) {
-        $html_fields = [
-            'pdf_footer_text',
-            'pdf_footer_contact_details_content'
-        ];
-
-        return strpos($key, '_content') !== false || in_array($key, $html_fields);
-    }
-
-    /**
-     * Check if a field is a file upload field
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    string    $key    Field key
-     * @return   bool    Whether the field is a file upload field
-     */
-    protected function is_file_field($key) {
-        $file_fields = $this->get_file_fields();
-        return array_key_exists($key, $file_fields);
     }
 
     /**
@@ -1036,204 +928,43 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
     }
 
 
+    // Inside class SettingsModuleBase
+
     protected function render_file_field_internal($id, $current_value_att_id, $field_name, $args) {
         $file_url = $current_value_att_id ? wp_get_attachment_url($current_value_att_id) : '';
-        $file_exists = $file_url && get_post_status($current_value_att_id); // Check if post exists
+        // Ensure get_post_status is only called if $current_value_att_id is a valid ID
+        $file_exists = $file_url && $current_value_att_id && get_post($current_value_att_id) && get_post_status($current_value_att_id);
 
-        echo '<div class="file-upload-wrapper" data-field-id="' . esc_attr($id) . '">';
+        // The 'accept' attribute should come from the field's arguments
+        $accept_type = $args['accept'] ?? '';
+
+        echo '<div class="file-upload-wrapper" data-field-id="' . esc_attr($id) . '">'; // data-field-id on wrapper is okay but not what button directly uses
         echo '<input type="hidden" id="' . esc_attr($id) . '" name="' . esc_attr($field_name) . '" value="' . esc_attr($current_value_att_id) . '" />';
-        echo '<div class="file-preview-area">';
+        echo '<div class="file-preview-wrapper">';
         if ($file_exists) {
-            $file_type = get_post_mime_type($current_value_att_id);
-            if (strpos($file_type, 'image') !== false) {
+            $file_mime_type = get_post_mime_type($current_value_att_id);
+            if ($file_mime_type && strpos($file_mime_type, 'image') !== false) {
                 echo wp_get_attachment_image($current_value_att_id, 'medium');
             } else {
-                echo '<a href="' . esc_url($file_url) . '" target="_blank">' . esc_html(basename(get_attached_file($current_value_att_id))) . '</a>';
+                $file_path = get_attached_file($current_value_att_id);
+                echo "<p class='file-preview'>";
+                echo '<a href="' . esc_url($file_url) . '" target="_blank">' . esc_html(basename($file_path ? $file_path : $file_url)) . '</a>';
+                echo "</p>";
             }
         } else {
             echo '<span>' . __('No file selected.', 'product-estimator') . '</span>';
         }
         echo '</div>';
-        echo '<button type="button" class="button select-file-button">' . ($file_exists ? __('Replace File', 'product-estimator') : __('Upload File', 'product-estimator')) . '</button>';
+        // ***** ADD data-field-id and data-accept TO THIS BUTTON *****
+        echo '<button type="button" class="button select-file-button file-upload-button" data-field-id="' . esc_attr($id) . '" data-accept="' . esc_attr($accept_type) . '">' . ($file_exists ? __('Replace File', 'product-estimator') : __('Upload File', 'product-estimator')) . '</button>';
+        // Also ensure the remove button has the data-field-id
         if ($file_exists) {
-            echo '<button type="button" class="button remove-file-button">' . __('Remove File', 'product-estimator') . '</button>';
-        }
-        echo '</div>';
-    }
-
-
-    /**
-     * Render a textarea field.
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    array    $args    Field arguments.
-     */
-    protected function render_textarea_field($args) {
-        $options = get_option($this->option_name);
-        $id = $args['id'];
-        $value = isset($options[$id]) ? $options[$id] : '';
-
-        if (empty($value) && isset($args['default'])) {
-            $value = $args['default'];
-        }
-
-        echo '<textarea id="' . esc_attr($id) . '" name="' . esc_attr($this->option_name) . '[' . esc_attr($id) . ']" rows="5" cols="50">' . esc_textarea($value) . '</textarea>';
-
-        if (isset($args['description'])) {
-            echo '<p class="description">' . esc_html($args['description']) . '</p>';
-        }
-    }
-
-    /**
-     * Render a file upload field with improved handling.
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    array    $args    Field arguments.
-     */
-    protected function render_file_field($args) {
-        $options = get_option($this->option_name);
-
-        $id = $args['id'];
-        $file_id = isset($options[$id]) ? $options[$id] : '';
-        $file_url = '';
-        $is_required = isset($args['required']) && $args['required'];
-        $accept = isset($args['accept']) ? $args['accept'] : '';
-
-        if ($file_id) {
-            $file_url = wp_get_attachment_url($file_id);
-            $file_path = get_attached_file($file_id);
-            $file_exists = $file_path && file_exists($file_path);
+            echo '<button type="button" class="button remove-file-button" data-field-id="' . esc_attr($id) . '">' . __('Remove File', 'product-estimator') . '</button>';
         } else {
-            $file_exists = false;
-        }
-
-        // Hidden input to store the attachment ID
-        echo '<input type="hidden" id="' . esc_attr($id) . '" name="'.$this->option_name . '[' . esc_attr($id) . ']" value="' . esc_attr($file_id) . '"' . ($is_required ? ' required' : '') . ' />';
-        // File preview with improved handling
-        echo '<div class="file-preview-wrapper">';
-        if ($file_url && $file_exists) {
-            // Show preview based on file type
-            if (strpos($accept, 'pdf') !== false) {
-                // For PDFs, show filename with download link
-                $filename = basename($file_url);
-                echo '<p class="file-preview pdf-preview">';
-                echo '<span class="dashicons dashicons-pdf"></span> ';
-                echo '<a href="' . esc_url($file_url) . '" target="_blank">' . esc_html($filename) . '</a>';
-                echo '</p>';
-            } else if (strpos($accept, 'image') !== false) {
-                // For images, show thumbnail
-                echo '<div class="image-preview">';
-                echo wp_get_attachment_image($file_id, 'thumbnail');
-                echo '</div>';
-            } else {
-                // For other file types, just show filename
-                $filename = basename($file_url);
-                echo '<p class="file-preview"><a href="' . esc_url($file_url) . '" target="_blank">' . esc_html($filename) . '</a></p>';
-            }
-        } else if ($is_required) {
-            // Show warning if file is required but not provided
-            echo '<p class="file-required-notice">' . esc_html__('A file is required', 'product-estimator') . '</p>';
+            // It's good practice for the remove button to also have data-field-id even if hidden initially
+            echo '<button type="button" class="button remove-file-button hidden" data-field-id="' . esc_attr($id) . '">' . __('Remove File', 'product-estimator') . '</button>';
         }
         echo '</div>';
-
-        // Upload button with more descriptive label
-        $button_text = $file_exists
-            ? __('Replace File', 'product-estimator')
-            : __('Upload File', 'product-estimator');
-
-        echo '<input type="button" class="button file-upload-button" value="' . esc_attr($button_text) . '" data-field-id="' . esc_attr($id) . '" data-accept="' . esc_attr($accept) . '" />';
-
-        // Remove button (only shown if a file is set)
-        if ($file_exists) {
-            echo ' <input type="button" class="button file-remove-button" value="' . esc_attr__('Remove File', 'product-estimator') . '" data-field-id="' . esc_attr($id) . '" />';
-        } else {
-            echo ' <input type="button" class="button file-remove-button hidden" value="' . esc_attr__('Remove File', 'product-estimator') . '" data-field-id="' . esc_attr($id) . '" />';
-        }
-
-        // Add more descriptive field information
-        if (isset($args['description'])) {
-            echo '<p class="description">' . esc_html($args['description']) . ($is_required ? ' <span class="required">*</span>' : '') . '</p>';
-        }
-
-        // Add accept format information if specified
-        if (!empty($accept)) {
-            echo '<p class="file-format-info">' . sprintf(
-                    esc_html__('Accepted format: %s', 'product-estimator'),
-                    '<code>' . esc_html($accept) . '</code>'
-                ) . '</p>';
-        }
-    }
-
-    /**
-     * Render a rich text editor field with improved initialization.
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    array    $args    Field arguments.
-     */
-    protected function render_html_field($args) {
-        $options = get_option($this->option_name);
-        $id = $args['id'];
-
-        // Get the raw value
-        $value = isset($options[$id]) ? $options[$id] : '';
-        // Ensure apostrophes and quotes are decoded properly
-        $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
-
-        if (strpos($value, '&amp;lt;') !== false || strpos($value, '&amp;gt;') !== false) {
-            $value = html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
-        }
-
-        if (empty($value) && isset($args['default'])) {
-            $value = $args['default'];
-        }
-
-        $encoded_value = esc_attr($value);
-
-
-        // Output a hidden field with the raw HTML value for JavaScript to use
-        // Use WordPress rich text editor
-        $editor_id = $id;
-//        $editor_settings = array(
-//            'textarea_name' => $this->option_name . "[{$id}]",
-//            'media_buttons' => false,
-//            'textarea_rows' => 10,
-//            'teeny'         => false,
-//            'wpautop'       => false,
-//            'tinymce'       => array(
-//                'toolbar1'        => 'bold,italic,underline,bullist,numlist,link,unlink',
-//                'toolbar2'        => '',
-//                'plugins'         => 'lists,paste,wordpress,wplink',
-//
-//                'forced_root_block'  => '',
-//                'entity_encoding'    => 'raw',
-//                'verify_html'        => false,
-//                'cleanup'            => false,
-//                'keep_styles'        => true,
-//                ),
-//            'quicktags'     => true,
-//        );
-
-        $editor_settings = array(
-            'textarea_name' => $this->option_name ."[{$id}]",
-            'media_buttons' => false,
-            'textarea_rows' => 10,
-            'teeny'         => false, // Set to false to get more formatting options
-        );
-
-        // Output the editor
-        echo '<div class="wp-editor-wrapper" data-original-content="' . $encoded_value . '">';
-        wp_editor($value, $editor_id, $editor_settings);
-        echo '</div>';
-
-        // Add description
-        if (isset($args['description'])) {
-            echo '<p class="description">' . esc_html($args['description']) . '</p>';
-        }
-
-        // Add script to ensure proper HTML initialization
     }
 
     /**

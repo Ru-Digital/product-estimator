@@ -159,24 +159,41 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   /**
    * Performs AJAX search for products. Uses ProductAdditions-specific AJAX action.
    */
+// ProductAdditionsSettingsModule.js
   _searchProducts(searchTerm, categoryId) {
     this.logger.log('Searching products with term:', searchTerm, 'in category:', categoryId);
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl,
-      data: {
-        action: this.settings.actions.search_products, // Specific action from localized data
+      data: { // This is the 'data' object passed to your utility
+        action: this.settings.actions.search_products,
         nonce: this.settings.nonce,
         search: searchTerm,
         category: categoryId,
-        // option_name and tab_id are available in this.settings if PHP needs them
+        // Potentially add these if your PHP handler expects them and isn't getting them:
+        // option_name: this.settings.option_name,
+        // tab_id: this.settings.tab_id,
       }
     })
-      .then(response => {
-        if (response.success && response.data && response.data.products) {
+      .then(response => { // 'response' is whatever ajax.ajaxRequest resolves with
+        this.logger.log('Raw response from ajax.ajaxRequest:', response);
+        this.logger.log('Type of response:', typeof response);
+        if (response && typeof response === 'object') {
+          this.logger.log('Is response an array?', Array.isArray(response));
+          this.logger.log('Response keys:', Object.keys(response));
+          this.logger.log('Does response have "success" property?', response.hasOwnProperty('success'));
+          this.logger.log('Does response have "data" property?', response.hasOwnProperty('data'));
+        }
+
+        // Original check:
+        // if (response.success && response.data && response.data.products) {
+
+        // Tentative check if ajax.ajaxRequest directly returns the 'data' part:
+        if (response && response.products && Array.isArray(response.products)) {
+          this.logger.log('Product data found directly in response. Processing products array.');
           let resultsHtml = '';
-          if (response.data.products.length > 0) {
+          if (response.products.length > 0) {
             resultsHtml = '<ul class="product-results-list">';
-            response.data.products.forEach(product => {
+            response.products.forEach(product => {
               const escapedName = this.$('<div>').text(product.name || '').html();
               resultsHtml += `<li class="product-result-item" data-id="${product.id}" data-name="${escapedName}">${product.name || 'Unnamed Product'} (ID: ${product.id})</li>`;
             });
@@ -186,14 +203,30 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
           }
           this.dom.productSearchResults?.html(resultsHtml).show();
         } else {
-          this.logger.error('Product search failed or returned invalid data:', response);
-          this.dom.productSearchResults?.html(`<p>${this.settings.i18n.errorSearching || 'Error searching products'}</p>`).show();
+          // If the above 'if' failed, it means 'response' wasn't structured as {products: [...]}
+          // So, now we check if it was the original WordPress format {success: true, data: {products: [...]}}
+          if (response && response.success && response.data && response.data.products && Array.isArray(response.data.products)) {
+            this.logger.log('Product data found in response.data.products. Processing products array.');
+            let resultsHtml = '';
+            if (response.data.products.length > 0) {
+              resultsHtml = '<ul class="product-results-list">';
+              response.data.products.forEach(product => {
+                const escapedName = this.$('<div>').text(product.name || '').html();
+                resultsHtml += `<li class="product-result-item" data-id="${product.id}" data-name="${escapedName}">${product.name || 'Unnamed Product'} (ID: ${product.id})</li>`;
+              });
+              resultsHtml += '</ul>';
+            } else {
+              resultsHtml = `<p>${this.settings.i18n.noProductsFound || 'No products found'}</p>`;
+            }
+            this.dom.productSearchResults?.html(resultsHtml).show();
+          } else {
+            // If both checks fail, then the data is truly unexpected.
+            this.logger.error('Product search failed or returned invalid/unexpected data structure:', response);
+            this.dom.productSearchResults?.html(`<p>${this.settings.i18n.errorSearching || 'Error searching products'}</p>`).show();
+          }
         }
       })
-      .catch(error => {
-        this.logger.error('AJAX error searching products:', error);
-        this.dom.productSearchResults?.html(`<p>${this.settings.i18n.errorSearching || 'Error searching products'}</p>`).show();
-      });
+      .catch(error => { /* ... */ });
   }
 
   /**

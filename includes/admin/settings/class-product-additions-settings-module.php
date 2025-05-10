@@ -378,28 +378,41 @@ class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase impleme
 
     // Helper method from previous step
     private function get_features_object()
-    { /* ... */
+    {
+        static $features_obj = null;
+        if ($features_obj === null && function_exists('product_estimator_features')) {
+            $features_obj = product_estimator_features();
+        }
+        return $features_obj;
+    }
+    
+    private function get_relation_type_label($relation_type_key) {
+        $labels = [
+            'auto_add_by_category' => __('Auto-Add Product with Category', 'product-estimator'),
+            'auto_add_note_by_category' => __('Auto-Add Note with Category', 'product-estimator'),
+            'suggest_products_by_category' => __('Suggest Products when Category', 'product-estimator'),
+        ];
+        return $labels[$relation_type_key] ?? $relation_type_key;
     }
 
-    private function get_relation_type_label($relation_type_key)
-    { /* ... */
+    private function get_target_details_for_display(array $item) {
+        $relation_type = $item['relation_type'] ?? '';
+        if ($relation_type === 'auto_add_by_category' && isset($item['product_id'])) {
+            $product = wc_get_product($item['product_id']);
+            return $product ? esc_html($product->get_name()) : '';
+        } elseif ($relation_type === 'auto_add_note_by_category' && isset($item['note_text'])) {
+            return esc_html(wp_trim_words($item['note_text'], 10, '...'));
+        } elseif ($relation_type === 'suggest_products_by_category' && isset($item['target_category'])) {
+            $target_cat = get_term($item['target_category'], 'product_cat');
+            return ($target_cat && !is_wp_error($target_cat)) ? esc_html($target_cat->name . ' (Category)') : '';
+        }
+        return '';
     }
 
-    private function get_target_details_for_display(array $item)
-    { /* ... */
-    }
 
     protected function get_item_management_capability()
     {
         return 'manage_product_terms';
     }
 
-    // AJAX handlers for search_category_products and get_product_details (if still needed for specific UI parts)
-    public function ajax_search_category_products()
-    { /* ... as before ... */
-    }
-
-    public function ajax_get_product_details()
-    { /* ... as before ... */
-    }
 }

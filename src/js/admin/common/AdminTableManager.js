@@ -396,13 +396,17 @@ class AdminTableManager {
       url: this.settings.ajaxUrl,
       data: dataPayload
     })
-      .then(response => {
-        if (response.success && response.data && response.data.item) {
-          this.showNotice((response.data && response.data.message) || this.settings.i18n.itemSavedSuccess, 'success');
+      .then(response => { // 'response' here IS LIKELY the 'data' part of the WP AJAX response
+        this.logger.log('AJAX save response received:', response);
+
+        // If ajax.ajaxRequest returns the 'data' part directly,
+        // then a successful response from our PHP handlers will have an 'item' property.
+        if (response && response.item) { // <<<< MODIFIED CHECK
+          this.showNotice(response.message || this.settings.i18n.itemSavedSuccess, 'success');
           if (this.isEditMode) {
-            this.updateTableRow(response.data.item);
+            this.updateTableRow(response.item); // Use response.item
           } else {
-            this.addTableRow(response.data.item);
+            this.addTableRow(response.item);    // Use response.item
           }
           this.dom.formContainer?.slideUp();
           this.dom.addButton?.show();
@@ -410,16 +414,23 @@ class AdminTableManager {
           this.updateNoItemsMessageVisibility();
           this.formModified = false;
         } else {
-          const errorMsg = (response.data && response.data.message) || this.settings.i18n.errorSavingItem;
-          const errorsDetail = (response.data && response.data.errors) ? `<br><pre>${JSON.stringify(response.data.errors, null, 2)}</pre>` : '';
+          // This block is hit if response.item is not present,
+          // or if 'response' itself is falsy (e.g. ajax.ajaxRequest resolved with undefined or null on error)
+          // The message from response might still be useful if it's an error message from PHP
+          const errorMsg = (response && response.message) ? response.message : this.settings.i18n.errorSavingItem;
+          const errorsDetail = (response && response.errors) ? `<br><pre>${JSON.stringify(response.errors, null, 2)}</pre>` : '';
           this.showNotice(errorMsg + errorsDetail, 'error');
-          this.logger.error('Error saving item or item data missing in response:', response);
+          this.logger.error('Error saving item or item data missing in successful-looking response structure:', response);
         }
       })
       .catch(error => {
+        // This .catch is for network errors or if ajax.ajaxRequest explicitly rejects
         const errorMsg = error.message || this.settings.i18n.errorSavingItem;
         this.showNotice(errorMsg, 'error');
-        this.logger.error('AJAX error saving item:', error);
+        this.logger.error('AJAX error during save operation:', error);
+      })
+      .finally(() => {
+        this.showFormLoadingSpinner(false, this.dom.saveButton);
       })
       .finally(() => {
         this.showFormLoadingSpinner(false, this.dom.saveButton);

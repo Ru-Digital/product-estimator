@@ -5,7 +5,13 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * Similar Products Settings Module
  *
  * Handles settings for defining relationships between product categories and their attributes
- * to display similar products in the product estimator.
+ * to display similar products in the product estimator. This module allows administrators to
+ * create rules that determine which product attributes should be used to find similar products
+ * for specific categories.
+ * 
+ * When a customer adds a product to their estimate, the system uses these rules to identify
+ * and suggest similar alternative products based on matching attribute values, enhancing
+ * the shopping experience by presenting relevant options.
  *
  * @since      1.0.5
  * @package    Product_Estimator
@@ -14,7 +20,10 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
 final class SimilarProductsSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
-     * Option name for storing similar products settings
+     * Option name for storing similar products settings in the WordPress options table
+     * 
+     * This option stores an array of rules, each defining a relationship between source
+     * categories and the product attributes used for finding similar products.
      *
      * @since    1.0.5
      * @access   private
@@ -24,6 +33,8 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
 
     /**
      * Initialize the class and set its properties.
+     * 
+     * Sets up the module and registers AJAX handlers for the admin interface.
      *
      * @param string $plugin_name The name of this plugin.
      * @param string $version The version of this plugin.
@@ -36,7 +47,10 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
     }
 
     /**
-     * Set the tab and section details.
+     * Set the tab and section details for the admin interface.
+     * 
+     * Defines the tab ID, title, section ID, and section title for the similar
+     * products settings in the admin interface.
      *
      * @since    1.1.0
      * @access   protected
@@ -50,6 +64,9 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
 
     /**
      * Register AJAX handlers for this module
+     * 
+     * Sets up the WordPress AJAX actions that handle the asynchronous operations
+     * for managing similar products rules in the admin interface.
      *
      * @since    1.0.5
      * @access   private
@@ -61,7 +78,10 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
     }
 
     /**
-     * Register the module's settings
+     * Register the module's settings with WordPress
+     * 
+     * Registers the similar products settings option with the WordPress Settings API.
+     * This allows WordPress to handle sanitization and access control for the option.
      *
      * @since    1.0.5
      * @access   public
@@ -70,17 +90,15 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
         // This registers the 'product_estimator_similar_products' option directly with WordPress.
         // It will be saved if a form submits to options.php for the 'product_estimator_settings' group.
         // However, this module's UI saves rules via custom AJAX.
-        // If there are no standard fields on this tab saved via the main AJAX flow, this is fine.
         parent::register_settings(); // Call parent to ensure it can do its setup if any.
 
         register_setting(
             'product_estimator_settings', // This is the option group used on the main settings page.
-            // If this option is saved independently, it might need its own group.
             $this->option_name,          // The actual option name being saved.
             array(
                 'type' => 'array',
                 'description' => 'Product Estimator Similar Products Settings',
-                'sanitize_callback' => array($this, 'sanitize_settings_callback') // Renamed to avoid conflict
+                'sanitize_callback' => array($this, 'sanitize_settings_callback') // Callback for sanitizing data
             )
         );
     }
@@ -88,6 +106,9 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
 
     /**
      * Register the module-specific settings fields.
+     * 
+     * This module uses a custom UI rather than standard WordPress settings fields,
+     * so this method is empty but required by the interface.
      *
      * @since    1.1.0
      * @access   protected
@@ -98,9 +119,12 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
 
     /**
      * Check if this module handles a specific setting
+     * 
+     * The similar products module uses a separate option rather than individual settings,
+     * so this always returns false.
      *
-     * @param string $key Setting key
-     * @return bool Whether this module handles the setting
+     * @param string $key Setting key to check
+     * @return bool Whether this module handles the setting (always false)
      * @since    1.1.0
      * @access   public
      */
@@ -111,9 +135,13 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
 
     /**
      * Validate module-specific settings
+     * 
+     * Required by the interface but not used for this module since it handles
+     * validation through its AJAX handlers.
      *
      * @param array $input The settings input to validate
-     * @return array The validated settings
+     * @param array $context_field_definitions Additional field definitions for context
+     * @return array The validated settings (unchanged in this implementation)
      * @since    1.1.0
      * @access   public
      */
@@ -124,9 +152,12 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
     }
 
     /**
-     * Sanitize the settings
+     * Sanitize the settings before saving to database
+     * 
+     * Ensures that all rule data is properly sanitized and has the expected structure
+     * before being stored. Handles both new rule format and backward compatibility.
      *
-     * @param array $settings The settings array
+     * @param array $settings The settings array to sanitize
      * @return array The sanitized settings
      * @since    1.0.5
      * @access   public
@@ -135,7 +166,9 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
         if (!is_array($settings)) {
             return array();
         }
+        
         foreach ($settings as $id => &$rule) { // Pass $rule by reference
+            // Sanitize source categories (array of category IDs)
             if (isset($rule['source_categories']) && is_array($rule['source_categories'])) {
                 $rule['source_categories'] = array_map('absint', $rule['source_categories']);
             } elseif (isset($rule['source_category'])) { // Backward compatibility
@@ -145,18 +178,23 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
                 $rule['source_categories'] = array();
             }
 
+            // Sanitize attributes array
             if (isset($rule['attributes']) && is_array($rule['attributes'])) {
                 $rule['attributes'] = array_map('sanitize_text_field', $rule['attributes']);
             } else {
                 $rule['attributes'] = array();
             }
         }
+        
         return $settings;
     }
 
 
     /**
      * Process form data specific to this module
+     * 
+     * This module uses AJAX for saving settings, not the standard form submission,
+     * so this method always returns true.
      *
      * @since    1.1.0
      * @access   protected
@@ -169,7 +207,9 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
     }
 
     /**
-     * Render the settings section description
+     * Render the settings section description in the admin interface
+     * 
+     * Displays explanatory text at the top of the similar products settings section.
      *
      * @since    1.1.0
      * @access   public
@@ -179,7 +219,10 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
     }
 
     /**
-     * Render the module content
+     * Render the module content in the admin interface
+     * 
+     * Loads the existing settings and product categories, then includes the template
+     * that displays the similar products settings interface.
      *
      * @since    1.0.5
      * @access   public
@@ -192,17 +235,20 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
 
     /**
      * Enqueue module-specific scripts.
+     * 
+     * Adds data to the JavaScript environment that is needed by the admin interface,
+     * including nonces, URLs, and translatable strings.
      *
      * @since    1.1.0
      * @access   public
      */
     public function enqueue_scripts() {
-        // Localize script with module data
+        // Localize script with module data for JavaScript
         $actual_data_for_js_object = array(
             'nonce' => wp_create_nonce('product_estimator_similar_products_nonce'),
             'tab_id' => $this->tab_id,
-            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
-            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
+            'ajaxUrl'      => admin_url('admin-ajax.php'),
+            'ajax_action'   => 'save_' . $this->tab_id . '_settings',
             'option_name'   => $this->option_name,
             'i18n' => array(
                 'loading_attributes' => __('Loading attributes...', 'product-estimator'),
@@ -218,12 +264,16 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
                 'select_attributes_error' => __('Please select at least one attribute.', 'product-estimator')
             )
         );
-        $this->add_script_data('similarProductsSettings', $actual_data_for_js_object); // Unique global JS object
+        
+        // Add data to JavaScript environment
+        $this->add_script_data('similarProductsSettings', $actual_data_for_js_object);
     }
 
 
     /**
      * Enqueue module-specific styles.
+     * 
+     * Loads the CSS file needed for styling the similar products settings interface.
      *
      * @since    1.1.0
      * @access   public
@@ -238,12 +288,16 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
     }
 
     /**
-     * Render a single rule item
+     * Render a single rule item in the admin interface
+     * 
+     * Includes the template for a single rule item, passing the necessary variables.
+     * Used for both existing rules and when creating new rules.
      *
-     * @param string $rule_id The rule ID
-     * @param array $rule The rule data
-     * @param array $categories Available product categories
+     * @param string $rule_id The unique identifier for the rule
+     * @param array $rule The rule data containing source categories and attributes
+     * @param array $categories Available product categories for selection
      * @since    1.0.5
+     * @access   public
      */
     public function render_rule_item($rule_id, $rule, $categories) {
         // Include the partial template with proper variables
@@ -251,25 +305,28 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
     }
 
     /**
-     * AJAX handler to get attributes for a product category
-     * Updated to handle multiple categories
+     * AJAX handler to get product attributes for selected categories
+     * 
+     * Retrieves all attributes used by products in the specified categories.
+     * Supports both multiple categories (new format) and single category (legacy).
      *
      * @since    1.0.6
+     * @access   public
      */
     public function ajax_get_category_attributes() {
-        // Check nonce
+        // Check nonce for security
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_similar_products_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
             return;
         }
 
-        // Check permissions
+        // Check user permissions
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => __('You do not have permission to perform this action.', 'product-estimator')));
             return;
         }
 
-        // Get category IDs - now support for multiple categories
+        // Get category IDs - support for multiple categories
         $category_ids = isset($_POST['category_ids']) && is_array($_POST['category_ids'])
             ? array_map('absint', $_POST['category_ids'])
             : array();
@@ -287,6 +344,7 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
         // Get all attributes for products in these categories
         $attributes = $this->get_category_product_attributes($category_ids);
 
+        // Send success response with attributes data
         wp_send_json_success(array(
             'attributes' => $attributes
         ));
@@ -294,18 +352,22 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
 
     /**
      * AJAX handler to save a similar products rule
-     * Updated to handle multiple source categories
+     * 
+     * Processes form data to create or update a rule that defines which attributes
+     * to use for finding similar products within specific categories.
+     * Supports both multiple categories (new format) and single category (legacy).
      *
      * @since    1.0.6
+     * @access   public
      */
     public function ajax_save_similar_products_rule() {
-        // Check nonce
+        // Check nonce for security
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_similar_products_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
             return;
         }
 
-        // Check permissions
+        // Check user permissions
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => __('You do not have permission to perform this action.', 'product-estimator')));
             return;
@@ -314,22 +376,23 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
         // Get rule data
         $rule_id = isset($_POST['rule_id']) ? sanitize_text_field($_POST['rule_id']) : '';
 
-        // Get source categories - now supports multiple
+        // Get source categories - supports multiple categories
         $source_categories = isset($_POST['source_categories']) && is_array($_POST['source_categories'])
             ? array_map('absint', $_POST['source_categories'])
             : array();
 
-        // For backward compatibility
+        // For backward compatibility - support single category
         if (empty($source_categories) && isset($_POST['source_category'])) {
             $source_categories = array(absint($_POST['source_category']));
         }
 
+        // Get selected attributes for similar product matching
         $attributes = isset($_POST['attributes']) && is_array($_POST['attributes'])
             ? array_map('sanitize_text_field', $_POST['attributes'])
             : array();
 
 
-        // Validate data
+        // Validate required data
         if (empty($source_categories)) {
             wp_send_json_error(array('message' => __('Please select at least one source category.', 'product-estimator')));
             return;
@@ -354,11 +417,13 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
         // Update or add the rule
         $settings[$rule_id] = array(
             'source_categories' => $source_categories,
+            'attributes' => $attributes,
         );
 
         // Save settings
         update_option($this->option_name, $settings);
 
+        // Send success response
         wp_send_json_success(array(
             'message' => __('Rule saved successfully!', 'product-estimator'),
             'rule_id' => $rule_id
@@ -367,17 +432,21 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
 
     /**
      * AJAX handler to delete a similar products rule
+     * 
+     * Removes a rule from the stored settings when requested via AJAX.
+     * Validates the request data and provides appropriate responses.
      *
      * @since    1.0.5
+     * @access   public
      */
     public function ajax_delete_similar_products_rule() {
-        // Check nonce
+        // Check nonce for security
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_similar_products_nonce')) {
             wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
             return;
         }
 
-        // Check permissions
+        // Check user permissions
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => __('You do not have permission to perform this action.', 'product-estimator')));
             return;
@@ -406,6 +475,7 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
         // Save settings
         update_option($this->option_name, $settings);
 
+        // Send success response
         wp_send_json_success(array(
             'message' => __('Rule deleted successfully!', 'product-estimator')
         ));
@@ -413,11 +483,15 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
 
     /**
      * Get all product attributes for specific categories
-     * Updated to handle multiple categories
+     * 
+     * Retrieves all product attributes used by products in the specified categories.
+     * Results are formatted for use in the admin interface (name and label for each attribute).
+     * Supports both multiple categories and single category (through type conversion).
      *
-     * @param array $category_ids The category IDs
-     * @return array List of available attributes
+     * @param array|int $category_ids The category ID(s) to get attributes for
+     * @return array List of available attributes with names and labels
      * @since    1.0.6
+     * @access   private
      */
     private function get_category_product_attributes($category_ids) {
         // Ensure we have an array of category IDs
@@ -425,7 +499,7 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
             $category_ids = array($category_ids);
         }
 
-        // Query products in the categories
+        // Query products in the specified categories
         $args = array(
             'post_type' => 'product',
             'posts_per_page' => 50, // Limit to avoid performance issues
@@ -456,7 +530,7 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
             $product_attributes = $product_obj->get_attributes();
 
             foreach ($product_attributes as $attribute_name => $attribute) {
-                // Skip if already processed
+                // Skip if already processed (avoid duplicates)
                 if (isset($processed_attributes[$attribute_name])) {
                     continue;
                 }
@@ -478,7 +552,7 @@ final class SimilarProductsSettingsModule extends SettingsModuleBase implements 
             }
         }
 
-        // Sort attributes by label
+        // Sort attributes by label for better user experience
         usort($attributes, function ($a, $b) {
             return strcmp($a['label'], $b['label']);
         });

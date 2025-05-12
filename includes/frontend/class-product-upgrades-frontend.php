@@ -77,7 +77,7 @@ class ProductUpgradesFrontend extends FrontendBase
             $config_settings['upgrade_for_product_id'] = $product_id;
             $config_settings['estimate_id'] = $estimate_id;
             $config_settings['room_id'] = $room_id;
-            $config_settings['display_mode'] = $config['display_mode'];
+            $config_settings['display_mode'] = 'tiles'; // Always use tiles display mode
             $config_settings['type'] = $type;
             $config_settings['title'] = $config['title'];
             $config_settings['description'] = $config['description'];

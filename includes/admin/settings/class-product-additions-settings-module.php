@@ -243,7 +243,24 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
             'auto_add_by_category' => __('Auto-Add Product with Category', 'product-estimator'),
             'auto_add_note_by_category' => __('Auto-Add Note with Category', 'product-estimator'),
         ];
-        if ($features && property_exists($features, 'suggested_products_enabled') && $features->suggested_products_enabled) {
+
+        // Debug feature switches
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Feature Switches Debug in ProductAdditionsSettingsModule::get_item_form_fields_definition()');
+            error_log('Raw feature switches object: ' . print_r($features, true));
+        }
+
+        // Check if suggested products feature is enabled
+        // We're now using a direct property on our wrapper object
+        $suggested_products_enabled = ($features && isset($features->suggested_products_enabled) && $features->suggested_products_enabled === true);
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('suggested_products_enabled value: ' . ($suggested_products_enabled ? 'true' : 'false'));
+        }
+
+        // Only include the suggest_products_by_category option if the feature is enabled
+        if ($suggested_products_enabled) {
+            error_log('Adding suggest_products_by_category option to action_type_options');
             $action_type_options['suggest_products_by_category'] = __('Suggest Products when Category', 'product-estimator');
         }
 
@@ -377,6 +394,11 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         // Filter out items for disabled features before display
         $features = $this->get_features_object();
         $processed_items = [];
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('get_items_for_table() - Features object: ' . print_r($features, true));
+        }
+
         if (is_array($items)) {
             foreach ($items as $id => $item_data) {
                 if (!is_array($item_data)) continue; // Skip malformed items
@@ -386,12 +408,25 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                     $item_data['id'] = $id;
                 }
 
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Processing item: ' . print_r($item_data, true));
+                }
+
+                // Skip suggest_products_by_category items if the feature is disabled
+                // Use the direct property access on our wrapper object
+                $suggested_products_enabled = ($features && isset($features->suggested_products_enabled) && $features->suggested_products_enabled === true);
+
                 if (isset($item_data['relation_type']) &&
                     $item_data['relation_type'] === 'suggest_products_by_category' &&
-                    $features && property_exists($features, 'suggested_products_enabled') &&
-                    !$features->suggested_products_enabled) {
+                    !$suggested_products_enabled) {
+
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Skipping item due to disabled feature: ' . $item_data['id']);
+                    }
+
                     continue; // Skip this item if the feature is disabled
                 }
+
                 $processed_items[$item_data['id']] = $item_data; // Re-key by actual item ID
             }
         }
@@ -554,6 +589,16 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         $features = $this->get_features_object();
         $base_product_search_id = 'product_id'; // Corresponds to the field ID in get_item_form_fields_definition
 
+        // Debug log the features object
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('ProductAdditionsSettingsModule::get_module_specific_script_data() - Features object:');
+            error_log(print_r($features, true));
+            if ($features) {
+                error_log('suggested_products_enabled value for JS: ' .
+                    (property_exists($features, 'suggested_products_enabled') && $features->suggested_products_enabled ? 'true' : 'false'));
+            }
+        }
+
         // Data that is unique to ProductAdditionsSettingsModule or overrides from common table data
         return [
             // 'option_name', 'tab_id', 'item_id_key', 'nonce' for CRUD are inherited from get_common_table_script_data()
@@ -601,7 +646,7 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 'noteTextRequired'       => __('The note text cannot be empty for this action type.', 'product-estimator'),
             ],
             'feature_flags' => [ // Module-specific flags for JS logic
-                'suggested_products_enabled' => ($features && property_exists($features, 'suggested_products_enabled')) ? $features->suggested_products_enabled : false,
+                'suggested_products_enabled' => ($features && isset($features->suggested_products_enabled) && $features->suggested_products_enabled === true),
             ]
         ];
     }
@@ -743,12 +788,20 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 }
                 break;
             case 'suggest_products_by_category':
-                if ($features && property_exists($features, 'suggested_products_enabled') && $features->suggested_products_enabled) {
+                // Check for feature enabled status using direct property access
+                $suggested_products_enabled = ($features && isset($features->suggested_products_enabled) && $features->suggested_products_enabled === true);
+
+                if ($suggested_products_enabled) {
                     if (empty($sanitized_data['target_category'])) {
                         $errors->add('missing_target_category_for_suggest', __('Please select a target category for suggestions.', 'product-estimator'));
                     }
                 } else {
                     $errors->add('feature_disabled_suggest', __('Suggest products feature is currently disabled. This rule cannot be saved.', 'product-estimator'));
+
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Validation failed - Suggest products feature is disabled.');
+                        error_log('Features object: ' . print_r($features, true));
+                    }
                 }
                 break;
             case 'auto_add_note_by_category':
@@ -815,17 +868,30 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         // Static variable persists between method calls for caching
         static $features_obj = null;
 
+        // Debug log
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('ProductAdditionsSettingsModule::get_features_object() called');
+        }
+
         // Only fetch the features once per request
         if ($features_obj === null) {
-            if (function_exists('product_estimator_features')) {
-                // Get features from the global function
-                $features_obj = product_estimator_features();
-            } else {
-                // Fallback with default values if function isn't available
-                $features_obj = (object)[
-                    'suggested_products_enabled' => false,
-                    // Add other default feature flags here as needed
-                ];
+            // Create a simple object with the feature flags
+            $features_obj = new \stdClass();
+
+            // Get features directly from the WordPress option
+            $feature_settings = get_option('product_estimator_feature_switches', []);
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Feature settings from option: ' . print_r($feature_settings, true));
+            }
+
+            // Set the suggested_products_enabled property
+            $suggested_products_value = isset($feature_settings['suggested_products_enabled']) ? $feature_settings['suggested_products_enabled'] : 0;
+            $features_obj->suggested_products_enabled = ($suggested_products_value == 1);
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('suggested_products_enabled raw value: ' . $suggested_products_value);
+                error_log('suggested_products_enabled set to: ' . ($features_obj->suggested_products_enabled ? 'true' : 'false'));
             }
         }
 
@@ -850,12 +916,33 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
      * @return string User-friendly translated label
      */
     private function get_relation_type_label($relation_type_key) {
+        // Get features object to check if suggested products is enabled
+        $features = $this->get_features_object();
+
+        // Debug log feature object when checking for relation type label
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('get_relation_type_label() called for: ' . $relation_type_key);
+            error_log('Features object: ' . print_r($features, true));
+        }
+
         // Map of relation type keys to their human-readable labels
         $labels = [
             'auto_add_by_category' => __('Auto-Add Product with Category', 'product-estimator'),
             'auto_add_note_by_category' => __('Auto-Add Note with Category', 'product-estimator'),
-            'suggest_products_by_category' => __('Suggest Products when Category', 'product-estimator'),
         ];
+
+        // Check if the feature is enabled using our wrapper object
+        // with direct property access
+        $suggested_products_enabled = ($features && isset($features->suggested_products_enabled) && $features->suggested_products_enabled === true);
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('suggested_products_enabled value: ' . ($suggested_products_enabled ? 'true' : 'false'));
+        }
+
+        // Only include suggest_products_by_category if the feature is enabled
+        if ($suggested_products_enabled) {
+            $labels['suggest_products_by_category'] = __('Suggest Products when Category', 'product-estimator');
+        }
 
         // Return the mapped label or format the key as a fallback
         return $labels[$relation_type_key] ?? ucfirst(str_replace('_', ' ', $relation_type_key));

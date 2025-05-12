@@ -458,19 +458,49 @@ class AdminTableManager extends VerticalTabbedModule {
     })
       .then(response => {
         this.logger.log('AJAX save response received:', response);
+
+        // Enhanced response validation with detailed logging
+        if (!response) {
+          this.logger.error('Empty response received from server');
+          this.showNotice(this.settings.i18n.errorSavingItem || 'Error: Empty response from server', 'error');
+          return;
+        }
+
+        this.logger.log('Response structure:', {
+          hasItemProperty: !!response.item,
+          itemType: response.item ? typeof response.item : 'N/A',
+          itemKeys: response.item ? Object.keys(response.item) : 'N/A',
+          message: response.message || 'No message'
+        });
+
         if (response && response.item) {
           this.showNotice(response.message || this.settings.i18n.itemSavedSuccess || 'Item saved.', 'success');
+
+          // CRITICAL: Handling the first item scenario directly
+          const isFirstItem = !this.dom.listTableBody.find('tr').length;
+          this.logger.log('Is this the first item?', isFirstItem);
+
           if (this.isEditMode) {
             this.updateTableRow(response.item);
           } else {
             this.addTableRow(response.item);
+
+            // Special handling for first item
+            if (isFirstItem) {
+              this.logger.log('FIRST ITEM ADDED - Ensuring table visibility');
+              this.dom.listTable.show();
+              this.dom.noItemsMessage.hide();
+
+              // Force DOM recalculation/repaint for the table
+              void this.dom.listTable[0].offsetHeight;
+            }
           }
+
           this.dom.formContainer?.slideUp();
           this.dom.addButton?.show();
           this.resetForm();
           this.isEditMode = false;
           this.currentItemId = null;
-          this.updateNoItemsMessageVisibility();
           this.formModified = false;
         } else {
           const errorMsg = (response && response.message) ? response.message : this.settings.i18n.errorSavingItem || 'Error saving item or response format incorrect.';
@@ -558,10 +588,47 @@ class AdminTableManager extends VerticalTabbedModule {
 
   addTableRow(itemData) {
     this.logger.log('Adding table row for tab:', this.settings.tab_id, itemData);
+
+    // Debug table state before adding row
+    const preAddInfo = {
+      hasListTable: !!this.dom.listTable?.length,
+      hasListTableBody: !!this.dom.listTableBody?.length,
+      tableSelector: this.dom.listTable?.selector || 'N/A',
+      tableBodySelector: this.dom.listTableBody?.selector || 'N/A',
+      isTableVisible: this.dom.listTable?.is(':visible'),
+      existingRows: this.dom.listTableBody?.find('tr').length || 0
+    };
+    this.logger.log('Pre-add table state:', preAddInfo);
+
+    // Create the row
     const $row = this.createTableRow(itemData);
+    this.logger.log('Created row:', $row && $row.length ? 'Successfully' : 'Failed');
+
+    // Add the row to the table
     if ($row && this.dom.listTableBody && this.dom.listTableBody.length) {
       this.dom.listTableBody.append($row);
-      this.updateNoItemsMessageVisibility();
+      this.logger.log('Row appended to table body');
+
+      // Always make table visible after adding a row, and hide the "no items" message
+      if (this.dom.listTable) {
+        this.logger.log('Making table visible after row added');
+        this.dom.listTable.show();
+      }
+
+      if (this.dom.noItemsMessage) {
+        this.logger.log('Hiding no items message after row added');
+        this.dom.noItemsMessage.hide();
+      }
+
+      // Skip updateNoItemsMessageVisibility() since we're explicitly handling visibility
+
+      // Debug table state after adding row
+      const postAddInfo = {
+        isTableVisible: this.dom.listTable?.is(':visible'),
+        rowCount: this.dom.listTableBody?.find('tr').length || 0,
+        isNoItemsVisible: this.dom.noItemsMessage?.is(':visible')
+      };
+      this.logger.log('Post-add table state:', postAddInfo);
     } else {
       this.logger.error('Failed to add table row: createTableRow returned invalid value or listTableBody not found for tab:', this.settings.tab_id);
     }
@@ -625,19 +692,30 @@ class AdminTableManager extends VerticalTabbedModule {
     // Get i18n strings
     const i18n = this.settings.i18n || {};
 
-    // Create the row with the correct data-id attribute and any classes from the selector
-    const $row = this.$(`<${listItemRowSelector.split('.')[0]} data-id="${itemData.id}"></${listItemRowSelector.split('.')[0]}>`);
+    // Extract just the tag name without any attribute selectors
+    const tagName = listItemRowSelector.split('.')[0].replace(/\[(.*?)\]/g, '');
+
+    // Create the row with the correct tag and data-id attribute
+    const $row = this.$(`<${tagName} data-id="${itemData.id}"></${tagName}>`);
+
+    // Debug the row element that's being created
+    this.logger.log(`Creating row with tag: "${tagName}", selector was: "${listItemRowSelector}"`);
 
     // If listItemRowSelector includes classes, add them: e.g., 'tr.my-custom-row-class'
     if (listItemRowSelector.includes('.')) {
       $row.addClass(listItemRowSelector.substring(listItemRowSelector.indexOf('.') + 1).replace(/\./g, ' '));
     }
 
+    this.logger.log(`Creating row for item ID ${itemData.id} with columns:`, Object.keys(tableColumns));
+
     // Create each cell using the column IDs from PHP
     Object.entries(tableColumns).forEach(([columnId, columnTitle]) => {
       const $cell = this.$('<td></td>')
         .addClass(`column-${columnId}`) // Match the PHP class naming convention
         .attr('data-colname', columnTitle); // Set the column title for responsive display
+
+      // Log column creation for debugging
+      this.logger.log(`Creating column "${columnId}" for row ${itemData.id}`);
 
       // Hook points for column customization:
       // 1. Child class can implement a specific method for a column
@@ -648,9 +726,11 @@ class AdminTableManager extends VerticalTabbedModule {
       const methodName = `populateColumn_${columnId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
       if (typeof this[methodName] === 'function') {
         // Let the child class handle this specific column
+        this.logger.log(`Using custom handler ${methodName} for column "${columnId}"`);
         this[methodName]($cell, itemData, columnId);
       } else if (columnId === 'item_actions' || columnId.endsWith('_actions')) {
         // Default handling for actions column
+        this.logger.log(`Creating actions column with default buttons`);
         $cell.addClass('actions');
 
         // Create edit button
@@ -671,11 +751,19 @@ class AdminTableManager extends VerticalTabbedModule {
       } else {
         // Default handling for other columns - just use the display field if available
         const displayField = `${columnId}_display`;
-        $cell.text(itemData[displayField] || itemData[columnId] || '');
+        const displayValue = itemData[displayField] || itemData[columnId] || '';
+        this.logger.log(`Setting text for column "${columnId}": "${displayValue}"`);
+        $cell.text(displayValue);
       }
 
       // Add the cell to the row
       $row.append($cell);
+    });
+
+    // Debug the final row structure
+    this.logger.log(`Final row structure for item ${itemData.id}:`, {
+      html: $row.prop('outerHTML'),
+      cellCount: $row.find('td').length
     });
 
     // Allow child classes to perform post-processing on the row
@@ -691,8 +779,25 @@ class AdminTableManager extends VerticalTabbedModule {
       this.logger.warn('Cannot update "no items" message: listItemRow selector missing in settings.selectors.');
       return;
     }
+
+    // Debug info
+    const debugInfo = {
+      hasNoItemsMessage: !!this.dom.noItemsMessage?.length,
+      hasListTableBody: !!this.dom.listTableBody?.length,
+      hasListTable: !!this.dom.listTable?.length,
+      listItemRowSelector: this.settings.selectors.listItemRow,
+      tableBodyContent: this.dom.listTableBody ? this.dom.listTableBody.html() : 'N/A',
+      rowsFound: this.dom.listTableBody ? this.dom.listTableBody.find(this.settings.selectors.listItemRow).length : -1
+    };
+    this.logger.log('updateNoItemsMessageVisibility debug info:', debugInfo);
+
     if (this.dom.noItemsMessage && this.dom.noItemsMessage.length && this.dom.listTableBody && this.dom.listTable) {
-      const hasItems = this.dom.listTableBody.find(this.settings.selectors.listItemRow).length > 0;
+      const rowSelector = this.settings.selectors.listItemRow;
+      const $foundRows = this.dom.listTableBody.find(rowSelector);
+      const hasItems = $foundRows.length > 0;
+
+      this.logger.log(`Looking for rows matching "${rowSelector}" in table body - found: ${$foundRows.length}`);
+
       if (hasItems) {
         this.dom.noItemsMessage.hide();
         this.dom.listTable.show();

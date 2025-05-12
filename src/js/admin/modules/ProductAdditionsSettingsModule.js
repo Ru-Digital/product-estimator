@@ -23,6 +23,9 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     };
     super(config); // Calls AdminTableManager constructor
 
+    // We can access feature flags via this.settings.feature_flags
+    // This is used in _handleRelationTypeChange to show/hide fields
+
     // this.logger is initialized by AdminTableManager.
     // this.settings (formerly this.localizedData in VTM/ATM context before PES refactor)
     // is populated by ProductEstimatorSettings via the super chain.
@@ -150,6 +153,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     const actionType = this.dom.relationTypeSelect?.val();
     this.logger.log('Relation type changed to:', actionType);
 
+    // Check feature flags to determine UI behavior
+
     this.dom.targetCategoryRow?.hide();
     this.dom.productSearchRow?.hide();
     this.dom.noteRow?.hide();
@@ -163,7 +168,7 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     } else if (actionType === 'auto_add_note_by_category') {
       this.dom.noteRow?.show();
     } else if (actionType === 'suggest_products_by_category') {
-      // this.settings contains feature_flags if they are part of the localized object
+      // Only show target category row if feature is enabled
       if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {
         this.dom.targetCategoryRow?.show();
       } else {

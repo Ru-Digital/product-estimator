@@ -1,6 +1,10 @@
 /**
  * Product Upgrades Admin CSS
  * Styles for the upgrade configurations management interface
+ * 
+ * Note: Table styles moved to admin-tables.css
+ * Select2 styles moved to product-estimator-settings.css
+ * This file only contains module-specific styles
  */
 
 /* Container Styles */
@@ -63,55 +67,6 @@
   max-width: 100%;
 }
 
-/* Select2 Custom Styles */
-.select2-container--default .select2-selection--multiple {
-  border-color: #8c8f94;
-}
-
-.select2-container--default.select2-container--focus .select2-selection--multiple {
-  border-color: #2271b1;
-  box-shadow: 0 0 0 1px #2271b1;
-}
-
-.select2-container--default .select2-selection--multiple .select2-selection__choice {
-  background-color: #f0f0f1;
-  border-color: #c3c4c7;
-  color: #3c434a;
-  padding: 3px 8px;
-}
-
-.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
-  color: #b32d2e;
-  margin-right: 5px;
-}
-
-.select2-container--default .select2-selection--single {
-  border-color: #8c8f94;
-  height: auto;
-  padding: 4px 8px;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-  line-height: 1.5;
-}
-
-.select2-dropdown {
-  border-color: #2271b1;
-}
-
-.select2-container--default .select2-results__option--highlighted[aria-selected] {
-  background-color: #2271b1;
-}
-
-.select2-container .select2-selection--multiple .select2-selection__rendered {
-  padding: 4px 8px;
-}
-
-.select2-container--default .select2-selection--multiple .select2-selection__choice {
-  margin-top: 4px;
-  margin-bottom: 4px;
-}
-
 /* Form Actions */
 .form-actions {
   margin-top: 20px;
@@ -128,28 +83,6 @@
 
 .product-upgrades-list h3 {
   margin-bottom: 12px;
-}
-
-.product-upgrades-table {
-  border-spacing: 0;
-  width: 100%;
-  clear: both;
-}
-
-.product-upgrades-table thead th {
-  font-weight: 600;
-  padding: 8px 10px;
-  line-height: 1.3;
-  font-size: 14px;
-}
-
-.product-upgrades-table td {
-  vertical-align: middle;
-  padding: 10px;
-}
-
-.product-upgrades-table .actions {
-  text-align: right;
 }
 
 /* Button Styles */
@@ -212,8 +145,7 @@
   }
 
   #product-upgrade-form select,
-  #product-upgrade-form textarea,
-  .select2-container {
+  #product-upgrade-form textarea {
     width: 100% !important;
   }
 
@@ -235,17 +167,6 @@
   .form-actions button {
     width: 100%;
     margin-bottom: 5px;
-  }
-
-  .product-upgrades-table .column-actions {
-    text-align: left;
-  }
-
-  .product-upgrades-table .actions button {
-    display: block;
-    width: 100%;
-    margin-bottom: 5px;
-    text-align: center;
   }
 }
 

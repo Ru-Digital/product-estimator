@@ -275,7 +275,7 @@ class ProductUpgrades {
    * @param {Object} upgrade - Upgrade configuration
    */
   renderUpgradeOption(container, upgrade) {
-    // Create the upgrade option based on display mode
+    // Create the upgrade option with the tiles display mode
     const upgradeElement = document.createElement('div');
     upgradeElement.className = 'product-upgrade-option';
 
@@ -295,128 +295,35 @@ class ProductUpgrades {
       upgradeElement.appendChild(descElement);
     }
 
-    // Create the appropriate input based on display mode
-    switch (upgrade.display_mode) {
-      case 'dropdown':
-        this.createDropdownUpgrade(upgradeElement, upgrade);
-        break;
-
-      case 'radio':
-        this.createRadioUpgrade(upgradeElement, upgrade);
-        break;
-
-      case 'tiles':
-        this.createTilesUpgrade(upgradeElement, upgrade);
-        break;
-
-      default:
-        // Default to dropdown
-        this.createDropdownUpgrade(upgradeElement, upgrade);
-    }
+    // Create tiles display for upgrade options
+    this.createTilesUpgrade(upgradeElement, upgrade);
 
     // Add to container
     container.appendChild(upgradeElement);
   }
 
   /**
-   * Create a dropdown upgrade option
+   * Create a dropdown upgrade option (Legacy method, no longer used)
    * @param {HTMLElement} container - Container element
    * @param {Object} upgrade - Upgrade configuration
+   * @deprecated Since all upgrades now use the tiles display mode
    */
   createDropdownUpgrade(container, upgrade) {
-    const selectContainer = document.createElement('div');
-    selectContainer.className = 'product-upgrade-select';
-    selectContainer.dataset.upgradeId = upgrade.id;
-
-    const select = document.createElement('select');
-    select.className = 'upgrade-select';
-    select.name = `upgrade_${upgrade.id}`;
-
-    // Add default "No upgrade" option
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.textContent = 'No upgrade';
-    select.appendChild(defaultOption);
-
-    // Add upgrade options
-    if (upgrade.upgrade_categories && upgrade.upgrade_categories.length > 0) {
-      // First load all products in these categories
-      this.loadCategoryProducts(upgrade.upgrade_categories)
-        .then(products => {
-          products.forEach(product => {
-            const option = document.createElement('option');
-            option.value = product.id;
-            option.textContent = product.name;
-            option.dataset.price = product.price;
-            select.appendChild(option);
-          });
-        })
-        .catch(error => {
-          this.log('Error loading category products:', error);
-        });
-    }
-
-    selectContainer.appendChild(select);
-    container.appendChild(selectContainer);
-
-    // Add change event listener
-    select.addEventListener('change', () => this.handleUpgradeSelection(select));
+    // This method is kept for backward compatibility but is no longer used
+    // All upgrades now use the tiles display mode
+    this.createTilesUpgrade(container, upgrade);
   }
 
   /**
-   * Create radio button upgrade options
+   * Create radio button upgrade options (Legacy method, no longer used)
    * @param {HTMLElement} container - Container element
    * @param {Object} upgrade - Upgrade configuration
+   * @deprecated Since all upgrades now use the tiles display mode
    */
   createRadioUpgrade(container, upgrade) {
-    const radioContainer = document.createElement('div');
-    radioContainer.className = 'product-upgrade-radio';
-    radioContainer.dataset.upgradeId = upgrade.id;
-
-    // Create a form group for radio buttons
-    const radioGroup = document.createElement('div');
-    radioGroup.className = 'radio-group';
-
-    // Add "No upgrade" option
-    const defaultLabel = document.createElement('label');
-    defaultLabel.className = 'radio-label';
-
-    const defaultRadio = document.createElement('input');
-    defaultRadio.type = 'radio';
-    defaultRadio.name = `upgrade_${upgrade.id}`;
-    defaultRadio.value = '';
-    defaultRadio.checked = true;
-
-    defaultLabel.appendChild(defaultRadio);
-    defaultLabel.appendChild(document.createTextNode('No upgrade'));
-    radioGroup.appendChild(defaultLabel);
-
-    // Load and add upgrade options
-    if (upgrade.upgrade_categories && upgrade.upgrade_categories.length > 0) {
-      this.loadCategoryProducts(upgrade.upgrade_categories)
-        .then(products => {
-          products.forEach(product => {
-            const label = document.createElement('label');
-            label.className = 'radio-label';
-
-            const radio = document.createElement('input');
-            radio.type = 'radio';
-            radio.name = `upgrade_${upgrade.id}`;
-            radio.value = product.id;
-            radio.dataset.price = product.price;
-
-            label.appendChild(radio);
-            label.appendChild(document.createTextNode(product.name));
-            radioGroup.appendChild(label);
-          });
-        })
-        .catch(error => {
-          this.log('Error loading category products:', error);
-        });
-    }
-
-    radioContainer.appendChild(radioGroup);
-    container.appendChild(radioContainer);
+    // This method is kept for backward compatibility but is no longer used
+    // All upgrades now use the tiles display mode
+    this.createTilesUpgrade(container, upgrade);
   }
 
   /**

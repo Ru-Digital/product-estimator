@@ -117,11 +117,12 @@ class SettingsManager {
             'NotificationSettingsModule',
             'ProductAdditionsSettingsModule',
             'LabelsSettingsModule',
-            'FeatureSwitchesSettingsModule',
             #TODO
 //            'PricingRulesSettingsModule',
 //            'SimilarProductsSettingsModule',
-//            'ProductUpgradesSettingsModule',
+            'ProductUpgradesSettingsModule',
+            'FeatureSwitchesSettingsModule',
+
         ];
 
         // Load and initialize each module

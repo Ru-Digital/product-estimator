@@ -20,7 +20,6 @@ class AdminTableManager extends VerticalTabbedModule {
    * @param {string} config.localizedDataName - The name of the global JS object holding localized data.
    */
   constructor(config) {
-    console.log('[AdminTableManager] Constructor received config:', JSON.stringify(config)); // Log at the very start
 
     // Configuration for the VerticalTabbedModule parent class
     const vtmConfig = {
@@ -29,7 +28,6 @@ class AdminTableManager extends VerticalTabbedModule {
       ajaxActionPrefix: `atm_form_save_${config.mainTabId}`
     };
 
-    console.log('[AdminTableManager] vtmConfig created:', JSON.stringify(vtmConfig));
 
     super(vtmConfig); // Calls VerticalTabbedModule constructor
 
@@ -42,13 +40,10 @@ class AdminTableManager extends VerticalTabbedModule {
     // Use `config.mainTabId` (from this constructor's direct argument `config`)
     // This `config` is guaranteed to have `mainTabId` as passed by ProductAdditionsSettingsModule.
 
-    console.log('[AdminTableManager] About to initialize logger. Current config:', JSON.stringify(config));
-    console.log('[AdminTableManager] Value of config.mainTabId:', config.mainTabId); // What does this print?
     const loggerName = `AdminTableManager:${config.mainTabId || 'Generic'}`;
-    console.log('[AdminTableManager] Constructed logger name:', loggerName);
 
     this.logger = createLogger(loggerName); // Pass the pre-constructed string
-    this.logger = createLogger(`AdminTableManager:${config.mainTabId || 'Generic'}`);
+    this.logger = createLogger(`${config.mainTabId || 'Generic'}`);
 
     // `this.settings` is initialized by the `super(vtmConfig)` call chain (ProductEstimatorSettings).
     // `this.settings.tab_id` will hold the mainTabId.

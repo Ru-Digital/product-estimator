@@ -105,7 +105,7 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
 
     // Click handling for vertical tab navigation links
     this.$container.on('click.vtm', '.pe-vtabs-nav-list a, .vertical-tabs-nav a', this.handleVerticalTabClick.bind(this));
-    logger.log(`VerticalTabbedModule for "${this.settings.tab_id}": Common VTM events bound.`);
+    logger.log(`[${this.settings.tab_id}] Common VTM events bound.`);
   }
 
   /**
@@ -113,7 +113,7 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
    * (e.g., AdminTableManager will put its item table/form events here or in its own init)
    */
   bindModuleSpecificEvents() {
-    logger.log(`VerticalTabbedModule for "${this.settings.tab_id}": Base bindModuleSpecificEvents() called.`);
+    logger.log(`[${this.settings.tab_id}] Base bindModuleSpecificEvents() called.`);
     // Child classes like AdminTableManager will override this to bind their own specific events.
   }
 
@@ -121,7 +121,7 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
    * Called when this module's main horizontal tab becomes active. Override in child classes.
    */
   onMainTabActivated() {
-    logger.log(`VerticalTabbedModule for "${this.settings.tab_id}": Base onMainTabActivated() called.`);
+    logger.log(`[${this.settings.tab_id}] Base onMainTabActivated() called.`);
     // Child classes can implement specific logic here.
   }
 
@@ -129,21 +129,21 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
    * Called when this module's main horizontal tab becomes inactive. Override in child classes.
    */
   onMainTabDeactivated() {
-    logger.log(`VerticalTabbedModule for "${this.settings.tab_id}": Base onMainTabDeactivated() called.`);
+    logger.log(`[${this.settings.tab_id}] Base onMainTabDeactivated() called.`);
     // Child classes can implement specific logic here.
   }
 
   setupVerticalTabs() {
     if (!this.$container || !this.$container.length) {
-      logger.warn(`VerticalTabbedModule for "${this.settings.tab_id}": Cannot setup vertical tabs, $container not found.`);
+      logger.warn(`[${this.settings.tab_id}] Cannot setup vertical tabs, $container not found.`);
       return;
     }
-    logger.log(`VerticalTabbedModule for "${this.settings.tab_id}": Setting up vertical tabs.`);
+    logger.log(`[${this.settings.tab_id}] Setting up vertical tabs.`);
     const $verticalTabsNav = this.$container.find('.pe-vtabs-nav-list, .vertical-tabs-nav');
     const $verticalTabContents = this.$container.find('.pe-vtabs-tab-panel, .vertical-tab-content');
 
     if (!$verticalTabsNav.length || !$verticalTabContents.length) {
-      logger.warn(`VerticalTabbedModule for "${this.settings.tab_id}": Vertical tab navigation or content panels not found. Vertical tabs may not function.`);
+      logger.warn(`[${this.settings.tab_id}] Vertical tab navigation or content panels not found. Vertical tabs may not function.`);
       return;
     }
 
@@ -161,17 +161,17 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     }
 
     if (!$verticalTabsNav.find(`a[data-tab="${activeSubTabId}"]`).length) {
-      logger.warn(`VerticalTabbedModule for "${this.settings.tab_id}": Determined active/default sub-tab "${activeSubTabId}" not valid. Falling back to first available.`);
+      logger.warn(`[${this.settings.tab_id}] Determined active/default sub-tab "${activeSubTabId}" not valid. Falling back to first available.`);
       const $firstTabLink = $verticalTabsNav.find('a[data-tab]').first();
       if ($firstTabLink.length) {
         activeSubTabId = $firstTabLink.data('tab');
       } else {
-        logger.error(`VerticalTabbedModule for "${this.settings.tab_id}": No valid sub-tabs found. Cannot initialize vertical tabs.`);
+        logger.error(`[${this.settings.tab_id}] No valid sub-tabs found. Cannot initialize vertical tabs.`);
         return;
       }
     }
 
-    logger.log(`VerticalTabbedModule for "${this.settings.tab_id}": Initial active sub-tab ID to show: ${activeSubTabId}`);
+    logger.log(`[${this.settings.tab_id}] Initial active sub-tab ID to show: ${activeSubTabId}`);
     this.showVerticalTab(activeSubTabId, false); // false to prevent history update on initial load
 
     this.adjustTabContentHeight();
@@ -187,7 +187,7 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     if (subTabId) {
       this.showVerticalTab(subTabId, true); // true to update history
     } else {
-      logger.warn(`VerticalTabbedModule for "${this.settings.tab_id}": Vertical tab link clicked but no subTabId found in data-tab attribute.`);
+      logger.warn(`[${this.settings.tab_id}] Vertical tab link clicked but no subTabId found in data-tab attribute.`);
     }
   }
 
@@ -223,7 +223,7 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     if ($activeContentPanel.length) {
       $activeContentPanel.show().addClass('active');
     } else {
-      logger.warn(`VerticalTabbedModule for "${this.settings.tab_id}": Content panel for sub-tab ID "${subTabId}" not found.`);
+      logger.warn(`[${this.settings.tab_id}] Content panel for sub-tab ID "${subTabId}" not found.`);
     }
 
     if (updateHistory) {
@@ -291,7 +291,7 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     const subTabId = $form.attr('data-sub-tab-id');
 
     if (!subTabId || String(subTabId).trim() === '') {
-      logger.error(`VerticalTabbedModule for "${this.settings.tab_id}": CRITICAL - 'data-sub-tab-id' attribute is missing or empty on the submitted form. Form:`, $form[0]);
+      logger.error(`[${this.settings.tab_id}] CRITICAL - 'data-sub-tab-id' attribute is missing or empty on the submitted form. Form:`, $form[0]);
       this.showNotice('Error: Could not save settings. Form configuration is missing "data-sub-tab-id".', 'error');
       return;
     }
@@ -321,7 +321,7 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
       main_tab_id: this.settings.tab_id // Pass main tab ID for context if needed by backend
     };
 
-    logger.log(`VerticalTabbedModule for "${this.settings.tab_id}": Sending AJAX with payload:`, ajaxDataPayload);
+    logger.log(`[${this.settings.tab_id}] Sending AJAX with payload:`, ajaxDataPayload);
 
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl, // ajaxUrl from base class settings
@@ -329,7 +329,7 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
       data: ajaxDataPayload
     })
       .then(response => {
-        logger.log(`VerticalTabbedModule for "${this.settings.tab_id}": AJAX success response:`, response);
+        logger.log(`[${this.settings.tab_id}] AJAX success response:`, response);
         const successMsg = (response && response.message) || (this.settings.i18n && this.settings.i18n.saveSuccess) || 'Settings saved successfully.';
         this.showNotice(successMsg, 'success'); // Inherited from ProductEstimatorSettings
 
@@ -343,14 +343,14 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
         }
       })
       .catch(error => {
-        logger.error(`VerticalTabbedModule for "${this.settings.tab_id}": AJAX error response:`, error);
+        logger.error(`[${this.settings.tab_id}] AJAX error response:`, error);
         const errorMsg = (error && error.message) ? error.message : (this.settings.i18n && this.settings.i18n.saveError) || 'Error saving settings.';
         this.showNotice(errorMsg, 'error'); // Inherited from ProductEstimatorSettings
       })
       .finally(() => {
         $submitButton.prop('disabled', false);
         $spinner.removeClass('is-active');
-        logger.log(`VerticalTabbedModule for "${this.settings.tab_id}": AJAX request finalized.`);
+        logger.log(`[${this.settings.tab_id}] AJAX request finalized.`);
       });
   }
 

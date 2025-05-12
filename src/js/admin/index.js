@@ -14,7 +14,7 @@ import './modules/FeatureSwitchesSettingsModule';
 //TODO
 // import './modules/PricingRulesSettingsModule';
 // import './modules/SimilarProductsSettingsModule';
-// import './modules/ProductUpgradesSettingsModule';
+import './modules/ProductUpgradesSettingsModule';
 
 // This is the main entry point for the frontend script bundle
 // The admin modules are imported separately due to code splitting in webpack

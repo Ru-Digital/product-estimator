@@ -212,6 +212,10 @@ class AdminTableManager extends VerticalTabbedModule {
     this.logger.log('DOM elements cached for tab:', this.settings.tab_id);
   }
 
+  /**
+   * Binds event handlers to DOM elements.
+   * This method sets up all the common event handling for the table manager.
+   */
   bindEvents() {
     if (!this.dom || Object.keys(this.dom).length === 0) {
       this.logger.error("AdminTableManager bindEvents: DOM elements not cached (this.dom is empty/undefined). Cannot bind events.");
@@ -223,6 +227,7 @@ class AdminTableManager extends VerticalTabbedModule {
     const deleteButtonSelector = this.settings.selectors?.deleteButton;
 
     if (this.dom.listTableBody && this.dom.listTableBody.length) {
+      // Bind standard action buttons
       if (editButtonSelector) {
         this.dom.listTableBody.on('click.adminTableManager', editButtonSelector, this.handleEdit.bind(this));
       } else {
@@ -233,6 +238,9 @@ class AdminTableManager extends VerticalTabbedModule {
       } else {
         this.logger.warn('Delete button selector (settings.selectors.deleteButton) is undefined. Skipping bind for delete.');
       }
+
+      // Bind custom action buttons if they exist
+      this.bindCustomActionButtons();
     } else {
       this.logger.warn('listTableBody DOM element not found for tab:', this.settings.tab_id, '- Edit/delete events for items not bound.');
     }
@@ -243,7 +251,22 @@ class AdminTableManager extends VerticalTabbedModule {
     this.dom.form?.on('change.adminTableManager input.adminTableManager', ':input', () => {
       this.formModified = true;
     });
+
     this.logger.log('AdminTableManager common events bound for tab:', this.settings.tab_id);
+  }
+
+  /**
+   * Binds event handlers for custom action buttons.
+   * Child classes should override this method to bind their custom action buttons.
+   */
+  bindCustomActionButtons() {
+    // Base implementation does nothing
+    // Child classes should override to handle their custom action buttons
+    // Example implementation:
+    //
+    // if (this.dom.listTableBody) {
+    //   this.dom.listTableBody.on('click.adminTableManager', '.pe-view-product-button', this.handleViewProduct.bind(this));
+    // }
   }
 
   handleAddNew(e) {
@@ -568,10 +591,99 @@ class AdminTableManager extends VerticalTabbedModule {
     }
   }
 
+  /**
+   * Creates a table row from item data.
+   * This method provides a common implementation for creating table rows based on
+   * the table_columns setting provided from PHP.
+   *
+   * @param {Object} itemData - The item data for the row.
+   * @returns {jQuery} - The jQuery object representing the row.
+   */
   createTableRow(itemData) {
-    this.logger.error('createTableRow() must be implemented by the child class.', itemData);
-    const colspan = this.dom.listTable?.find('thead th').length || 4;
-    return this.$(`<tr><td colspan="${colspan}">Error: createTableRow not implemented in child for ${this.settings.tab_id}.</td></tr>`);
+    this.logger.log('AdminTableManager: Creating table row with data:', itemData);
+    if (!itemData || !itemData.id) {
+      this.logger.error('Cannot create table row: itemData or itemData.id is missing.');
+      // Return a valid jQuery object for a row, even for an error.
+      const colspan = this.dom.listTable?.find('thead th').length || 4;
+      return this.$(`<tr><td colspan="${colspan}">Error: Invalid item data provided to createTableRow.</td></tr>`);
+    }
+
+    // Get column information from the settings passed from PHP
+    const tableColumns = this.settings.table_columns || {};
+    if (Object.keys(tableColumns).length === 0) {
+      this.logger.error('Table columns data is missing in settings. Settings must include table_columns data.');
+      const colspan = this.dom.listTable?.find('thead th').length || 4;
+      return this.$(`<tr><td colspan="${colspan}">Error: table_columns data missing in settings for ${this.settings.tab_id}.</td></tr>`);
+    }
+
+    // Get selector values
+    const selectors = this.settings.selectors || {};
+    const listItemRowSelector = selectors.listItemRow || 'tr'; // Base class might use this if defined
+    const editButtonClass = (selectors.editButton || '.pe-edit-item-button').replace(/^\./, '');
+    const deleteButtonClass = (selectors.deleteButton || '.pe-delete-item-button').replace(/^\./, '');
+
+    // Get i18n strings
+    const i18n = this.settings.i18n || {};
+
+    // Create the row with the correct data-id attribute and any classes from the selector
+    const $row = this.$(`<${listItemRowSelector.split('.')[0]} data-id="${itemData.id}"></${listItemRowSelector.split('.')[0]}>`);
+
+    // If listItemRowSelector includes classes, add them: e.g., 'tr.my-custom-row-class'
+    if (listItemRowSelector.includes('.')) {
+      $row.addClass(listItemRowSelector.substring(listItemRowSelector.indexOf('.') + 1).replace(/\./g, ' '));
+    }
+
+    // Create each cell using the column IDs from PHP
+    Object.entries(tableColumns).forEach(([columnId, columnTitle]) => {
+      const $cell = this.$('<td></td>')
+        .addClass(`column-${columnId}`) // Match the PHP class naming convention
+        .attr('data-colname', columnTitle); // Set the column title for responsive display
+
+      // Hook points for column customization:
+      // 1. Child class can implement a specific method for a column
+      // 2. Generic actions column handler
+      // 3. Default text display
+
+      // Check if the child class has a method to populate specific column content
+      const methodName = `populateColumn_${columnId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+      if (typeof this[methodName] === 'function') {
+        // Let the child class handle this specific column
+        this[methodName]($cell, itemData, columnId);
+      } else if (columnId === 'item_actions' || columnId.endsWith('_actions')) {
+        // Default handling for actions column
+        $cell.addClass('actions');
+
+        // Create edit button
+        const $editButton = this.$('<button></button>')
+          .attr('type', 'button')
+          .addClass(`button button-small ${editButtonClass}`)
+          .text(i18n.editButtonLabel || 'Edit')
+          .data('id', itemData.id);
+
+        // Create delete button
+        const $deleteButton = this.$('<button></button>')
+          .attr('type', 'button')
+          .addClass(`button button-small ${deleteButtonClass}`)
+          .text(i18n.deleteButtonLabel || 'Delete')
+          .data('id', itemData.id);
+
+        $cell.append($editButton, ' ', $deleteButton);
+      } else {
+        // Default handling for other columns - just use the display field if available
+        const displayField = `${columnId}_display`;
+        $cell.text(itemData[displayField] || itemData[columnId] || '');
+      }
+
+      // Add the cell to the row
+      $row.append($cell);
+    });
+
+    // Allow child classes to perform post-processing on the row
+    if (typeof this.afterRowCreated === 'function') {
+      this.afterRowCreated($row, itemData);
+    }
+
+    return $row;
   }
 
   updateNoItemsMessageVisibility() {

@@ -11,7 +11,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements SettingsModuleInterface {
+final class LabelsSettingsModule extends SettingsModuleWithTableBase implements SettingsModuleInterface {
 
     protected $option_name = 'product_estimator_labels';
     private $defined_label_types = [];
@@ -253,6 +253,99 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
     public function get_defined_label_types() {
         return $this->defined_label_types;
+    }
+
+    /**
+     * Get table columns for the labels table
+     *
+     * @return array Associative array of column_id => column_label
+     */
+    protected function get_table_columns() {
+        return [
+            'label_id' => __('Label ID', 'product-estimator'),
+            'label_title' => __('Label Title', 'product-estimator'),
+            'label_value' => __('Current Value', 'product-estimator'),
+            'item_actions' => __('Actions', 'product-estimator')
+        ];
+    }
+
+    /**
+     * Render table cell content
+     *
+     * @param array $item Item data
+     * @param string $column_name Column name
+     * @return string Cell content
+     */
+    public function render_table_cell_content($item, $column_name) {
+        switch ($column_name) {
+            case 'label_id':
+                return esc_html($item['id'] ?? '');
+            case 'label_title':
+                return esc_html($item['title'] ?? '');
+            case 'label_value':
+                return esc_html($item['value'] ?? '');
+            case 'item_actions':
+                return $this->render_standard_item_actions($item);
+            default:
+                return '';
+        }
+    }
+
+    /**
+     * Validate item data
+     *
+     * @param array $raw_item_data Raw item data
+     * @param string|null $item_id Item ID
+     * @param array|null $original_item_data Original item data
+     * @return array|WP_Error Validated data or error
+     */
+    protected function validate_item_data(array $raw_item_data, $item_id = null, $original_item_data = null) {
+        $validated = [];
+
+        if (empty($raw_item_data['label_id']) && empty($item_id)) {
+            return new \WP_Error('missing_label_id', __('Label ID is required.', 'product-estimator'));
+        }
+
+        $validated['id'] = $item_id ?: sanitize_key($raw_item_data['label_id']);
+        $validated['title'] = sanitize_text_field($raw_item_data['label_title'] ?? '');
+        $validated['value'] = sanitize_text_field($raw_item_data['label_value'] ?? '');
+
+        return $validated;
+    }
+
+    /**
+     * Define form fields for the label item form
+     *
+     * @return array Form fields definition
+     */
+    protected function get_item_form_fields_definition() {
+        return [
+            'label_id' => [
+                'type' => 'text',
+                'label' => __('Label ID', 'product-estimator'),
+                'required' => true,
+                'description' => __('Unique identifier for this label', 'product-estimator'),
+                'attributes' => ['readonly' => 'readonly'],
+                'show_in_edit' => true,
+                'show_in_add' => true,
+            ],
+            'label_title' => [
+                'type' => 'text',
+                'label' => __('Label Title', 'product-estimator'),
+                'required' => true,
+                'description' => __('Display title for this label', 'product-estimator'),
+                'show_in_edit' => true,
+                'show_in_add' => true,
+            ],
+            'label_value' => [
+                'type' => 'text',
+                'label' => __('Label Value', 'product-estimator'),
+                'required' => true,
+                'description' => __('The text that will be displayed', 'product-estimator'),
+                'show_in_edit' => true,
+                'show_in_add' => true,
+            ],
+        ];
     }
 }
 

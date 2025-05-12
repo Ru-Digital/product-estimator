@@ -84,6 +84,11 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
 
             // Ensure the ID used here matches the ID within $field_args_for_general for consistency
             $this->store_field_for_sub_tab($vertical_tab_id, 'my_pa_setting_field_id', $field_args_for_general);
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Product Additions: Stored field for tab ' . $vertical_tab_id . ': my_pa_setting_field_id');
+                error_log('Product Additions: Field args: ' . print_r($field_args_for_general, true));
+            }
         }
     }
 
@@ -91,6 +96,37 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         // Output HTML for the section description, if any.
         // For example:
         echo '<p>' . esc_html__('These are the general settings for Product Additions.', 'product-estimator') . '</p>';
+    }
+
+    /**
+     * Check if this module handles a specific setting key.
+     * This is important for validation to recognize both table items and general settings.
+     *
+     * @since    1.x.x
+     * @param    string    $key    The setting key to check.
+     * @return   boolean   True if this module handles the setting key.
+     */
+    public function has_setting($key) {
+        // Check if it's a general setting field
+        if ($key === 'my_pa_setting_field_id') {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Product Additions: has_setting: TRUE for ' . $key);
+            }
+            return true;
+        }
+
+        // Check if it's a table item - item keys typically start with 'rel_' prefix
+        if (is_string($key) && strpos($key, 'rel_') === 0) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Product Additions: has_setting: TRUE for table item ' . $key);
+            }
+            return true;
+        }
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Product Additions: has_setting: FALSE for ' . $key);
+        }
+        return false;
     }
 
 
@@ -282,19 +318,7 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 echo esc_html($this->get_target_details_for_display($item));
                 break;
             case 'item_actions':
-                $item_id_for_actions = $item['id'] ?? '';
-                ?>
-                <button type="button" class="pe-edit-item-button button button-small"
-                        data-id="<?php echo esc_attr($item_id_for_actions); ?>"
-                        aria-label="<?php esc_attr_e('Edit this item', 'product-estimator'); ?>">
-                    <?php esc_html_e('Edit', 'product-estimator'); ?>
-                </button>
-                <button type="button" class="pe-delete-item-button button button-small"
-                        data-id="<?php echo esc_attr($item_id_for_actions); ?>"
-                        aria-label="<?php esc_attr_e('Delete this item', 'product-estimator'); ?>">
-                    <?php esc_html_e('Delete', 'product-estimator'); ?>
-                </button>
-                <?php
+                echo $this->render_standard_item_actions($item);
                 break;
         }
     }
@@ -602,6 +626,26 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
     protected function get_item_management_capability()
     {
         return 'manage_options'; // Or a more specific capability
+    }
+
+    /**
+     * Add custom actions for product addition items
+     * This demonstrates how to extend the standard actions
+     *
+     * @param array $item The item data
+     * @return string HTML for additional actions
+     */
+    protected function get_additional_item_actions($item) {
+        // Only add the view action for certain relation types
+        if (isset($item['relation_type']) && $item['relation_type'] === 'auto_add_by_category' && !empty($item['product_id'])) {
+            return sprintf(
+                '<button type="button" class="button button-small pe-view-product-button" data-id="%s" data-product-id="%s">%s</button>',
+                esc_attr($item['id']),
+                esc_attr($item['product_id']),
+                esc_html__('Edit Product', 'product-estimator')
+            );
+        }
+        return '';
     }
 
     // AJAX handler for product search (used by the 'product_search_component' field)

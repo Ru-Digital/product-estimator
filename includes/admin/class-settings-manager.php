@@ -121,7 +121,7 @@ class SettingsManager {
             #TODO
 //            'PricingRulesSettingsModule',
 //            'SimilarProductsSettingsModule',
-//            'ProductUpgradesSettingsModule',
+            'ProductUpgradesSettingsModule',
         ];
 
         // Load and initialize each module

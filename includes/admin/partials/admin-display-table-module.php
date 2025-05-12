@@ -62,7 +62,7 @@ $current_item_values = [];
 
     <div class="<?php echo esc_attr( $form_container_class ); ?>" style="display: none;">
         <h3 class="<?php echo esc_attr( $form_title_class ); ?>"><?php echo esc_html( $default_form_title ); ?></h3>
-        <form class="<?php echo esc_attr( $form_tag_class ); ?>" method="post" action="javascript:void(0);">
+        <form class="<?php echo esc_attr( $form_tag_class ); ?>" method="post" action="javascript:void(0);" data-tab-id="<?php echo esc_attr($this->get_tab_id()); ?>" data-sub-tab-id="<?php echo esc_attr(isset($vertical_tab_id) ? $vertical_tab_id : 'rules_table_tab'); ?>">
             <?php // This hidden input is crucial for AdminTableManager.js to distinguish add/edit and get the ID. ?>
             <input type="hidden" name="<?php echo esc_attr( $hidden_item_id_name ); ?>" value="" class="pe-item-id-input" />
 

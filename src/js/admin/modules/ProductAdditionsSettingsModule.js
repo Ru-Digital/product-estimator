@@ -415,60 +415,64 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   }
 
   /**
-   * Override AdminTableManager.createTableRow to generate HTML for a Product Addition row.
+   * Custom column population method for 'source_categories' column
+   * This method follows the naming convention for column handlers in AdminTableManager
    */
-  createTableRow(itemData) {
-    this.logger.log('Creating Product Additions table row with data:', itemData);
-    if (!itemData || !itemData.id) {
-      this.logger.error('Cannot create table row: itemData or itemData.id is missing.');
-      // Return a valid jQuery object for a row, even for an error.
-      return this.$('<tr><td colspan="4">Error: Invalid item data provided to createTableRow.</td></tr>');
-    }
+  populateColumn_source_categories($cell, itemData) {
+    $cell.text(itemData.source_category_display || 'N/A');
+  }
 
-    // Ensure selectors are valid, falling back to defaults if necessary.
-    // this.settings.selectors from ProductEstimatorSettings base
-    const selectors = this.settings.selectors || {};
-    const listItemRowSelector = selectors.listItemRow || 'tr'; // Base class might use this if defined
-    const editButtonClass = (selectors.editButton || '.pe-edit-item-button').replace(/^\./, '');
-    const deleteButtonClass = (selectors.deleteButton || '.pe-delete-item-button').replace(/^\./, '');
-
-    // i18n messages from this.settings.i18n
-    const i18n = this.settings.i18n || {};
-
-    const $row = this.$(`<${listItemRowSelector.split('.')[0]} data-id="${itemData.id}"></${listItemRowSelector.split('.')[0]}>`);
-    // If listItemRowSelector includes classes, add them: e.g., 'tr.my-custom-row-class'
-    if (listItemRowSelector.includes('.')) {
-      $row.addClass(listItemRowSelector.substring(listItemRowSelector.indexOf('.') + 1).replace(/\./g, ' '));
-    }
-
-
-    $row.append(this.$('<td></td>').text(itemData.source_category_display || 'N/A'));
-
-    const $actionTypeCell = this.$('<td></td>');
+  /**
+   * Custom column population method for 'action_type' column
+   */
+  populateColumn_action_type($cell, itemData) {
     const $actionTypeSpan = this.$('<span></span>')
-      .addClass(`relation-type pe-relation-${itemData.relation_type || 'unknown'}`) // Add a fallback class
+      .addClass(`relation-type pe-relation-${itemData.relation_type || 'unknown'}`)
       .text(itemData.action_type_display || itemData.relation_type || 'N/A');
-    $actionTypeCell.append($actionTypeSpan);
-    $row.append($actionTypeCell);
+    $cell.append($actionTypeSpan);
+  }
 
-    $row.append(this.$('<td></td>').text(itemData.target_details_display || 'N/A'));
+  /**
+   * Custom column population method for 'target_details' column
+   */
+  populateColumn_target_details($cell, itemData) {
+    $cell.text(itemData.target_details_display || 'N/A');
+  }
 
-    const $actionsCell = this.$('<td></td>').addClass('actions');
-    const $editButton = this.$('<button></button>')
-      .attr('type', 'button')
-      .addClass(`button button-small ${editButtonClass}`)
-      .text(i18n.editButtonLabel || 'Edit')
-      .data('id', itemData.id); // Store ID for easy access in event handler
+  /**
+   * Binds event handlers for custom action buttons.
+   * This overrides the base AdminTableManager.bindCustomActionButtons method.
+   */
+  bindCustomActionButtons() {
+    if (this.dom.listTableBody && this.dom.listTableBody.length) {
+      // Bind the view product button click event
+      this.dom.listTableBody.on('click.productAdditions', '.pe-view-product-button', this.handleViewProduct.bind(this));
+      this.logger.log('Product Additions custom action buttons bound');
+    }
+  }
 
-    const $deleteButton = this.$('<button></button>')
-      .attr('type', 'button')
-      .addClass(`button button-small ${deleteButtonClass}`)
-      .text(i18n.deleteButtonLabel || 'Delete')
-      .data('id', itemData.id);
+  /**
+   * Handles clicks on the "View Product" button.
+   * @param {Event} e - The click event
+   */
+  handleViewProduct(e) {
+    e.preventDefault();
+    const $button = this.$(e.currentTarget);
+    const itemId = $button.data('id');
+    const productId = $button.data('product-id');
 
-    $actionsCell.append($editButton, ' ', $deleteButton);
-    $row.append($actionsCell);
-    return $row;
+    this.logger.log('View Product button clicked for item ID:', itemId, 'Product ID:', productId);
+
+    if (!productId) {
+      this.showNotice('Error: Could not determine the product to view.', 'error');
+      return;
+    }
+
+    // Open the product in a new window/tab
+    // This could be a link to the WordPress admin edit page for the product
+    const adminUrl = window.ajaxurl ? window.ajaxurl.replace('admin-ajax.php', '') : '/wp-admin/';
+    const productUrl = `${adminUrl}post.php?post=${productId}&action=edit`;
+    window.open(productUrl, '_blank');
   }
 }
 

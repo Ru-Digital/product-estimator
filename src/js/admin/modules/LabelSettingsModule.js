@@ -49,22 +49,6 @@ class LabelSettingsModule extends VerticalTabbedModule {
     // e.g., initializing a specific type of editor if one was used for labels.
     logger.log('Labels main tab activated - specific setup can go here.');
   }
-
-  // Example of a module-specific handler, if needed:
-  // handleEmailValidation(e) {
-  //   const $field = this.$(e.target); // Use this.$
-  //   if (!$field.closest(this.$container).length) return;
-
-  //   const email = $field.val().trim();
-  //   // Access i18n from this.settings, which is initialized by the base class
-  //   const i18n = (this.settings && this.settings.i18n) || {};
-  //   if (email && !validation.validateEmail(email)) {
-  //     this.showFieldError($field, i18n.validationErrorEmail || 'Please enter a valid email address.');
-  //     return false;
-  //   }
-  //   this.clearFieldError($field);
-  //   return true;
-  // }
 }
 
 // Initialize the module

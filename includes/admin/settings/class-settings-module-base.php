@@ -551,7 +551,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
      * @param    string   $name_override Optional. Direct 'name' attribute for the field.
      * @return   void Echoes field HTML.
      */
-    protected function render_field($args, $value_override = null, $name_override = null) {
+    public function render_field($args, $value_override = null, $name_override = null) { // <<< CHANGED TO public
         $field_id = $args['id'] ?? '';
         if (empty($field_id)) {
             if(defined('WP_DEBUG') && WP_DEBUG) { error_log(get_class($this).": Field ID missing in render_field args: " . print_r($args, true)); }

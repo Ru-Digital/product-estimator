@@ -30,13 +30,14 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 'description' => __('Manage rules for product additions and suggestions based on categories.', 'product-estimator'),
                 'content_type'=> 'table', // Key: This tab will render table content
             ],
+
             // Add other tabs here if ProductAdditionsSettingsModule ever needs them.
             // Example:
-            // [
-            //     'id'          => 'pa_general_settings',
-            //     'title'       => __('General PA Settings', 'product-estimator'),
-            //     'content_type'=> 'settings', // This would use register_vertical_tab_fields
-            // ],
+             [
+                 'id'          => 'pa_general_settings',
+                 'title'       => __('General PA Settings', 'product-estimator'),
+                 'content_type'=> 'settings', // This would use register_vertical_tab_fields
+             ],
         ];
     }
 
@@ -50,13 +51,46 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
             // No settings fields to register for the tab that displays the table.
             // The table and its item form are handled by other mechanisms.
         }
-        // elseif ($vertical_tab_id === 'pa_general_settings') {
-        //     // Example: Register fields for another 'settings' type tab if added
-        //     // $section_id = $this->section_id . '_pa_general';
-        //     // add_settings_section($section_id, ...);
-        //     // add_settings_field(..., $this, 'render_field_callback_proxy', ..., $section_id, $field_args);
-        //     // $this->store_field_for_sub_tab($vertical_tab_id, 'my_pa_setting', $field_args);
-        // }
+        else if ($vertical_tab_id === 'pa_general_settings') {
+            $section_id = $this->section_id . '_pa_general';
+            add_settings_section(
+                $section_id,
+                __('General Settings Section Title', 'product-estimator'),
+                [$this, 'your_section_callback_function'], // Assuming this method now exists
+                $page_slug_for_wp_api
+            );
+
+            // Define actual field arguments for your field
+            $field_args_for_general = [
+                'id'          => 'my_pa_setting_field_id', // The ID should be part of the field args for render_field
+                'title'       => __('Enable Feature X', 'product-estimator'), // Not directly used by render_field unless you customize
+                'type'        => 'checkbox',
+                'description' => __('Tick to enable Feature X for product additions.', 'product-estimator'), // Not directly used by render_field
+                'default'     => '0',
+                'option_name' => $this->option_name, // Often useful for the render_field to know where to get the value
+                // Any other attributes required by your render_field method or the HTML structure
+                'attributes' => ['id' => 'my_pa_setting_field_id_html'], // Actual HTML id if different from setting key
+                'checkbox_label' => __('Enable this awesome feature', 'product-estimator') // Example if your render_field supports it
+            ];
+
+            add_settings_field(
+                'my_pa_setting_field_id', // Unique ID for the setting field
+                __('Enable Feature X Label', 'product-estimator'), // Label displayed next to the field
+                [$this, 'render_field'], // <--- CORRECTED CALLBACK
+                $page_slug_for_wp_api,
+                $section_id,
+                $field_args_for_general // This array is passed as the first argument to $this->render_field()
+            );
+
+            // Ensure the ID used here matches the ID within $field_args_for_general for consistency
+            $this->store_field_for_sub_tab($vertical_tab_id, 'my_pa_setting_field_id', $field_args_for_general);
+        }
+    }
+
+    public function your_section_callback_function() {
+        // Output HTML for the section description, if any.
+        // For example:
+        echo '<p>' . esc_html__('These are the general settings for Product Additions.', 'product-estimator') . '</p>';
     }
 
 

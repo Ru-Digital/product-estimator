@@ -127,7 +127,7 @@ class ProductEstimatorSettings {
 
       // Check if this form is specifically a vertical tab form
       // which should be handled by VerticalTabbedModule.js
-      if ($form.hasClass('pe-vtabs-tab-form') && $form.attr('data-tab')) {
+      if ($form.hasClass('pe-vtabs-tab-form') && $form.attr('data-sub-tab-id')) {
         logger.log('Generic handler (ProductEstimatorSettings.js): Form has .pe-vtabs-tab-form and data-tab. Letting VerticalTabbedModule handle it.', $form[0]);
         // DO NOT call e.preventDefault() or e.stopImmediatePropagation() here for these forms.
         // Simply return, allowing the VerticalTabbedModule's more specific handler to proceed.

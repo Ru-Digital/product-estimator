@@ -207,14 +207,17 @@ class VerticalTabbedModule {
     let formDataStr = $form.serialize();
     logger.log('Serialized form data:', formDataStr);
 
-    let currentSubTabId = $form.attr('data-tab');
+    let currentSubTabId = $form.attr('data-sub-tab-id'); // Correctly get sub-tab ID
     if (!currentSubTabId || String(currentSubTabId).trim() === '') {
-      logger.error("CRITICAL: 'data-tab' attribute is missing or empty on a form this module is handling. Form:", $form[0]);
-      currentSubTabId = this.config.defaultSubTabId;
-      this.showNotice('Error: Could not determine the current settings section. Please check form markup.', 'error');
-      if ($submitButton && $submitButton.length) $submitButton.prop('disabled', false);
-      if ($spinner && $spinner.length) $spinner.removeClass('is-active');
-      return;
+      // Try data-tab as a fallback if data-sub-tab-id isn't there, though data-sub-tab-id should be standard
+      currentSubTabId = $form.attr('data-tab');
+      if (!currentSubTabId || String(currentSubTabId).trim() === '') {
+        logger.error("CRITICAL: 'data-sub-tab-id' (or fallback 'data-tab') attribute is missing or empty on a form this module is handling. Form:", $form[0]);
+        currentSubTabId = this.config.defaultSubTabId; // Fallback to default
+        this.showNotice('Error: Could not determine the current settings section. Please check form markup.', 'error');
+        // ... (rest of error handling)
+        return;
+      }
     }
     currentSubTabId = String(currentSubTabId).trim();
     logger.log(`Final sub-tab ID for AJAX: "${currentSubTabId}"`);

@@ -6,6 +6,7 @@
  *
  * Available variables:
  * @var array  $vertical_tabs Array of tab definitions (from get_vertical_tabs()).
+ * Each tab can now have a 'content_type' => 'table' or 'settings' (default).
  * @var string $active_tab_id The ID of the currently active tab.
  * @var string $base_url      The base URL for tab navigation.
  * @var \RuDigital\ProductEstimator\Includes\Admin\Settings\SettingsModuleWithVerticalTabsBase $this The instance of the calling class.
@@ -25,8 +26,16 @@ if ( empty( $vertical_tabs ) ) {
 }
 ?>
 
-    <?php if($this->get_section_title()): ?>  <h2 class="section-title"><?= $this->get_section_title() ?></h2> <?php endif ?>
-    <?php if($this->render_section_description()): ?>  <div class="section-description"><?php $this->render_section_description() ?></div> <?php endif ?>
+<?php if($this->get_section_title()): ?>  <h2 class="section-title"><?php echo esc_html($this->get_section_title()); ?></h2> <?php endif; ?>
+<?php
+// Check if render_section_description returns content before echoing wrapping div
+ob_start();
+$this->render_section_description();
+$section_description_content = ob_get_clean();
+if ( ! empty( trim( $section_description_content ) ) ) :
+    ?>
+    <div class="section-description"><?php echo $section_description_content; // Content is already escaped by the method if needed ?></div>
+<?php endif; ?>
 
 <div class="pe-vtabs-wrapper"> <?php // Generic outer wrapper ?>
 
@@ -60,49 +69,68 @@ if ( empty( $vertical_tabs ) ) {
                     continue; // Skip tab if ID is missing
                 }
                 $is_panel_active = ( $active_tab_id === $tab_data['id'] );
+                // Determine the content type for the tab, defaulting to 'settings'
+                $content_type = $tab_data['content_type'] ?? 'settings';
                 ?>
                 <div id="<?php echo esc_attr( $tab_data['id'] ); ?>"
-                     class="pe-vtabs-tab-panel <?php echo $is_panel_active ? 'active' : ''; ?>"
+                     class="pe-vtabs-tab-panel <?php echo $is_panel_active ? 'active' : ''; ?> pe-vtabs-tab-panel-<?php echo esc_attr($content_type); ?>"
                     <?php if ( ! $is_panel_active ) echo 'style="display:none;"'; // Initially hide non-active tabs ?>
                 >
-                    <h3><?php echo esc_html( $tab_data['title'] . ' ' . __( 'Settings', 'product-estimator' ) ); ?></h3>
+                    <h3><?php echo esc_html( $tab_data['title'] . ( $content_type === 'settings' ? ' ' . __( 'Settings', 'product-estimator' ) : '' ) ); ?></h3>
                     <?php if ( ! empty( $tab_data['description'] ) ) : ?>
                         <p class="pe-vtabs-tab-description"><?php echo esc_html( $tab_data['description'] ); ?></p>
                     <?php endif; ?>
 
-                    <form method="post" action="javascript:void(0);" class="pe-vtabs-tab-form product-estimator-form" data-tab="<?php echo esc_attr( $tab_data['id'] ); ?>" data-type="<?php echo esc_attr( $tab_data['id'] ); ?>">
+                    <?php if ( $content_type === 'table' ) : ?>
                         <?php
-                        // Important: settings_fields() and do_settings_sections() output content.
-                        // Ensure they are called for each tab whose content needs to be available.
-                        settings_fields( $this->plugin_name . '_options' ); // This might need adjustment if each tab has vastly different option groups. Usually shared.
-                        do_settings_sections( $this->plugin_name . '_' . $this->get_tab_id() . '_' . $tab_data['id'] );
+                        // For 'table' type tabs, call a method on the module instance to render table content.
+                        // The module ($this) must implement render_table_content_for_tab().
+                        // This method will be responsible for including the admin-display-table-module.php partial
+                        // with the correct context and data.
+                        if ( method_exists( $this, 'render_table_content_for_tab' ) ) {
+                            // Pass the specific $tab_data if the table rendering needs to be context-aware
+                            // (e.g. if one module instance manages multiple distinct tables in different tabs)
+                            // For now, we assume one primary table managed by a module extending SettingsModuleWithTableBase.
+                            $this->render_table_content_for_tab( $tab_data );
+                        } else {
+                            echo '<div class="notice notice-error"><p>' . esc_html__( 'Error: This module is not configured to display table content correctly.', 'product-estimator' ) . '</p></div>';
+                        }
                         ?>
-                        <p class="submit">
-                            <button type="submit" name="submit_<?php echo esc_attr( $this->get_tab_id() . '_' . $tab_data['id'] ); ?>" class="button button-primary save-settings">
-                                <?php
-                                /* translators: %s: Tab title */
-                                printf( esc_html__( 'Save %s Settings', 'product-estimator' ), esc_html( $tab_data['title'] ) );
-                                ?>
-                            </button>
-                            <span class="spinner"></span>
-                        </p>
-                    </form>
+                    <?php else : // Default to 'settings' content type ?>
+                        <form method="post" action="javascript:void(0);" class="pe-vtabs-tab-form product-estimator-form" data-tab-id="<?php echo esc_attr($this->get_tab_id()); ?>" data-sub-tab-id="<?php echo esc_attr( $tab_data['id'] ); ?>">
+                            <?php
+                            // The page slug for settings_fields and do_settings_sections
+                            // should correspond to how fields were registered for this specific sub-tab.
+                            $page_slug_for_wp_api = $this->plugin_name . '_' . $this->get_tab_id() . '_' . $tab_data['id'];
+
+                            // Output nonce, action, and option_page fields for the settings API.
+                            // The option_group for settings_fields() should be the one that $this->option_name refers to,
+                            // or a more specific one if settings are stored differently per sub-tab.
+                            // For simplicity, assume $this->option_name is the primary option group for the whole module.
+                            settings_fields( $this->option_name );
+
+                            // Output the settings sections and fields for this specific sub-tab.
+                            do_settings_sections( $page_slug_for_wp_api );
+                            ?>
+                            <p class="submit">
+                                <button type="submit" name="submit_<?php echo esc_attr( $this->get_tab_id() . '_' . $tab_data['id'] ); ?>" class="button button-primary save-settings">
+                                    <?php
+                                    /* translators: %s: Tab title */
+                                    printf( esc_html__( 'Save %s Settings', 'product-estimator' ), esc_html( $tab_data['title'] ) );
+                                    ?>
+                                </button>
+                                <span class="spinner"></span>
+                            </p>
+                        </form>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
     </div>
 
     <?php
-    // The method render_vertical_tabs_sidebar() is specific to the module extending the base class.
-    // It will output its own HTML structure. If that structure needs generic styling for the container,
-    // the method itself should use generic classes, or this partial could provide a generic wrapper.
-    // For now, this partial calls the method, and the method is responsible for its own classes.
-    // The 'label-usage-info' class is specific to the Labels module's sidebar.
     if ( method_exists( $this, 'render_vertical_tabs_sidebar' ) ) {
-        // You could wrap this in a generic sidebar container if needed:
-        // echo '<div class="pe-vtabs-sidebar-wrapper">';
         $this->render_vertical_tabs_sidebar();
-        // echo '</div>';
     }
     ?>
 </div>

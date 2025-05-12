@@ -62,18 +62,20 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
       if ($element && $element.length && this.$.fn.select2) {
         $element.select2({
           placeholder: placeholderText,
-          width: '100%',
+          width: 'resolve', // TRY THIS! or 'style'
           allowClear: true,
           dropdownCssClass: 'product-estimator-dropdown'
-        }).val(null).trigger('change'); // Ensure it's cleared initially
+        }).val(null).trigger('change');
       } else if ($element && !$element.length) {
         this.logger.warn('Select2 target element not found:', $element.selector);
       }
     };
 
-    initSelect2(this.dom.sourceCategorySelect, this.settings.i18n.selectSourceCategories || 'Select source categories');
-    initSelect2(this.dom.targetCategorySelect, this.settings.i18n.selectTargetCategory || 'Select a category');
-    this.logger.log('Select2 components initialized for Product Additions.');
+    setTimeout(() => {
+      initSelect2(this.dom.sourceCategorySelect, this.settings.i18n.selectSourceCategories || 'Select source categories');
+      initSelect2(this.dom.targetCategorySelect, this.settings.i18n.selectTargetCategory || 'Select a category');
+      this.logger.log('Select2 components initialized for Product Additions.');
+    }, 100); // 100ms delay, adjust if needed
   }
 
   /**
@@ -162,10 +164,12 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 // ProductAdditionsSettingsModule.js
   _searchProducts(searchTerm, categoryId) {
     this.logger.log('Searching products with term:', searchTerm, 'in category:', categoryId);
+    this.logger.log('AJAX Action for product search:', this.settings.actions.search_products); // <<< ADD THIS
+    this.logger.log('Full settings.actions object:', this.settings.actions); // <<< AND THIS
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl,
       data: { // This is the 'data' object passed to your utility
-        action: this.settings.actions.search_products,
+        action: this.settings.actions.search_products, // CORRECTED - Use the key to get the action string
         nonce: this.settings.nonce,
         search: searchTerm,
         category: categoryId,
@@ -403,13 +407,13 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     const $row = this.$(`<tr data-id="${itemData.id}"></tr>`);
 
     // Column 1: Source Categories
-    $row.append(this.$('<td></td>').text(itemData.source_name || 'N/A'));
+    $row.append(this.$('<td></td>').text(itemData.source_category_display || 'N/A'));
 
     // Column 2: Action Type
     const $actionTypeCell = this.$('<td></td>');
     const $actionTypeSpan = this.$('<span></span>')
-      .addClass(`relation-type ${itemData.relation_type || ''}`) // For styling based on type
-      .text(itemData.relation_type_label || itemData.relation_type || 'N/A');
+      .addClass(`relation-type pe-relation-${itemData.relation_type || ''}`) // Added pe-relation- class
+      .text(itemData.action_type_display || itemData.relation_type || 'N/A');
     $actionTypeCell.append($actionTypeSpan);
     $row.append($actionTypeCell);
 

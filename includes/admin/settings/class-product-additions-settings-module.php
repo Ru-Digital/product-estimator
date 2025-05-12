@@ -2,89 +2,172 @@
 // File: class-product-additions-settings-module.php (Refactored)
 namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
 
-// SettingsModuleWithTableBase is its parent.
-// SettingsModuleInterface is implemented.
+/**
+ * Product Additions Settings Module
+ *
+ * This module manages rules for product relationships, automatically adding
+ * related products, notes, or suggesting products based on category relationships.
+ *
+ * This is a concrete implementation of the settings module hierarchy:
+ * SettingsModuleBase → SettingsModuleWithVerticalTabsBase → SettingsModuleWithTableBase → ProductAdditionsSettingsModule
+ *
+ * Key functionality:
+ * - Manages rules for automatic product additions
+ * - Handles rule-based product suggestions
+ * - Supports automatic note addition based on product categories
+ * - Provides a WooCommerce product search integration
+ * - Renders rules in a tabular format with CRUD operations
+ *
+ * @since      1.0.0
+ * @package    ProductEstimator
+ * @subpackage ProductEstimator/Admin/Settings
+ */
 final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase implements SettingsModuleInterface
 {
+    /**
+     * Option name in WordPress options table where all settings are stored
+     * This is the key in wp_options for this module's settings collection
+     */
     protected $option_name = 'product_estimator_product_additions';
-    private $product_categories = null; // Cache categories
 
+    /**
+     * Cache for product categories to prevent multiple taxonomy queries
+     * Populated in get_item_form_fields_definition() when needed
+     */
+    private $product_categories = null;
+
+    /**
+     * Configure the module's tab details
+     *
+     * This method sets the identifiers and titles for this module within the
+     * main settings page. These values are used in:
+     * - URL parameters for navigation
+     * - HTML IDs for DOM targeting
+     * - Display titles in the UI
+     * - WordPress settings API section registration
+     *
+     * @return void
+     */
     protected function set_tab_details()
     {
+        // Main tab identifier in the settings page
         $this->tab_id = 'product_additions';
+
+        // Display title for the main tab
         $this->tab_title = __('Product Additions', 'product-estimator');
-        // This section_title can be used as the title for the single vertical tab.
+
+        // Section identifier for WordPress settings API
         $this->section_id = 'product_additions_rules_section';
+
+        // Title used for the section and vertical tab
         $this->section_title = __('Product Relationship Rules', 'product-estimator');
     }
 
     /**
-     * Defines the vertical tabs for this module.
-     * This module will display its table content within a single vertical tab.
+     * Defines the vertical tabs structure for this module
+     *
+     * This method configures the left-side vertical tab navigation for the module.
+     * Each tab can display different types of content: tables, settings forms, or custom content.
+     *
+     * This product additions module has two tabs:
+     * 1. Main rules table - Displays the CRUD interface for relationship rules
+     * 2. General settings - Contains general configuration options for product additions
+     *
+     * The 'content_type' value determines how each tab's content is rendered:
+     * - 'table': Uses render_table_content_for_tab() from SettingsModuleWithTableBase
+     * - 'settings': Uses the WordPress Settings API with fields from register_vertical_tab_fields()
+     * - 'custom': Would require a custom render method for specialized content
+     *
+     * @return array Array of tab definitions
      */
     protected function get_vertical_tabs() {
         return [
+            // Main rules management table tab
             [
-                'id'          => 'rules_table_tab', // Unique ID for this tab panel
-                'title'       => $this->section_title, // Use the main section title for the tab
+                'id'          => 'rules_table_tab',           // Unique ID for this tab panel
+                'title'       => $this->section_title,        // Use the main section title for the tab
                 'description' => __('Manage rules for product additions and suggestions based on categories.', 'product-estimator'),
-                'content_type'=> 'table', // Key: This tab will render table content
+                'content_type'=> 'table',                     // This tab displays table-based content
             ],
 
-            // Add other tabs here if ProductAdditionsSettingsModule ever needs them.
-            // Example:
-             [
-                 'id'          => 'pa_general_settings',
-                 'title'       => __('General PA Settings', 'product-estimator'),
-                 'content_type'=> 'settings', // This would use register_vertical_tab_fields
-             ],
+            // Additional settings tab for general configuration options
+            [
+                'id'          => 'pa_general_settings',       // Unique ID for this settings tab
+                'title'       => __('General PA Settings', 'product-estimator'),
+                'content_type'=> 'settings',                  // This tab displays WordPress settings fields
+            ],
         ];
     }
 
     /**
-     * Registers settings sections and fields for a specific vertical tab.
-     * Since our only tab ('rules_table_tab') is of type 'table',
-     * no standard WordPress settings fields are registered via this method for that tab.
+     * Registers WordPress settings fields for vertical tabs
+     *
+     * This method is called by SettingsModuleWithVerticalTabsBase for each vertical tab
+     * to register settings fields with the WordPress Settings API. The fields are rendered
+     * automatically when a tab with 'content_type' => 'settings' is active.
+     *
+     * Each tab can have its own sections and fields:
+     * - For 'rules_table_tab', no settings are needed as it uses table display
+     * - For 'pa_general_settings', we register standard WordPress settings fields
+     *
+     * The registration process has three components:
+     * 1. Register a settings section using add_settings_section()
+     * 2. Register individual fields with add_settings_field()
+     * 3. Store field data in the module using store_field_for_sub_tab()
+     *
+     * @param string $vertical_tab_id     Current tab ID being registered
+     * @param string $page_slug_for_wp_api Page slug for WordPress Settings API
+     * @return void
      */
     protected function register_vertical_tab_fields($vertical_tab_id, $page_slug_for_wp_api) {
+        // The table-type tab doesn't need WordPress settings fields
         if ($vertical_tab_id === 'rules_table_tab') {
-            // No settings fields to register for the tab that displays the table.
-            // The table and its item form are handled by other mechanisms.
+            // No settings fields to register - table content is handled separately
+            // via render_table_content_for_tab() from SettingsModuleWithTableBase
+            return;
         }
-        else if ($vertical_tab_id === 'pa_general_settings') {
+
+        // Register fields for the general settings tab
+        if ($vertical_tab_id === 'pa_general_settings') {
+            // Create a unique section ID by combining the base section ID with a suffix
             $section_id = $this->section_id . '_pa_general';
+
+            // Register the settings section
             add_settings_section(
-                $section_id,
-                __('General Settings Section Title', 'product-estimator'),
-                [$this, 'your_section_callback_function'], // Assuming this method now exists
-                $page_slug_for_wp_api
+                $section_id,                                          // Section ID
+                __('General Settings Section Title', 'product-estimator'), // Section title
+                [$this, 'your_section_callback_function'],            // Section description callback
+                $page_slug_for_wp_api                                 // Page slug
             );
 
-            // Define actual field arguments for your field
+            // Define a checkbox field with all necessary properties
             $field_args_for_general = [
-                'id'          => 'my_pa_setting_field_id', // The ID should be part of the field args for render_field
-                'title'       => __('Enable Feature X', 'product-estimator'), // Not directly used by render_field unless you customize
-                'type'        => 'checkbox',
-                'description' => __('Tick to enable Feature X for product additions.', 'product-estimator'), // Not directly used by render_field
-                'default'     => '0',
-                'option_name' => $this->option_name, // Often useful for the render_field to know where to get the value
-                // Any other attributes required by your render_field method or the HTML structure
-                'attributes' => ['id' => 'my_pa_setting_field_id_html'], // Actual HTML id if different from setting key
-                'checkbox_label' => __('Enable this awesome feature', 'product-estimator') // Example if your render_field supports it
+                'id'          => 'my_pa_setting_field_id',            // Field ID in the database
+                'title'       => __('Enable Feature X', 'product-estimator'), // Field title
+                'type'        => 'checkbox',                           // Field type (checkbox, text, select, etc.)
+                'description' => __('Tick to enable Feature X for product additions.', 'product-estimator'),
+                'default'     => '0',                                  // Default value if not set
+                'option_name' => $this->option_name,                   // Option name for data storage
+                'attributes'  => [
+                    'id' => 'my_pa_setting_field_id_html'             // HTML element ID attribute
+                ],
+                'checkbox_label' => __('Enable this awesome feature', 'product-estimator') // Label next to checkbox
             ];
 
+            // Register the field with WordPress Settings API
             add_settings_field(
-                'my_pa_setting_field_id', // Unique ID for the setting field
-                __('Enable Feature X Label', 'product-estimator'), // Label displayed next to the field
-                [$this, 'render_field'], // <--- CORRECTED CALLBACK
-                $page_slug_for_wp_api,
-                $section_id,
-                $field_args_for_general // This array is passed as the first argument to $this->render_field()
+                'my_pa_setting_field_id',                             // Field ID
+                __('Enable Feature X Label', 'product-estimator'),     // Field label in the UI
+                [$this, 'render_field'],                              // Callback to render the field
+                $page_slug_for_wp_api,                                // Page slug
+                $section_id,                                          // Section ID this field belongs to
+                $field_args_for_general                               // Field arguments
             );
 
-            // Ensure the ID used here matches the ID within $field_args_for_general for consistency
+            // Store field data in module for validation and form handling
             $this->store_field_for_sub_tab($vertical_tab_id, 'my_pa_setting_field_id', $field_args_for_general);
 
+            // Debug logging to help troubleshoot field registration
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Product Additions: Stored field for tab ' . $vertical_tab_id . ': my_pa_setting_field_id');
                 error_log('Product Additions: Field args: ' . print_r($field_args_for_general, true));
@@ -92,19 +175,34 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         }
     }
 
+    /**
+     * Callback for rendering the section description
+     *
+     * This function is called by WordPress when rendering the settings section.
+     * It outputs the descriptive text that appears at the top of the section.
+     *
+     * @return void
+     */
     public function your_section_callback_function() {
-        // Output HTML for the section description, if any.
-        // For example:
         echo '<p>' . esc_html__('These are the general settings for Product Additions.', 'product-estimator') . '</p>';
+        echo '<p>' . esc_html__('Configure global behavior for product additions, suggestions, and notes.', 'product-estimator') . '</p>';
     }
 
     /**
-     * Check if this module handles a specific setting key.
-     * This is important for validation to recognize both table items and general settings.
+     * Determines if this module handles a specific setting key
      *
-     * @since    1.x.x
-     * @param    string    $key    The setting key to check.
-     * @return   boolean   True if this module handles the setting key.
+     * This method is crucial for the validation process as it identifies which
+     * settings keys belong to this module. It handles two types of keys:
+     *
+     * 1. Settings fields from the WordPress Settings API (e.g., 'my_pa_setting_field_id')
+     * 2. Table items which typically have a prefix specific to their type (e.g., 'rel_')
+     *
+     * Without this method, the module wouldn't know which settings to validate
+     * when save operations occur through the Settings API or custom AJAX handlers.
+     *
+     * @since 1.0.0
+     * @param string $key The setting key to check
+     * @return boolean True if this module handles the setting key
      */
     public function has_setting($key) {
         // Check if it's a general setting field
@@ -210,7 +308,24 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         return $fields;
     }
 
-    // In class-product-additions-settings-module.php
+    /**
+     * Custom rendering for the product search component
+     *
+     * This callback creates a specialized UI component for searching and selecting
+     * WooCommerce products. It includes:
+     *
+     * 1. A search input with autocomplete functionality
+     * 2. A results container for displaying matching products
+     * 3. A hidden input to store the selected product ID
+     * 4. A display area showing the currently selected product
+     * 5. A clear button to reset the selection
+     *
+     * The component uses AJAX to fetch product results as the user types.
+     *
+     * @param array      $field_args     Field definition from get_item_form_fields_definition()
+     * @param string|int $current_value  Currently selected product ID (if any)
+     * @return void      Outputs the complete HTML for the component
+     */
     public function render_product_search_component_callback($field_args, $current_value) {
         $base_html_id = esc_attr($field_args['attributes']['id'] ?? $field_args['id']); // Will be 'product_id'
 
@@ -283,16 +398,48 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         return $processed_items;
     }
 
+    /**
+     * Defines the columns displayed in the table
+     *
+     * This method specifies what columns appear in the rules table and their headers.
+     * The keys are used in render_table_cell_content() to identify which column
+     * is being rendered.
+     *
+     * Column structure:
+     * - 'source_categories': Categories that trigger the rule
+     * - 'action_type': The type of action (auto-add, suggest, note)
+     * - 'target_details': The result of the action (product, note content, etc.)
+     * - 'item_actions': Edit/Delete buttons for each row
+     *
+     * @return array Associative array of column identifiers and display labels
+     */
     protected function get_table_columns()
     {
         return [
-            'source_categories' => __('Source Categories', 'product-estimator'),
-            'action_type' => __('Action', 'product-estimator'),
-            'target_details' => __('Target/Note', 'product-estimator'),
-            'item_actions' => __('Actions', 'product-estimator'),
+            'source_categories' => __('Source Categories', 'product-estimator'),  // Displays category names
+            'action_type'       => __('Action', 'product-estimator'),             // Shows action type
+            'target_details'    => __('Target/Note', 'product-estimator'),        // Shows target product or note text
+            'item_actions'      => __('Actions', 'product-estimator'),            // Shows action buttons
         ];
     }
 
+    /**
+     * Renders the content for table cells
+     *
+     * This method generates the HTML content for each cell in the table based on
+     * the column name and item data. It formats each piece of data appropriately
+     * for display in the admin UI.
+     *
+     * Column handling:
+     * - source_categories: Shows comma-separated list of category names
+     * - action_type: Displays a formatted action label with CSS class
+     * - target_details: Shows context-specific data (product name, note excerpt, or category)
+     * - item_actions: Shows edit/delete/view buttons
+     *
+     * @param array  $item        The item data for this row
+     * @param string $column_name The column identifier being rendered
+     * @return void  Directly outputs HTML for the cell content
+     */
     public function render_table_cell_content($item, $column_name)
     {
         $relation_type = $item['relation_type'] ?? '';
@@ -323,25 +470,63 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         }
     }
 
+    /**
+     * Prepares item data for populating the edit form
+     *
+     * This method formats an item's data specifically for displaying in the
+     * edit form fields. It performs two key operations:
+     *
+     * 1. Adds additional display data for special fields:
+     *    - For product fields, it adds the product name for display
+     *
+     * 2. Ensures all form fields have at least a default value:
+     *    - Checks against get_item_form_fields_definition()
+     *    - Ensures multi-select fields get empty arrays instead of empty strings
+     *    - Applies default values from field definitions
+     *
+     * This method is called by handle_ajax_get_item() when an item is being
+     * loaded for editing.
+     *
+     * @param array $item_data The raw item data from the database
+     * @return array Prepared data with all required fields for the form
+     */
     protected function prepare_item_for_form_population(array $item_data) {
-        if (!is_array($item_data)) { return []; }
+        // Safety check for malformed data
+        if (!is_array($item_data)) {
+            return [];
+        }
 
-        if (!empty($item_data['product_id']) && isset($item_data['relation_type']) && $item_data['relation_type'] === 'auto_add_by_category') {
+        // For auto-add rules, get the product name for display in the form
+        if (!empty($item_data['product_id']) &&
+            isset($item_data['relation_type']) &&
+            $item_data['relation_type'] === 'auto_add_by_category') {
+
+            // Use WooCommerce function to get product details
             $product = wc_get_product($item_data['product_id']);
             if ($product) {
-                $item_data['product_name_display'] = $product->get_formatted_name(); // For product_search_component
+                // Store formatted name for the product search component to display
+                $item_data['product_name_display'] = $product->get_formatted_name();
             } else {
                 $item_data['product_name_display'] = __('Product not found', 'product-estimator');
             }
         }
-        // Ensure all field IDs from get_item_form_fields_definition are present in $item_data
-        // This helps JS populate the form correctly, even if some values are empty.
+
+        // Ensure all expected form fields have values
+        // This prevents JS errors when populating the form
         $field_defs = $this->get_item_form_fields_definition();
         foreach($field_defs as $def) {
             if (!isset($item_data[$def['id']])) {
-                $item_data[$def['id']] = $def['default'] ?? ( ($def['type'] === 'select' && !empty($def['attributes']['multiple'])) ? [] : '' ) ;
+                // Set appropriate default values based on field type
+                if ($def['type'] === 'select' && !empty($def['attributes']['multiple'])) {
+                    // Multi-select fields should default to empty array
+                    $item_data[$def['id']] = [];
+                } else {
+                    // Standard fields get their default or empty string
+                    $item_data[$def['id']] = $def['default'] ?? '';
+                }
             }
         }
+
         return $item_data;
     }
 
@@ -496,6 +681,29 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         echo '<p>' . esc_html__('Define rules to automatically add related products or notes, or suggest alternative products, based on the categories of items added to an estimate.', 'product-estimator') . '</p>';
     }
 
+    /**
+     * Validates product addition rule data
+     *
+     * This method validates and sanitizes rule data before it is saved.
+     * The validation is context-sensitive based on the rule type:
+     *
+     * 1. For all rules:
+     *    - Source categories must be valid category IDs
+     *    - Relation type must be a valid option
+     *
+     * 2. Relation-specific validation:
+     *    - auto_add_by_category: Requires a valid product ID
+     *    - suggest_products_by_category: Requires a valid target category ID
+     *    - auto_add_note_by_category: Requires non-empty note text
+     *
+     * 3. Feature-based validation:
+     *    - Confirms feature flags match rule types (for suggested products)
+     *
+     * @param array      $raw_item_data     The unvalidated form data
+     * @param string|int $item_id           The ID of item being edited (null for new)
+     * @param array      $original_item_data The original item data (for edits)
+     * @return array|WP_Error               Validated data or error object
+     */
     protected function validate_item_data(array $raw_item_data, $item_id = null, $original_item_data = null)
     {
         $sanitized_data = [];
@@ -586,40 +794,112 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         return $response_item;
     }
 
+    /**
+     * Gets the product estimator features configuration object
+     *
+     * This private helper method returns the plugin's feature flags configuration.
+     * It uses the global product_estimator_features() function if available,
+     * or falls back to default values if the function isn't defined.
+     *
+     * The method uses static caching to ensure the feature object is only
+     * fetched once per request, improving performance when called multiple times.
+     *
+     * Feature flags control which functionalities are available:
+     * - suggested_products_enabled: Controls whether product suggestions are available
+     * - Other feature flags may be added in the future
+     *
+     * @return object Object containing feature flag properties
+     */
     private function get_features_object()
     {
+        // Static variable persists between method calls for caching
         static $features_obj = null;
-        if ($features_obj === null) { // Ensure it's fetched only once per request
+
+        // Only fetch the features once per request
+        if ($features_obj === null) {
             if (function_exists('product_estimator_features')) {
+                // Get features from the global function
                 $features_obj = product_estimator_features();
             } else {
-                // Fallback or default if the global function/object isn't available
-                $features_obj = (object)['suggested_products_enabled' => false]; // Example default
+                // Fallback with default values if function isn't available
+                $features_obj = (object)[
+                    'suggested_products_enabled' => false,
+                    // Add other default feature flags here as needed
+                ];
             }
         }
+
         return $features_obj;
     }
 
+    /**
+     * Gets a human-readable label for a relation type
+     *
+     * This helper method converts the internal relation type key into a
+     * user-friendly translated label for display in the UI.
+     *
+     * The method handles the three standard relation types:
+     * - auto_add_by_category: Automatically add specific products
+     * - auto_add_note_by_category: Automatically add notes
+     * - suggest_products_by_category: Suggest products from a category
+     *
+     * For any unknown relation types, it falls back to a basic formatted version
+     * of the key with underscores replaced by spaces.
+     *
+     * @param string $relation_type_key The internal relation type key
+     * @return string User-friendly translated label
+     */
     private function get_relation_type_label($relation_type_key) {
+        // Map of relation type keys to their human-readable labels
         $labels = [
             'auto_add_by_category' => __('Auto-Add Product with Category', 'product-estimator'),
             'auto_add_note_by_category' => __('Auto-Add Note with Category', 'product-estimator'),
             'suggest_products_by_category' => __('Suggest Products when Category', 'product-estimator'),
         ];
+
+        // Return the mapped label or format the key as a fallback
         return $labels[$relation_type_key] ?? ucfirst(str_replace('_', ' ', $relation_type_key));
     }
 
+    /**
+     * Formats the target details for display in the table
+     *
+     * This helper method generates the appropriate display text for the "Target/Note"
+     * column based on the relation type. The content varies depending on the type:
+     *
+     * - For auto_add_by_category: Shows the product name
+     * - For auto_add_note_by_category: Shows a trimmed excerpt of the note text
+     * - For suggest_products_by_category: Shows the target category name
+     *
+     * Each type has appropriate error handling for missing data.
+     *
+     * @param array $item The rule item data
+     * @return string Formatted HTML-safe display text
+     */
     private function get_target_details_for_display(array $item) {
         $relation_type = $item['relation_type'] ?? '';
+
+        // For auto-add product rules, show the product name
         if ($relation_type === 'auto_add_by_category' && !empty($item['product_id'])) {
             $product = wc_get_product($item['product_id']);
-            return $product ? esc_html($product->get_name()) : __('Product not found', 'product-estimator');
-        } elseif ($relation_type === 'auto_add_note_by_category' && !empty($item['note_text'])) {
-            return esc_html(wp_trim_words($item['note_text'], 10, '...'));
-        } elseif ($relation_type === 'suggest_products_by_category' && !empty($item['target_category'])) {
-            $target_cat = get_term($item['target_category'], 'product_cat');
-            return ($target_cat && !is_wp_error($target_cat)) ? esc_html($target_cat->name . ' (Category)') : __('Category not found', 'product-estimator');
+            return $product
+                ? esc_html($product->get_name())
+                : __('Product not found', 'product-estimator');
         }
+        // For auto-add note rules, show a trimmed excerpt of the note
+        elseif ($relation_type === 'auto_add_note_by_category' && !empty($item['note_text'])) {
+            // Limit to 10 words with ellipsis for long notes
+            return esc_html(wp_trim_words($item['note_text'], 10, '...'));
+        }
+        // For product suggestion rules, show the target category
+        elseif ($relation_type === 'suggest_products_by_category' && !empty($item['target_category'])) {
+            $target_cat = get_term($item['target_category'], 'product_cat');
+            return ($target_cat && !is_wp_error($target_cat))
+                ? esc_html($target_cat->name . ' (Category)')
+                : __('Category not found', 'product-estimator');
+        }
+
+        // Fallback for unknown or empty relation types
         return '';
     }
 
@@ -649,8 +929,25 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
     }
 
     // AJAX handler for product search (used by the 'product_search_component' field)
-// class-product-additions-settings-module.php
-// Rename this function to match the new hook
+    /**
+     * AJAX handler for product search functionality
+     *
+     * This method processes AJAX requests for the product search autocomplete component.
+     * It searches WooCommerce products based on:
+     * 1. A search term (partial product name)
+     * 2. A specific product category
+     *
+     * The search is performed using WP_Query with a taxonomy filter for the category,
+     * and the results are formatted for display in the autocomplete dropdown.
+     *
+     * Security:
+     * - Verifies nonce to prevent CSRF
+     * - Validates required parameters
+     * - Sanitizes all input
+     *
+     * @since 1.0.0
+     * @return void Sends JSON response and terminates execution
+     */
     public function ajax_handle_product_search_for_additions() {
         // Nonce check - Use the nonce that JS is sending for 'search_products'
         // The JS is sending this.settings.nonce which is from get_nonce_action_base() . '_nonce'

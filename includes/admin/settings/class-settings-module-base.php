@@ -5,8 +5,25 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
 /**
  * Base Settings Module Class
  *
- * This abstract class provides the foundation for all setting module implementations.
- * Each settings tab should extend this class to maintain consistency.
+ * This abstract class provides the foundation for all settings module implementations.
+ * It is the ROOT class in the settings module inheritance hierarchy:
+ *
+ * SettingsModuleBase (This class)
+ * ├── SettingsModuleWithVerticalTabsBase
+ *     └── SettingsModuleWithTableBase
+ *         └── Concrete Module Classes (e.g., ProductUpgradesSettingsModule)
+ *
+ * Key responsibilities:
+ * - Define the interface for all settings modules
+ * - Handle standard WordPress Settings API integration
+ * - Provide AJAX-based settings saving
+ * - Manage script/style enqueuing for modules
+ * - Define form field rendering
+ * - Implement validation
+ *
+ * Usage:
+ * Simple modules can extend this class directly.
+ * For more complex UIs, extend one of the specialized subclasses.
  *
  * @since      1.1.0
  * @package    Product_Estimator
@@ -106,42 +123,79 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Set the tab and section details.
-     * Implemented by child classes.
+     *
+     * This MUST be implemented by ALL child classes and is one of the first methods called
+     * during initialization. It sets up the core identifiers for this module.
+     *
+     * Implementation example:
+     * ```php
+     * protected function set_tab_details() {
+     *     $this->tab_id = 'product_upgrades';           // Used for tab identification in HTML/JS
+     *     $this->tab_title = 'Product Upgrades';        // Displayed as the tab title
+     *     $this->section_id = 'product_upgrades_settings'; // Used for settings API section
+     *     $this->section_title = 'Product Upgrades Settings'; // Displayed as section heading
+     * }
+     * ```
+     *
+     * These values are used for:
+     * - Settings API integration
+     * - AJAX handler naming
+     * - HTML ID/class generation
+     * - JavaScript targeting
+     *
      * @since    1.1.0
      * @access   protected
      */
     abstract protected function set_tab_details();
 
     /**
-     * Register the settings section and fields.
-     * For simple modules. Vertical tab modules override this.
+     * Register the settings section and fields with WordPress Settings API.
+     *
+     * This is called from admin_init hook for all modules.
+     * It creates the section container and then calls register_fields()
+     * to allow the specific module to populate that section.
+     *
+     * NOTE: For simple modules only. Modules with vertical tabs override this
+     * to create their more complex structure.
+     *
      * @since    1.1.0
      * @access   public
      */
     public function register_settings() {
+        // Only create the section if we have both required identifiers
         if ($this->section_id && $this->section_title) {
             add_settings_section(
-                $this->section_id,
-                $this->section_title,
+                $this->section_id,                    // Section ID used in add_settings_field()
+                $this->section_title,                 // Title displayed at the top of the section
                 [$this, 'render_section_description'], // Callback for section description
                 $this->plugin_name . '_' . $this->tab_id // Page slug for this section
             );
         }
-        // Child class implements register_fields to call add_settings_field
+
+        // Child class implements register_fields to add fields within this section
         $this->register_fields();
     }
 
     /**
-     * Get the section title.
+     * Get the section title for this module.
+     *
+     * Used by various rendering functions to display consistent headings.
+     *
      * @since    1.1.0
-     * @return string
+     * @return string The section title
      */
     public function get_section_title() {
         return $this->section_title;
     }
 
     /**
-     * Stores a registered field's definition.
+     * Stores a registered field's definition for later validation and rendering.
+     *
+     * This caches field definitions in the $registered_fields array to:
+     * 1. Enable validation against specific field requirements
+     * 2. Allow context-specific field filtering for vertical tabs
+     * 3. Provide field metadata for JavaScript
+     *
      * @since    X.X.X
      * @access   protected
      * @param    string $field_id The unique ID of the field.

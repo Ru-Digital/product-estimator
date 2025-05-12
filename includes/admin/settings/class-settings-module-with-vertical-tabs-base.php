@@ -2,12 +2,30 @@
 namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
 
 /**
- * Base Settings Module Class for modules with Vertical Tabs.
+ * Base Settings Module Class for modules with Vertical Tabs
  *
  * This abstract class extends SettingsModuleBase to provide functionality
- * for settings pages that are structured with vertical tabs.
+ * for settings pages that are structured with vertical tabs (tabs along the left side).
  *
- * @since      X.X.X // TODO: Set appropriate version
+ * Class Hierarchy Position:
+ * SettingsModuleBase
+ * └── SettingsModuleWithVerticalTabsBase (THIS CLASS)
+ *     └── SettingsModuleWithTableBase
+ *         └── Concrete Module Classes
+ *
+ * Key responsibilities:
+ * - Manage a set of vertical tabs within a main settings tab
+ * - Handle tab-specific field registration
+ * - Render the tabbed interface
+ * - Support navigation between tabs
+ * - Manage form submissions for specific tabs
+ *
+ * Usage pattern:
+ * 1. Implement get_vertical_tabs() to define your tabs
+ * 2. Implement register_vertical_tab_fields() for each tab's settings
+ * 3. Use render_tab_specific_content() to output each tab's contents
+ *
+ * @since      X.X.X
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
@@ -17,10 +35,40 @@ abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
     /**
      * Defines the vertical tabs for the settings page.
      *
+     * REQUIRED: All modules extending this class MUST implement this method.
+     *
      * Each item in the returned array should be an associative array with keys:
-     * 'id'          => (string) Unique slug for the tab (e.g., 'general', 'advanced').
-     * 'title'       => (string) Translatable title for the tab navigation.
-     * 'description' => (string, optional) Translatable description displayed above the tab's content.
+     * 'id'           => (string) Unique slug for the tab (e.g., 'general', 'advanced')
+     * 'title'        => (string) Translatable title for the tab navigation
+     * 'description'  => (string, optional) Translatable description above tab content
+     * 'content_type' => (string, optional) Tab content type (e.g., 'settings', 'table', 'custom')
+     *                   This determines how tab content is rendered:
+     *                   - 'settings': Standard WordPress settings fields (default)
+     *                   - 'table': Data table with CRUD operations (used by SettingsModuleWithTableBase)
+     *                   - 'custom': Custom content rendered by a specified callback
+     *
+     * Example implementation:
+     * ```php
+     * protected function get_vertical_tabs() {
+     *   return [
+     *     [
+     *       'id' => 'general_settings',
+     *       'title' => __('General Settings', 'product-estimator'),
+     *       'description' => __('Basic configuration options', 'product-estimator')
+     *     ],
+     *     [
+     *       'id' => 'advanced_settings',
+     *       'title' => __('Advanced Options', 'product-estimator'),
+     *       'description' => __('Configuration for advanced users', 'product-estimator')
+     *     ],
+     *     [
+     *       'id' => 'data_table',
+     *       'title' => __('Data Management', 'product-estimator'),
+     *       'content_type' => 'table'
+     *     ]
+     *   ];
+     * }
+     * ```
      *
      * @since    X.X.X
      * @access   protected

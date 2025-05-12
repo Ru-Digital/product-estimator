@@ -2,12 +2,67 @@
 // File: class-settings-module-with-tables-base.php (Refactored to use new partial for form fields)
 namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
 
+/**
+ * Settings Module With Tables Base Class
+ *
+ * This abstract class extends the tabbed interface foundation to add standardized
+ * table-based CRUD operations for managing collections of settings items.
+ *
+ * It is the THIRD class in the settings module inheritance hierarchy:
+ *
+ * SettingsModuleBase
+ * ├── SettingsModuleWithVerticalTabsBase
+ *     └── SettingsModuleWithTableBase (This class)
+ *         └── Concrete Module Classes (e.g., ProductAdditionsSettingsModule)
+ *
+ * IMPORTANT: This class requires SettingsModuleWithVerticalTabsBase as its parent.
+ * Tables are rendered inside vertical tabs via the 'content_type' => 'table' specification.
+ *
+ * Core Functionality:
+ * - Standardized table rendering with sortable columns
+ * - Add/Edit form generation from field definitions
+ * - AJAX-based item CRUD operations (Create, Read, Update, Delete)
+ * - Input validation and sanitization
+ * - Client-side JS data preparation
+ *
+ * Usage Pattern:
+ * 1. Extend this class for modules that manage collections of settings items
+ * 2. Implement required abstract methods (get_table_columns, render_table_cell_content, etc.)
+ * 3. Define form fields using get_item_form_fields_definition()
+ * 4. Set up validation rules in validate_item_data()
+ * 5. Configure item display formatting in render_table_cell_content()
+ *
+ * @since      1.0.0
+ * @package    ProductEstimator
+ * @subpackage ProductEstimator/Admin/Settings
+ */
 abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTabsBase
 {
 
-    // Abstract methods for table display
+    /**
+     * Renders the content for a specific cell in the table
+     *
+     * Child classes MUST implement this method to define how each column's data
+     * should be displayed for a given item.
+     *
+     * @param array  $item        The item data being displayed
+     * @param string $column_name The column identifier from get_table_columns()
+     * @return void  Outputs the HTML content for the cell
+     */
     abstract public function render_table_cell_content($item, $column_name);
 
+    /**
+     * Defines the columns to display in the table
+     *
+     * Child classes MUST implement this method to define the table structure.
+     *
+     * @return array Associative array of column identifiers and their display headers:
+     *               [
+     *                 'column_id' => 'Column Header Label',
+     *                 'actions'   => 'Actions',
+     *                 // etc.
+     *               ]
+     */
     abstract protected function get_table_columns();
 
     /**
@@ -53,7 +108,26 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         return '';
     }
 
-    // Abstract methods for data handling
+    /**
+     * Validates and sanitizes item data before saving
+     *
+     * Child classes MUST implement this method to validate all input data.
+     * This is a critical security boundary for ensuring only valid, sanitized
+     * data is stored in the database.
+     *
+     * The method should:
+     * 1. Validate all required fields are present
+     * 2. Sanitize input according to field types (ints, strings, arrays, etc.)
+     * 3. Perform any business logic validation (relationships, constraints, etc.)
+     * 4. Return either:
+     *    - An array of validated and sanitized data
+     *    - A WP_Error object with validation error messages
+     *
+     * @param array      $raw_item_data     The unvalidated data from form submission
+     * @param string|int $item_id           The ID of the item being edited (null for new items)
+     * @param array      $original_item_data The original item data (for edit operations)
+     * @return array|WP_Error               Validated data or error object
+     */
     abstract protected function validate_item_data(array $raw_item_data, $item_id = null, $original_item_data = null);
 
     // Abstract methods from SettingsModuleWithVerticalTabsBase for tab structure
@@ -62,22 +136,64 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
     abstract protected function register_vertical_tab_fields($vertical_tab_id, $page_slug_for_wp_api);
 
     /**
-     * Child classes MUST implement this to define the structure of their add/edit item form fields.
-     * (Docblock for this method remains the same as before)
-     * @return   array Array of form field definitions.
-     * @since    X.X.X
-     * @access   protected
+     * Defines the structure of the add/edit item form fields
+     *
+     * Child classes MUST implement this method to define the form fields used for
+     * creating and editing items in the table. The returned array defines all form
+     * fields, their types, validation rules, and display attributes.
+     *
+     * The form fields structure is the heart of the table's CRUD operations.
+     *
+     * Example structure:
+     * [
+     *   [
+     *     'id' => 'item_id', // Hidden field for item ID (always include this)
+     *     'type' => 'hidden'
+     *   ],
+     *   [
+     *     'id' => 'field_name', // Field identifier (used as array key in item data)
+     *     'label' => 'Field Label', // Display label
+     *     'type' => 'text', // Field type (text, select, checkbox, textarea, etc.)
+     *     'required' => true, // Whether field is required
+     *     'attributes' => [ // HTML attributes
+     *       'class' => 'some-class pe-item-form-field',
+     *       'id' => 'field_name', // Explicit ID matching field name
+     *       // Other attributes
+     *     ],
+     *     'description' => 'Help text shown below the field', // Optional
+     *     // For select fields:
+     *     'options' => ['key' => 'Label', 'key2' => 'Label 2'], // Options for select
+     *     // For custom fields:
+     *     'render_callback' => 'method_name', // Custom rendering method
+     *   ],
+     *   // Additional fields...
+     * ]
+     *
+     * @return array Array of form field definitions
+     * @since  1.0.0
      */
     abstract protected function get_item_form_fields_definition();
 
 
     /**
-     * Renders the content for a tab that is designated as 'table' type.
-     * This method includes the main table module partial.
+     * Renders the content for a tab that is designated as 'table' type
      *
-     * @param array $tab_data Data for the specific tab being rendered.
-     * @since    X.X.X
-     * @access   public
+     * This method is the entry point for displaying table-based settings content.
+     * It loads the shared table module partial template which contains:
+     * - The table listing all items
+     * - The add/edit form interface
+     * - JavaScript integration hooks
+     *
+     * Important flow:
+     * 1. Prepares template variables via prepare_template_data_for_table()
+     * 2. Sets up module instance and other required variables for the template
+     * 3. Includes the template file which renders the complete UI
+     *
+     * This method is called automatically when a vertical tab with
+     * 'content_type' => 'table' is being displayed.
+     *
+     * @param array $tab_data Data for the specific tab being rendered
+     * @since 1.0.0
      */
     public function render_table_content_for_tab(array $tab_data)
     {
@@ -106,11 +222,23 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
     }
 
     /**
-     * Prepare data specifically for the main table display partial (admin-display-table-module.php).
+     * Prepares data for the table display template
      *
-     * @return   array  Associative array of data for the table template.
-     * @since    X.X.X
-     * @access   protected
+     * This method collects all necessary data to render the table UI.
+     * It serves as a central point for child classes to customize what
+     * data is available to the admin-display-table-module.php template.
+     *
+     * By default, it provides:
+     * - table_items: The collection of items to display (from get_items_for_table())
+     * - table_columns: Column definitions for the table (from get_table_columns())
+     * - add_new_button_label: Customizable label for the "Add New" button
+     * - default_form_title: Default title for the form when adding/editing items
+     *
+     * Child classes can override this method to add additional template data
+     * or modify the existing data.
+     *
+     * @return array Associative array of data for the table template
+     * @since  1.0.0
      */
     protected function prepare_template_data_for_table()
     {
@@ -141,6 +269,21 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         return $is_edit_mode ? __('Edit Item', 'product-estimator') : __('Add New Item', 'product-estimator');
     }
 
+    /**
+     * AJAX handler for adding a new item
+     *
+     * This method handles the AJAX request for creating a new item in the table.
+     * The execution flow is:
+     * 1. Verify the request (nonce, capabilities)
+     * 2. Extract and process the form data
+     * 3. Validate the item data using validate_item_data()
+     * 4. Generate a unique ID for the new item
+     * 5. Prepare the item for saving with prepare_item_for_save()
+     * 6. Save the updated collection
+     * 7. Return a success response with the prepared item
+     *
+     * @since 1.0.0
+     */
     public function handle_ajax_add_item()
     {
         $this->verify_item_ajax_request();
@@ -170,6 +313,22 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         exit;
     }
 
+    /**
+     * AJAX handler for updating an existing item
+     *
+     * This method handles the AJAX request for updating an item in the table.
+     * The execution flow is:
+     * 1. Verify the request (nonce, capabilities)
+     * 2. Get the item ID from the request
+     * 3. Extract and process the form data
+     * 4. Validate the item exists in the collection
+     * 5. Validate the updated data using validate_item_data(), providing the original item
+     * 6. Prepare the item for saving with prepare_item_for_save()
+     * 7. Save the updated collection
+     * 8. Return a success response with the prepared item
+     *
+     * @since 1.0.0
+     */
     public function handle_ajax_update_item()
     {
         $this->verify_item_ajax_request();
@@ -205,6 +364,20 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         exit;
     }
 
+    /**
+     * AJAX handler for deleting an item
+     *
+     * This method handles the AJAX request for deleting an item from the table.
+     * The execution flow is:
+     * 1. Verify the request (nonce, capabilities)
+     * 2. Get the item ID from the request
+     * 3. Verify the item exists in the collection
+     * 4. Remove the item from the collection
+     * 5. Save the updated collection
+     * 6. Return a success response with the deleted item ID
+     *
+     * @since 1.0.0
+     */
     public function handle_ajax_delete_item()
     {
         $this->verify_item_ajax_request();
@@ -224,6 +397,22 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         exit;
     }
 
+    /**
+     * AJAX handler for retrieving an item for editing
+     *
+     * This method handles the AJAX request for getting an item's data to populate
+     * the edit form. The execution flow is:
+     * 1. Verify the request (nonce, capabilities)
+     * 2. Get the item ID from the request
+     * 3. Verify the item exists in the collection
+     * 4. Prepare the item data for form population with prepare_item_for_form_population()
+     * 5. Return a success response with the prepared item data
+     *
+     * This differs from prepare_item_for_response() in that it specifically formats
+     * the data for form inputs rather than display in the table.
+     *
+     * @since 1.0.0
+     */
     public function handle_ajax_get_item()
     {
         $this->verify_item_ajax_request();
@@ -247,6 +436,17 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         exit;
     }
 
+    /**
+     * Verifies AJAX requests for item operations
+     *
+     * This method provides centralized security verification for all item CRUD operations:
+     * 1. Verifies the nonce to prevent CSRF attacks
+     * 2. Checks user capabilities to ensure authorized access
+     *
+     * If verification fails, it sends an appropriate error response and terminates execution.
+     *
+     * @since 1.0.0
+     */
     protected function verify_item_ajax_request()
     {
         if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), $this->get_nonce_action_base() . '_nonce')) {
@@ -474,11 +674,34 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
     }
 
     /**
-     * Get common script data for table-based modules.
+     * Prepares common JavaScript data for table-based modules
      *
-     * @since    X.X.X
-     * @access   protected
-     * @return   array
+     * This method provides a standardized set of data for JavaScript initialization
+     * of table-based settings modules. It creates a comprehensive object containing:
+     *
+     * 1. Base configuration (extends data from parent class)
+     *    - Nonce for AJAX security
+     *    - Option name for the settings
+     *    - Table structure information
+     *
+     * 2. AJAX action definitions
+     *    - add_item, update_item, delete_item, get_item endpoints
+     *
+     * 3. DOM selector definitions
+     *    - Form selectors (inputs, buttons, containers)
+     *    - Table selectors (rows, cells, headers)
+     *    - UI element selectors (messages, buttons, etc.)
+     *
+     * 4. Internationalization strings
+     *    - Success/error messages
+     *    - Button labels
+     *    - Confirmation texts
+     *
+     * This data is combined with module-specific data in child classes
+     * and localized for JavaScript access through wp_localize_script().
+     *
+     * @since  1.0.0
+     * @return array Complete set of table module script data
      */
     protected function get_common_table_script_data() {
         // Get common data from parent (SettingsModuleWithVerticalTabsBase)

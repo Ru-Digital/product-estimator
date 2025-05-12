@@ -716,4 +716,96 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             }
         }
     }
+
+    /**
+     * Get base script data common to all modules.
+     *
+     * @since    X.X.X
+     * @access   protected
+     * @return   array
+     */
+    protected function get_base_script_data() {
+        return [
+            'ajaxUrl'     => admin_url('admin-ajax.php'),
+            // General nonce for standard settings saving, can be overridden for specific needs.
+            'nonce'       => wp_create_nonce('product_estimator_settings_nonce'),
+            'tab_id'      => $this->get_tab_id(), // Current module's main tab ID
+            'option_name' => $this->option_name,  // The option name this module primarily saves to
+            'i18n'        => [
+                'saving'           => __('Saving...', 'product-estimator'),
+                'loading'          => __('Loading...', 'product-estimator'),
+                'error'            => __('An error occurred.', 'product-estimator'),
+                'saveSuccess'      => sprintf(
+                /* translators: %s: Tab title */
+                    __('%s settings saved successfully.', 'product-estimator'),
+                    $this->get_tab_title()
+                ),
+                'saveError'        => sprintf(
+                /* translators: %s: Tab title */
+                    __('Error saving %s settings.', 'product-estimator'),
+                    $this->get_tab_title()
+                ),
+                'fieldRequired'    => __('This field is required.', 'product-estimator'),
+                'validationFailed' => __('Please correct the errors in the form.', 'product-estimator'),
+            ],
+            'actions'     => [
+                // Standard action for saving settings for this tab (matches handle_ajax_save)
+                'save_settings' => 'save_' . $this->get_tab_id() . '_settings',
+            ],
+            'selectors'   => [
+                // Very common selectors if any, e.g., for a global spinner or messages
+                // 'spinner' => '.spinner',
+                // 'submitButton' => '.button-primary.save-settings',
+            ],
+        ];
+    }
+
+    abstract protected function get_module_specific_script_data(); // Child must define this
+
+// In class-settings-module-base.php (Alternative provide_script_data_for_localization)
+    public function provide_script_data_for_localization() {
+        $default_structure = [
+            'ajaxUrl'     => admin_url('admin-ajax.php'),
+            'nonce'       => '', // To be filled
+            'tab_id'      => $this->get_tab_id(),
+            'option_name' => $this->option_name,
+            'i18n'        => [],
+            'actions'     => [],
+            'selectors'   => [],
+            // Add other top-level keys expected by JS modules
+        ];
+
+        // Get data from the hierarchy
+        $hierarchical_data = [];
+        if ($this instanceof SettingsModuleWithTableBase) {
+            $hierarchical_data = $this->get_common_table_script_data();
+        } elseif ($this instanceof SettingsModuleWithVerticalTabsBase) {
+            $hierarchical_data = $this->get_common_script_data();
+        } else {
+            $hierarchical_data = $this->get_base_script_data();
+        }
+
+        $module_specific_data = (array) $this->get_module_specific_script_data();
+
+        // Merge: Start with default, apply hierarchical, then module-specific
+        $final_data = array_replace_recursive($default_structure, $hierarchical_data, $module_specific_data);
+
+        // Ensure critical nonces are correct (e.g., table modules might have a different nonce)
+        // This logic would need care based on which nonce is authoritative.
+        // Example: If table nonce is primary for table modules:
+        if ($this instanceof SettingsModuleWithTableBase && isset($hierarchical_data['nonce'])) {
+            $final_data['nonce'] = $hierarchical_data['nonce'];
+        } elseif (isset($hierarchical_data['nonce'])) { // General settings nonce
+            $final_data['nonce'] = $hierarchical_data['nonce'];
+        } else {
+            $final_data['nonce'] = wp_create_nonce('product_estimator_settings_nonce'); // Fallback
+        }
+
+
+        $context_name = $this->get_js_context_name();
+        if (empty($context_name)) { /* ... error log ... */ return; }
+        $this->add_script_data($context_name, $final_data);
+    }
+
+
 }

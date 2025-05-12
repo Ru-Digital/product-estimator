@@ -167,17 +167,42 @@ abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
         // echo '<p>' . esc_html__('This is a sidebar area for the vertical tabs settings.', 'product-estimator') . '</p>';
     }
 
+    /**
+     * Get common script data for vertical tab modules.
+     *
+     * @since    X.X.X
+     * @access   protected
+     * @return   array
+     */
     protected function get_common_script_data() {
-        // Ensure this method exists and provides necessary common data for JS.
-        return [
-            'mainTabId'         => $this->get_tab_id(), // The ID of the main settings page tab (e.g., 'labels', 'notifications')
-            'ajax_url'          => admin_url('admin-ajax.php'),
-            'nonce'             => wp_create_nonce('product_estimator_settings_nonce'), // General settings nonce
+        $base_data = parent::get_base_script_data(); // Get data from SettingsModuleBase
+
+        $vertical_tab_common_data = [
+            // 'mainTabId' is already covered by 'tab_id' from get_base_script_data()
+            // 'ajax_url' is covered by get_base_script_data()
+            // 'nonce' from get_base_script_data() is used for the primary settings save.
+            // Individual vertical tabs might have their own specific AJAX actions requiring different nonces.
             'i18n'              => [
-                'saving'      => __('Saving...', 'product-estimator'),
-                'saveSuccess' => __('Settings saved successfully.', 'product-estimator'), // Generic success
-                'saveError'   => __('Error saving settings.', 'product-estimator'),       // Generic error
+                // Overwrite or add more specific i18n strings for vertical tab contexts
+                // 'saveSuccess' and 'saveError' are already fairly generic in base.
+                // We can make them slightly more specific to the sub-tab context if JS handles it.
+                'confirmCancelEditing'=> __('You have unsaved changes. Are you sure you want to cancel?', 'product-estimator'),
             ],
+            'selectors' => [
+                // Common selectors for vertical tab UI elements managed by a shared JS component
+                'verticalTabNav'     => '.pe-vtabs-nav',
+                'verticalTabNavItem' => '.pe-vtabs-nav-item',
+                'verticalTabContent' => '.pe-vtabs-content',
+                'verticalTabPane'    => '.pe-vtabs-pane',
+                'saveSubTabButton'   => '.save-subtab-settings-button', // Example if there's a common save button per sub-tab
+            ],
+            // 'ajaxActionPrefix' might be useful if there's a common pattern for saving sub-tabs,
+            // e.g., if AJAX save is per sub-tab. The current setup saves all fields under one option_name
+            // scoped by sub_tab_id in handle_ajax_save in SettingsModuleBase.
         ];
+
+        // Merge, giving priority to vertical_tab_common_data for overrides.
+        return array_replace_recursive($base_data, $vertical_tab_common_data);
     }
+
 }

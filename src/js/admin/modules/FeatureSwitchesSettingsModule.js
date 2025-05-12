@@ -4,57 +4,42 @@
  * Handles functionality specific to the feature switches settings tab.
  */
 import { createLogger } from '@utils';
-const logger = createLogger('FeatureSwitchSettings');
+import ProductEstimatorSettings from '../common/ProductEstimatorSettings'; // Adjust path as needed
 
-class FeatureSwitchesSettingsModule {
+const logger = createLogger('FeatureSwitchesSettingsModule');
+
+class FeatureSwitchesSettingsModule extends ProductEstimatorSettings {
   /**
    * Initialize the module
    */
   constructor() {
-    $ = jQuery; // Make jQuery available as this.$
-
-    // before this script runs or at least before init() is called.
-    const localizedSettings = window.featureSwitchesSettings || {};
-
-    this.settings = {
-      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
-      nonce: localizedSettings.nonce || '', // Fallback
-      i18n: localizedSettings.i18n || {},   // Fallback
-      tab_id: localizedSettings.tab_id || 'feature_switches', // Fallback
-    };
-
-    // Defer initialization to document.ready to ensure DOM is loaded
-    $(document).ready(() => {
-      // Re-check localizedSettings in case they are defined by another script in document.ready
-      const updatedLocalizedSettingsOnReady = window.featureSwitchesSettings || {};
-      if (updatedLocalizedSettingsOnReady.nonce) {
-        this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
-      }
-
-      this.init();
+    super({
+      isModule: true,
+      settingsObjectName: 'featureSwitchesSettings',
+      defaultTabId: 'feature_switches',
+      // loggerName: 'FeatureSwitchesSettingsModule' // Base class now uses constructor.name
     });
+    // Properties like this.$ and this.settings are initialized by super()
   }
 
   /**
-   * Initialize the module
+   * Module-specific initialization, called by the base class constructor on document.ready.
    */
-  init() {
+  moduleInit() {
     logger.log('Initializing Feature Switches Settings Module');
     this.bindEvents();
     // Add any initial setup logic for feature switch fields here if needed
   }
 
   /**
-   * Bind event handlers
+   * Bind event handlers specific to this module
    */
   bindEvents() {
-    const $ = jQuery;
-
     // Listen for tab changes to activate module logic when this tab is shown
-    $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
+    this.$(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
 
     // Add any specific event handlers for interactions within the Feature Switches tab
-    // Example: $('#enable_example_feature').on('change', this.handleFeatureSwitchChange.bind(this));
+    // Example: this.$('#enable_example_feature').on('change', this.handleFeatureSwitchChange.bind(this));
   }
 
   /**
@@ -69,30 +54,26 @@ class FeatureSwitchesSettingsModule {
       // You can call setup functions here if needed when the tab becomes visible
       // this.setupFeatureSwitchFields();
     }
-
-    const url = new URL(window.location.href);
-    url.searchParams.delete('sub_tab');
-    window.history.replaceState({}, '', url);
+    this.clearSubTabFromUrl(); // Call common URL clearing logic from base
   }
 
   // Add other methods as needed for client-side functionality
   // Example:
   // setupFeatureSwitchFields() {
-  //   log('FeatureSwitchesSettingsModule', 'Setting up feature switch fields');
+  //   logger.log('Setting up feature switch fields');
   //   // Add logic to set initial states, attach event listeners, etc.
   // }
 }
 
 // Initialize the module when the DOM is ready.
-// It will activate fully when its tab is displayed due to the tab change listener.
+// The base class constructor handles calling moduleInit at the right time.
 jQuery(document).ready(function() {
   // Check if the tab's container element exists before initializing
+  // This ensures the module is only instantiated if its corresponding UI is present.
   if (jQuery('#feature_switches').length) {
-    const module = new FeatureSwitchesSettingsModule();
-    // Optional: Make it available globally for debugging
-    // window.FeatureSwitchesSettingsModule = module;
+    // Make it available globally for debugging or if other scripts need to interact with it
+    window.FeatureSwitchesSettingsModuleInstance = new FeatureSwitchesSettingsModule();
   }
 });
 
-// Export the module if using ES modules
 export default FeatureSwitchesSettingsModule;

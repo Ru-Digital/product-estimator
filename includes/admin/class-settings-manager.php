@@ -116,11 +116,12 @@ class SettingsManager {
             'NetsuiteSettingsModule',
             'NotificationSettingsModule',
             'ProductAdditionsSettingsModule',
-            'PricingRulesSettingsModule',
-            'SimilarProductsSettingsModule',
-            'ProductUpgradesSettingsModule',
             'LabelsSettingsModule',
             'FeatureSwitchesSettingsModule',
+            #TODO
+//            'PricingRulesSettingsModule',
+//            'SimilarProductsSettingsModule',
+//            'ProductUpgradesSettingsModule',
         ];
 
         // Load and initialize each module

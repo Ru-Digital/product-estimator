@@ -182,22 +182,65 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         <?php
     }
 
-    public function enqueue_scripts() {
-        $commonData = $this->get_common_script_data();
-        $module_specific_data = [
-            'defaultSubTabId'   => 'labels-general',
-            'option_name'       => $this->option_name,
-            'mainTabId'         => $this->tab_id,
-            'ajaxActionPrefix'  => 'save_labels',
-            'defined_label_types' => array_keys($this->defined_label_types),
-            'i18n' => [
+    /**
+     * Returns the unique JavaScript context name for this module's settings.
+     *
+     * @since    X.X.X
+     * @access   protected
+     * @return   string The JavaScript context name.
+     */
+    protected function get_js_context_name() {
+        return 'labelsSettings'; // This should match the JS object name (e.g., window.labelsSettings)
+    }
+
+    /**
+     * Returns an array of script data specific to this module.
+     * This data will be merged with common data from the parent class.
+     *
+     * @since    X.X.X
+     * @access   protected
+     * @return   array Associative array of module-specific script data.
+     */
+    protected function get_module_specific_script_data() {
+        // This data was previously in the $module_specific_data array in enqueue_scripts.
+        return [
+            'option_name'       => $this->option_name, // Explicitly include option_name
+            'defaultSubTabId'   => 'labels-general', // Default vertical tab to show
+            // 'mainTabId' (as 'tab_id') is inherited, already in common data.
+            'ajaxActionPrefix'  => 'save_labels', // Used by JS if VTM has specific save logic per sub-tab (not default)
+            'defined_label_types' => array_keys($this->defined_label_types), // For JS to know available sub-tabs/types
+            'i18n' => [ // Module-specific i18n, merges with/overrides common data
                 'saveSuccess' => __('Label settings saved successfully.', 'product-estimator'),
                 'saveError'   => __('Error saving label settings.', 'product-estimator'),
             ],
+            // 'actions' and 'selectors' are typically inherited from SettingsModuleWithVerticalTabsBase
+            // and are sufficient for standard vertical tab settings forms.
         ];
-        $actual_data_for_js_object = array_replace_recursive($commonData, $module_specific_data);
-        $this->add_script_data('labelsSettings', $actual_data_for_js_object);
     }
+
+    /**
+     * Enqueue module-specific scripts and styles.
+     *
+     * @since 1.2.0 (Refactored to use provide_script_data_for_localization)
+     */
+    public function enqueue_scripts() {
+        // This single call will handle getting common data (from SettingsModuleWithVerticalTabsBase),
+        // module-specific data (from get_module_specific_script_data above),
+        // merging them, and calling add_script_data with the correct context name (from get_js_context_name).
+        $this->provide_script_data_for_localization();
+
+        // If LabelsSettingsModule has its own JS file (e.g., LabelsSettingsModule.js)
+        // enqueue it here.
+        // Example:
+        // wp_enqueue_script(
+        //     $this->plugin_name . '-labels-settings-module',
+        //     PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/modules/labels-settings-module.js', // Ensure path is correct
+        //     [$this->plugin_name . '-admin', 'jquery'], // Dependencies
+        //     $this->version,
+        //     true // Load in footer
+        // );
+    }
+
 
     public function enqueue_styles() {
         wp_enqueue_style(

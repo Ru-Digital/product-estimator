@@ -192,28 +192,72 @@ final class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBas
         return $validated;
     }
 
-    public function enqueue_scripts() {
-        wp_enqueue_media();
-        wp_enqueue_editor();
+    /**
+     * Returns the unique JavaScript context name for this module's settings.
+     *
+     * @since    X.X.X
+     * @access   protected
+     * @return   string The JavaScript context name.
+     */
+    protected function get_js_context_name() {
+        return 'notificationSettings'; // This should match the JS object name (e.g., window.notificationSettings)
+    }
 
-        $commonData = $this->get_common_script_data();
-        $module_specific_data = [
-            'defaultSubTabId'   => 'notifications-general',
-            'option_name'       => $this->option_name,
-            'mainTabId'         => $this->tab_id,
-            'ajaxActionPrefix'  => 'save_notifications',
-            'defined_notification_types' => array_keys($this->defined_notification_types),
-            'i18n'               => [
+    /**
+     * Returns an array of script data specific to this module.
+     * This data will be merged with common data from the parent class.
+     *
+     * @since    X.X.X
+     * @access   protected
+     * @return   array Associative array of module-specific script data.
+     */
+    protected function get_module_specific_script_data() {
+        // This data was previously in the $module_specific_data array in enqueue_scripts.
+        // 'option_name' and 'mainTabId' (as 'tab_id') are already provided by base classes,
+        // so they only need to be here if this module specifically overrides them
+        // (which 'option_name' does, and it's correctly set in $this->option_name).
+        return [
+            'defaultSubTabId'   => 'notifications-general', // JS specific for VTM behavior
+            'ajaxActionPrefix'  => 'save_notifications',    // JS specific for VTM AJAX prefix if needed
+            'defined_notification_types' => array_keys($this->defined_notification_types), // Module-specific data
+            'i18n'               => [ // Module-specific i18n, will merge with/override common data
                 'selectImage'          => __( 'Select or Upload Logo', 'product-estimator' ),
                 'useThisImage'         => __( 'Use this image', 'product-estimator' ),
                 'validationErrorEmail' => __( 'Please enter a valid From Email address.', 'product-estimator' ),
+                // Overriding generic save messages for more context
                 'saveSuccess'          => __( 'Notification settings saved successfully.', 'product-estimator' ),
                 'saveError'            => __( 'Error saving notification settings.', 'product-estimator' ),
             ],
+            // 'actions' and 'selectors' are typically inherited from SettingsModuleWithVerticalTabsBase
+            // and are sufficient for standard vertical tab settings forms.
+            // Only add them here if NotificationSettings has truly unique actions/selectors
+            // not covered by the parent's get_common_script_data().
         ];
+    }
 
-        $actual_data_for_js_object = array_replace_recursive($commonData, $module_specific_data);
-        $this->add_script_data('notificationSettings', $actual_data_for_js_object);
+    /**
+     * Enqueue module-specific scripts and styles.
+     *
+     * @since 1.2.0 (Refactored to use provide_script_data_for_localization)
+     */
+    public function enqueue_scripts() {
+        wp_enqueue_media(); // For image/file uploads
+        wp_enqueue_editor();  // For WP HTML editor fields
+
+        // This single call will handle getting common data, module-specific data,
+        // merging them, and calling add_script_data with the correct context name.
+        $this->provide_script_data_for_localization();
+
+        // If NotificationSettingsModule has its own JS file (e.g., NotificationSettingsModule.js)
+        // enqueue it here.
+        // Example:
+        // wp_enqueue_script(
+        //     $this->plugin_name . '-notification-settings-module',
+        //     PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/modules/notification-settings-module.js',
+        //     [$this->plugin_name . '-admin', 'jquery'], // Add dependencies like main admin script, jQuery
+        //     $this->version,
+        //     true // Load in footer
+        // );
     }
 
     public function enqueue_styles() {

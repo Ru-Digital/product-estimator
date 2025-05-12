@@ -285,4 +285,71 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         add_action('wp_ajax_' . $item_action_prefix . '_delete_item', array($this, 'handle_ajax_delete_item'));
         add_action('wp_ajax_' . $item_action_prefix . '_get_item', array($this, 'handle_ajax_get_item'));
     }
+
+    /**
+     * Get common script data for table-based modules.
+     *
+     * @since    X.X.X
+     * @access   protected
+     * @return   array
+     */
+    protected function get_common_table_script_data() {
+        // Get common data from parent (SettingsModuleWithVerticalTabsBase)
+        $common_vertical_tab_data = parent::get_common_script_data();
+
+        $item_action_prefix = 'pe_table_' . $this->get_tab_id(); // e.g., pe_table_product_additions
+        $item_nonce_action = $this->get_nonce_action_base(); // e.g., product_estimator_pa_items
+
+        $table_common_data = [
+            'item_id_key' => 'item_id', // Default key for item ID in form data
+            'nonce'       => wp_create_nonce($item_nonce_action . '_nonce'), // Specific nonce for item CRUD actions
+            'actions'   => [
+                // Override the general 'save_settings' if table modules don't use it.
+                // Add base actions for item CRUD. Final module can override if names differ.
+                'add_item'    => $item_action_prefix . '_add_item',
+                'update_item' => $item_action_prefix . '_update_item',
+                'delete_item' => $item_action_prefix . '_delete_item',
+                'get_item'    => $item_action_prefix . '_get_item',
+            ],
+            'selectors' => [
+                // Common selectors for the table UI (form, buttons, table elements)
+                // These should align with your admin-display-table-module.php partial
+                'formContainer'      => '.pe-admin-table-form-container',
+                'form'               => '.pe-item-management-form',
+                'formTitle'          => '.pe-form-title',
+                'idInput'            => 'input[name="item_id"]', // Assuming 'item_id' is the name of your hidden ID field
+                'saveButton'         => '.pe-save-item-button',
+                'cancelButton'       => '.pe-cancel-form-button',
+                'addButton'          => '.pe-add-new-item-button',
+                'listTableContainer' => '.pe-admin-list-table-wrapper',
+                'listTable'          => '.pe-admin-list-table',
+                'listTableBody'      => '#' . $this->get_tab_id() . '-table-body', // Assumes table body ID convention
+                'listItemRow'        => 'tr[data-id]', // Selector for a row, using data-id attribute
+                'editButton'         => '.pe-edit-item-button',    // Class for edit buttons in rows
+                'deleteButton'       => '.pe-delete-item-button',  // Class for delete buttons in rows
+                'noItemsMessage'     => '.pe-no-items-message',
+            ],
+            'i18n' => [
+                // Common i18n strings for table item management
+                'confirmDelete'       => __('Are you sure you want to delete this item?', 'product-estimator'),
+                'itemSavedSuccess'    => __('Item saved successfully.', 'product-estimator'),
+                'itemAddedSuccess'    => $this->get_item_added_message(),   // From method
+                'itemUpdatedSuccess'  => $this->get_item_updated_message(), // From method
+                'itemDeletedSuccess'  => $this->get_item_deleted_message(), // From method
+                'errorSavingItem'     => __('Error saving item.', 'product-estimator'),
+                'errorDeletingItem'   => __('Error deleting item.', 'product-estimator'),
+                'errorLoadingItem'    => __('Error loading item details.', 'product-estimator'),
+                'addItemButtonLabel'  => $this->get_add_new_button_label(),
+                'editItemFormTitle'   => $this->get_form_title(true),
+                'addItemFormTitle'    => $this->get_form_title(false),
+                'saveChangesButton'   => __('Save Changes', 'product-estimator'), // Generic save button text for items
+                'updateChangesButton' => __('Update Changes', 'product-estimator'),// Generic update button text
+                'deleting'            => __('Deleting...', 'product-estimator'),
+                'editButtonLabel'     => __('Edit', 'product-estimator'),
+                'deleteButtonLabel'   => __('Delete', 'product-estimator'),
+            ]
+        ];
+        // Merge, giving priority to table_common_data for overrides (especially nonce and actions).
+        return array_replace_recursive($common_vertical_tab_data, $table_common_data);
+    }
 }

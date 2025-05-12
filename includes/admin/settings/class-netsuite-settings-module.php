@@ -216,27 +216,33 @@ final class NetsuiteSettingsModule extends SettingsModuleBase implements Setting
         }
     }
 
-    /**
-     * Enqueue module-specific scripts.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function enqueue_scripts() {
-        $actual_data_for_js_object = [
-            'nonce' => wp_create_nonce('product_estimator_netsuite_nonce'),
-            'tab_id' => $this->tab_id,
-            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
-            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
-            'option_name'   => $this->option_name,
-            'i18n' => [
-                'testing' => __('Testing connection...', 'product-estimator'),
-                'success' => __('Connection successful!', 'product-estimator'),
-                'error'   => __('Connection failed:', 'product-estimator'),
-            ]
-        ];
-        $this->add_script_data('netsuiteSettings', $actual_data_for_js_object);
+    public function enqueue_scripts() { // This might be renamed or refactored if AdminScriptHandler changes
+        $this->provide_script_data_for_localization();
     }
+
+    protected function get_js_context_name() {
+        return 'netsuiteSettings';
+    }
+
+    protected function get_module_specific_script_data() {
+        $specific_data = [
+            'option_name' => $this->option_name, // Ensure $this->option_name is correct for Netsuite
+            'i18n' => [
+                'saveSuccess' => __('NetSuite settings saved successfully.', 'product-estimator'),
+                // ... other i18n
+            ],
+            'actions' => [
+                'test_netsuite_connection' => 'pe_test_netsuite_connection',
+            ],
+            'selectors' => [
+                'testConnectionButton' => '#test-netsuite-connection',
+                'connectionResultSpan' => '#connection-result',
+            ],
+            'test_connection_nonce' => wp_create_nonce('product_estimator_netsuite_test_nonce'),
+        ];
+        return $specific_data;
+    }
+
 
     /**
      * Enqueue module-specific styles.

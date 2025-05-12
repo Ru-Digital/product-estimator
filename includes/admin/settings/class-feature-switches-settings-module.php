@@ -133,19 +133,31 @@ final class FeatureSwitchesSettingsModule extends SettingsModuleBase implements 
      * @since    1.1.0
      * @access   public
      */
-    public function enqueue_scripts() {
-        $actual_data_for_js_object = [
-            $this->plugin_name . '-admin',
-            'featureSwitchesSettings',
-            'nonce' => wp_create_nonce('product_estimator_feature_switches_nonce'),
-            'tab_id' => $this->tab_id,
-            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
-            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
-            'option_name'   => $this->option_name,
-            'i18n' => []
+    // Add this to your class-general-settings-module.php file in the enqueue_scripts method
+
+
+    /**
+     * Enqueue module-specific styles.
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function enqueue_scripts() { // This might be renamed or refactored if AdminScriptHandler changes
+        $this->provide_script_data_for_localization();
+    }
+
+    protected function get_js_context_name() {
+        return 'featureSwitchesSettings';
+    }
+
+    protected function get_module_specific_script_data() {
+        return [
+            'option_name' => $this->option_name,
+            'i18n' => [
+                // 'specific_general_setting_message' => __('Hello from General Settings', 'product-estimator'),
+            ],
+            // No need to specify 'option_name', 'actions', 'selectors' unless overriding base.
         ];
-        // Use $this->add_script_data for consistency
-        $this->add_script_data('featureSwitchesSettings', $actual_data_for_js_object);
     }
 
     /**

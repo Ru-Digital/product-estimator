@@ -399,20 +399,6 @@ final class GeneralSettingsModule extends SettingsModuleBase implements Settings
      */
     // Add this to your class-general-settings-module.php file in the enqueue_scripts method
 
-    public function enqueue_scripts() {
-        $actual_data_for_js_object = [
-            $this->plugin_name . '-admin',
-            'generalSettings',
-            'nonce' => wp_create_nonce('product_estimator_settings_nonce'),
-            'tab_id' => $this->tab_id,
-            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
-            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
-            'option_name'   => $this->option_name,
-            'i18n' => []
-        ];
-
-        $this->add_script_data('generalSettings', $actual_data_for_js_object);
-    }
 
     /**
      * Enqueue module-specific styles.
@@ -420,13 +406,21 @@ final class GeneralSettingsModule extends SettingsModuleBase implements Settings
      * @since    1.1.0
      * @access   public
      */
-    public function enqueue_styles() {
-        wp_enqueue_style(
-            $this->plugin_name . '-general-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/general-settings.css',
-            array($this->plugin_name . '-settings'),
-            $this->version
-        );
+    public function enqueue_scripts() { // This might be renamed or refactored if AdminScriptHandler changes
+        $this->provide_script_data_for_localization();
+    }
+
+    protected function get_js_context_name() {
+        return 'generalSettings';
+    }
+
+    protected function get_module_specific_script_data() {
+        return [
+            'i18n' => [
+                // 'specific_general_setting_message' => __('Hello from General Settings', 'product-estimator'),
+            ],
+            // No need to specify 'option_name', 'actions', 'selectors' unless overriding base.
+        ];
     }
 
 

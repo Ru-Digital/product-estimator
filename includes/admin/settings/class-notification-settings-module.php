@@ -11,7 +11,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase implements SettingsModuleInterface {
+final class NotificationSettingsModule extends SettingsModuleWithVerticalTabsBase implements SettingsModuleInterface {
 
     protected $option_name = 'product_estimator_notification_settings';
     private $defined_notification_types = [];

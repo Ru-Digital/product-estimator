@@ -2,7 +2,7 @@
 // File: class-product-additions-settings-module.php (Ensure this is the version you're using)
 namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
 
-class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase implements SettingsModuleInterface
+final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase implements SettingsModuleInterface
 {
     protected $option_name = 'product_estimator_product_additions';
 

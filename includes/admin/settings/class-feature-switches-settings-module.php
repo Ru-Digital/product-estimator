@@ -13,7 +13,7 @@ use RuDigital\ProductEstimator\Includes\Admin\Settings\SettingsModuleBase;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class FeatureSwitchesSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
+final class FeatureSwitchesSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     protected $option_name = 'product_estimator_feature_switches';
 

@@ -10,7 +10,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class GeneralSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
+final class GeneralSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Array of settings keys managed by this module

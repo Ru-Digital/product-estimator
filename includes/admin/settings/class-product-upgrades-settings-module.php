@@ -10,7 +10,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class ProductUpgradesSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
+final class ProductUpgradesSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Option name for storing product upgrades settings

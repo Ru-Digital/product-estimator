@@ -10,7 +10,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class PricingRulesSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
+final class PricingRulesSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Set the tab and section details.

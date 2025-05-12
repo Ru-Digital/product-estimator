@@ -11,7 +11,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class SimilarProductsSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
+final class SimilarProductsSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Option name for storing similar products settings

@@ -286,11 +286,26 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
      */
     public function handle_ajax_add_item()
     {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('SettingsModuleWithTableBase::handle_ajax_add_item called for ' . get_class($this));
+            error_log('POST data: ' . print_r($_POST, true));
+        }
+
         $this->verify_item_ajax_request();
         $item_data_from_post = isset($_POST['item_data']) ? wp_unslash($_POST['item_data']) : [];
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Item data from post (before parsing): ' . print_r($item_data_from_post, true));
+        }
+
         if (!is_array($item_data_from_post)) {
             parse_str($item_data_from_post, $item_data_from_post);
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Item data from post (after parsing): ' . print_r($item_data_from_post, true));
+            }
         }
+
         $validated_data = $this->validate_item_data($item_data_from_post, null, null);
         if (is_wp_error($validated_data)) {
             wp_send_json_error(['message' => $validated_data->get_error_message(), 'errors' => $validated_data->get_error_messages()], 400);

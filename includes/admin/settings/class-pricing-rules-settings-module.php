@@ -21,11 +21,16 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-final class PricingRulesSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
+final class PricingRulesSettingsModule extends SettingsModuleWithTableBase implements SettingsModuleInterface {
+    /**
+     * Option name in WordPress options table where pricing rules are stored
+     * This is the key in wp_options for this module's settings collection
+     */
+    protected $option_name = 'product_estimator_pricing_rules';
 
     /**
      * Set the tab and section details for the admin interface.
-     * 
+     *
      * Defines the tab ID, title, section ID, and section title for this settings module.
      * These values are used to register and identify this module in the admin interface.
      *
@@ -60,62 +65,526 @@ final class PricingRulesSettingsModule extends SettingsModuleBase implements Set
     }
 
     /**
-     * Register the module-specific settings fields.
-     * 
-     * Creates the default pricing settings fields that will appear in the 
-     * admin interface. These include the default pricing method and source
-     * settings that apply when no category-specific rules match.
+     * Get the vertical tabs for this module
+     *
+     * Defines the structure of vertical tabs displayed within this module's main tab
      *
      * @since    1.1.0
      * @access   protected
+     * @return   array    Array of vertical tab definitions
      */
-    public function register_fields() {
-        $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
+    protected function get_vertical_tabs() {
+        return [
+            // Settings tab - contains default pricing options
+            // Pricing rules table tab
+            [
+                'id' => 'pricing_rules_table',
+                'title' => __('Pricing Rules', 'product-estimator'),
+                'description' => __('Manage category-specific pricing rules', 'product-estimator'),
+                'content_type' => 'table', // Table-based interface
+            ],
+            [
+                'id' => 'settings',
+                'title' => __('Settings', 'product-estimator'),
+                'description' => __('Configure default pricing settings', 'product-estimator'),
+                'content_type' => 'settings', // Standard fields display
+            ],
+        ];
+    }
 
-        // Section for default pricing method and source
-        add_settings_section(
-            $this->section_id, // Default settings section
-            $this->section_title,
-            [$this, 'render_default_settings_section_description'],
-            $page_slug_for_wp_api
-        );
+    /**
+     * Register fields for a vertical tab
+     *
+     * Defines and registers the fields that appear in a specific vertical tab
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    string    $vertical_tab_id    ID of the vertical tab
+     * @param    string    $page_slug_for_wp_api    Page slug used by WordPress settings API
+     */
+    protected function register_vertical_tab_fields($vertical_tab_id, $page_slug_for_wp_api) {
+        // The table-type tab doesn't need WordPress settings fields
+        if ($vertical_tab_id === 'pricing_rules_table') {
+            // No settings fields to register - table content is handled separately
+            // via render_table_content_for_tab() from SettingsModuleWithTableBase
+            return;
+        }
 
-        // Add default pricing method and source fields
-        $default_fields = array(
-            'default_pricing_method' => array(
-                'title' => __('Default Pricing Method', 'product-estimator'),
-                'type' => 'select',
-                'description' => __('Select the default pricing method to use when no specific rules apply.', 'product-estimator'),
-                'default' => 'sqm',
-                'options' => $this->get_pricing_methods()
-            ),
-            'default_pricing_source' => array(
-                'title' => __('Default Pricing Source', 'product-estimator'),
-                'type' => 'select',
-                'description' => __('Select the default pricing source to use when no specific rules apply.', 'product-estimator'),
-                'default' => 'website',
-                'options' => $this->get_pricing_sources()
-            ),
-        );
+        if ($vertical_tab_id === 'settings') {
+            // Create a unique section ID by combining the base section ID with a suffix
+            $section_id = $this->section_id . '_settings';
 
-        foreach ($default_fields as $id => $field_args) {
-            $callback_args = array_merge($field_args, ['id' => $id, 'label_for' => $id]);
-            add_settings_field(
-                $id,
-                $field_args['title'],
-                [$this, 'render_field_callback_proxy'],
-                $page_slug_for_wp_api,
-                $this->section_id, // Add to the defaults section
-                $callback_args
+            // Register fields for the settings tab
+            add_settings_section(
+                $section_id,
+                __('Default Pricing Settings', 'product-estimator'),
+                [$this, 'your_section_callback_function'],
+                $page_slug_for_wp_api
             );
-            // Store the field definition for later use in validation and rendering
-            $this->store_registered_field($id, $callback_args);
+
+            // Add default pricing method and source fields
+            $default_fields = array(
+                'default_pricing_method' => array(
+                    'id' => 'default_pricing_method',
+                    'title' => __('Default Pricing Method', 'product-estimator'),
+                    'type' => 'select',
+                    'description' => __('Select the default pricing method to use when no specific rules apply.', 'product-estimator'),
+                    'default' => 'sqm',
+                    'options' => $this->get_pricing_methods(),
+                    'option_name' => $this->option_name,
+                    'attributes' => [
+                        'id' => 'default_pricing_method',
+                        'class' => 'regular-text'
+                    ]
+                ),
+                'default_pricing_source' => array(
+                    'id' => 'default_pricing_source',
+                    'title' => __('Default Pricing Source', 'product-estimator'),
+                    'type' => 'select',
+                    'description' => __('Select the default pricing source to use when no specific rules apply.', 'product-estimator'),
+                    'default' => 'website',
+                    'options' => $this->get_pricing_sources(),
+                    'option_name' => $this->option_name,
+                    'attributes' => [
+                        'id' => 'default_pricing_source',
+                        'class' => 'regular-text'
+                    ]
+                ),
+            );
+
+            foreach ($default_fields as $id => $field_args) {
+                add_settings_field(
+                    $id,
+                    $field_args['title'],
+                    [$this, 'render_field'],
+                    $page_slug_for_wp_api,
+                    $section_id,
+                    $field_args
+                );
+
+                // Store field data in module for validation and form handling
+                $this->store_field_for_sub_tab($vertical_tab_id, $id, $field_args);
+
+                // Debug logging
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Pricing Rules: Stored field for tab ' . $vertical_tab_id . ': ' . $id);
+                }
+            }
         }
     }
 
     /**
+     * Define the table columns for the pricing rules table
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    Associative array of column IDs and labels
+     */
+    protected function get_table_columns() {
+        return [
+            'categories' => __('Categories', 'product-estimator'),
+            'pricing_method' => __('Pricing Method', 'product-estimator'),
+            'item_actions' => __('Actions', 'product-estimator')
+        ];
+    }
+
+    /**
+     * Render content for a specific cell in the pricing rules table
+     *
+     * @since    1.1.0
+     * @access   public
+     * @param    array     $item          The item data being displayed
+     * @param    string    $column_name   The column identifier
+     */
+    public function render_table_cell_content($item, $column_name) {
+        switch ($column_name) {
+            case 'categories':
+                // Get and display category names for this rule
+                $category_names = isset($item['category_names']) ? $item['category_names'] : '';
+                echo esc_html($category_names);
+                break;
+
+            case 'pricing_method':
+                // Display the pricing method and source in a readable format
+                $pricing_method = isset($item['pricing_method']) ? $item['pricing_method'] : '';
+                $pricing_source = isset($item['pricing_source']) ? $item['pricing_source'] : '';
+                echo esc_html($this->get_pricing_label($pricing_method, $pricing_source));
+                break;
+
+            case 'item_actions':
+                // Use the standard action buttons from the parent class
+                echo $this->render_standard_item_actions($item);
+                break;
+
+            default:
+                // For any other column, output the raw value if it exists
+                if (isset($item[$column_name])) {
+                    echo esc_html($item[$column_name]);
+                } else {
+                    echo '—'; // Em dash as placeholder for empty cells
+                }
+                break;
+        }
+    }
+
+
+    /**
+     * Define the structure of form fields for adding/editing pricing rules
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    Array of field definitions
+     */
+    protected function get_item_form_fields_definition() {
+        $categories = get_terms(['taxonomy' => 'product_cat', 'hide_empty' => false]);
+        $category_options = [];
+
+        if (!is_wp_error($categories)) {
+            foreach ($categories as $category) {
+                $category_options[$category->term_id] = $category->name;
+            }
+        }
+
+        return [
+            [
+                'id' => 'item_id',
+                'type' => 'hidden',
+                'attributes' => [
+                    'class' => 'pe-item-form-field',
+                    'id' => 'item_id',
+                ],
+            ],
+            [
+                'id' => 'categories',
+                'label' => __('Categories', 'product-estimator'),
+                'type' => 'select',
+                'required' => true,
+                'multiple' => true,
+                'options' => $category_options,
+                'attributes' => [
+                    'class' => 'pe-item-form-field',
+                    'id' => 'categories',
+                    'name' => 'categories[]', // Use array notation for multiple select
+                    'data-placeholder' => __('Select categories', 'product-estimator'),
+                ],
+                'description' => __('Select categories to which this pricing method should apply.', 'product-estimator'),
+            ],
+            [
+                'id' => 'pricing_method',
+                'label' => __('Pricing Method', 'product-estimator'),
+                'type' => 'select',
+                'required' => true,
+                'options' => $this->get_pricing_methods(),
+                'attributes' => [
+                    'class' => 'pe-item-form-field',
+                    'id' => 'pricing_method',
+                ],
+                'description' => __('Select how pricing should be calculated for products in the selected categories.', 'product-estimator'),
+            ],
+            [
+                'id' => 'pricing_source',
+                'label' => __('Pricing Source', 'product-estimator'),
+                'type' => 'select',
+                'required' => true,
+                'options' => $this->get_pricing_sources(),
+                'attributes' => [
+                    'class' => 'pe-item-form-field',
+                    'id' => 'pricing_source',
+                ],
+                'description' => __('Select where the price data should be sourced from.', 'product-estimator'),
+            ],
+        ];
+    }
+
+    /**
+     * Get items for the pricing rules table
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array    Array of pricing rule items with formatted data
+     */
+    protected function get_items_for_table() {
+        // Get the pricing rules with a fallback to empty array
+        $pricing_rules = get_option('product_estimator_pricing_rules', []);
+
+        // Ensure pricing_rules is an array
+        if (!is_array($pricing_rules)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('PricingRulesSettingsModule: pricing_rules option is not an array');
+                error_log('Value: ' . print_r($pricing_rules, true));
+            }
+            $pricing_rules = [];
+        }
+
+        $formatted_rules = [];
+
+        foreach ($pricing_rules as $rule_id => $rule) {
+            // Get category names for display
+            $category_names = [];
+            $categories_array = isset($rule['categories']) ? (array)$rule['categories'] : [];
+
+            foreach ($categories_array as $cat_id) {
+                $term = get_term($cat_id, 'product_cat');
+                if (!is_wp_error($term) && $term) {
+                    $category_names[] = $term->name;
+                }
+            }
+
+            // Ensure $rule is an array before merging
+            if (!is_array($rule)) {
+                // Log error for debugging
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('PricingRulesSettingsModule: Rule data is not an array for rule_id: ' . $rule_id);
+                    error_log('Rule value: ' . print_r($rule, true));
+                }
+                $rule = array(); // Convert to empty array to prevent array_merge error
+            }
+
+            // Add formatted data to the rule
+            $formatted_rules[$rule_id] = array_merge($rule, [
+                'id' => $rule_id,
+                'category_names' => implode(', ', $category_names),
+                'pricing_label' => $this->get_pricing_label(
+                    $rule['pricing_method'] ?? '',
+                    $rule['pricing_source'] ?? ''
+                ),
+            ]);
+        }
+
+        return $formatted_rules;
+    }
+
+    /**
+     * Validate pricing rule data before saving
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array           $raw_item_data      The unvalidated data from form submission
+     * @param    string|int|null $item_id            The ID of the item being edited (null for new items)
+     * @param    array|null      $original_item_data The original item data (for edit operations)
+     * @return   array|\WP_Error                     Validated data or error object
+     */
+    protected function validate_item_data(array $raw_item_data, $item_id = null, $original_item_data = null) {
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('PricingRulesSettingsModule - validate_item_data called with:');
+            error_log('Raw item data: ' . print_r($raw_item_data, true));
+            error_log('Item ID: ' . ($item_id ?? 'null'));
+            error_log('Original item data: ' . ($original_item_data ? print_r($original_item_data, true) : 'null'));
+        }
+
+        $validated_data = [];
+        $error_messages = [];
+
+        // Validate categories (required, must be valid term IDs)
+        // Handle both string and array input for categories
+        $categories_input = $raw_item_data['categories'] ?? null;
+
+        // Log raw input for debugging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('PricingRulesSettingsModule - Raw categories input: ' . print_r($categories_input, true));
+        }
+
+        // Convert to array if it's a string (single value) or comma-separated list
+        if (!is_array($categories_input)) {
+            if (is_string($categories_input) && !empty($categories_input)) {
+                // Handle comma-separated values or single value
+                $categories_input = strpos($categories_input, ',') !== false ?
+                    explode(',', $categories_input) :
+                    [$categories_input];
+            } else {
+                $categories_input = [];
+            }
+        }
+
+        if (empty($categories_input)) {
+            $error_messages[] = __('Please select at least one category.', 'product-estimator');
+        } else {
+            $valid_categories = [];
+            foreach ($categories_input as $cat_id) {
+                $cat_id = absint($cat_id);
+                $term = get_term($cat_id, 'product_cat');
+                if (!is_wp_error($term) && $term) {
+                    $valid_categories[] = $cat_id;
+                }
+            }
+
+            if (empty($valid_categories)) {
+                $error_messages[] = __('Please select valid product categories.', 'product-estimator');
+            } else {
+                $validated_data['categories'] = $valid_categories;
+            }
+        }
+
+        // Validate pricing method (required, must be in allowed list)
+        if (empty($raw_item_data['pricing_method'])) {
+            $error_messages[] = __('Please select a pricing method.', 'product-estimator');
+        } else {
+            $method = sanitize_text_field($raw_item_data['pricing_method']);
+            $valid_methods = array_keys($this->get_pricing_methods());
+
+            if (!in_array($method, $valid_methods)) {
+                $error_messages[] = __('Invalid pricing method selected.', 'product-estimator');
+            } else {
+                $validated_data['pricing_method'] = $method;
+            }
+        }
+
+        // Validate pricing source (required, must be in allowed list)
+        if (empty($raw_item_data['pricing_source'])) {
+            $error_messages[] = __('Please select a pricing source.', 'product-estimator');
+        } else {
+            $source = sanitize_text_field($raw_item_data['pricing_source']);
+            $valid_sources = array_keys($this->get_pricing_sources());
+
+            if (!in_array($source, $valid_sources)) {
+                $error_messages[] = __('Invalid pricing source selected.', 'product-estimator');
+            } else {
+                $validated_data['pricing_source'] = $source;
+            }
+        }
+
+        // Return error if any validation failed
+        if (!empty($error_messages)) {
+            return new \WP_Error('validation_failed', implode('<br>', $error_messages));
+        }
+
+        return $validated_data;
+    }
+
+    /**
+     * Prepare item data for response after saving
+     *
+     * Adds additional data needed for proper display in the table UI
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    array    $saved_item    The saved item data
+     * @return   array    Enhanced item data for UI display
+     */
+    protected function prepare_item_for_response(array $saved_item) {
+        // Calculate category names
+        $category_names = [];
+        $categories_array = isset($saved_item['categories']) ? (array)$saved_item['categories'] : [];
+
+        foreach ($categories_array as $cat_id) {
+            $term = get_term($cat_id, 'product_cat');
+            if (!is_wp_error($term) && $term) {
+                $category_names[] = $term->name;
+            }
+        }
+
+        // Create formatted data
+        $formatted_data = [
+            'category_names' => implode(', ', $category_names),
+            'pricing_label' => $this->get_pricing_label(
+                $saved_item['pricing_method'] ?? '',
+                $saved_item['pricing_source'] ?? ''
+            ),
+        ];
+
+        // Add UI-specific fields - ensure we're merging arrays
+        if (!is_array($saved_item)) {
+            // Log error for debugging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('PricingRulesSettingsModule: prepare_item_for_response received non-array item');
+                error_log('Item value: ' . print_r($saved_item, true));
+            }
+            // Since $saved_item is typed as array, this shouldn't happen under normal conditions
+            // but we protect against PHP type errors just in case
+            return $formatted_data;
+        }
+
+        return array_merge($saved_item, $formatted_data);
+    }
+
+    /**
+     * Customize the "Add New" button label
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   string    The button label
+     */
+    protected function get_add_new_button_label() {
+        return __('Add New Pricing Rule', 'product-estimator');
+    }
+
+    /**
+     * Customize the form title
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @param    bool      $is_edit_mode    Whether the form is in edit mode
+     * @return   string    The form title
+     */
+    protected function get_form_title($is_edit_mode = false) {
+        return $is_edit_mode
+            ? __('Edit Pricing Rule', 'product-estimator')
+            : __('Add New Pricing Rule', 'product-estimator');
+    }
+
+    /**
+     * Customize the success message for adding an item
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   string    The success message
+     */
+    protected function get_item_added_message() {
+        return __('Pricing rule added successfully.', 'product-estimator');
+    }
+
+    /**
+     * Customize the success message for updating an item
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   string    The success message
+     */
+    protected function get_item_updated_message() {
+        return __('Pricing rule updated successfully.', 'product-estimator');
+    }
+
+    /**
+     * Customize the success message for deleting an item
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   string    The success message
+     */
+    protected function get_item_deleted_message() {
+        return __('Pricing rule deleted successfully.', 'product-estimator');
+    }
+
+    /**
+     * Render the default settings section description.
+     *
+     * Displays explanatory text for the default pricing settings section.
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function render_default_settings_section_description() {
+        echo '<p>' . esc_html__('Set the default pricing method and source to use when no specific category rules apply.', 'product-estimator') . '</p>';
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Rendering default settings section description for Pricing Rules');
+        }
+    }
+
+    /**
+     * Section callback for the settings vertical tab
+     * Displays description text for the default settings section.
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function your_section_callback_function() {
+        echo 'Configure the default pricing settings below. These will be used when no specific category rules match.>';
+    }
+
+    /**
      * Validate module-specific settings
-     * 
+     *
      * Ensures that submitted settings have valid values before they are saved.
      * This validation is applied to settings saved through the main settings form,
      * primarily the default pricing method and source.
@@ -142,7 +611,7 @@ final class PricingRulesSettingsModule extends SettingsModuleBase implements Set
                 // If invalid, we could revert to a safe default here if needed
             }
         }
-        
+
         // Additional validation for default_pricing_source
         if (isset($validated['default_pricing_source'])) {
             $valid_sources = array_keys($this->get_pricing_sources());
@@ -150,75 +619,13 @@ final class PricingRulesSettingsModule extends SettingsModuleBase implements Set
                 add_settings_error($this->option_name, 'invalid_pricing_source', __('Invalid default pricing source selected.', 'product-estimator'));
             }
         }
-        
+
         return $validated;
     }
 
     /**
-     * Render a settings field via proxy method
-     * 
-     * This proxy method allows the parent class to handle field rendering
-     * while maintaining proper method visibility.
-     *
-     * @since    1.1.0
-     * @access   public
-     * @param    array    $args    Field arguments including type, id, and other properties
-     */
-    public function render_field_callback_proxy($args) {
-        parent::render_field($args);
-    }
-
-    /**
-     * Process form data specific to this module
-     * 
-     * Handles the processing and validation of form data submitted via the
-     * default settings form. This is separate from the category-specific
-     * pricing rules which are handled via AJAX.
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    array    $form_data    The form data to process
-     * @return   true|\WP_Error    True on success, WP_Error on failure
-     */
-    protected function process_form_data($form_data) {
-        if (!isset($form_data['product_estimator_settings'])) {
-            return new \WP_Error('missing_data', __('No settings data received', 'product-estimator'));
-        }
-
-        $settings = $form_data['product_estimator_settings'];
-
-        // Validate default pricing method
-        if (isset($settings['default_pricing_method'])) {
-            $method = $settings['default_pricing_method'];
-            $valid_methods = array_keys($this->get_pricing_methods());
-            if (!in_array($method, $valid_methods)) {
-                return new \WP_Error(
-                    'invalid_pricing_method',
-                    __('Invalid default pricing method', 'product-estimator')
-                );
-            }
-        }
-
-        // Validate default pricing source
-        if (isset($settings['default_pricing_source'])) {
-            $source = $settings['default_pricing_source'];
-            $valid_sources = array_keys($this->get_pricing_sources());
-            if (!in_array($source, $valid_sources)) {
-                return new \WP_Error(
-                    'invalid_pricing_source',
-                    __('Invalid default pricing source', 'product-estimator')
-                );
-            }
-        }
-
-        // For category-specific pricing rules, we handle the data saving through separate AJAX endpoints
-        // but defaults will be saved with the main settings
-        return true;
-    }
-
-    /**
      * Additional actions after saving settings
-     * 
+     *
      * Performs cleanup operations after settings are saved, such as
      * clearing any caches that might contain outdated pricing information.
      *
@@ -232,318 +639,8 @@ final class PricingRulesSettingsModule extends SettingsModuleBase implements Set
     }
 
     /**
-     * Render the main section description.
-     * 
-     * This method can be empty or provide a description for the whole tab.
-     * In this module, we use specific section descriptions instead.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function render_section_description() { /* Can be empty or describe the whole tab */ }
-
-    /**
-     * Render the default settings section description.
-     * 
-     * Displays explanatory text for the default pricing settings section.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function render_default_settings_section_description() {
-        echo '<p>' . esc_html__('Set the default pricing method and source to use when no specific category rules apply.', 'product-estimator') . '</p>';
-    }
-
-    /**
-     * Render a select field.
-     * 
-     * Creates an HTML select dropdown with options based on the field configuration.
-     * This is a helper method used by the field rendering system.
-     *
-     * @since    1.1.0
-     * @access   private
-     * @param    array    $args    Field arguments including options and current value
-     */
-    private function render_select_field($args) {
-        $options = get_option('product_estimator_settings');
-        $id = $args['id'];
-        $current_value = isset($options[$id]) ? $options[$id] : '';
-
-        if (empty($current_value) && isset($args['default'])) {
-            $current_value = $args['default'];
-        }
-
-        echo '<select id="' . esc_attr($id) . '" name="product_estimator_settings[' . esc_attr($id) . ']">';
-        foreach ($args['options'] as $value => $label) {
-            echo '<option value="' . esc_attr($value) . '" ' . selected($current_value, $value, false) . '>' . esc_html($label) . '</option>';
-        }
-        echo '</select>';
-
-        if (isset($args['description'])) {
-            echo '<p class="description">' . esc_html($args['description']) . '</p>';
-        }
-    }
-
-    /**
-     * Render the module content in the admin interface.
-     * 
-     * Creates the complete HTML for the pricing rules tab, including both
-     * the default settings form and the category-specific pricing rules interface.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function render_module_content() {
-        // Render the form for default settings first
-        echo '<h3>' . esc_html__('Default Pricing Settings', 'product-estimator') . '</h3>';
-        ?>
-        <form method="post" action="javascript:void(0);" class="product-estimator-form default-pricing-form" data-tab-id="<?php echo esc_attr($this->tab_id); /* No sub-tab for these defaults */ ?>">
-            <?php
-            // This generates the WordPress settings form fields with proper nonce
-            settings_fields($this->option_name); 
-            
-            // This outputs all sections and fields registered for this settings page
-            do_settings_sections($this->plugin_name . '_' . $this->tab_id); 
-            ?>
-            <p class="submit">
-                <button type="submit" class="button button-primary save-settings">
-                    <?php esc_html_e('Save Default Settings', 'product-estimator'); ?>
-                </button>
-                <span class="spinner"></span>
-            </p>
-        </form>
-        <hr class="pricing-rules-divider" />
-        <?php
-        // Then render the custom UI for category-specific pricing rules
-        $pricing_rules = get_option('product_estimator_pricing_rules', array());
-        $categories = get_terms(['taxonomy' => 'product_cat', 'hide_empty' => false]);
-        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/partials/pricing-rules-admin-display.php';
-    }
-
-    /**
-     * Enqueue module-specific scripts.
-     * 
-     * Loads JavaScript libraries and adds data needed by the admin interface.
-     * This includes the Select2 library for enhanced dropdowns and localized
-     * data like AJAX URLs and translatable strings.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function enqueue_scripts() {
-        // Enqueue Select2 for enhanced multi-select functionality
-        wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', ['jquery'], '4.1.0-rc.0', true);
-
-        // Set up data for the JavaScript module to use
-        $actual_data_for_js_object = [
-            'nonce' => wp_create_nonce('product_estimator_pricing_rules_nonce'),
-            'tab_id' => $this->tab_id,
-            'ajaxUrl'      => admin_url('admin-ajax.php'), 
-            'ajax_action'   => 'save_' . $this->tab_id . '_settings',
-            'option_name'   => $this->option_name,
-            'i18n'            => [
-                'confirmDelete' => __('Are you sure you want to delete this pricing rule?', 'product-estimator'),
-            ],
-        ];
-        
-        // Add the data to the JavaScript environment
-        $this->add_script_data('pricingRulesSettings', $actual_data_for_js_object);
-    }
-
-    /**
-     * Enqueue module-specific styles.
-     * 
-     * Loads CSS files needed for the pricing rules interface, including
-     * the Select2 styles and module-specific customizations.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function enqueue_styles() {
-        // Enqueue Select2 CSS for enhanced dropdowns
-        wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', [], '4.1.0-rc.0');
-
-        // Enqueue module-specific styles
-        wp_enqueue_style(
-            $this->plugin_name . '-pricing-rules',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/pricing-rules.css',
-            array($this->plugin_name . '-settings'),
-            $this->version
-        );
-    }
-
-    /**
-     * Register module hooks.
-     * 
-     * Sets up WordPress action and filter hooks needed by this module,
-     * particularly the AJAX handlers for category-specific pricing rules.
-     *
-     * @since    1.1.0
-     * @access   protected
-     */
-    protected function register_hooks() {
-        parent::register_hooks();
-
-        // Register AJAX handlers for category-specific pricing rules
-        add_action('wp_ajax_save_pricing_rule', array($this, 'ajax_save_pricing_rule'));
-        add_action('wp_ajax_delete_pricing_rule', array($this, 'ajax_delete_pricing_rule'));
-    }
-
-    /**
-     * AJAX handler for saving a category-specific pricing rule
-     * 
-     * Processes form data submitted via AJAX to create or update a pricing rule
-     * that applies to specific product categories. Validates the data and
-     * updates the stored rules.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function ajax_save_pricing_rule() {
-        // Check nonce for security
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_pricing_rules_nonce')) {
-            wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
-            return;
-        }
-
-        // Check user permissions
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('You do not have permission to perform this action.', 'product-estimator')));
-            return;
-        }
-
-        // Get and process form data
-        $rule_id = isset($_POST['rule_id']) && !empty($_POST['rule_id']) ?
-            sanitize_text_field($_POST['rule_id']) :
-            uniqid('rule_'); // Generate a unique ID if none provided
-
-        // Handle categories as array for multiple selection
-        $categories = array();
-        if (isset($_POST['categories']) && is_array($_POST['categories'])) {
-            foreach ($_POST['categories'] as $cat_id) {
-                $categories[] = absint($cat_id);
-            }
-        }
-
-        // Get pricing method and source
-        $pricing_method = isset($_POST['pricing_method']) ? sanitize_text_field($_POST['pricing_method']) : '';
-        $pricing_source = isset($_POST['pricing_source']) ? sanitize_text_field($_POST['pricing_source']) : '';
-
-        // Validate required data
-        if (empty($categories)) {
-            wp_send_json_error(array('message' => __('Please select at least one category.', 'product-estimator')));
-            return;
-        }
-
-        if (empty($pricing_method)) {
-            wp_send_json_error(array('message' => __('Please select a pricing method.', 'product-estimator')));
-            return;
-        }
-
-        if (empty($pricing_source)) {
-            wp_send_json_error(array('message' => __('Please select a pricing source.', 'product-estimator')));
-            return;
-        }
-
-        // Get current rules
-        $pricing_rules = get_option('product_estimator_pricing_rules', array());
-
-        // Prepare the rule data
-        $rule_data = array(
-            'categories' => $categories,
-            'pricing_method' => $pricing_method,
-            'pricing_source' => $pricing_source,
-        );
-
-        // Add or update rule
-        $pricing_rules[$rule_id] = $rule_data;
-
-        // Save rules
-        update_option('product_estimator_pricing_rules', $pricing_rules);
-
-        // Get category names for display in the response
-        $category_names = array();
-        foreach ($categories as $cat_id) {
-            $term = get_term($cat_id, 'product_cat');
-            if (!is_wp_error($term) && $term) {
-                $category_names[] = $term->name;
-            }
-        }
-
-        // Get human-readable label for the pricing configuration
-        $pricing_label = $this->get_pricing_label($pricing_method, $pricing_source);
-
-        // Prepare response data with all information needed by the UI
-        $response_data = array(
-            'id' => $rule_id,
-            'categories' => $categories,
-            'category_names' => implode(', ', $category_names),
-            'pricing_method' => $pricing_method,
-            'pricing_source' => $pricing_source,
-            'pricing_label' => $pricing_label,
-        );
-
-        // Send success response
-        wp_send_json_success(array(
-            'message' => __('Pricing rule saved successfully.', 'product-estimator'),
-            'rule' => $response_data,
-        ));
-    }
-
-    /**
-     * AJAX handler for deleting a category-specific pricing rule
-     * 
-     * Processes AJAX requests to delete an existing pricing rule.
-     * Validates the request data and updates the stored rules accordingly.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function ajax_delete_pricing_rule() {
-        // Check nonce for security
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_pricing_rules_nonce')) {
-            wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
-            return;
-        }
-
-        // Check user permissions
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => __('You do not have permission to perform this action.', 'product-estimator')));
-            return;
-        }
-
-        // Get rule ID to delete
-        $rule_id = isset($_POST['rule_id']) ? sanitize_text_field($_POST['rule_id']) : '';
-
-        if (empty($rule_id)) {
-            wp_send_json_error(array('message' => __('Invalid rule ID.', 'product-estimator')));
-            return;
-        }
-
-        // Get current rules
-        $pricing_rules = get_option('product_estimator_pricing_rules', array());
-
-        // Check if rule exists
-        if (!isset($pricing_rules[$rule_id])) {
-            wp_send_json_error(array('message' => __('Pricing rule not found.', 'product-estimator')));
-            return;
-        }
-
-        // Remove rule
-        unset($pricing_rules[$rule_id]);
-
-        // Save updated rules
-        update_option('product_estimator_pricing_rules', $pricing_rules);
-
-        // Send success response
-        wp_send_json_success(array(
-            'message' => __('Pricing rule deleted successfully.', 'product-estimator'),
-        ));
-    }
-
-    /**
      * Get combined pricing method and source label
-     * 
+     *
      * Creates a human-readable description of a pricing configuration
      * by combining the method and source labels.
      *
@@ -562,7 +659,7 @@ final class PricingRulesSettingsModule extends SettingsModuleBase implements Set
 
     /**
      * Get human-readable label for pricing method
-     * 
+     *
      * Converts a pricing method key into a user-friendly label.
      *
      * @since    1.1.0
@@ -581,7 +678,7 @@ final class PricingRulesSettingsModule extends SettingsModuleBase implements Set
 
     /**
      * Get human-readable label for pricing source
-     * 
+     *
      * Converts a pricing source key into a user-friendly label.
      *
      * @since    1.1.0
@@ -600,7 +697,7 @@ final class PricingRulesSettingsModule extends SettingsModuleBase implements Set
 
     /**
      * Get available pricing methods
-     * 
+     *
      * Returns an array of all supported pricing methods with their labels.
      * Used for populating select fields in the UI.
      *
@@ -617,7 +714,7 @@ final class PricingRulesSettingsModule extends SettingsModuleBase implements Set
 
     /**
      * Get available pricing sources
-     * 
+     *
      * Returns an array of all supported pricing sources with their labels.
      * Used for populating select fields in the UI.
      *
@@ -630,5 +727,108 @@ final class PricingRulesSettingsModule extends SettingsModuleBase implements Set
             'website' => __('Website', 'product-estimator'),
             'netsuite' => __('NetSuite', 'product-estimator'),
         );
+    }
+
+    /**
+     * Enqueue module-specific scripts.
+     *
+     * Loads JavaScript libraries and adds data needed by the admin interface.
+     * This includes the Select2 library for enhanced dropdowns and localized
+     * data like AJAX URLs and translatable strings.
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function enqueue_scripts() {
+        parent::enqueue_scripts();
+
+        // Enqueue Select2 for enhanced multi-select functionality
+        wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', ['jquery'], '4.1.0-rc.0', true);
+
+        // This single call handles getting common data, module-specific data, merging, and localizing.
+        // It relies on get_common_table_script_data() from SettingsModuleWithTableBase,
+        // get_module_specific_script_data() and get_js_context_name() from this class.
+        $this->provide_script_data_for_localization();
+    }
+
+    /**
+     * Enqueue module-specific styles.
+     *
+     * Loads CSS files needed for the pricing rules interface, including
+     * the Select2 styles and module-specific customizations.
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function enqueue_styles() {
+        parent::enqueue_styles();
+
+        // Enqueue Select2 CSS for enhanced dropdowns
+        wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', [], '4.1.0-rc.0');
+
+        // Enqueue module-specific styles
+        wp_enqueue_style(
+            $this->plugin_name . '-pricing-rules',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/pricing-rules.css',
+            array($this->plugin_name . '-settings'),
+            $this->version
+        );
+    }
+
+    /**
+     * Returns the unique JavaScript context name for this module's settings.
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   string The JavaScript context name.
+     */
+    protected function get_js_context_name() {
+        return 'pricingRulesSettings';
+    }
+
+    /**
+     * Returns the base string used for nonce actions
+     * This provides a consistent namespace for nonce generation and verification
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   string The nonce action base
+     */
+    protected function get_nonce_action_base() {
+        return 'product_estimator_pricing_rules_items';
+    }
+
+    /**
+     * Returns an array of script data specific to this module.
+     * This data will be merged with common data from the parent class.
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array Associative array of module-specific script data.
+     */
+    protected function get_module_specific_script_data() {
+        // Add module-specific data
+        return [
+            'selectors' => [
+                'categoriesSelect' => '#categories',
+                'pricingMethodSelect' => '#pricing_method',
+                'pricingSourceSelect' => '#pricing_source',
+            ],
+            'i18n' => [
+                'selectCategories' => __('Please select categories', 'product-estimator'),
+                'selectPricingMethod' => __('Please select a pricing method', 'product-estimator'),
+                'selectPricingSource' => __('Please select a pricing source', 'product-estimator'),
+                'confirmDelete' => __('Are you sure you want to delete this pricing rule?', 'product-estimator'),
+                'addNew' => __('Add New Pricing Rule', 'product-estimator'),
+                'saveChanges' => __('Save Changes', 'product-estimator'),
+                'itemSavedSuccess' => __('Pricing rule saved successfully.', 'product-estimator'),
+                'itemDeletedSuccess' => __('Pricing rule deleted successfully.', 'product-estimator'),
+                'errorSavingItem' => __('Error saving pricing rule.', 'product-estimator'),
+                'errorDeletingItem' => __('Error deleting pricing rule.', 'product-estimator'),
+                'errorLoadingItem' => __('Error loading pricing rule details.', 'product-estimator'),
+                'saveChangesButton' => __('Save Pricing Rule', 'product-estimator'),
+                'updateChangesButton' => __('Update Pricing Rule', 'product-estimator'),
+            ],
+        ];
     }
 }

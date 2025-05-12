@@ -45,10 +45,13 @@ final class PricingRulesSettingsModule extends SettingsModuleWithTableBase imple
     }
 
     /**
-     * Check if this module handles a specific setting key
+     * Determines if this module handles a specific setting key
      *
-     * Used by the settings manager to determine which module should handle
-     * a specific setting when saving or retrieving values.
+     * This method is crucial for the validation process as it identifies which
+     * settings keys belong to this module. It handles two types of keys:
+     *
+     * 1. Settings fields like 'default_pricing_method' and 'default_pricing_source'
+     * 2. Table items which typically have a prefix (rule_) or are full rule IDs
      *
      * @since    1.1.0
      * @access   public
@@ -56,12 +59,27 @@ final class PricingRulesSettingsModule extends SettingsModuleWithTableBase imple
      * @return   bool      Whether this module handles the setting
      */
     public function has_setting($key) {
-        $module_settings = [
-            'default_pricing_method',
-            'default_pricing_source'
-        ];
+        // Check if it's a default setting field
+        if ($key === 'default_pricing_method' || $key === 'default_pricing_source') {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('PricingRulesSettingsModule: has_setting: TRUE for default setting ' . $key);
+            }
+            return true;
+        }
 
-        return in_array($key, $module_settings);
+        // Check if it's a table item - rule items typically start with 'rule_' prefix
+        // or are full rule IDs like 'pricing_rules_XXXXXXX'
+        if (is_string($key) && (strpos($key, 'rule_') === 0 || strpos($key, 'pricing_rules_') === 0)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('PricingRulesSettingsModule: has_setting: TRUE for rule item ' . $key);
+            }
+            return true;
+        }
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('PricingRulesSettingsModule: has_setting: FALSE for ' . $key);
+        }
+        return false;
     }
 
     /**
@@ -118,7 +136,7 @@ final class PricingRulesSettingsModule extends SettingsModuleWithTableBase imple
             add_settings_section(
                 $section_id,
                 __('Default Pricing Settings', 'product-estimator'),
-                [$this, 'your_section_callback_function'],
+                [$this, 'render_default_settings_section_description'],
                 $page_slug_for_wp_api
             );
 
@@ -318,7 +336,20 @@ final class PricingRulesSettingsModule extends SettingsModuleWithTableBase imple
 
         $formatted_rules = [];
 
+        // These are keys that should be excluded from the table as they're settings, not rules
+        $excluded_keys = ['default_pricing_method', 'default_pricing_source'];
+
         foreach ($pricing_rules as $rule_id => $rule) {
+            // Skip default settings - they should only appear in the Settings tab
+            if (in_array($rule_id, $excluded_keys)) {
+                continue;
+            }
+
+            // Skip if the rule doesn't have categories (it's not a valid rule)
+            if (!isset($rule['categories']) || empty($rule['categories'])) {
+                continue;
+            }
+
             // Get category names for display
             $category_names = [];
             $categories_array = isset($rule['categories']) ? (array)$rule['categories'] : [];
@@ -571,16 +602,7 @@ final class PricingRulesSettingsModule extends SettingsModuleWithTableBase imple
         }
     }
 
-    /**
-     * Section callback for the settings vertical tab
-     * Displays description text for the default settings section.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function your_section_callback_function() {
-        echo 'Configure the default pricing settings below. These will be used when no specific category rules match.>';
-    }
+    // This function is no longer needed as we're using render_default_settings_section_description instead
 
     /**
      * Validate module-specific settings
@@ -621,21 +643,6 @@ final class PricingRulesSettingsModule extends SettingsModuleWithTableBase imple
         }
 
         return $validated;
-    }
-
-    /**
-     * Additional actions after saving settings
-     *
-     * Performs cleanup operations after settings are saved, such as
-     * clearing any caches that might contain outdated pricing information.
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    array    $form_data    The processed form data
-     */
-    protected function after_save_actions($form_data) {
-        // Clear any caches related to pricing rules to ensure latest settings are used
-        wp_cache_delete('product_estimator_pricing_rules_defaults', 'options');
     }
 
     /**

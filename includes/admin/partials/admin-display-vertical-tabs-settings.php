@@ -144,13 +144,8 @@ if ( ! empty( trim( $section_description_content ) ) ) :
                             // should match how fields were registered for this specific sub-tab
                             $page_slug_for_wp_api = $this->plugin_name . '_' . $this->get_tab_id() . '_' . $tab_data['id'];
 
-                            // Output WordPress settings fields (nonce, action, option_page) with unique ID for nonce
-                            ob_start();
+                            // Output WordPress settings fields (nonce, action, option_page)
                             settings_fields( $this->option_name );
-                            $settings_fields = ob_get_clean();
-                            // Add unique ID to _wpnonce field
-                            $settings_fields = str_replace('id="_wpnonce"', 'id="_wpnonce_' . esc_attr($tab_data['id']) . '"', $settings_fields);
-                            echo $settings_fields;
 
                             // Output settings sections and fields for this tab
                             do_settings_sections( $page_slug_for_wp_api );

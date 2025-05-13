@@ -89,15 +89,7 @@ $current_item_values = [];
               data-sub-tab-id="<?php echo esc_attr(isset($vertical_tab_id) ? $vertical_tab_id : 'rules_table_tab'); ?>">
               
             <!-- Hidden field for item ID, populated when editing -->
-            <?php
-            // Generate a unique identifier for this form's item_id field
-            $unique_field_suffix = $this->get_tab_id() . '_' . (isset($vertical_tab_id) ? $vertical_tab_id : 'rules_table_tab');
-            $unique_item_id_name = $hidden_item_id_name . '_' . $unique_field_suffix;
-            $unique_item_id_id = $hidden_item_id_name . '_form_' . $unique_field_suffix; // Added 'form_' to ensure uniqueness
-            ?>
-            <input type="hidden" name="<?php echo esc_attr( $unique_item_id_name ); ?>" 
-                   id="<?php echo esc_attr( $unique_item_id_id ); ?>" 
-                   value="" class="pe-item-id-input" data-original-name="<?php echo esc_attr( $hidden_item_id_name ); ?>" />
+            <input type="hidden" name="<?php echo esc_attr( $hidden_item_id_name ); ?>" value="" class="pe-item-id-input" />
 
             <?php
             // Form Field Rendering Logic
@@ -118,9 +110,10 @@ $current_item_values = [];
                                        
                         $_name_override = $field_args['id'];
                         
-                        // Ensure field has ID attribute with unique suffix
-                        $field_unique_id = $field_args['id'] . '_field_' . $unique_field_suffix;
-                        $field_args['attributes']['id'] = $field_unique_id;
+                        // Ensure field has ID attribute
+                        if ( !isset( $field_args['attributes']['id'] ) ) {
+                            $field_args['attributes']['id'] = $field_args['id'];
+                        }
                         
                         // Render the hidden field
                         $this->render_field( $field_args, $_current_value, $_name_override );
@@ -185,9 +178,10 @@ $current_item_values = [];
                                 $_name_override .= '[]';
                             }
                             
-                            // Ensure field has ID attribute with unique suffix
-                            $field_unique_id = $field_id . '_field_' . $unique_field_suffix;
-                            $field_args['attributes']['id'] = $field_unique_id;
+                            // Ensure field has ID attribute
+                            if ( !isset($field_args['attributes']['id']) ) {
+                                $field_args['attributes']['id'] = $field_id;
+                            }
                             
                             // Get HTML element ID and set up description ID if needed
                             $_html_element_id = $field_args['attributes']['id'];

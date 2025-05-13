@@ -59,13 +59,7 @@ if (empty($active_tab) || !isset($modules[$active_tab])) {
                     <form method="post" action="javascript:void(0);" class="product-estimator-form" data-tab="<?php echo esc_attr($tab_id); ?>">
                         <?php
                         // Ensure $this->plugin_name is accessible here. This context ($this) is SettingsManager.
-                        // Handle settings fields with unique nonce ID
-                        ob_start();
                         settings_fields($this->plugin_name . '_options'); // $this->plugin_name is from SettingsManager context
-                        $settings_fields = ob_get_clean();
-                        // Add unique ID to _wpnonce field based on tab ID
-                        $settings_fields = str_replace('id="_wpnonce"', 'id="_wpnonce_' . esc_attr($tab_id) . '"', $settings_fields);
-                        echo $settings_fields;
                         // The page slug for do_settings_sections in this fallback should also use the module's properties if available
                         $fallback_page_slug = (method_exists($module, 'get_plugin_name') && method_exists($module, 'get_tab_id'))
                             ? $module->get_plugin_name() . '_' . $module->get_tab_id()

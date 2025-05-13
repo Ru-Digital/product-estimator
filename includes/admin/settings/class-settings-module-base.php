@@ -581,8 +581,7 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
         ?>
         <form method="post" action="javascript:void(0);" class="product-estimator-form" data-tab-id="<?php echo esc_attr($this->tab_id); ?>">
             <?php
-            // Output nonce, action, and option_page fields with unique ID for nonce
-            $this->output_settings_fields_with_unique_nonce($this->option_name);
+            settings_fields($this->option_name); // Output nonce, action, and option_page fields for $this->option_name
             do_settings_sections($this->plugin_name . '_' . $this->tab_id); // Page slug for fields registered to this tab
             ?>
             <p class="submit">
@@ -593,27 +592,6 @@ abstract class SettingsModuleBase implements SettingsModuleInterface {
             </p>
         </form>
         <?php
-    }
-    
-    /**
-     * Output WordPress settings fields with a unique nonce ID
-     * This prevents duplicate IDs when multiple forms are on the same page
-     *
-     * @since    1.3.0
-     * @access   protected
-     * @param    string $option_group The option group name
-     */
-    protected function output_settings_fields_with_unique_nonce($option_group) {
-        // Capture the output of settings_fields
-        ob_start();
-        settings_fields($option_group);
-        $settings_fields = ob_get_clean();
-        
-        // Add unique ID to _wpnonce field based on tab ID
-        $settings_fields = str_replace('id="_wpnonce"', 'id="_wpnonce_' . esc_attr($this->tab_id) . '"', $settings_fields);
-        
-        // Output the modified fields
-        echo $settings_fields;
     }
 
     /**

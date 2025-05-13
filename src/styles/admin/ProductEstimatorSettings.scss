@@ -5,8 +5,11 @@
  */
 
 // Import shared variables and animations
+
 @use '../admin/variables' as *;
+
 @use '../admin/animations' as *;
+
 @use 'sass:color';
 
 // Additional variables needed for this module
@@ -18,19 +21,21 @@ $choice-background: $light-background;
 $choice-border: #c3c4c7;
 $remove-color: $error-color;
 $clear-color: $secondary-text-color;
-$dropdown-shadow: rgba(0, 0, 0, 0.1);
+$dropdown-shadow: rgb(0, 0, 0, 0.1);
 $spinner-color: #f3f3f3;
 
 /* Form Styling Specific to Settings */
+
 .product-estimator-form {
+
   input[type="text"],
   input[type="email"],
   input[type="password"],
   input[type="number"],
   select,
   textarea {
-    min-width: 250px;
     max-width: 500px;
+    min-width: 250px;
     width: 100%;
   }
 
@@ -41,11 +46,12 @@ $spinner-color: #f3f3f3;
 }
 
 /* Field Errors */
+
 .field-error {
   color: $error-color;
   display: block;
-  margin-top: 5px;
   font-size: 12px;
+  margin-top: 5px;
 }
 
 input.error,
@@ -55,33 +61,36 @@ textarea.error {
 }
 
 /* Loading State */
+
 .loading {
-  text-align: center;
-  padding: 40px;
   color: $text-color;
+  padding: 40px;
+  text-align: center;
 
   &::after {
+    animation: 1s linear infinite spin;
+    border: 2px solid $spinner-color;
+    border-radius: 50%;
+    border-top: 2px solid $primary-color;
     content: '';
     display: inline-block;
-    width: 20px;
     height: 20px;
     margin-left: 10px;
-    border: 2px solid $spinner-color;
-    border-top: 2px solid $primary-color;
-    border-radius: 50%;
-    animation: 1s linear infinite spin;
+    width: 20px;
   }
 }
 
 // Animation keyframes now imported from _animations.scss
 
 /* Required Fields */
+
 .form-table th.required label::after {
-  content: ' *';
   color: $error-color;
+  content: ' *';
 }
 
 /* === Select2 Global Styles - Consistent across all modules === */
+
 .select2-container {
   box-sizing: border-box;
   display: inline-block;
@@ -91,6 +100,7 @@ textarea.error {
 }
 
 .select2-container--default {
+
   .select2-selection--single,
   .select2-selection--multiple {
     background-color: $background-color;
@@ -100,6 +110,7 @@ textarea.error {
   }
 
   &.select2-container--focus {
+
     .select2-selection--single,
     .select2-selection--multiple {
       border-color: $primary-color;
@@ -109,6 +120,7 @@ textarea.error {
   }
 
   /* --- Single Select Specific Styling --- */
+
   .select2-selection--single {
     height: 30px;
     line-height: 28px;
@@ -117,10 +129,10 @@ textarea.error {
     .select2-selection__rendered {
       color: $secondary-text-color;
       line-height: inherit;
-      padding-right: 20px;
-      padding-left: 0;
-      text-overflow: ellipsis;
       overflow: hidden;
+      padding-left: 0;
+      padding-right: 20px;
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
 
@@ -131,14 +143,14 @@ textarea.error {
     .select2-selection__arrow {
       height: 28px;
       position: absolute;
-      top: 1px;
       right: 1px;
+      top: 1px;
       width: 20px;
 
       b {
         border-color: $clear-color transparent transparent transparent;
         border-style: solid;
-        border-width: 5px 4px 0 4px;
+        border-width: 5px 4px 0;
         height: 0;
         left: 50%;
         margin-left: -4px;
@@ -151,11 +163,12 @@ textarea.error {
   }
 
   /* --- Multiple Select Specific Styling --- */
+
   .select2-selection--multiple {
-    min-height: 30px;
-    padding: 0;
     cursor: text;
     display: block;
+    min-height: 30px;
+    padding: 0;
 
     .select2-selection__rendered {
       box-sizing: border-box;
@@ -165,8 +178,8 @@ textarea.error {
       width: 100%;
 
       &::after {
-        content: "";
         clear: both;
+        content: "";
         display: table;
       }
     }
@@ -178,10 +191,10 @@ textarea.error {
       color: $secondary-text-color;
       cursor: default;
       float: left;
+      line-height: 1.5;
       margin-right: 4px;
       margin-top: 3px;
       padding: 2px 18px 2px 2px;
-      line-height: 1.5;
       white-space: nowrap;
     }
 
@@ -189,10 +202,10 @@ textarea.error {
       color: $remove-color;
       cursor: pointer;
       display: inline-block;
-      position: relative;
+      float: none;
       font-weight: bold;
       margin-left: 0;
-      float: none;
+      position: relative;
       vertical-align: middle;
 
       &:hover {
@@ -201,52 +214,54 @@ textarea.error {
     }
 
     /* The <li> holding the search field */
+
     .select2-search--inline {
       float: left;
-      padding: 0;
-      margin: 0;
       list-style-type: none;
+      margin: 0;
+      padding: 0;
     }
 
     .select2-search__field {
       background: transparent;
       border: none;
       box-shadow: none;
-      outline: 0;
-      font-size: 13px;
-      line-height: 1.5;
-      height: 26px;
-      padding: 0 3px;
-      margin: 3px 0 2px 0;
-      width: 100%;
-      min-width: 320px;
-      vertical-align: baseline;
       box-sizing: border-box;
+      font-size: 13px;
+      height: 26px;
+      line-height: 1.5;
+      margin: 3px 0 2px;
+      min-width: 320px;
+      outline: 0;
+      padding: 0 3px;
+      vertical-align: baseline;
+      width: 100%;
     }
 
     /* Placeholder for multiple select (inside search field) */
+
     .select2-selection__placeholder {
       color: $placeholder-color;
-      margin-top: 5px;
       float: left;
       line-height: 1.5;
+      margin-top: 5px;
     }
   }
 
   /* --- Dropdown Styling (common for single and multiple) --- */
+
   .select2-results__options {
     list-style: none;
     margin: 0;
-    padding: 0;
     max-height: 200px;
     overflow-y: auto;
+    padding: 0;
   }
 
   .select2-results__option {
+    line-height: 1.5;
     padding: 6px 8px;
     user-select: none;
-    -webkit-user-select: none;
-    line-height: 1.5;
 
     &--highlighted[aria-selected] {
       background-color: $option-hover-color;
@@ -257,23 +272,24 @@ textarea.error {
       background-color: $option-selected-color;
     }
 
-    &[aria-disabled=true] {
+    &[aria-disabled="true"] {
       color: $disabled-color;
       cursor: not-allowed;
     }
   }
 
   /* Search field within the dropdown */
+
   .select2-search--dropdown .select2-search__field {
-    display: block;
-    width: 100%;
-    padding: 6px 8px;
-    font-size: 13px;
-    line-height: 1.5;
     border: 1px solid $input-border-color;
     border-radius: 3px;
     box-sizing: border-box;
+    display: block;
+    font-size: 13px;
+    line-height: 1.5;
     margin: 4px 0;
+    padding: 6px 8px;
+    width: 100%;
   }
 }
 
@@ -283,27 +299,27 @@ textarea.error {
   color: $remove-color;
   cursor: pointer;
   display: inline-block;
-  position: relative;
+  float: none;
   font-weight: bold;
   margin-left: 0;
-  float: none;
+  position: relative;
   vertical-align: middle;
 }
 
 .select2-dropdown {
   background-color: $background-color;
   border: 1px solid $input-border-color;
-  border-top: none;
   border-radius: 0 0 3px 3px;
+  border-top: none;
+  box-shadow: 0 1px 3px $dropdown-shadow;
   box-sizing: border-box;
   z-index: 10051;
-  box-shadow: 0 1px 3px $dropdown-shadow;
 }
 
 .select2-container--open .select2-dropdown--above {
-  border-top: 1px solid $input-border-color;
   border-bottom: 0;
   border-radius: 3px 3px 0 0;
+  border-top: 1px solid $input-border-color;
 }
 
 .select2-results {
@@ -311,8 +327,11 @@ textarea.error {
 }
 
 /* Responsive Adjustments */
+
 @media screen and (max-width: 782px) {
+
   .product-estimator-form {
+
     input[type="text"],
     input[type="email"],
     input[type="password"],

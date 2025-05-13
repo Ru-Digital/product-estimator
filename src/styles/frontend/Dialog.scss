@@ -1,41 +1,47 @@
 /**
  * Product Estimator - Confirmation Dialog Styles
  */
+
 @use 'sass:color';
+
 @use 'variables' as *;
+
 @use 'mixins' as *;
 
 .pe-dialog-backdrop {
+
   @include overlay-backdrop($bg-overlay, $z-index-dialog - 1);
-  display: none;
   animation: fade-in 0.2s ease-out;
+  display: none;
 }
 
 .pe-confirmation-dialog {
+
   @include modal-container(450px, $z-index-dialog);
-  display: none;
   animation: modal-slide-in 0.3s ease-out;
+  display: none;
 }
 
 .pe-dialog-header {
+
   @include modal-header($bg-lighter, $border-color);
 }
 
 .pe-dialog-title {
-  margin: 0;
+  color: $primary-color;
   font-size: 1.2rem;
   font-weight: 600;
-  color: $primary-color;
+  margin: 0;
 }
 
 .pe-dialog-close {
   background: none;
   border: none;
+  color: $text-light;
+  cursor: pointer;
   font-size: 1.5rem;
   line-height: 1;
-  cursor: pointer;
   padding: 0 5px;
-  color: $text-light;
   transition: color 0.2s;
   
   &:hover {
@@ -48,17 +54,19 @@
 }
 
 .pe-dialog-message {
-  margin: 0;
-  font-size: $font-size-base;
   color: $text-color;
+  font-size: $font-size-base;
   line-height: 1.5;
+  margin: 0;
 }
 
 .pe-dialog-footer {
+
   @include modal-footer($bg-lighter, $border-color);
 }
 
 .pe-dialog-btn {
+
   @include button-base($bg-lighter, $text-color, color.adjust($bg-lighter, $lightness: -5%));
   font-size: 0.9rem;
   
@@ -69,42 +77,51 @@
 }
 
 .pe-dialog-cancel {
+
   @include button-ghost($text-color);
 }
 
 .pe-dialog-confirm {
+
   @include button-primary;
 }
 
 /* Dialog types */
+
 .pe-dialog-action-delete {
+
   .pe-dialog-title {
     color: $error-color;
   }
   
   .pe-dialog-confirm {
+
     @include button-danger;
   }
 }
 
 /* Icon support */
+
 .pe-dialog-icon {
-  margin-right: 10px;
   display: inline-block;
-  vertical-align: middle;
   font-size: 1.2em;
+  margin-right: 10px;
+  vertical-align: middle;
 }
 
 /* WordPress compatibility */
+
 .wp-admin .pe-confirmation-dialog {
   font-family: $font-family;
 }
 
 /* Mobile responsiveness */
+
 @media screen and (max-width: $breakpoint-sm) {
+
   .pe-confirmation-dialog {
-    width: 95%;
     max-width: none;
+    width: 95%;
   }
 
   .pe-dialog-footer {
@@ -112,6 +129,7 @@
   }
 
   .pe-dialog-btn {
+
     @include full-width-buttons-on-mobile;
     padding: 10px;
   }

@@ -7,9 +7,9 @@
  * This module relies on abstract base classes for common functionality,
  * selectors, and internationalization strings.
  */
-import VerticalTabbedModule from '../common/VerticalTabbedModule';
-import { validation } from '@utils';
 import { createLogger } from '@utils';
+
+import VerticalTabbedModule from '../common/VerticalTabbedModule';
 
 const logger = createLogger('LabelSettings');
 
@@ -33,7 +33,8 @@ class LabelSettingsModule extends VerticalTabbedModule {
     if (!this.$container || !this.$container.length) {
       return;
     }
-
+    
+    // No additional specific events needed for this module
   }
 
   /**
@@ -41,6 +42,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
    */
   onMainTabActivated() {
     super.onMainTabActivated();
+    // No additional actions needed when the Labels tab is activated
   }
 }
 
@@ -59,6 +61,7 @@ jQuery(document).ready(function($) { // Pass $ to use it directly
       }
     }
   } else {
+    logger.warn('Container #labels not found. LabelSettingsModule will not be initialized.');
   }
 });
 

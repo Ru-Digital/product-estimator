@@ -57,6 +57,13 @@ export const {
 } = validation;
 
 // Export a convenience function to safely access nested properties
+/**
+ * Safely access nested properties in an object
+ * @param {object} obj - The object to access
+ * @param {string} path - The path to the property (dot notation, e.g., 'prop1.prop2.prop3')
+ * @param {*} defaultValue - The value to return if the property doesn't exist
+ * @returns {*} The value at the specified path or the default value if not found
+ */
 export function get(obj, path, defaultValue = null) {
   const keys = path.split('.');
   let result = obj;

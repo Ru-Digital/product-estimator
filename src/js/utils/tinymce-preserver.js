@@ -4,6 +4,12 @@
 
 import { createLogger } from './logger';
 const logger = createLogger('UtilsTinyMCEPreserver');
+/**
+ * Set up TinyMCE HTML preservation to properly handle special tags like <br>
+ * @param {string[]} editorIds - Array of TinyMCE editor IDs to configure
+ * @param {string} containerSelector - CSS selector for the container with editors
+ * @returns {void}
+ */
 export function setupTinyMCEHTMLPreservation(editorIds, containerSelector = 'body') {
   const $ = jQuery;
 

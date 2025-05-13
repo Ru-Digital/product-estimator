@@ -10,7 +10,7 @@ const logger = createLogger('VariationHandler');
 class VariationHandler {
   /**
    * Initialize the VariationHandler
-   * @param {Object} config - Configuration options
+   * @param {object} config - Configuration options
    */
   constructor(config = {}) {
     // Default configuration
@@ -138,10 +138,9 @@ class VariationHandler {
 
   /**
    * Check if parent product has estimator enabled
-   * @param {number|string} productId - Product ID
    * @returns {boolean} True if parent has estimator enabled
    */
-  isParentEstimatorEnabled(productId) {
+  isParentEstimatorEnabled() {
     // Check if we have any data in the DOM about parent product
     const button = document.querySelector('.single_add_to_estimator_button');
     if (button) {
@@ -320,7 +319,7 @@ class VariationHandler {
 
   /**
    * Get the currently selected variation from the form
-   * @returns {Object|null} The variation data or null if none selected
+   * @returns {object | null} The variation data or null if none selected
    */
   getCurrentVariation() {
     if (!this.variationsForm) return null;
@@ -348,7 +347,8 @@ class VariationHandler {
     // Method 4: Use jQuery data if available
     if (typeof jQuery !== 'undefined') {
       const $form = jQuery(this.variationsForm);
-      const jqueryData = $form.data('product_variations');
+      // Data might be available via jQuery but we're just using the value directly
+      // const jqueryData = $form.data('product_variations');
       const currentVal = $form.find('input[name="variation_id"]').val();
 
       if (currentVal) {

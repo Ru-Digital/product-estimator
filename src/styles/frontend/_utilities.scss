@@ -3,9 +3,13 @@
  *
  * A collection of helper classes that can be used directly in HTML.
  */
+
 @use 'sass:color';
+
 @use 'variables' as *;
+
 @use 'mixins' as *;
+
 @use 'animations';
 
 // =======================================================
@@ -37,18 +41,22 @@
 }
 
 .pe-flex-center {
+
   @include flex(row, center, center);
 }
 
 .pe-flex-between {
+
   @include flex(row, space-between, center);
 }
 
 .pe-flex-start {
+
   @include flex(row, flex-start, center);
 }
 
 .pe-flex-end {
+
   @include flex(row, flex-end, center);
 }
 
@@ -61,26 +69,43 @@
 // =======================================================
 
 // Margin utilities
+
 .pe-mt-0 { margin-top: 0 !important; }
+
 .pe-mt-xs { margin-top: $spacing-xs !important; }
+
 .pe-mt-sm { margin-top: $spacing-sm !important; }
+
 .pe-mt-md { margin-top: $spacing-md !important; }
+
 .pe-mt-lg { margin-top: $spacing-lg !important; }
+
 .pe-mt-xl { margin-top: $spacing-xl !important; }
 
 .pe-mb-0 { margin-bottom: 0 !important; }
+
 .pe-mb-xs { margin-bottom: $spacing-xs !important; }
+
 .pe-mb-sm { margin-bottom: $spacing-sm !important; }
+
 .pe-mb-md { margin-bottom: $spacing-md !important; }
+
 .pe-mb-lg { margin-bottom: $spacing-lg !important; }
+
 .pe-mb-xl { margin-bottom: $spacing-xl !important; }
 
 // Padding utilities
+
 .pe-p-0 { padding: 0 !important; }
+
 .pe-p-xs { padding: $spacing-xs !important; }
+
 .pe-p-sm { padding: $spacing-sm !important; }
+
 .pe-p-md { padding: $spacing-md !important; }
+
 .pe-p-lg { padding: $spacing-lg !important; }
+
 .pe-p-xl { padding: $spacing-xl !important; }
 
 // =======================================================
@@ -148,6 +173,7 @@
 }
 
 .pe-text-truncate {
+
   @include truncate-text(1);
 }
 
@@ -210,23 +236,25 @@
 // =======================================================
 
 .pe-loading {
-  position: relative;
-  pointer-events: none;
   opacity: 0.7;
+  pointer-events: none;
+  position: relative;
 }
 
 .pe-loading-dots {
+
   @include loading-dots;
 }
 
 .pe-loading-spinner {
+
   @include loading-spinner;
 }
 
 .pe-disabled {
+  cursor: not-allowed;
   opacity: 0.6;
   pointer-events: none;
-  cursor: not-allowed;
 }
 
 // =======================================================
@@ -271,6 +299,7 @@
 
 .pe-show-sm {
   display: none !important;
+
   @media screen and (max-width: $breakpoint-sm) {
     display: block !important;
   }
@@ -278,6 +307,7 @@
 
 .pe-show-md {
   display: none !important;
+
   @media screen and (max-width: $breakpoint-md) {
     display: block !important;
   }

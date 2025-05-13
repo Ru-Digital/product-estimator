@@ -6,25 +6,23 @@
 
 /**
  * Validates an email address
- *
  * @param {string} email - Email address to validate
- * @return {boolean} - Whether the email is valid
+ * @returns {boolean} - Whether the email is valid
  */
 export function validateEmail(email) {
   if (!email) return false;
 
-  const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   return re.test(String(email).toLowerCase());
 }
 
 /**
  * Validates a number within specified bounds
- *
  * @param {number|string} value - Number to validate
- * @param {Object} options - Validation options
+ * @param {object} options - Validation options
  * @param {number} [options.min] - Minimum allowed value
  * @param {number} [options.max] - Maximum allowed value
- * @param {boolean} [options.integer=false] - Whether the value must be an integer
+ * @param {boolean} [options.integer] - Whether the value must be an integer
  * @returns {boolean} Whether the number is valid
  */
 export function validateNumber(value, options = {}) {
@@ -57,7 +55,6 @@ export function validateNumber(value, options = {}) {
 
 /**
  * Validates that a value is not empty
- *
  * @param {*} value - Value to check
  * @returns {boolean} Whether the value is not empty
  */
@@ -79,7 +76,6 @@ export function validateRequired(value) {
 
 /**
  * Show field error
- *
  * @param {jQuery|HTMLElement} field - Field element
  * @param {string} message - Error message
  */
@@ -104,7 +100,6 @@ export function showFieldError(field, message) {
 
 /**
  * Clear field error
- *
  * @param {jQuery|HTMLElement} field - Field element
  */
 export function clearFieldError(field) {
@@ -121,7 +116,6 @@ export function clearFieldError(field) {
 
 /**
  * Shows an admin notice
- *
  * @param {string} message - Notice message
  * @param {string} type - Notice type (success/error)
  * @param {number} duration - Duration in ms before auto-dismissing
@@ -184,9 +178,8 @@ export function showNotice(message, type = 'success', duration = 5000) {
 
 /**
  * Validates a form by checking all specified fields
- *
  * @param {HTMLFormElement|jQuery} form - Form to validate
- * @param {Object} validators - Map of field selectors to validator functions
+ * @param {object} validators - Map of field selectors to validator functions
  * @returns {boolean} Whether the form is valid
  */
 export function validateForm(form, validators) {

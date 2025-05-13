@@ -6,9 +6,9 @@
  * Handles functionality specific to the product additions settings tab.
  * Extends AdminTableManager for common table and form management.
  */
+import { ajax, createLogger } from '@utils'; // Import utilities needed for this module
+
 import AdminTableManager from '../common/AdminTableManager'; // Adjust path as needed
-import { ajax, validation } from '@utils'; // Assuming @utils provides these. Removed dom, format as they weren't explicitly used in this file's logic directly.
-import { createLogger } from '@utils';
 
 class ProductAdditionsSettingsModule extends AdminTableManager {
   /**
@@ -36,7 +36,7 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     // Defer DOM-dependent specific initializations until the base AdminTableManager signals it's ready.
     // The event name uses this.config.mainTabId.
     // Note: this.config.mainTabId is from the config passed to super(), available after super() call.
-    this.$(document).on(`admin_table_manager_ready_${this.config.mainTabId}`, () => { // POTENTIAL ERROR HERE
+    this.$(document).on(`admin_table_manager_ready_${this.config.mainTabId}`, () => {
       this._cacheProductAdditionsDOM();
       this._bindSpecificEvents();
       this._initializeSelect2();
@@ -68,6 +68,7 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
       this.dom.noteTextInput = this.$container.find(paSelectors.noteTextInput);
       this.dom.noteRow = this.$container.find(paSelectors.noteRow);
     } else {
+      this.logger.warn('ProductAdditionsSettingsModule: Settings or selectors not available for DOM caching');
     }
   }
 
@@ -142,6 +143,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
   /**
    * Handles changes in the relation type select dropdown.
+   * Shows/hides appropriate fields based on the selected relation type.
+   * @private
    */
   _handleRelationTypeChange() {
     const actionType = this.dom.relationTypeSelect?.val();
@@ -165,12 +168,15 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
       if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {
         this.dom.targetCategoryRow?.show();
       } else {
+        this.logger.warn('ProductAdditionsSettingsModule: Suggested products feature is disabled in feature flags');
       }
     }
   }
 
   /**
    * Handles changes in the target category select dropdown.
+   * Shows/hides product search field based on the selected category and relation type.
+   * @private
    */
   _handleTargetCategoryChange() {
     const categoryId = this.dom.targetCategorySelect?.val();
@@ -183,6 +189,10 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     }
   }
 
+  /**
+   * Clears all product selection related fields.
+   * @private
+   */
   _clearProductSelectionFields() {
     this.dom.productSearchInput?.val('');
     this.dom.productSearchResults?.empty().hide();
@@ -190,6 +200,12 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     this.dom.selectedProductDisplay?.hide().find('.selected-product-info').empty();
   }
 
+  /**
+   * Handles keyup events in the product search input field.
+   * Triggers product search after debounce period.
+   * @param {Event} e - The keyup event
+   * @private
+   */
   _handleProductSearchKeyup(e) {
     const searchTerm = this.$(e.target).val()?.trim() || '';
     const categoryId = this.dom.targetCategorySelect?.val();
@@ -206,6 +222,13 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     }, 500); // Debounce
   }
 
+  /**
+   * Searches for products based on search term and category.
+   * Displays results in the product search results container.
+   * @param {string} searchTerm - The search term to filter products by
+   * @param {string|number} categoryId - The category ID to filter products by
+   * @private
+   */
   _searchProducts(searchTerm, categoryId) {
     // this.settings.actions and other properties from ProductEstimatorSettings base
     if (!this.settings.actions || !this.settings.actions.search_products) {
@@ -250,11 +273,17 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
           this.dom.productSearchResults?.html(`<p>${(this.settings.i18n && this.settings.i18n.errorSearching) || 'Error searching products'}</p>`).show();
         }
       })
-      .catch(error => {
+      .catch(() => {
         this.dom.productSearchResults?.html(`<p>${(this.settings.i18n && this.settings.i18n.errorSearching) || 'Error searching products'}</p>`).show();
       });
   }
 
+  /**
+   * Handles clicks on product search results.
+   * Sets the selected product ID and displays product information.
+   * @param {Event} e - The click event
+   * @private
+   */
   _handleProductResultClick(e) {
     const $item = this.$(e.currentTarget);
     const productId = $item.data('id');
@@ -268,6 +297,11 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     this.formModified = true; // Mark form as modified, inherited from AdminTableManager
   }
 
+  /**
+   * Handles clicks on the clear product button.
+   * Clears product selection fields and sets focus to search input.
+   * @private
+   */
   _handleClearProduct() {
     this._clearProductSelectionFields();
     this.dom.productSearchInput?.focus();
@@ -276,6 +310,7 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
   /**
    * Override AdminTableManager.resetForm to include Product Additions specific fields.
+   * @override
    */
   resetForm() {
     super.resetForm(); // Call base class method first
@@ -296,6 +331,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
   /**
    * Override AdminTableManager.populateFormWithData for Product Additions specific fields.
+   * @param {object} itemData - The data for the product addition item to populate the form with
+   * @override
    */
   populateFormWithData(itemData) {
     super.populateFormWithData(itemData); // Sets item ID, calls base logic
@@ -340,6 +377,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
   /**
    * Override AdminTableManager.validateForm for Product Additions specific validation.
+   * @returns {boolean} True if the form passes validation, false otherwise
+   * @override
    */
   validateForm() {
     let isValid = super.validateForm(); // Perform base validation first
@@ -400,6 +439,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   /**
    * Custom column population method for 'source_categories' column
    * This method follows the naming convention for column handlers in AdminTableManager
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
   populateColumn_source_categories($cell, itemData) {
     $cell.text(itemData.source_category_display || 'N/A');
@@ -407,6 +448,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
   /**
    * Custom column population method for 'action_type' column
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
   populateColumn_action_type($cell, itemData) {
     const $actionTypeSpan = this.$('<span></span>')
@@ -417,6 +460,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
   /**
    * Custom column population method for 'target_details' column
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
   populateColumn_target_details($cell, itemData) {
     $cell.text(itemData.target_details_display || 'N/A');
@@ -425,6 +470,7 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   /**
    * Binds event handlers for custom action buttons.
    * This overrides the base AdminTableManager.bindCustomActionButtons method.
+   * @override
    */
   bindCustomActionButtons() {
     if (this.dom.listTableBody && this.dom.listTableBody.length) {
@@ -440,7 +486,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   handleViewProduct(e) {
     e.preventDefault();
     const $button = this.$(e.currentTarget);
-    const itemId = $button.data('id');
     const productId = $button.data('product-id');
 
 

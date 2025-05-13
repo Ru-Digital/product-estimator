@@ -10,9 +10,8 @@ const logger = createLogger('UtilsAjax'); // <<< ERROR HAPPENS HERE: createLogge
 
 /**
  * Handle AJAX request with error handling and consistent response format
- *
- * @param {Object} options - AJAX options
- * @return {Promise} - Promise resolving to response data
+ * @param {object} options - AJAX options
+ * @returns {Promise} - Promise resolving to response data
  */
 export function ajaxRequest(options) {
   const $ = jQuery;
@@ -49,10 +48,9 @@ export function ajaxRequest(options) {
 
 /**
  * Creates a debounced function
- *
  * @param {Function} func - Function to debounce
  * @param {number} wait - Milliseconds to wait
- * @return {Function} - Debounced function
+ * @returns {Function} - Debounced function
  */
 export function debounce(func, wait = 300) {
   let timeout;
@@ -70,9 +68,8 @@ export function debounce(func, wait = 300) {
 
 /**
  * Makes a simple WordPress AJAX request with FormData
- *
  * @param {string} action - WordPress AJAX action name
- * @param {Object} data - Data to send (excluding action and nonce)
+ * @param {object} data - Data to send (excluding action and nonce)
  * @param {string} nonce - Security nonce (defaults to productEstimatorVars.nonce)
  * @returns {Promise} - Promise resolving to response data
  */
@@ -125,7 +122,7 @@ export function wpAjax(action, data = {}, nonce = null) {
 
 /**
  * Format form data for AJAX submissions
- * @param {FormData|Object|string} formData - The form data to format
+ * @param {FormData | object | string} formData - The form data to format
  * @returns {string} Formatted form data string
  */
 export function formatFormData(formData) {

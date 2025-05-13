@@ -3,11 +3,7 @@
  *
  * Imports all HTML templates and registers them with the template engine
  */
-
-// Import template engine
-import TemplateEngine from './TemplateEngine';
-
-// Import component templates
+import { createLogger } from '@utils';
 import productItemTemplate from '@templates/components/product-item.html';
 import roomItemTemplate from '@templates/components/room-item.html';
 import estimateItemTemplate from '@templates/components/estimate-item.html';
@@ -16,21 +12,16 @@ import noteItemTemplate from '@templates/components/note-item.html';
 import includeItemTemplate from '@templates/components/include-item.html';
 import similarItemTemplate from '@templates/components/similar-item.html';
 import productUpgradeItemTemplate from '@templates/components/product-upgrade-item.html';
-
-
-// Import form templates
 import newEstimateFormTemplate from '@templates/forms/new-estimate-form.html';
 import newRoomFormTemplate from '@templates/forms/new-room-form.html';
 import roomSelectionFormTemplate from '@templates/forms/room-selection-form.html';
 import estimateSelectionTemplate from '@templates/forms/estimate-selection.html';
-
-// Import UI templates
 import estimatesEmptyTemplate from '@templates/ui/estimates-empty.html';
 import roomsEmptyTemplate from '@templates/ui/rooms-empty.html';
 import productsEmptyTemplate from '@templates/ui/products-empty.html';
 import modalMessagesTemplate from '@templates/ui/modal-messages.html';
 
-import { createLogger } from '@utils';
+import TemplateEngine from './TemplateEngine';
 const logger = createLogger('TemplateLoader');
 
 // Create a map of all templates
@@ -55,7 +46,7 @@ const templates = {
 
 /**
  * Initialize all templates with the template engine
- * @returns {Object} The initialized template engine
+ * @returns {object} The initialized template engine
  */
 // In template-loader.js
 export function initializeTemplates() {
@@ -66,7 +57,7 @@ export function initializeTemplates() {
 
   Object.entries(templates).forEach(([id, html]) => {
     if (!html || html.trim() === '') {
-      console.warn(`Template ${id} has empty HTML content!`);
+      logger.warn(`Template ${id} has empty HTML content!`);
     } else {
       logger.log(`Registering template: ${id} (${html.length} characters)`);
       TemplateEngine.registerTemplate(id, html);
@@ -80,6 +71,11 @@ export function initializeTemplates() {
 }
 
 // Add this function to check template content
+/**
+ * Check if a template exists and log its content
+ * @param {string} templateId - The ID of the template to check
+ * @returns {boolean} True if the template exists, false otherwise
+ */
 export function checkTemplateContent(templateId) {
   const template = templates[templateId];
   if (!template) {

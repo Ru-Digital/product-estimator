@@ -4,11 +4,9 @@
  * Handles functionality specific to the pricing rules settings tab.
  * Extends AdminTableManager for common table and form management.
  */
-import AdminTableManager from '../common/AdminTableManager';
-import { ajax, validation } from '@utils';
 import { createLogger } from '@utils';
 
-const logger = createLogger('PricingRulesSettingsModule');
+import AdminTableManager from '../common/AdminTableManager';
 
 class PricingRulesSettingsModule extends AdminTableManager {
   /**
@@ -49,6 +47,7 @@ class PricingRulesSettingsModule extends AdminTableManager {
       this.dom.pricingMethodSelect = this.$container.find(prSelectors.pricingMethodSelect);
       this.dom.pricingSourceSelect = this.$container.find(prSelectors.pricingSourceSelect);
     } else {
+      this.logger.warn('PricingRulesSettingsModule: settings or selectors not available for DOM caching');
     }
   }
 
@@ -114,6 +113,8 @@ class PricingRulesSettingsModule extends AdminTableManager {
 
   /**
    * Override AdminTableManager.populateFormWithData for Pricing Rules specific fields.
+   * @param {object} itemData - The data for the pricing rule item to populate the form with
+   * @override
    */
   populateFormWithData(itemData) {
     super.populateFormWithData(itemData); // Sets item ID, calls base logic
@@ -134,6 +135,8 @@ class PricingRulesSettingsModule extends AdminTableManager {
 
   /**
    * Override AdminTableManager.validateForm for Pricing Rules specific validation.
+   * @returns {boolean} True if the form passes validation, false otherwise
+   * @override
    */
   validateForm() {
     let isValid = super.validateForm(); // Perform base validation first
@@ -171,6 +174,8 @@ class PricingRulesSettingsModule extends AdminTableManager {
 
   /**
    * Custom column population method for 'categories' column
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
   populateColumn_categories($cell, itemData) {
     $cell.text(itemData.category_names || 'N/A');
@@ -178,6 +183,8 @@ class PricingRulesSettingsModule extends AdminTableManager {
 
   /**
    * Custom column population method for 'pricing_method' column
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
   populateColumn_pricing_method($cell, itemData) {
     $cell.text(itemData.pricing_label || 'N/A');
@@ -198,7 +205,8 @@ jQuery(document).ready(function ($) {
           // Create a properly configured instance with the correct defaultSubTabId
           window.PricingRulesSettingsModuleInstance = new PricingRulesSettingsModule();
         } catch (error) {
-          logger.error('Error instantiating PricingRulesSettingsModule:', error);
+          const errorLogger = createLogger('PricingRulesInit');
+          errorLogger.error('Error instantiating PricingRulesSettingsModule:', error);
           // Use the global notice system if ProductEstimatorSettings is available
           if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
             window.ProductEstimatorSettingsInstance.showNotice('Failed to initialize Pricing Rules settings. Check console for errors.', 'error');
@@ -206,13 +214,15 @@ jQuery(document).ready(function ($) {
         }
       }
     } else {
-      logger.error(`Localized data object "${localizedDataObjectName}" not found for tab: ${mainTabId}. Module cannot be initialized.`);
+      const errorLogger = createLogger('PricingRulesInit');
+      errorLogger.error(`Localized data object "${localizedDataObjectName}" not found for tab: ${mainTabId}. Module cannot be initialized.`);
       if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
         window.ProductEstimatorSettingsInstance.showNotice(`Configuration data for Pricing Rules ("${localizedDataObjectName}") is missing. Module disabled.`, 'error');
       }
     }
   } else {
-    logger.warn(`Main container #${mainTabId} not found. PricingRulesSettingsModule will not be initialized.`);
+    const warnLogger = createLogger('PricingRulesInit');
+    warnLogger.warn(`Main container #${mainTabId} not found. PricingRulesSettingsModule will not be initialized.`);
   }
 });
 

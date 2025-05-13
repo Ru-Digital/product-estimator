@@ -1,125 +1,131 @@
 /**
  * Modal styles for the Product Estimator plugin
  */
+
 @use 'sass:color';
+
 @use 'variables' as *;
+
 @use 'animations' as *;
 
 /* Modal Base */
+
 .product-estimator-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: $z-index-modal;
-  overflow: hidden;
   color: $text-color;
+  display: none;
   font-family: $font-family;
+  inset: 0;
+  overflow: hidden;
+  position: fixed;
+  z-index: $z-index-modal;
 }
 
 /* Modal Overlay */
+
 .product-estimator-modal-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   background-color: $bg-overlay;
   cursor: pointer;
+  inset: 0;
+  position: absolute;
 }
 
 /* Modal Container */
+
 .product-estimator-modal-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  max-width: 1000px;
-  max-height: 95vh;
   background-color: $bg-color;
   border-radius: $border-radius-lg;
   box-shadow: $shadow-lg;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  left: 50%;
+  max-height: 95vh;
+  max-width: 1000px;
+  overflow: hidden;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
 }
 
 /* Modal Header */
+
 .product-estimator-modal-header {
-  padding: 20px 25px;
-  border-bottom: 1px solid $border-color;
   background-color: $bg-dark;
+  border-bottom: 1px solid $border-color;
+  padding: 20px 25px;
 
   h2 {
-    margin: 0;
-    font-size: $font-size-xlarge;
     color: $bg-color;
+    font-size: $font-size-xlarge;
     font-weight: 600;
+    margin: 0;
   }
 }
 
 /* Modal Close Button */
+
 .product-estimator-modal-close {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  font-size: $font-size-xlarge;
-  font-weight: 700;
-  line-height: 1;
-  color: $text-lighter;
+  align-items: center;
   background: transparent;
   border: 0;
-  cursor: pointer;
-  padding: 5px;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border-radius: 50%;
+  color: $text-lighter;
+  cursor: pointer;
+  display: flex;
+  font-size: $font-size-xlarge;
+  font-weight: 700;
+  height: 30px;
+  justify-content: center;
+  line-height: 1;
+  padding: 5px;
+  position: absolute;
+  right: 15px;
+  top: 15px;
   transition: $transition-base;
+  width: 30px;
 
   &:hover {
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: rgb(0, 0, 0, 0.1);
     color: $bg-color;
   }
 }
 
 /* Modal Content */
+
 .product-estimator-modal-form-container {
-  padding: 25px;
-  overflow-y: auto;
   flex: 1;
+  overflow-y: auto;
+  padding: 25px;
 }
 
 /* Estimates View */
+
 #estimates,
 #estimate-selection-wrapper {
+
   h2 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    font-size: 1.4rem;
-    color: $text-color;
     border-bottom: 1px solid $border-color;
+    color: $text-color;
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    margin-top: 0;
     padding-bottom: 10px;
   }
 }
 
 /* Room and estimate pricing display */
+
 .room-total-price {
-  margin-left: auto;
   color: $primary-color;
-  font-weight: 600;
   font-size: 0.9em;
+  font-weight: 600;
+  margin-left: auto;
 }
 
 .estimate-total-price {
   color: $text-color;
-  font-weight: 400;
   font-size: 0.8em;
+  font-weight: 400;
   margin-left: 10px;
 
   &.amount {
@@ -135,31 +141,31 @@
 }
 
 .estimate-name {
-  margin: 0;
-  font-size: 1.2rem;
   color: $primary-color;
   flex-grow: 1;
+  font-size: 1.2rem;
+  margin: 0;
 }
 
 .estimate-header {
+  align-items: center;
   background-color: $bg-lighter;
-  padding: 12px 15px;
+  border-bottom: 1px solid transparent;
   cursor: pointer;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid transparent;
+  padding: 12px 15px;
   transition: background-color 0.2s;
 
   &:hover {
     background-color: color.adjust($bg-lighter, $lightness: -3%);
   }
 
-  &:after {
-    content: "\f142"; /* Dashicons minus */
-    font-family: dashicons;
-    font-size: 20px;
+  &::after {
     color: $primary-color;
+    content: "\f142"; /* Dashicons minus */
+    font-family: dashicons, sans-serif;
+    font-size: 20px;
     transition: transform 0.2s ease;
   }
 
@@ -169,28 +175,29 @@
 }
 
 .remove-estimate {
+  align-items: center;
   background: transparent;
   border: none;
-  padding: 8px;
-  cursor: pointer;
   color: $text-lighter;
+  cursor: pointer;
   display: flex;
-  align-items: center;
   justify-content: center;
+  padding: 8px;
   transition: color 0.2s ease;
   z-index: 5;
   
   &:hover {
-    color: $error-color;
     background: transparent;
+    color: $error-color;
   }
 }
 
 .estimate-section.collapsed {
+
   .estimate-header {
     border-bottom-color: transparent;
 
-    &:after {
+    &::after {
       content: "\f140"; /* Dashicons plus */
     }
   }
@@ -201,35 +208,37 @@
 }
 
 .estimate-content {
-  padding: 15px;
   display: block;
   overflow: hidden;
+  padding: 15px;
   transition: max-height 0.3s ease;
 }
 
 /* Room Header */
+
 .room-header {
-  display: flex;
   align-items: center;
+  display: flex;
   justify-content: space-between;
   margin-bottom: 15px;
 
   h4 {
-    margin: 0;
-    font-size: 15px;
     color: $text-color;
+    font-size: 15px;
+    margin: 0;
   }
 }
 
 /* Add Room Button */
+
 .add-room {
   background: $primary-color;
-  color: $bg-color;
   border: none;
   border-radius: $border-radius;
-  padding: 8px 15px;
-  font-size: 14px;
+  color: $bg-color;
   cursor: pointer;
+  font-size: 14px;
+  padding: 8px 15px;
   transition: $transition-base;
 
   &:hover {
@@ -238,6 +247,7 @@
 }
 
 /* Accordion Styles */
+
 .accordion {
   border: 1px solid $border-color;
   border-radius: $border-radius;
@@ -253,47 +263,49 @@
 }
 
 /* Removal buttons styling */
+
 .accordion-header-wrapper {
-  width: 100%;
-  display: flex;
   align-items: center;
-  justify-content: space-between;
   background-color: $bg-light;
   border-bottom: 1px solid $border-color;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
 
   .accordion-header {
-    flex-grow: 1;
-    text-align: left;
+    align-items: center;
     background: transparent;
     border: none;
-    width: 100%;
-    padding: 15px;
     color: $text-light;
-    font-size: 15px;
     cursor: pointer;
     display: flex;
+    flex-grow: 1;
+    font-size: 15px;
     justify-content: space-between;
-    align-items: center;
-    transition: $transition-base;
-    position: relative;
+    padding: 15px;
     padding-right: 30px; /* Make room for the indicator */
+    position: relative;
+    text-align: left;
+    transition: $transition-base;
+    width: 100%;
 
     &:hover {
       background-color: $bg-lighter;
     }
 
     /* Accordion expand/collapse indicator */
+
     &::after {
+      color: $text-lighter;
       content: "\f140"; /* WordPress dashicons - arrow-down */
-      font-family: dashicons;
       display: inline-block;
+      font-family: dashicons, sans-serif;
+      font-size: 20px;
       position: absolute;
       right: 15px;
       top: 50%;
       transform: translateY(-50%);
       transition: transform 0.2s ease;
-      color: $text-lighter;
-      font-size: 20px;
     }
 
     &.active::after {
@@ -318,6 +330,7 @@
     }
 
     /* Additional spacing for room dimensions and total price */
+
     .room-dimensions,
     .room-total-price {
       margin-right: 30px; /* Ensure text doesn't overlap with indicator */
@@ -326,54 +339,55 @@
 }
 
 .remove-room {
+  align-items: center;
   background: transparent;
   border: none;
-  padding: 8px;
-  cursor: pointer;
   color: $text-lighter;
+  cursor: pointer;
   display: flex;
-  align-items: center;
   justify-content: center;
-  transition: color 0.2s ease;
   margin-right: 10px;
+  padding: 8px;
+  transition: color 0.2s ease;
 
   &:hover {
-    color: $error-color;
     background: transparent;
+    color: $error-color;
   }
 }
 
 .accordion-content {
-  padding: 15px 0;
-  display: none;
   background-color: $bg-color;
   border-top: 1px solid $border-color;
+  display: none;
+  padding: 15px 0;
 }
 
 .room-products {
   padding: 15px;
 
   h5 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: $font-size-base;
     color: $text-color;
+    font-size: $font-size-base;
+    margin-bottom: 15px;
+    margin-top: 0;
   }
 }
 
 /* Room Products */
+
 .product-list {
   list-style: none;
-  padding: 0;
   margin: 0;
+  padding: 0;
 }
 
 .product-item {
-  display: flex;
   align-items: start;
-  flex-direction: column;
   border: 1px solid $border-color;
   border-radius: $border-radius;
+  display: flex;
+  flex-direction: column;
   margin-bottom: 10px;
   position: relative;
 
@@ -383,26 +397,26 @@
 }
 
 .product-wrapper {
-  display: flex;
-  width: 100%;
   align-items: flex-start;
+  display: flex;
   padding: 10px;
+  width: 100%;
 }
 
 .product-thumbnail {
-  width: 110px;
-  height: 110px;
-  object-fit: cover;
   border-radius: $border-radius;
+  height: 110px;
   margin-right: 15px;
+  object-fit: cover;
+  width: 110px;
 }
 
 .product-details-wrapper {
   display: flex;
-  flex-direction: column;
-  width: 100%;
   flex: 1;
+  flex-direction: column;
   padding-right: 30px; /* Make room for the remove button */
+  width: 100%;
 }
 
 .product-details {
@@ -412,9 +426,9 @@
 }
 
 .product-name {
+  font-size: 15px;
   font-weight: 600;
   margin-bottom: 5px;
-  font-size: 15px;
 }
 
 .product-room-area {
@@ -425,8 +439,8 @@
 
 .product-price {
   color: $primary-color;
-  font-weight: 600;
   font-size: 15px;
+  font-weight: 600;
   margin-bottom: 3px;
 }
 
@@ -437,46 +451,47 @@
 }
 
 .remove-product {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  align-items: center;
   background: transparent;
   border: none;
-  padding: 4px;
-  cursor: pointer;
   color: $text-lighter;
+  cursor: pointer;
   display: flex;
-  align-items: center;
   justify-content: center;
+  padding: 4px;
+  position: absolute;
+  right: 10px;
+  top: 10px;
   transition: color 0.2s ease;
 
   &:hover {
-    color: $error-color;
     background: transparent;
+    color: $error-color;
   }
 }
 
 /* Form Styles */
+
 .form-group {
   margin-bottom: 20px;
 
   label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
     color: $text-color;
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
   }
 
   select,
   input[type="text"],
   input[type="number"],
   input[type="tel"] {
-    width: 100%;
-    padding: 10px 12px;
     border: 1px solid $border-color-dark;
     border-radius: $border-radius;
-    font-size: $font-size-base;
     color: $text-color;
+    font-size: $font-size-base;
+    padding: 10px 12px;
+    width: 100%;
   }
 }
 
@@ -486,16 +501,17 @@
 }
 
 /* Button Styles */
+
 .button,
 .submit-btn,
 .cancel-btn {
-  padding: 10px 20px;
+  border: none;
   border-radius: $border-radius;
+  cursor: pointer;
   font-size: 0.9rem;
   font-weight: 600;
-  cursor: pointer;
+  padding: 10px 20px;
   transition: $transition-base;
-  border: none;
 }
 
 .submit-btn,
@@ -518,19 +534,20 @@
 }
 
 /* Room Form */
+
 .room-form-container {
   background: white;
-  padding: 20px;
   border-radius: $border-radius;
   box-shadow: $shadow;
   margin-bottom: 20px;
+  padding: 20px;
 
   h2 {
-    font-size: 1.2rem;
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: $text-color;
     border-bottom: none;
+    color: $text-color;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    margin-top: 0;
     padding-bottom: 0;
   }
 }
@@ -546,48 +563,47 @@
 
 .button-group {
   display: flex;
-  justify-content: space-between;
   gap: 10px;
+  justify-content: space-between;
   margin-top: 20px;
 }
 
 /* Loading Indicator */
+
 .product-estimator-modal-loading {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  align-items: center;
   background-color: rgba($bg-color, 0.8);
   display: flex;
   flex-direction: column;
-  align-items: center;
+  inset: 0;
   justify-content: center;
+  position: absolute;
   z-index: 1;
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid $bg-lighter;
-  border-top: 3px solid $primary-color;
-  border-radius: 50%;
   animation: 1s linear infinite spin;
+  border: 3px solid $bg-lighter;
+  border-radius: 50%;
+  border-top: 3px solid $primary-color;
+  height: 40px;
+  width: 40px;
 }
 
 .loading-text {
-  margin-top: 15px;
-  font-weight: 500;
   color: $text-color;
+  font-weight: 500;
+  margin-top: 15px;
 }
 
 /* Notice Styles */
+
 .notice {
   background-color: $bg-lighter;
   border-left: 4px solid $primary-color;
-  padding: 15px;
-  margin-bottom: 20px;
   border-radius: 0 $border-radius $border-radius 0;
+  margin-bottom: 20px;
+  padding: 15px;
 }
 
 .no-estimates,
@@ -599,39 +615,37 @@
 }
 
 /* Confirmation dialog */
+
 .confirmation-dialog {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   background: white;
-  padding: 20px;
   border-radius: $border-radius;
   box-shadow: $shadow-lg;
-  z-index: $z-index-dialog;
+  left: 50%;
   max-width: 400px;
+  padding: 20px;
+  position: fixed;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: 90%;
+  z-index: $z-index-dialog;
 
   h3 {
-    margin-top: 0;
     margin-bottom: 15px;
+    margin-top: 0;
   }
 }
 
 .confirmation-dialog-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 10px;
+  justify-content: flex-end;
   margin-top: 20px;
 }
 
 .confirmation-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   background-color: $bg-overlay;
+  inset: 0;
+  position: fixed;
   z-index: $z-index-overlay;
 }
 
@@ -646,32 +660,36 @@
 }
 
 .confirmation-dialog button {
-  padding: 8px 16px;
   border: none;
   border-radius: $border-radius;
   cursor: pointer;
+  padding: 8px 16px;
 }
 
 /* Use dashicons for the remove icons */
+
 .dashicons-trash,
 .dashicons-no {
   font-size: 16px;
-  width: 16px;
   height: 16px;
+  width: 16px;
 }
 
 /* Animations imported from _animations.scss */
 
 /* Prevent body scrolling when modal is open */
+
 body.modal-open {
   overflow: hidden;
 }
 
 /* Responsive Adjustments */
+
 @media screen and (max-width: $breakpoint-md) {
+
   .product-estimator-modal-container {
-    width: 95%;
     max-height: 95vh;
+    width: 95%;
   }
 
   .product-estimator-modal-header h2 {
@@ -692,8 +710,8 @@ body.modal-open {
   }
 
   .confirmation-dialog {
-    width: 95%;
     max-width: 350px;
+    width: 95%;
   }
 
   .confirmation-dialog-actions {
@@ -701,18 +719,18 @@ body.modal-open {
   }
 
   .confirmation-dialog button {
-    width: 100%;
     margin-bottom: 5px;
+    width: 100%;
   }
 
   .product-item {
-    padding: 12px;
     flex-wrap: wrap;
+    padding: 12px;
   }
 
   .product-thumbnail {
-    width: 40px;
     height: 40px;
+    width: 40px;
   }
 
   .product-details {
@@ -721,46 +739,47 @@ body.modal-open {
 }
 
 /* Included Products styling */
+
 .product-includes {
+  border-top: 1px dashed color.adjust($border-color, $lightness: -5%);
+  box-sizing: border-box;
+  clear: both;
+  margin-left: 0;
   margin-top: 12px;
   padding: 10px;
-  border-top: 1px dashed color.adjust($border-color, $lightness: -5%);
   width: 100%;
-  clear: both;
-  box-sizing: border-box;
-  margin-left: 0;
 
   &-header {
-    display: flex;
     align-items: center;
+    display: flex;
     margin-bottom: 8px;
   }
 
   &-icon {
-    display: flex;
     align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
     background-color: $primary-color;
     border-radius: 50%;
+    display: flex;
+    height: 20px;
+    justify-content: center;
     margin-right: 6px;
+    width: 20px;
 
     .dashicons {
       color: $bg-color;
       font-size: 14px;
-      width: 14px;
       height: 14px;
       line-height: 1;
+      width: 14px;
     }
   }
 
   &-title {
+    color: $text-color;
     font-size: 12px;
     font-weight: 600;
-    color: $text-color;
-    text-transform: uppercase;
     letter-spacing: 0.5px;
+    text-transform: uppercase;
   }
 
   &-items {
@@ -771,55 +790,56 @@ body.modal-open {
 }
 
 /* Individual include item */
+
 .include-item {
-  display: flex;
-  justify-content: space-between;
   align-items: flex-start;
+  display: flex;
   font-size: 12px;
+  justify-content: space-between;
   line-height: 1.4;
   position: relative;
 
   &-name {
     color: $text-light;
-    font-weight: normal;
     flex: 1;
+    font-weight: normal;
     padding-right: 8px;
   }
 
   &-prices {
+    align-items: flex-end;
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
   }
 
   &-total-price {
     color: $primary-color;
     font-weight: 500;
-    white-space: nowrap;
     margin-bottom: 2px;
+    white-space: nowrap;
   }
 
   &-unit-price {
     color: $text-lighter;
     font-size: 10px;
-    white-space: nowrap;
     font-style: italic;
+    white-space: nowrap;
   }
 
   &.note-item {
-    padding: 8px 10px;
-    justify-content: start;
     align-items: center;
+    justify-content: start;
+    padding: 8px 10px;
   }
 
   &-note {
-    font-style: italic;
     color: $text-light;
-    line-height: 1.4;
     font-size: 0.9em;
+    font-style: italic;
+    line-height: 1.4;
 
     p {
-      margin: 0 0 6px 0;
+      margin: 0 0 6px;
 
       &:last-child {
         margin: 0;
@@ -829,6 +849,7 @@ body.modal-open {
 }
 
 /* Note styling */
+
 .product-note-item {
   background-color: color.adjust($warning-color, $saturation: -70%, $lightness: 45%);
   border-left: 3px solid $primary-color;
@@ -840,31 +861,31 @@ body.modal-open {
 }
 
 .note-details {
-  display: flex;
   align-items: flex-start;
-  position: relative;
+  display: flex;
   padding-right: 30px;
+  position: relative;
 }
 
 .note-icon {
-  margin-right: 10px;
   color: $primary-color;
+  margin-right: 10px;
 
   .dashicons {
-    width: 20px;
-    height: 20px;
     font-size: 20px;
+    height: 20px;
+    width: 20px;
   }
 }
 
 .note-content {
+  color: $text-light;
   flex: 1;
   font-style: italic;
-  color: $text-light;
   line-height: 1.5;
 
   p {
-    margin: 0 0 8px 0;
+    margin: 0 0 8px;
 
     &:last-child {
       margin: 0;
@@ -877,121 +898,123 @@ body.modal-open {
 }
 
 /* Product Suggestions Styling */
+
 .product-suggestions {
+  border-top: 1px dashed color.adjust($border-color, $lightness: -5%);
   margin-top: 20px;
   padding-top: 15px;
-  border-top: 1px dashed color.adjust($border-color, $lightness: -5%);
 
   h5 {
-    font-size: $font-size-base;
-    margin: 0 0 12px;
+    align-items: center;
     color: $text-color;
     display: flex;
-    align-items: center;
+    font-size: $font-size-base;
+    margin: 0 0 12px;
 
-    &:before {
-      content: "";
-      display: inline-block;
-      width: 18px;
-      height: 18px;
+    &::before {
       background-color: color.adjust($success-color, $lightness: -5%);
       border-radius: 50%;
+      content: "";
+      display: inline-block;
+      height: 18px;
       margin-right: 8px;
       position: relative;
+      width: 18px;
     }
 
-    &:after {
-      content: "?";
+    &::after {
       color: white;
-      position: absolute;
+      content: "?";
       font-size: 12px;
       font-weight: bold;
       margin-left: -18px;
       margin-top: -1px;
+      position: absolute;
     }
   }
 }
 
 .suggestions-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 15px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   margin-top: 10px;
 }
 
 .suggestion-item {
+  background: $bg-light;
   border: 1px solid $border-color;
   border-radius: $border-radius;
-  padding: 10px;
-  background: $bg-light;
   display: flex;
   flex-direction: column;
+  padding: 10px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    transform: translateY(-2px);
     box-shadow: $shadow;
+    transform: translateY(-2px);
   }
 }
 
 .suggestion-image {
-  width: 100%;
-  height: 100px;
-  display: flex;
-  justify-content: center;
   align-items: center;
-  overflow: hidden;
+  display: flex;
+  height: 100px;
+  justify-content: center;
   margin-bottom: 10px;
+  overflow: hidden;
+  width: 100%;
 
   img {
-    max-width: 100%;
     max-height: 100px;
+    max-width: 100%;
     object-fit: contain;
   }
 
   .no-image {
-    width: 80px;
-    height: 80px;
     background: $bg-lighter;
     border-radius: $border-radius;
+    height: 80px;
     position: relative;
+    width: 80px;
 
-    &:after {
+    &::after {
+      color: $text-lighter;
       content: "No Image";
+      font-size: 10px;
+      left: 50%;
       position: absolute;
       top: 50%;
-      left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 10px;
-      color: $text-lighter;
     }
   }
 }
 
 .suggestion-details {
-  flex-grow: 1;
   display: flex;
   flex-direction: column;
+  flex-grow: 1;
   margin-bottom: 10px;
 }
 
 .suggestion-name {
-  font-size: 13px;
-  font-weight: 500;
+  -webkit-box-orient: vertical;
   color: $text-color;
-  margin-bottom: 5px;
-  line-height: 1.3;
+
   /* For long product names */
   display: -webkit-box;
+  font-size: 13px;
+  font-weight: 500;
   -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  line-height: 1.3;
+  margin-bottom: 5px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .suggestion-price {
-  font-size: 14px;
   color: $primary-color;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -1002,12 +1025,12 @@ body.modal-open {
 
 .add-suggestion-to-room {
   background: $primary-color;
-  color: $bg-color;
   border: none;
   border-radius: $border-radius;
-  padding: 5px 15px;
-  font-size: 12px;
+  color: $bg-color;
   cursor: pointer;
+  font-size: 12px;
+  padding: 5px 15px;
   transition: $transition-base;
   width: 100%;
 
@@ -1017,25 +1040,27 @@ body.modal-open {
 }
 
 /* User Details Section */
+
 .customer-details-section {
+  border-top: 1px solid $border-color;
   margin-top: 20px;
   padding-top: 15px;
-  border-top: 1px solid $border-color;
 
   h4 {
+    color: $text-color;
     font-size: 16px;
     margin-bottom: 15px;
-    color: $text-color;
   }
 }
 
 /* User details confirmation display */
+
 .customer-details-confirmation {
+  background-color: $bg-light;
+  border-left: 4px solid $primary-color;
+  border-radius: $border-radius;
   margin-top: 15px;
   padding: 15px;
-  background-color: $bg-light;
-  border-radius: $border-radius;
-  border-left: 4px solid $primary-color;
 }
 
 .saved-customer-details {
@@ -1048,81 +1073,85 @@ body.modal-open {
 }
 
 /* Form fields styling */
+
 #new-estimate-form {
+
   .form-group {
     margin-bottom: 15px;
   }
 
   label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
     color: $text-color;
+    display: block;
+    font-weight: 500;
+    margin-bottom: 5px;
   }
 
   input[type="text"],
   input[type="email"],
   input[type="tel"] {
-    width: 100%;
-    padding: 10px;
     border: 1px solid $border-color-dark;
     border-radius: $border-radius;
     font-size: 14px;
+    padding: 10px;
+    width: 100%;
 
     &:focus {
       border-color: $primary-color;
-      outline: none;
       box-shadow: 0 0 0 1px $primary-color;
+      outline: none;
     }
   }
 }
 
 /* Error message styling */
+
 .modal-message {
-  padding: 12px 15px;
-  margin-bottom: 20px;
   border-radius: $border-radius;
   font-size: 14px;
+  margin-bottom: 20px;
+  padding: 12px 15px;
 }
 
 .modal-error-message {
   background-color: #f8d7da;
-  color: #721c24;
   border: 1px solid #f5c6cb;
+  color: #721c24;
 }
 
 .modal-success-message {
   background-color: #d4edda;
-  color: #155724;
   border: 1px solid #c3e6cb;
+  color: #155724;
 }
 
 /* Estimate actions */
+
 .estimate-actions {
-  margin-top: 15px;
   display: flex;
   justify-content: flex-end;
   margin-bottom: 15px;
+  margin-top: 15px;
 
   ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
     display: flex;
     gap: 1rem; /* Adjust spacing between items as needed */
+    list-style: none;
+    margin: 0;
+    padding: 0;
 
     li {
       display: inline-block;
 
       a {
-        display: inline-flex;
         align-items: center;
-        text-decoration: none;
-        padding: 0.5rem 1rem;
-        border-radius: 0;
         background: $primary-color;
+        border-radius: 0;
         color: white;
         cursor: pointer;
+        display: inline-flex;
+        padding: 0.5rem 1rem;
+        text-decoration: none;
 
         &:hover {
           background: $primary-hover;
@@ -1137,93 +1166,82 @@ body.modal-open {
 }
 
 /* Price Graph Container */
+
 .price-graph-container {
-  margin: 10px 0;
-  font-family: $font-family;
-  width: 100%;
-  max-width: 100%;
-  position: relative;
   box-sizing: border-box;
+  font-family: $font-family;
+  margin: 10px 0;
+  max-width: 100%;
   padding: 0 20px; /* ✅ Full padding around container */
+  position: relative;
+  width: 100%;
 }
 
 /* Title Row with Flex Layout */
+
 .price-range-title {
-  font-weight: bold;
-  margin-bottom: 8px;
-  display: flex;
-  justify-content: space-between;
   align-items: center;
+  display: flex;
+  font-weight: bold;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
 .price-title {
   color: $primary-color;
   flex: 1;
-  white-space: nowrap;
+  margin-right: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-right: 10px;
+  white-space: nowrap;
 }
 
 .room-price {
-  white-space: nowrap;
   color: $text-color;
-  font-weight: 400;
   font-size: 0.9em;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 /* Graph Bar - Base Container */
+
 .price-graph-bar {
-  position: relative !important;
-  height: 20px;
   background-color: #e0e0e0;
   border-radius: $border-radius;
-  overflow: hidden;
+  height: 20px;
   margin-bottom: 6px; /* No side margins here anymore */
+  overflow: hidden;
+  position: relative !important;
 }
 
 /* Price Range Indicator */
+
 .price-graph-range {
-  position: absolute !important;
-  top: 0 !important;
-  bottom: 0 !important;
-  height: 100% !important;
   background-color: $success-color;
   border-radius: 3px;
-  z-index: 2;
+  bottom: 0 !important;
+  height: 100% !important;
   margin: 0 !important;
 
   /* Gradient fade */
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    rgba(0,0,0,0.15) 5px,
-    rgba(0,0,0,0.3) 10px,
-    rgba(0,0,0,0.5) 15px,
-    rgba(0,0,0,0.7) 20px,
-    black 40px,
-    black calc(100% - 40px),
-    rgba(0,0,0,0.7) calc(100% - 20px),
-    rgba(0,0,0,0.5) calc(100% - 15px),
-    rgba(0,0,0,0.3) calc(100% - 10px),
-    rgba(0,0,0,0.15) calc(100% - 5px),
-    transparent 100%
-  );
   mask-image: linear-gradient(
     to right,
     transparent 0%,
-    rgba(0,0,0,0.15) 5px,
-    rgba(0,0,0,0.3) 10px,
-    rgba(0,0,0,0.5) 15px,
-    rgba(0,0,0,0.7) 20px,
+    rgb(0, 0, 0, 0.15) 5px,
+    rgb(0, 0, 0, 0.3) 10px,
+    rgb(0, 0, 0, 0.5) 15px,
+    rgb(0, 0, 0, 0.7) 20px,
     black 40px,
     black calc(100% - 40px),
-    rgba(0,0,0,0.7) calc(100% - 20px),
-    rgba(0,0,0,0.5) calc(100% - 15px),
-    rgba(0,0,0,0.3) calc(100% - 10px),
-    rgba(0,0,0,0.15) calc(100% - 5px),
+    rgb(0, 0, 0, 0.7) calc(100% - 20px),
+    rgb(0, 0, 0, 0.5) calc(100% - 15px),
+    rgb(0, 0, 0, 0.3) calc(100% - 10px),
+    rgb(0, 0, 0, 0.15) calc(100% - 5px),
     transparent 100%
   );
+  position: absolute !important;
+  top: 0 !important;
+  z-index: 2;
 
   &.small-range {
     animation: pulse-highlight 2s infinite;
@@ -1231,113 +1249,114 @@ body.modal-open {
 }
 
 @keyframes pulse-highlight {
+
   0% { opacity: 0.9; }
+
   50% { opacity: 1; }
+
   100% { opacity: 0.9; }
 }
 
 /* Labels Area */
+
 .price-graph-labels {
-  font-size: 10px;
-  color: $text-light;
-  margin-top: 2px;
-  position: relative;
-  height: 18px;
-  width: 100%;
   box-sizing: border-box;
+  color: $text-light;
+  font-size: 10px;
+  height: 18px;
+  margin-top: 2px;
   padding: 0; /* ✅ No padding here anymore */
+  position: relative;
+  width: 100%;
 }
 
 /* Individual Label */
+
 .price-label {
   position: absolute;
   text-align: center;
-  white-space: nowrap;
   transform: translateX(-50%);
+  white-space: nowrap;
 
   &:first-child {
-    transform: translateX(0%); /* align start */
     text-align: left;
+    transform: translateX(0%); /* align start */
   }
 
   &:last-child {
-    transform: translateX(-100%) !important; /* align end */
     text-align: right;
+    transform: translateX(-100%) !important; /* align end */
   }
 }
 
 .price-tick {
-  width: 1px;
-  height: 4px;
   background-color: $text-lighter;
+  height: 4px;
   margin: 0 auto 1px;
+  width: 1px;
 }
 
 .price-value {
-  white-space: nowrap;
   font-size: 10px;
+  white-space: nowrap;
 }
 
 /* Dimensions Display */
+
 .price-dimensions {
-  font-weight: 400;
-  margin-left: 8px;
   color: $text-light;
   font-size: 0.9em;
+  font-weight: 400;
+  margin-left: 8px;
 }
 
 .price-notice {
-  font-weight: normal;
   color: $text-light;
   font-size: 10px;
+  font-weight: normal;
   margin-top: 5px;
   text-align: right;
 }
 
 /* Email Prompt Modal Styles */
+
 .email-prompt-modal {
+  inset: 0;
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   z-index: $z-index-modal + 1; /* Higher than the product estimator modal */
 }
 
 .email-prompt-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
   background-color: $bg-overlay;
+  inset: 0;
+  position: absolute;
   z-index: $z-index-modal + 2;
 }
 
 .email-prompt-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  max-width: 400px;
   background-color: $bg-color;
   border-radius: $border-radius;
   box-shadow: $shadow-lg;
-  z-index: $z-index-modal + 3;
+  left: 50%;
+  max-width: 400px;
   overflow: hidden;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  z-index: $z-index-modal + 3;
 }
 
 .email-prompt-header {
-  padding: 15px 20px;
   background-color: $bg-lighter;
   border-bottom: 1px solid $border-color-dark;
+  padding: 15px 20px;
 
   h3 {
+    color: $text-color;
+    font-size: 18px;
     margin: 0;
     padding: 0;
-    font-size: 18px;
-    color: $text-color;
   }
 }
 
@@ -1345,9 +1364,9 @@ body.modal-open {
   padding: 20px;
 
   p {
-    margin: 0 0 15px;
     font-size: 14px;
     line-height: 1.5;
+    margin: 0 0 15px;
   }
 
   .form-group {
@@ -1355,20 +1374,20 @@ body.modal-open {
   }
 
   label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    font-size: 14px;
     color: $text-color;
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 5px;
   }
 
   input[type="email"] {
-    width: 100%;
-    padding: 8px 10px;
     border: 1px solid $border-color-dark;
     border-radius: $border-radius;
     font-size: 14px;
     line-height: 1.5;
+    padding: 8px 10px;
+    width: 100%;
 
     &:focus {
       border-color: $info-color;
@@ -1379,36 +1398,36 @@ body.modal-open {
 }
 
 .email-validation-message {
-  margin-top: 5px;
   color: $error-color;
   font-size: 12px;
+  margin-top: 5px;
   min-height: 18px;
 }
 
 .email-prompt-footer {
-  padding: 15px 20px;
   background-color: $bg-lighter;
   border-top: 1px solid $border-color-dark;
-  text-align: right;
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 15px 20px;
+  text-align: right;
 
   button {
-    margin-left: 10px;
-    padding: 5px 12px;
+    cursor: pointer;
     font-size: 13px;
     line-height: 1.5;
-    cursor: pointer;
+    margin-left: 10px;
+    padding: 5px 12px;
   }
 
   .submit-email-btn {
-    flex: 1;
-    text-align: center;
     background-color: $info-color;
     border: 1px solid $info-color;
     color: white;
+    flex: 1;
+    text-align: center;
 
     &:hover {
       background-color: color.adjust($info-color, $lightness: -10%);
@@ -1433,28 +1452,35 @@ body.modal-open {
 }
 
 /* Loading state for buttons */
+
 .loading {
-  position: relative;
   pointer-events: none;
+  position: relative;
 }
 
 .loading-dots::after {
-  content: "";
   animation: loading-dots 1.5s infinite;
+  content: "";
 }
 
 @keyframes loading-dots {
+
   0% { content: "."; }
+
   33% { content: ".."; }
+
   66% { content: "..."; }
+
   100% { content: "."; }
 }
 
 /* More responsive adjustments */
+
 @media screen and (max-width: $breakpoint-md) {
+
   .product-includes {
-    width: 100%;
     padding-right: 25px;
+    width: 100%;
   }
 
   .product-includes-header {
@@ -1462,8 +1488,8 @@ body.modal-open {
   }
 
   .product-includes-icon {
-    width: 18px;
     height: 18px;
+    width: 18px;
   }
 
   .product-includes-title {
@@ -1487,9 +1513,9 @@ body.modal-open {
   }
 
   .note-icon .dashicons {
-    width: 16px;
-    height: 16px;
     font-size: 16px;
+    height: 16px;
+    width: 16px;
   }
 
   .price-graph-labels {
@@ -1527,19 +1553,20 @@ body.modal-open {
   #new-estimate-form input[type="text"],
   #new-estimate-form input[type="email"],
   #new-estimate-form input[type="tel"] {
-    padding: 8px;
     font-size: 13px;
+    padding: 8px;
   }
 }
 
 @media screen and (max-width: $breakpoint-sm) {
+
   .suggestions-list {
     grid-template-columns: repeat(2, 1fr);
   }
 
   .product-card-actions {
-    flex-direction: column;
     align-items: flex-start;
+    flex-direction: column;
     gap: 15px;
 
     .visualiser-button-wrapper,

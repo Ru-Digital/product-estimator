@@ -12,6 +12,7 @@ $text-color: #666;
 $link-color: #0073aa;
 
 /* General Admin Styles */
+
 .product-estimator-admin-wrapper {
   margin: 20px 0;
   max-width: 1200px;
@@ -27,9 +28,10 @@ $link-color: #0073aa;
 }
 
 /* Tab Navigation */
+
 .nav-tab-wrapper {
-  margin-bottom: 20px;
   border-bottom: 1px solid $border-color;
+  margin-bottom: 20px;
 }
 
 .nav-tab {
@@ -43,18 +45,21 @@ $link-color: #0073aa;
 }
 
 /* Tab Content */
+
 .tab-content {
   background: $background-color;
-  padding: 20px;
   border: 1px solid $border-color;
   border-top: none;
+  padding: 20px;
 }
 
 /* Form Styling */
+
 .product-estimator-form {
   max-width: 800px;
 
   input {
+
     &[type="text"],
     &[type="email"],
     &[type="number"],
@@ -73,9 +78,10 @@ $link-color: #0073aa;
 }
 
 .form-table {
+
   th {
-    width: 200px;
     padding: 20px 10px 20px 0;
+    width: 200px;
   }
 
   td {
@@ -84,50 +90,57 @@ $link-color: #0073aa;
 }
 
 /* Field Errors */
+
 .field-error {
   color: $error-color;
   display: block;
-  margin-top: 5px;
   font-size: 12px;
+  margin-top: 5px;
 }
 
 /* Loading State */
+
 .loading {
-  text-align: center;
-  padding: 40px;
   color: $text-color;
+  padding: 40px;
+  text-align: center;
 
   &::after {
-    content: '';
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    margin-left: 10px;
+    animation: spin 1s linear infinite;
     border: 2px solid $primary-color;
     border-radius: 50%;
     border-top-color: transparent;
-    animation: spin 1s linear infinite;
+    content: '';
+    display: inline-block;
+    height: 20px;
+    margin-left: 10px;
+    width: 20px;
   }
 }
 
 @keyframes spin {
+
   to {
     transform: rotate(360deg);
   }
 }
 
 /* Notice Styling */
+
 .notice {
   margin: 20px 0;
 }
 
 /* Responsive Adjustments */
+
 @media screen and (max-width: 782px) {
+
   .form-table td {
     padding: 10px;
   }
 
   .product-estimator-form {
+
     input[type="text"],
     input[type="email"],
     input[type="number"],
@@ -142,10 +155,11 @@ $link-color: #0073aa;
   }
 
   .report-filters {
+
     select,
     input[type="date"] {
-      width: 100%;
       margin-right: 0;
+      width: 100%;
     }
   }
 }
@@ -189,14 +203,17 @@ $link-color: #0073aa;
 */
 
 /* Print Styles */
+
 @media print {
   /* Set minimum lines for paragraph breaks */
+
   p, li, tr {
     orphans: 3; /* Minimum lines at bottom of page before break */
     widows: 3;  /* Minimum lines at top of page after break */
   }
   
   /* Avoid breaks inside these elements */
+
   h1, h2, h3, h4, 
   .postbox,
   tr, 
@@ -205,17 +222,20 @@ $link-color: #0073aa;
   }
   
   /* Force page breaks before these elements */
+
   h1, h2, h3 {
-    page-break-before: auto;
     page-break-after: avoid;
+    page-break-before: auto;
   }
   
   /* Ensure tables have header rows on each page */
+
   thead {
     display: table-header-group;
   }
   
   /* Avoid breaks in the middle of images */
+
   img {
     page-break-inside: avoid;
   }
@@ -243,6 +263,7 @@ $link-color: #0073aa;
  */
 
 /* Dashboard Widgets */
+
 .dashboard-widgets-wrap {
   overflow: hidden;
 
@@ -259,8 +280,8 @@ $link-color: #0073aa;
       }
 
       thead th {
-        font-weight: 600;
         border-bottom: 1px solid #ddd;
+        font-weight: 600;
       }
 
       tbody tr:nth-child(even) {
@@ -281,18 +302,18 @@ $link-color: #0073aa;
       padding: 0 15px;
 
       li {
+        list-style: none;
         margin-bottom: 10px;
         padding-left: 20px;
         position: relative;
-        list-style: none;
 
-        &:before {
-          content: "\f345";
-          font-family: dashicons;
-          position: absolute;
-          left: 0;
-          top: 1px;
+        &::before {
           color: $link-color;
+          content: "\f345";
+          font-family: dashicons, sans-serif;
+          left: 0;
+          position: absolute;
+          top: 1px;
         }
 
         &:last-child {
@@ -302,9 +323,9 @@ $link-color: #0073aa;
     }
 
     .inside p {
-      margin: 10px 15px;
       color: $text-color;
       font-style: italic;
+      margin: 10px 15px;
     }
   }
 
@@ -316,8 +337,8 @@ $link-color: #0073aa;
       padding: 10px 15px;
 
       li {
-        margin-bottom: 8px;
         font-size: 14px;
+        margin-bottom: 8px;
 
         &:last-child {
           margin-bottom: 0;
@@ -327,18 +348,20 @@ $link-color: #0073aa;
   }
 
   .hndle .page-title-action {
-    font-weight: normal;
     font-size: 13px;
+    font-weight: normal;
     margin-left: 10px;
     vertical-align: middle;
   }
 }
 
 /* Dashboard Overview Styling */
+
 @media only screen and (min-width: 800px) {
+
   .product-estimator-admin-wrapper .postbox-container {
-    width: 49%;
     float: left;
+    width: 49%;
 
     &:nth-child(odd) {
       margin-right: 2%;
@@ -347,6 +370,7 @@ $link-color: #0073aa;
 }
 
 @media only screen and (min-width: 1500px) {
+
   .product-estimator-admin-wrapper .postbox-container {
     width: 32%;
 
@@ -362,30 +386,31 @@ $link-color: #0073aa;
 }
 
 /* Stats Overview */
+
 .stats-overview {
   display: flex;
   flex-wrap: wrap;
   margin: -5px;
 
   .stat-item {
+    background: $alt-background-color;
+    border-radius: 4px;
     flex: 1 1 200px;
     margin: 5px;
     padding: 15px;
-    background: $alt-background-color;
-    border-radius: 4px;
     text-align: center;
 
     .stat-number {
+      color: $primary-color;
+      display: block;
       font-size: 24px;
       font-weight: 600;
-      display: block;
       margin-bottom: 5px;
-      color: $primary-color;
     }
 
     .stat-label {
-      font-size: 13px;
       color: $text-color;
+      font-size: 13px;
     }
   }
 }

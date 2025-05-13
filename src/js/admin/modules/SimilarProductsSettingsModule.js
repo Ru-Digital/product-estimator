@@ -3,9 +3,9 @@
  *
  * Handles functionality for the similar products settings tab in the admin area.
  */
+import { ajax, createLogger } from '@utils'; // Import utilities needed for this module
+
 import AdminTableManager from '../common/AdminTableManager'; // Adjust path as needed
-import { ajax, validation } from '@utils'; // Assuming @utils provides these. Removed dom, format as they weren't explicitly used in this file's logic directly.
-import { createLogger } from '@utils';
 
 class SimilarProductsSettingsModule extends AdminTableManager {
   /**
@@ -43,6 +43,7 @@ class SimilarProductsSettingsModule extends AdminTableManager {
       this.dom.attributesLoading = this.$container.find(selectors.attributesLoading);
       this.dom.selectedAttributesInput = this.$container.find(selectors.selectedAttributesInput);
     } else {
+      createLogger('SimilarProductsModule').warn('SimilarProductsSettingsModule: settings or selectors not available for DOM caching');
     }
 
   }
@@ -203,7 +204,7 @@ class SimilarProductsSettingsModule extends AdminTableManager {
         this.dom.attributesList.hide();
       }
     })
-    .catch(error => {
+    .catch(() => {
       this.dom.attributesLoading.text(this.settings.i18n.errorLoading || 'Error loading attributes. Please try again.');
       this.dom.attributesList.hide();
     });
@@ -248,7 +249,9 @@ class SimilarProductsSettingsModule extends AdminTableManager {
   }
 
   /**
-   * Override AdminTableManager.populateFormWithData for Product Additions specific fields.
+   * Override AdminTableManager.populateFormWithData for Similar Products specific fields.
+   * @param {object} itemData - The data for the similar product item to populate the form with
+   * @override
    */
   populateFormWithData(itemData) {
     super.populateFormWithData(itemData); // Sets item ID, calls base logic
@@ -276,7 +279,9 @@ class SimilarProductsSettingsModule extends AdminTableManager {
   }
 
   /**
-   * Override AdminTableManager.validateForm for Product Additions specific validation.
+   * Override AdminTableManager.validateForm for Similar Products specific validation.
+   * @returns {boolean} True if the form passes validation, false otherwise
+   * @override
    */
   validateForm() {
     let isValid = super.validateForm(); // Perform base validation first
@@ -308,6 +313,8 @@ class SimilarProductsSettingsModule extends AdminTableManager {
   /**
    * Custom column population method for 'source_categories' column
    * This method follows the naming convention for column handlers in AdminTableManager
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
   populateColumn_source_categories($cell, itemData) {
     $cell.text(itemData.source_categories_display || 'N/A');
@@ -315,6 +322,8 @@ class SimilarProductsSettingsModule extends AdminTableManager {
 
   /**
    * Custom column population method for 'attributes' column
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
   populateColumn_attributes($cell, itemData) {
     $cell.text(itemData.attributes_display || 'None selected');

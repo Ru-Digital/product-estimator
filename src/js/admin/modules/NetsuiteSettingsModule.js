@@ -5,10 +5,8 @@
  */
 import { ajaxRequest } from '@utils/ajax'; // Specific import from original
 import { createElement } from '@utils/dom'; // Specific import from original
-import { createLogger } from '@utils';
-import ProductEstimatorSettings from '../common/ProductEstimatorSettings'; // Adjust path as needed
 
-const logger = createLogger('NetsuiteSettingsModule');
+import ProductEstimatorSettings from '../common/ProductEstimatorSettings'; // Adjust path as needed
 
 class NetsuiteSettingsModule extends ProductEstimatorSettings {
   /**

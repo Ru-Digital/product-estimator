@@ -1,15 +1,18 @@
 /* Enhanced Carousel Styling for Suggested Products */
+
 @use 'sass:color';
+
 @use 'variables' as *;
+
 .product-suggestions {
-  margin-top: 20px;
-  padding-top: 15px;
   border-top: 1px dashed $border-color;
-  width: 100%;
-  max-width: 100%;
   box-sizing: border-box;
+  margin-top: 20px;
+  max-width: 100%;
   overflow: hidden;
+  padding-top: 15px;
   position: relative;
+  width: 100%;
   
   h5 {
     margin-bottom: 15px;
@@ -17,46 +20,46 @@
 }
 
 .suggestions-carousel {
-  overflow: hidden;
-  position: relative;
-  padding: 10px 40px; /* Space for navigation arrows */
   margin-bottom: 15px;
+  overflow: hidden;
+  padding: 10px 40px; /* Space for navigation arrows */
+  position: relative;
 }
 
 .suggestions-container {
   display: flex;
-  transition: transform 0.3s ease;
   gap: 15px;
+  transition: transform 0.3s ease;
   will-change: transform;
 }
 
 .suggestion-item {
-  flex: 0 0 auto;
-  width: 200px;
-  padding: 10px;
+  align-items: center;
+  background: $bg-light;
   border: 1px solid #e0e0e0;
   border-radius: $border-radius-lg;
-  background: $bg-light;
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
-  align-items: center;
-  transition: transform 0.2s, box-shadow 0.2s;
   height: 275px; /* Fixed height for consistent carousel */
+  padding: 10px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 200px;
   
   &:hover {
-    transform: translateY(-3px);
     box-shadow: $shadow;
+    transform: translateY(-3px);
   }
 }
 
 .suggestion-image {
-  width: 100%;
-  height: 100px;
-  margin-bottom: 10px;
-  display: flex;
   align-items: center;
+  display: flex;
+  height: 100px;
   justify-content: center;
+  margin-bottom: 10px;
   overflow: hidden;
+  width: 100%;
   
   img {
     max-height: 100%;
@@ -65,42 +68,42 @@
   }
   
   .no-image {
-    width: 80px;
-    height: 80px;
     background-color: $bg-lighter;
     border-radius: $border-radius-lg;
+    height: 80px;
     position: relative;
+    width: 80px;
     
-    &:before {
+    &::before {
+      color: $text-lighter;
       content: "No Image";
+      font-size: 10px;
+      left: 50%;
       position: absolute;
       top: 50%;
-      left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 10px;
-      color: $text-lighter;
     }
   }
 }
 
 .suggestion-details {
-  text-align: center;
-  width: 100%;
-  flex-grow: 1;
   display: flex;
   flex-direction: column;
+  flex-grow: 1;
   justify-content: space-between;
+  text-align: center;
+  width: 100%;
 }
 
 .suggestion-name {
-  font-weight: 600;
-  margin-bottom: 5px;
-  font-size: 14px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: -webkit-box;
+  font-size: 14px;
+  font-weight: 600;
+  -webkit-line-clamp: 2;
+  margin-bottom: 5px;
   min-height: 40px;
+  overflow: hidden;
 }
 
 .suggestion-price {
@@ -115,45 +118,46 @@
 }
 
 .add-suggestion-to-room {
-  width: 100%;
-  padding: 8px;
   background-color: $bg-dark; /* WordPress blue */
-  color: white;
   border: none;
   border-radius: $border-radius;
+  color: white;
   cursor: pointer;
-  transition: $transition-base;
-  font-weight: 600;
-  text-transform: uppercase;
   font-size: 12px;
+  font-weight: 600;
+  padding: 8px;
+  text-transform: uppercase;
+  transition: $transition-base;
+  width: 100%;
   
   &:hover {
     background-color: $primary-color;
   }
   
   &.loading {
-    opacity: 0.7;
     cursor: not-allowed;
+    opacity: 0.7;
   }
 }
 
 /* Carousel Navigation */
+
 .suggestions-nav {
+  align-items: center;
+  background: rgb(255, 255, 255, 0.9);
+  border: 1px solid $border-color-dark;
+  border-radius: 50%;
+  box-shadow: $shadow-sm;
+  cursor: pointer;
+  display: flex;
+  height: 36px;
+  justify-content: center;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 36px;
-  height: 36px;
-  background: rgba(255,255,255,0.9);
-  border: 1px solid $border-color-dark;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: $shadow-sm;
-  z-index: 5; /* Ensure buttons are above content */
   transition: $transition-base;
+  width: 36px;
+  z-index: 5; /* Ensure buttons are above content */
   
   &:hover {
     background: white;
@@ -169,47 +173,54 @@
   }
   
   &.disabled {
-    opacity: 0.3;
     cursor: not-allowed;
+    opacity: 0.3;
   }
   
   .dashicons {
-    font-size: 24px;
-    display: flex;
     align-items: center;
+    display: flex;
+    font-size: 24px;
     justify-content: center;
   }
 }
 
 /* Loading indicator for Add button */
+
 .loading-dots::after {
-  content: "...";
   animation: loading 1.5s infinite;
+  content: "...";
 }
 
 @keyframes loading {
+
   0% { content: "."; }
+
   33% { content: ".."; }
+
   66% { content: "..."; }
 }
 
 /* Empty state */
+
 .no-suggestions {
-  padding: 15px;
-  text-align: center;
   color: $text-light;
   font-style: italic;
+  padding: 15px;
+  text-align: center;
 }
 
 /* Responsive adjustments */
+
 @media screen and (max-width: $breakpoint-sm) {
+
   .suggestions-carousel {
     padding: 0 30px;
   }
 
   .suggestion-item {
-    width: 160px;
     height: 275px;
+    width: 160px;
   }
 
   .suggestion-image {
@@ -222,8 +233,8 @@
   }
 
   .suggestions-nav {
-    width: 28px;
     height: 28px;
+    width: 28px;
     
     .dashicons {
       font-size: 18px;

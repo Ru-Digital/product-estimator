@@ -6,22 +6,35 @@
  */
 
 // Make sass:color available to all modules
+
 @forward 'sass:color';
 
 // Forward shared resources so they're available to all imported files
+
 @forward 'variables';  // Variable definitions (colors, sizes, etc.)
+
 @forward 'mixins';     // Reusable pattern mixins
+
 @forward 'animations'; // Keyframe animations
 
 // Import utility classes (generates CSS output)
+
 @use 'utilities';      // Utility helper classes
 
 // Use modern @use syntax for all component styles
+
 @use 'PublicStyles';          // Base styles
+
 @use 'Modal';                 // Modal window styles
+
 @use 'Dialog';                // Dialog styles
+
 @use 'Carousel';              // Carousel styles
+
 @use 'SimilarProducts';       // Similar products styles 
+
 @use 'CustomerDetails';       // Customer details styles
+
 @use 'DetailsToggle';         // Details toggle styles
+
 @use 'ProductUpgrades';       // Product upgrades styles

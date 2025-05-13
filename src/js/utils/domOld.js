@@ -5,7 +5,7 @@
 /**
  * Create an element with attributes and children
  * @param {string} tag - Element tag name
- * @param {Object} attributes - Element attributes
+ * @param {object} attributes - Element attributes
  * @param {Array|string} children - Child elements or text
  * @returns {HTMLElement} Created element
  */

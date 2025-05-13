@@ -5,6 +5,7 @@
  */
 import { setupTinyMCEHTMLPreservation } from '@utils/tinymce-preserver';
 import { createLogger } from '@utils';
+
 import ProductEstimatorSettings from '../common/ProductEstimatorSettings'; // Adjust path as needed
 
 const logger = createLogger('GeneralSettingsModule');
@@ -73,7 +74,6 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
     const button = this.$(e.currentTarget);
     const targetInputSelector = button.data('target-input'); // Use the data-target-input attribute
     const targetPreviewSelector = button.data('target-preview'); // Use the data-target-preview attribute
-    const acceptType = button.data('accept') || '';
 
     if (this.mediaFrame) {
       this.mediaFrame.open();
@@ -95,8 +95,10 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
         if (targetInputSelector) {
           this.$(targetInputSelector).val(attachment.id).trigger('change');
         } else {
+          logger.warn('No target input selector found for file upload');
         }
       } else {
+        logger.warn('Invalid attachment selected from media library');
       }
 
       // Use the target preview selector from the data attribute
@@ -234,7 +236,7 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
   /**
    * Format file size in bytes to a human-readable format
    * @param {number} bytes - Size in bytes
-   * @return {string} Formatted size (e.g., "256 KB")
+   * @returns {string} Formatted size (e.g., "256 KB")
    */
   _formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';

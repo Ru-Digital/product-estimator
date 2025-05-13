@@ -2,11 +2,10 @@
  * Notification Settings JavaScript
  * Extends VerticalTabbedModule for common vertical tab and form handling.
  */
-import VerticalTabbedModule from '../common/VerticalTabbedModule'; // Adjust path as needed
-import { validation } from '@utils'; // Assuming @utils provides these
+import { validation } from '@utils'; // Import utilities needed for this module
 // import { setupTinyMCEHTMLPreservation } from '@utils/tinymce-preserver'; // If still needed specifically here
-import { createLogger } from '@utils';
-const logger = createLogger('NotificationSettings');
+
+import VerticalTabbedModule from '../common/VerticalTabbedModule'; // Adjust path as needed
 
 class NotificationSettingsModule extends VerticalTabbedModule {
   constructor() {
@@ -26,7 +25,6 @@ class NotificationSettingsModule extends VerticalTabbedModule {
   bindModuleSpecificEvents() {
     super.bindModuleSpecificEvents();
     if (!this.$container || !this.$container.length) return;
-    const $ = jQuery;
 
     this.$container.on('change', '#enable_notifications', this.handleToggleAllNotifications.bind(this));
     this.$container.on('change', 'input[id^="notification_"][id$="_enabled"]', this.handleToggleSingleNotification.bind(this));
@@ -67,7 +65,7 @@ class NotificationSettingsModule extends VerticalTabbedModule {
 
   handleToggleAllNotifications() {
     if (!this.$container || !this.$container.length) return;
-    const $ = jQuery;
+    
     const $globalEnableCheckbox = this.$container.find('#enable_notifications');
     if (!$globalEnableCheckbox.length) {
       return;

@@ -5,6 +5,8 @@
  * Provides a clean API for data operations and handles errors consistently.
  */
 
+import { createLogger } from '@utils';
+
 import {
   addEstimate, // Imports from EstimateStorage
   loadEstimateData, // Imports from EstimateStorage
@@ -15,17 +17,16 @@ import {
   removeProductFromRoom as removeProductFromRoomStorage, // Imports from EstimateStorage
   replaceProductInRoom as replaceProductInRoomStorage, // Imports from EstimateStorage
   addSuggestionsToRoom as replaceSuggestionsInRoomStorage,
-  getSuggestionsForRoom as getSuggestionsForRoomFromStorage,
-  getEstimate, addProductToRoom // Imports from EstimateStorage
+  getSuggestionsForRoom as getSuggestionsForRoomFromStorage
+  // getEstimate, addProductToRoom - Removed unused imports
 } from './EstimateStorage'; // Import necessary functions from storage
 
-import { createLogger } from '@utils';
 const logger = createLogger('EstimateStorage');
 
 class DataService {
   /**
    * Initialize the DataService
-   * @param {Object} config - Configuration options
+   * @param {object} config - Configuration options
    */
   constructor(config = {}) {
     // Check for existing instance
@@ -63,7 +64,7 @@ class DataService {
   /**
    * Make an AJAX request to the WordPress backend
    * @param {string} action - WordPress AJAX action name
-   * @param {Object} data - Request data
+   * @param {object} data - Request data
    * @returns {Promise} - Promise resolving to response data
    */
   request(action, data = {}) {
@@ -134,10 +135,9 @@ class DataService {
 
   /**
    * Check if any estimates exist in the session by checking localStorage
-   * @param {boolean} bypassCache - Whether to bypass the cache
    * @returns {Promise<boolean>} True if estimates exist
    */
-  checkEstimatesExist(bypassCache = false) {
+  checkEstimatesExist() {
     // Return a promise for API consistency
     return new Promise((resolve) => {
       // Load estimate data from localStorage
@@ -238,11 +238,10 @@ class DataService {
    * Get rooms for a specific estimate by reading from localStorage.
    * Note: This function now relies on localStorage for its data source.
    * @param {string|number} estimateId - Estimate ID
-   * @param {number|null} productId - Optional product ID (kept for potential future local logic, but not used for fetching here)
    * @param {boolean} bypassCache - Whether to bypass the cache (still respects cache for efficiency)
-   * @returns {Promise<Object>} An object containing room data from localStorage ({ has_rooms: boolean, rooms: Array })
+   * @returns {Promise<object>} An object containing room data from localStorage ({ has_rooms: boolean, rooms: Array })
    */
-  getRoomsForEstimate(estimateId, productId = null, bypassCache = false) {
+  getRoomsForEstimate(estimateId, bypassCache = false) {
     const cacheKey = `estimate_${estimateId}`;
 
     // Check cache first for efficiency within the same session
@@ -314,7 +313,7 @@ class DataService {
    * @param {string|number} roomId - Room ID
    * @param {number} productId - Product ID
    * @param {string|number|null} estimateId - Optional estimate ID to ensure correct room
-   * @returns {Promise<Object>} A promise that resolves after attempting to add the product to localStorage.
+   * @returns {Promise<object>} A promise that resolves after attempting to add the product to localStorage.
    */
   addProductToRoom(roomId, productId, estimateId = null) {
     logger.log('DataService: Adding product to room (localStorage first)', {
@@ -393,7 +392,7 @@ class DataService {
 
         // Remove room_suggested_products from comprehensiveProductData if it was part of it,
         // as it's handled separately or ignored.
-        if (comprehensiveProductData.hasOwnProperty('room_suggested_products')) {
+        if (Object.prototype.hasOwnProperty.call(comprehensiveProductData, 'room_suggested_products')) {
           delete comprehensiveProductData.room_suggested_products;
         }
         logger.log('DataService: Comprehensive product data to be stored (similar_products processed):', comprehensiveProductData);
@@ -483,7 +482,7 @@ class DataService {
    * @param {string|number} newProductId - ID of new product
    * @param {string|number|null} parentProductId - ID of the parent product (if replacing additional product)
    * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
-   * @returns {Promise<Object>} A promise that resolves after attempting to replace the product in localStorage
+   * @returns {Promise<object>} A promise that resolves after attempting to replace the product in localStorage
    * and update suggestions based on fetched data.
    */
   replaceProductInRoom(estimateId, roomId, oldProductId, newProductId, parentProductId, replaceType = 'main') {
@@ -557,7 +556,7 @@ class DataService {
 
         // Remove room_suggested_products key from comprehensiveNewProductData if it was part of it,
         // as it's handled separately or ignored.
-        if (comprehensiveNewProductData.hasOwnProperty('room_suggested_products')) {
+        if (Object.prototype.hasOwnProperty.call(comprehensiveNewProductData, 'room_suggested_products')) {
           delete comprehensiveNewProductData.room_suggested_products;
         }
         logger.log('DataService: New product data for replacement (similar_products processed):', comprehensiveNewProductData);
@@ -696,9 +695,9 @@ class DataService {
 
   /**
    * Create a new estimate
-   * @param {FormData|Object|string} formData - Form data
+   * @param {FormData | object | string} formData - Form data
    * @param {number|null} productId - Optional product ID
-   * @returns {Promise<Object>} A promise that resolves immediately with the client-side estimate ID.
+   * @returns {Promise<object>} A promise that resolves immediately with the client-side estimate ID.
    * The server-side creation is handled asynchronously.
    */
   addNewEstimate(formData, productId = null) {
@@ -763,17 +762,17 @@ class DataService {
 
   /**
    // In DataService.js
-
+   
    /**
    * Create a new room.
    * If a productId is provided, it fetches data for that product (including similar products)
    * and conditionally fetches/stores room suggestions based on a feature switch, then adds
    * the product to the new room in localStorage.
    * The main promise resolves after local changes. Async calls update the server.
-   * @param {FormData|Object|string} formData - Form data for the new room
+   * @param {FormData | object | string} formData - Form data for the new room
    * @param {string|number} estimateId - Estimate ID to add the room to
    * @param {number|null} productId - Optional product ID to add to the new room
-   * @returns {Promise<Object>} A promise that resolves with the new room data (and product if added).
+   * @returns {Promise<object>} A promise that resolves with the new room data (and product if added).
    */
   addNewRoom(formData, estimateId, productId = null) {
     logger.log('DataService: Adding new room', {
@@ -885,7 +884,7 @@ class DataService {
               logger.log('DataService: Suggestions feature disabled. Not processing room suggestions for new room.');
             }
 
-            if (comprehensiveProductData.hasOwnProperty('room_suggested_products')) {
+            if (Object.prototype.hasOwnProperty.call(comprehensiveProductData, 'room_suggested_products')) {
               delete comprehensiveProductData.room_suggested_products;
             }
             logger.log('DataService: Comprehensive product data for new room (similar_products processed):', comprehensiveProductData);
@@ -972,7 +971,7 @@ class DataService {
    * @param {string|number} roomId - Room ID
    * @param {number} productIndex - Product index in the room's products array (for backend call)
    * @param {string|number} productId - Product Id of the product being deleted (for localStorage and backend call)
-   * @returns {Promise<Object>} A promise that resolves after local storage updates.
+   * @returns {Promise<object>} A promise that resolves after local storage updates.
    */
   removeProductFromRoom(estimateId, roomId, productIndex, productId) {
     logger.log('[removeProductFromRoom] Initiating product removal process', { estimateId, roomId, productIndex, productId });
@@ -1118,7 +1117,7 @@ class DataService {
    * Remove a room from an estimate
    * @param {string|number} estimateId - Estimate ID
    * @param {string|number} roomId - Room ID
-   * @returns {Promise<Object>} A promise that resolves immediately after the local storage removal attempt.
+   * @returns {Promise<object>} A promise that resolves immediately after the local storage removal attempt.
    */
   removeRoom(estimateId, roomId) {
     logger.log('DataService: Removing room', {
@@ -1146,7 +1145,7 @@ class DataService {
     };
 
     // Make the AJAX request to the server asynchronously
-    const serverRequestPromise = this.request('remove_room', requestData)
+    this.request('remove_room', requestData)
       .then(serverData => {
         logger.log('DataService: Server-side room removal successful:', serverData);
         // Invalidate caches since we modified data on the server
@@ -1168,7 +1167,7 @@ class DataService {
   /**
    * Remove an entire estimate
    * @param {string|number} estimateId - Estimate ID
-   * @returns {Promise<Object>} Result data
+   * @returns {Promise<object>} Result data
    */
   removeEstimate(estimateId) {
     logger.log(`DataService: Removing estimate ${estimateId}`);
@@ -1212,11 +1211,9 @@ class DataService {
    * Get suggested products for a room from localStorage.
    * @param {string|number} estimateId - Estimate ID
    * @param {string|number} roomId - Room ID
-   * @param {Array} roomProducts - Array of product objects currently in the room (Note: this parameter is no longer used for data retrieval but kept for API consistency if other parts of the application expect it)
-   * @param {boolean} bypassCache - Whether to bypass the cache (Note: caching is handled by direct localStorage access, so this parameter has less direct impact here but is kept for API consistency)
    * @returns {Promise<Array|null>} Array of suggested products or null if not found
    */
-  getSuggestedProducts(estimateId, roomId, roomProducts = [], bypassCache = false) {
+  getSuggestedProducts(estimateId, roomId) {
     if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
       logger.log(`[getSuggestedProducts] Suggestions feature is disabled. Returning null for room ${roomId}.`);
       return Promise.resolve(null); // Or Promise.resolve([])
@@ -1240,7 +1237,7 @@ class DataService {
   /**
    * Get the variation estimator content
    * @param {number} variationId - Variation ID
-   * @returns {Promise<Object>} Result with HTML content
+   * @returns {Promise<object>} Result with HTML content
    */
   getVariationEstimator(variationId) {
     return this.request('get_variation_estimator', {
@@ -1250,7 +1247,7 @@ class DataService {
 
   /**
    * Format form data into a string for AJAX requests
-   * @param {FormData|Object|string} formData - The form data to format
+   * @param {FormData | object | string} formData - The form data to format
    * @returns {string} Formatted form data
    */
   formatFormData(formData) {

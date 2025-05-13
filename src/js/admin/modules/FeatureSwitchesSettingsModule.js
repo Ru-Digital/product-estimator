@@ -3,10 +3,7 @@
  *
  * Handles functionality specific to the feature switches settings tab.
  */
-import { createLogger } from '@utils';
 import ProductEstimatorSettings from '../common/ProductEstimatorSettings'; // Adjust path as needed
-
-const logger = createLogger('FeatureSwitchesSettingsModule');
 
 class FeatureSwitchesSettingsModule extends ProductEstimatorSettings {
   /**

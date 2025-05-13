@@ -6,9 +6,9 @@
  * Handles functionality specific to the product upgrades settings tab.
  * Extends AdminTableManager for common table and form management.
  */
-import AdminTableManager from '../common/AdminTableManager';
-import { ajax, validation, dom } from '@utils';
 import { createLogger } from '@utils';
+
+import AdminTableManager from '../common/AdminTableManager';
 
 class ProductUpgradesSettingsModule extends AdminTableManager {
   /**
@@ -50,6 +50,7 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
       this.dom.upgradeTitle = this.$container.find(puSelectors.upgradeTitle);
       this.dom.upgradeDescription = this.$container.find(puSelectors.upgradeDescription);
     } else {
+      this.logger.warn('ProductUpgradesSettingsModule: settings or selectors not available for DOM caching');
     }
   }
 
@@ -133,6 +134,8 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
 
   /**
    * Override AdminTableManager.populateFormWithData for Product Upgrades specific fields.
+   * @param {object} itemData - The data for the product upgrade item to populate the form with
+   * @override
    */
   populateFormWithData(itemData) {
     super.populateFormWithData(itemData); // Sets item ID, calls base logic
@@ -158,6 +161,8 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
 
   /**
    * Override AdminTableManager.validateForm for Product Upgrades specific validation.
+   * @returns {boolean} True if the form passes validation, false otherwise
+   * @override
    */
   validateForm() {
     let isValid = super.validateForm(); // Perform base validation first
@@ -189,6 +194,8 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
   /**
    * Custom column population method for 'base_categories' column
    * This method follows the naming convention for column handlers in AdminTableManager
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
   populateColumn_base_categories($cell, itemData) {
 
@@ -203,6 +210,8 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
 
   /**
    * Custom column population method for 'upgrade_categories' column
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
   populateColumn_upgrade_categories($cell, itemData) {
 

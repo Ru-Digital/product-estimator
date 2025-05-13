@@ -1,3 +1,5 @@
 import './frontend/index';
+import { createLogger } from '@utils';
 
-console.log('Product Estimator Frontend initialized');
+const logger = createLogger('ProductEstimatorFrontend');
+logger.log('Product Estimator Frontend initialized');

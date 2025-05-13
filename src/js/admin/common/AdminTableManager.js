@@ -8,14 +8,14 @@
  * provided by the corresponding PHP settings module.
  * Now extends VerticalTabbedModule.
  */
+import { ajax, createLogger } from '@utils'; // Import utilities needed for this class
+
 import VerticalTabbedModule from './VerticalTabbedModule.js';
-import { ajax, dom, validation } from '@utils'; // Assuming @utils provides these
-import { createLogger } from '@utils'; // Ensure createLogger is correctly imported
 
 class AdminTableManager extends VerticalTabbedModule {
   /**
    * Constructor for AdminTableManager.
-   * @param {Object} config - Configuration object for the module.
+   * @param {object} config - Configuration object for the module.
    * @param {string} config.mainTabId - The ID of the main horizontal tab this table manager belongs to.
    * @param {string} config.localizedDataName - The name of the global JS object holding localized data.
    */
@@ -49,6 +49,8 @@ class AdminTableManager extends VerticalTabbedModule {
     // `this.settings.tab_id` will hold the mainTabId.
     // A check for its presence after super() is good practice.
     if (!this.settings || !this.settings.tab_id) {
+      // This was previously an empty block, but it should log a warning
+      this.logger.warn('AdminTableManager: No tab_id found in settings.');
     }
 
     this.formModified = false;
@@ -108,6 +110,8 @@ class AdminTableManager extends VerticalTabbedModule {
     if (this.settings.i18n) {
       for (const key of required.i18n_keys) {
         if (this.settings.i18n[key] === undefined) {
+          this.logger.warn(`AdminTableManager: Missing i18n key '${key}' in settings.i18n`); 
+          allValid = false;
         }
       }
     } else {
@@ -186,6 +190,7 @@ class AdminTableManager extends VerticalTabbedModule {
         }
       }
     } else {
+      this.logger.warn(`AdminTableManager: Container for '${this.settings.tab_id}' not found or has no length.`);
     }
   }
 
@@ -207,15 +212,18 @@ class AdminTableManager extends VerticalTabbedModule {
       if (editButtonSelector) {
         this.dom.listTableBody.on('click.adminTableManager', editButtonSelector, this.handleEdit.bind(this));
       } else {
+        this.logger.warn(`AdminTableManager: No edit button selector defined for '${this.settings.tab_id}'.`);
       }
       if (deleteButtonSelector) {
         this.dom.listTableBody.on('click.adminTableManager', deleteButtonSelector, this.handleDelete.bind(this));
       } else {
+        this.logger.warn(`AdminTableManager: No delete button selector defined for '${this.settings.tab_id}'.`);
       }
 
       // Bind custom action buttons if they exist
       this.bindCustomActionButtons();
     } else {
+      this.logger.warn(`AdminTableManager: List table body not found for '${this.settings.tab_id}'.`);
     }
 
     this.dom.form?.on('submit.adminTableManager', this.handleSubmit.bind(this));
@@ -271,6 +279,7 @@ class AdminTableManager extends VerticalTabbedModule {
     if (this.dom.idInput && this.dom.idInput.length) {
       this.dom.idInput.val(this.currentItemId);
     } else {
+      this.logger.warn(`AdminTableManager: ID input field not found for '${this.settings.tab_id}'.`);
     }
 
     this.dom.formTitle?.text(this.settings.i18n.editItemFormTitle || `Edit Item #${itemId}`);
@@ -494,8 +503,10 @@ class AdminTableManager extends VerticalTabbedModule {
       if (this.dom.idInput && this.dom.idInput.length) {
         this.dom.idInput.val(itemData.id);
       } else {
+        this.logger.warn(`AdminTableManager: ID input field not found when populating form data for '${this.settings.tab_id}'.`);
       }
     } else {
+      this.logger.warn(`AdminTableManager: Invalid item data (missing ID) when populating form for '${this.settings.tab_id}'.`);
     }
     this.formModified = false;
   }
@@ -549,6 +560,7 @@ class AdminTableManager extends VerticalTabbedModule {
 
       // Debug table state after adding row
     } else {
+      this.logger.warn(`AdminTableManager: Could not add table row - either row creation failed or table body not found for '${this.settings.tab_id}'.`);
     }
   }
 
@@ -565,6 +577,7 @@ class AdminTableManager extends VerticalTabbedModule {
       if ($newRow) {
         $existingRow.replaceWith($newRow);
       } else {
+        this.logger.warn(`AdminTableManager: Failed to create replacement row for item #${itemData.id} in '${this.settings.tab_id}'.`);
       }
     } else {
       this.addTableRow(itemData);
@@ -575,8 +588,7 @@ class AdminTableManager extends VerticalTabbedModule {
    * Creates a table row from item data.
    * This method provides a common implementation for creating table rows based on
    * the table_columns setting provided from PHP.
-   *
-   * @param {Object} itemData - The item data for the row.
+   * @param {object} itemData - The item data for the row.
    * @returns {jQuery} - The jQuery object representing the row.
    */
   createTableRow(itemData) {
@@ -695,6 +707,7 @@ class AdminTableManager extends VerticalTabbedModule {
         this.dom.listTable.hide();
       }
     } else {
+      this.logger.warn(`AdminTableManager: Required DOM elements for no-items message handling not found for '${this.settings.tab_id}'.`);
     }
   }
 

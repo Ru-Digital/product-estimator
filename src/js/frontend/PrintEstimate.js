@@ -7,12 +7,15 @@
  * Added functionality for store contact requests via email or phone.
  */
 
-import ConfirmationDialog from './ConfirmationDialog';
+import { createLogger } from '@utils';
+// ConfirmationDialog is used indirectly via window.productEstimator.dialog
+
+const logger = createLogger('PrintEstimate');
 
 class PrintEstimate {
   /**
    * Initialize the PrintEstimate module
-   * @param {Object} config - Configuration options
+   * @param {object} config - Configuration options
    */
   constructor(config = {}) {
     // Default configuration
@@ -93,7 +96,7 @@ class PrintEstimate {
                     .then(url => {
                       window.open(url, '_blank');
                     })
-                    .catch(error => {
+                    .catch(() => {
                       this.showError('Error generating PDF URL. Please try again.');
                     });
                 }
@@ -102,7 +105,7 @@ class PrintEstimate {
                 this.showCustomerDetailsPrompt(estimateId, printButton, 'print');
               }
             })
-            .catch(error => {
+            .catch(() => {
               this.showError('Error checking customer details. Please try again.');
             })
             .finally(() => {
@@ -207,14 +210,13 @@ class PrintEstimate {
    * @param {string} action - The action type ('print', 'request_copy_email', 'request_copy_sms')
    */
   showCustomerDetailsPrompt(estimateId, button, action = 'print') {
-    // Define which fields are required for each action type
-    const requiredFields = {
-      'print': ['name', 'email'],
-      'request_copy_email': ['name', 'email'],
-      'request_copy_sms': ['name', 'phone'],
-      'request_contact_email': ['name', 'email'],
-      'request_contact_phone': ['name', 'phone']
-    };
+    // Required fields are determined in getMissingFields method
+    // Field requirements by action type:
+    // print: ['name', 'email']
+    // request_copy_email: ['name', 'email']
+    // request_copy_sms: ['name', 'phone']
+    // request_contact_email: ['name', 'email']
+    // request_contact_phone: ['name', 'phone']
 
     // First check which fields are already available in customer details
     this.checkCustomerDetails(estimateId)
@@ -299,7 +301,7 @@ class PrintEstimate {
               // Continue with the original action
               this.continueWithAction(action, estimateId, button, updatedDetails);
             })
-            .catch(error => {
+            .catch(() => {
               validationMsg.textContent = 'Error saving details. Please try again.';
               submitBtn.disabled = false;
               submitBtn.textContent = 'Continue';
@@ -325,7 +327,7 @@ class PrintEstimate {
           }
         }, 100);
       })
-      .catch(error => {
+      .catch(() => {
         this.showError('Error checking customer details. Please try again.');
         this.setButtonLoading(button, false);
         this.processing = false;
@@ -334,7 +336,7 @@ class PrintEstimate {
 
   /**
    * Get a list of missing fields based on action type and customer info
-   * @param {Object} customerInfo - Customer details object
+   * @param {object} customerInfo - Customer details object
    * @param {string} action - The action type
    * @returns {Array} List of missing field names
    */
@@ -375,7 +377,7 @@ class PrintEstimate {
    * Create HTML for the prompt modal with dynamic fields
    * @param {Array} missingFields - List of missing field names
    * @param {string} action - The action type
-   * @param {Object} existingDetails - Existing customer details
+   * @param {object} existingDetails - Existing customer details
    * @returns {string} Modal HTML
    */
   createPromptModalHtml(missingFields, action, existingDetails = {}) {
@@ -452,7 +454,7 @@ class PrintEstimate {
   validatePhone(phone) {
     // Allow digits, spaces, parens, plus, and dashes
     // At least 8 digits in total
-    const phonePattern = /^[\d\s()+\-]{8,}$/;
+    const phonePattern = /^[\d\s()+]{8,}$/;
     return phonePattern.test(phone);
   }
 
@@ -461,7 +463,7 @@ class PrintEstimate {
    * @param {string} action - The action type
    * @param {string} estimateId - The estimate ID
    * @param {HTMLElement} button - The button element
-   * @param {Object} customerDetails - Updated customer details
+   * @param {object} customerDetails - Updated customer details
    */
   continueWithAction(action, estimateId, button, customerDetails) {
     switch (action) {
@@ -470,7 +472,7 @@ class PrintEstimate {
         break;
       case 'request_copy_email':
         this.requestCopyEstimate(estimateId, button)
-          .then(response => {
+          .then(() => {
             this.showMessage(
               `Estimate has been emailed to ${customerDetails.email}`,
               'success',
@@ -480,7 +482,7 @@ class PrintEstimate {
               }
             );
           })
-          .catch(error => {
+          .catch(() => {
             this.showError('Error sending estimate copy. Please try again.');
             this.setButtonLoading(button, false);
             this.processing = false;
@@ -576,7 +578,7 @@ class PrintEstimate {
             } else {
               // Original request_copy email flow
               this.requestCopyEstimate(estimateId, button)
-                .then(response => {
+                .then(() => {
                   this.showMessage(`Estimate has been emailed to ${customerInfo.email}`, 'success', () => {
                     this.setButtonLoading(button, false);
                     this.processing = false;
@@ -642,7 +644,7 @@ class PrintEstimate {
    * @param {string} estimateId - The estimate ID
    * @param {string} contactMethod - Contact method ('email' or 'phone')
    * @param {HTMLElement} button - The button element
-   * @param {Object} customerDetails - Customer details
+   * @param {object} customerDetails - Customer details
    */
   requestStoreContact(estimateId, contactMethod, button, customerDetails) {
     // First store the estimate to ensure it's in the database
@@ -704,7 +706,7 @@ class PrintEstimate {
   /**
    * Check customer details for a specific estimate
    * @param {string} estimateId - The estimate ID
-   * @returns {Promise<Object>} Customer details object
+   * @returns {Promise<object>} Customer details object
    */
   checkCustomerDetails(estimateId) {
     return new Promise((resolve, reject) => {
@@ -739,8 +741,8 @@ class PrintEstimate {
    * Update customer details with multiple fields
    * This version dispatches an event to update all forms
    * @param {string} estimateId - The estimate ID
-   * @param {Object} details - Updated customer details
-   * @returns {Promise<Object>} Promise that resolves when details are updated
+   * @param {object} details - Updated customer details
+   * @returns {Promise<object>} Promise that resolves when details are updated
    */
   updateCustomerDetails(estimateId, details) {
     return new Promise((resolve, reject) => {
@@ -794,12 +796,12 @@ class PrintEstimate {
           if (response.success) {
             resolve(response.data);
           } else {
-            console.error('Error storing estimate:', response);
+            logger.error('Error storing estimate:', response);
             throw new Error(response.data?.message || 'Error storing estimate');
           }
         })
         .catch(error => {
-          console.error('Error in updateCustomerDetails:', error);
+          logger.error('Error in updateCustomerDetails:', error);
           reject(error);
         });
     });
@@ -808,7 +810,7 @@ class PrintEstimate {
   /**
    * Store the estimate in the database
    * @param {string} estimateId - The estimate ID
-   * @returns {Promise<Object>} Promise that resolves when estimate is stored
+   * @returns {Promise<object>} Promise that resolves when estimate is stored
    */
   storeEstimate(estimateId) {
     return new Promise((resolve, reject) => {
@@ -876,10 +878,10 @@ class PrintEstimate {
   /**
    * Request a copy of the estimate to be sent via email
    * @param {string} estimateId - The estimate ID
-   * @param {HTMLElement} button - The button element
-   * @returns {Promise<Object>} Promise that resolves when email is sent
+   * @param {HTMLElement} _button - The button element
+   * @returns {Promise<object>} Promise that resolves when email is sent
    */
-  requestCopyEstimate(estimateId, button) {
+  requestCopyEstimate(estimateId, _button) {
     return this.checkCustomerDetails(estimateId)
       .then(customerInfo => {
         if (!customerInfo.email) {
@@ -953,10 +955,10 @@ class PrintEstimate {
   /**
    * Show success or error message
    * @param {string} message - Message text
-   * @param {string} type - Message type ('success' or 'error')
+   * @param {string} _type - Message type ('success' or 'error')
    * @param {Function} onConfirm - Callback when confirmed
    */
-  showMessage(message, type = 'success', onConfirm = null) {
+  showMessage(message, _type = 'success', onConfirm = null) {
     if (window.productEstimator && window.productEstimator.dialog) {
       window.productEstimator.dialog.show({
         title: 'Estimate Sent',
@@ -1001,7 +1003,7 @@ class PrintEstimate {
    */
   log(...args) {
     if (this.config.debug) {
-      console.log('[PrintEstimate]', ...args);
+      logger.log(...args);
     }
   }
 }

@@ -106,7 +106,7 @@ export function sanitizeHTML(html) {
 /**
  * Format a date according to locale preferences
  * @param {Date|string} date - Date to format or ISO string
- * @param {Object} options - Intl.DateTimeFormat options
+ * @param {object} options - Intl.DateTimeFormat options
  * @returns {string} Formatted date
  */
 export function formatDate(date, options = {}) {
@@ -151,7 +151,7 @@ export function truncateText(text, maxLength = 100, ellipsis = '...') {
 
 /**
  * Convert object to URL query string
- * @param {Object} obj - Object to convert
+ * @param {object} obj - Object to convert
  * @returns {string} URL query string (without leading ?)
  */
 export function objectToQueryString(obj) {

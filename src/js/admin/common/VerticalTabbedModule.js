@@ -5,9 +5,9 @@
  * Handles common vertical tab navigation, AJAX form submission, and state management.
  * Extends ProductEstimatorSettings.
  */
+import { ajax, createLogger } from '@utils'; // Import ajax utility and logger creator
+
 import ProductEstimatorSettings from './ProductEstimatorSettings'; // Adjust path if ProductEstimatorSettings is in a different directory
-import { ajax } from '@utils'; // Assuming @utils provides ajax
-import { createLogger } from '@utils';
 
 // Module-specific logger. Can be this.logger if preferred and initialized in constructor.
 const logger = createLogger('VerticalTabbedModule');
@@ -15,7 +15,7 @@ const logger = createLogger('VerticalTabbedModule');
 class VerticalTabbedModule extends ProductEstimatorSettings {
   /**
    * Constructor for the VerticalTabbedModule.
-   * @param {Object} config - Configuration object for the module.
+   * @param {object} config - Configuration object for the module.
    * @param {string} config.mainTabId - The ID of the main horizontal tab for this module (e.g., 'labels', 'notifications'). This is passed as defaultTabId to ProductEstimatorSettings.
    * @param {string} config.defaultSubTabId - The default vertical sub-tab to show if none is specified.
    * @param {string} config.ajaxActionPrefix - The prefix for AJAX save actions (e.g., 'save_labels' for 'save_labels_settings').
@@ -139,21 +139,32 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
 
   /**
    * Placeholder for module-specific event bindings. Override in child classes.
-   * (e.g., AdminTableManager will put its item table/form events here or in its own init)
+   * Child classes should implement this method to bind their own specific events.
+   * For example, AdminTableManager uses this to bind table/form events.
+   * This method is called during initialization after common events are bound.
+   * @returns {void}
    */
   bindModuleSpecificEvents() {
     // Child classes like AdminTableManager will override this to bind their own specific events.
   }
 
   /**
-   * Called when this module's main horizontal tab becomes active. Override in child classes.
+   * Called when this module's main horizontal tab becomes active.
+   * Child classes should override this method to implement specific activation logic.
+   * This is the ideal place to refresh or initialize components that need to be
+   * visible when the tab is shown.
+   * @returns {void}
    */
   onMainTabActivated() {
     // Child classes can implement specific logic here.
   }
 
   /**
-   * Called when this module's main horizontal tab becomes inactive. Override in child classes.
+   * Called when this module's main horizontal tab becomes inactive.
+   * Child classes should override this method to implement specific deactivation logic.
+   * This is the ideal place to clean up resources or pause processes when the tab
+   * is no longer visible.
+   * @returns {void}
    */
   onMainTabDeactivated() {
     // Child classes can implement specific logic here.
@@ -348,6 +359,8 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     if ($activeLink.length) {
       $activeLink.closest(navItemSelector).addClass('active');
     } else {
+      // No active link found - this is OK if this is the initial load
+      // and we'll select the default tab
     }
 
     // Hide and deactivate all tab content panels
@@ -372,6 +385,7 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     if ($activeContentPanel.length) {
       $activeContentPanel.show().addClass('active');
     } else {
+      // No matching content panel found with direct ID - try partial matches
 
       // Last resort: try to find a panel with a similar ID/class
       const partialMatches = [];
@@ -425,6 +439,8 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
           this.onMainTabActivated(); // Call hook for child classes
         }, 100);
       } else {
+        // Container not found, log a warning
+        this.logger.warn(`VerticalTabbedModule: Container for tab '${this.settings.tab_id}' not found when activating main tab`);
       }
     } else if (oldMainTabId === this.settings.tab_id) { // If this VTM's main tab was deactivated
       this.onMainTabDeactivated(); // Call hook for child classes

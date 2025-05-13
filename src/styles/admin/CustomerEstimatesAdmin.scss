@@ -16,20 +16,30 @@ $text-color: #666;
 $badge-text-color: #fff;
 $background-color: #f7f7f7;
 $product-background: #f9f9f9;
-$overlay-background: rgba(255, 255, 255, 0.8);
+$overlay-background: rgb(255, 255, 255, 0.8);
 $spinner-color: #f3f3f3;
 $spinner-accent: #3498db;
 
 /* List Table Styles */
+
 .wp-list-table {
+
   .column-id { width: 5%; }
+
   .column-name { width: 20%; }
+
   .column-email { width: 20%; }
+
   .column-phone_number { width: 12%; }
+
   .column-postcode { width: 8%; }
+
   .column-total_amount { width: 15%; }
+
   .column-status { width: 8%; }
+
   .column-created_at { width: 12%; }
+
   .column-actions { 
     width: 15%;
     
@@ -42,21 +52,34 @@ $spinner-accent: #3498db;
 }
 
 /* Status Badges */
+
 @mixin status-badge($background) {
-  display: inline-block;
-  padding: 3px 8px;
   background-color: $background;
-  color: $badge-text-color;
   border-radius: 3px;
+  color: $badge-text-color;
+  display: inline-block;
   font-size: 12px;
+  padding: 3px 8px;
 }
 
-.status-saved { @include status-badge($primary-color); }
-.status-pending { @include status-badge($warning-color); }
-.status-completed { @include status-badge($success-color); }
-.status-cancelled { @include status-badge($error-color); }
+.status-saved {
+
+ @include status-badge($primary-color); }
+
+.status-pending {
+
+ @include status-badge($warning-color); }
+
+.status-completed {
+
+ @include status-badge($success-color); }
+
+.status-cancelled {
+
+ @include status-badge($error-color); }
 
 /* Single Estimate View */
+
 .estimate-details-container {
   margin-top: 20px;
   
@@ -66,8 +89,8 @@ $spinner-accent: #3498db;
 }
 
 .room-details {
-  margin-bottom: 30px;
   border-bottom: 1px solid $light-border-color;
+  margin-bottom: 30px;
   padding-bottom: 20px;
   
   &:last-child {
@@ -100,28 +123,28 @@ $spinner-accent: #3498db;
 }
 
 .estimate-total {
-  margin-top: 30px;
-  padding: 20px;
   background-color: $background-color;
   border: 1px solid $border-color;
   border-radius: 4px;
+  margin-top: 30px;
+  padding: 20px;
   
   h3 {
-    margin-top: 0;
     font-size: 20px;
+    margin-top: 0;
   }
 }
 
 .total-amount {
+  color: $primary-color;
   font-size: 24px;
   font-weight: bold;
-  color: $primary-color;
 }
 
 .estimate-actions {
+  border-top: 1px solid $border-color;
   margin-top: 20px;
   padding: 15px 0;
-  border-top: 1px solid $border-color;
   
   .button {
     margin-right: 10px;
@@ -129,52 +152,60 @@ $spinner-accent: #3498db;
 }
 
 /* Filter Bar */
+
 .tablenav .alignleft.actions select {
   min-width: 150px;
 }
 
 /* Search Box */
+
 .search-box {
   float: right;
   margin-bottom: 10px;
 }
 
 /* Loading States */
+
 .loading-overlay {
+  align-items: center;
+  background: $overlay-background;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  left: 0;
   position: fixed;
   top: 0;
-  left: 0;
   width: 100%;
-  height: 100%;
-  background: $overlay-background;
   z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid $spinner-color;
-  border-top: 4px solid $spinner-accent;
-  border-radius: 50%;
   animation: spin 1s linear infinite;
+  border: 4px solid $spinner-color;
+  border-radius: 50%;
+  border-top: 4px solid $spinner-accent;
+  height: 40px;
+  width: 40px;
 }
 
 @keyframes spin {
+
   0% { transform: rotate(0deg); }
+
   100% { transform: rotate(360deg); }
 }
 
 /* Admin Notices */
+
 .notice-success,
 .notice-error {
   margin: 15px 0;
 }
 
 /* Responsive Table */
+
 @media screen and (max-width: 782px) {
+
   .wp-list-table {
     border: 0;
     
@@ -183,19 +214,19 @@ $spinner-accent: #3498db;
     }
     
     tr {
-      margin-bottom: 15px;
-      display: block;
       border-bottom: 2px solid $border-color;
+      display: block;
+      margin-bottom: 15px;
     }
     
     td {
-      display: block;
-      text-align: right;
-      font-size: 13px;
       border-bottom: 1px dotted $dotted-border-color;
+      display: block;
+      font-size: 13px;
       padding: 8px 10px;
+      text-align: right;
       
-      &:before {
+      &::before {
         content: attr(data-label);
         float: left;
         font-weight: bold;
@@ -214,14 +245,17 @@ $spinner-accent: #3498db;
 }
 
 /* Print Styles */
+
 @media print {
   /* Set minimum lines for paragraph breaks */
+
   p, li, tr {
     orphans: 3; /* Minimum lines at bottom of page before break */
     widows: 3;  /* Minimum lines at top of page after break */
   }
   
   /* Avoid breaks inside these elements */
+
   h1, h2, h3, h4, 
   .room-details,
   tr, 
@@ -230,18 +264,21 @@ $spinner-accent: #3498db;
   }
   
   /* Force page breaks before these elements */
+
   h1, h2, h3, 
   .room-details {
-    page-break-before: auto;
     page-break-after: avoid;
+    page-break-before: auto;
   }
   
   /* Ensure tables have header rows on each page */
+
   thead {
     display: table-header-group;
   }
   
   /* Avoid breaks in the middle of images */
+
   img {
     page-break-inside: avoid;
   }

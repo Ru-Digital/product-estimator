@@ -1,3 +1,5 @@
 import './admin/index';
+import { createLogger } from '@utils';
 
-console.log('Product Estimator Admin initialized');
+const logger = createLogger('ProductEstimatorAdmin');
+logger.log('Product Estimator Admin initialized');

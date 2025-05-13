@@ -8,7 +8,7 @@ const logger = createLogger('ProductDetailsToggle');
 class ProductDetailsToggle {
   /**
    * Initialize the toggle functionality
-   * @param {Object} config - Configuration options
+   * @param {object} config - Configuration options
    */
   constructor(config = {}) {
     // Default configuration
@@ -243,8 +243,9 @@ class ProductDetailsToggle {
       // ModalManager will hide toggle/container later if data is empty
       productItem.classList.add('has-similar-products');
 
-      let similarProductsContainer = productItem.querySelector(this.config.selectors.similarProductsContainer);
-      let toggleButton = productItem.querySelector(this.config.selectors.productToggleButton); // Assuming this selects the correct button
+      // Container and button variables (for later if needed)
+      // let similarProductsContainer = productItem.querySelector(this.config.selectors.similarProductsContainer);
+      // let toggleButton = productItem.querySelector(this.config.selectors.productToggleButton);
 
       // --- START REMOVAL / COMMENT ---
       // // Initially show the similar products container (expanded by default) <<-- REMOVE THIS LOGIC
@@ -709,9 +710,8 @@ class ProductDetailsToggle {
 
   /**
    * Initialize carousels within the container
-   * @param {HTMLElement} container - The container with carousels
    */
-  initializeCarousels(container) {
+  initializeCarousels() {
     // Check if SuggestionsCarousel initialization function exists
     if (typeof window.initSuggestionsCarousels === 'function') {
       logger.log('Initializing carousels in similar products container');

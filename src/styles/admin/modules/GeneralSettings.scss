@@ -18,125 +18,132 @@ $border-color: #c3c4c7;
 $button-background: #f6f7f7;
 $tooltip-background: #555;
 $tooltip-text-color: #fff;
-$file-icon-color: #cc0000;
+$file-icon-color: #c00;
 $max-width: 800px;
 
 /* General Settings Section */
+
 #general {
+
   .form-table {
     margin-top: 0;
 
     th {
-      padding-top: 15px;
       padding-bottom: 15px;
+      padding-top: 15px;
     }
 
     td {
-      padding-top: 15px;
       padding-bottom: 15px;
+      padding-top: 15px;
       vertical-align: top;
     }
   }
 }
 
 /* Number Input Fields */
+
 #default_markup,
 #estimate_expiry_days {
   width: 80px;
 }
 
 /* Info Indicator */
+
 .info-indicator {
   color: $primary-color;
-  margin-left: 5px;
   cursor: help;
+  margin-left: 5px;
 }
 
 /* Tooltip */
+
 .tooltip {
-  position: relative;
   display: inline-block;
+  position: relative;
 
   .tooltip-text {
-    visibility: hidden;
-    width: 200px;
     background-color: $tooltip-background;
-    color: $tooltip-text-color;
-    text-align: center;
     border-radius: 6px;
-    padding: 5px;
-    position: absolute;
-    z-index: 1;
     bottom: 125%;
+    color: $tooltip-text-color;
     left: 50%;
     margin-left: -100px;
     opacity: 0;
+    padding: 5px;
+    position: absolute;
+    text-align: center;
     transition: opacity 0.3s;
+    visibility: hidden;
+    width: 200px;
+    z-index: 1;
   }
 
   &:hover .tooltip-text {
-    visibility: visible;
     opacity: 1;
+    visibility: visible;
   }
 }
 
 /* Field Help Box */
+
 .field-help-box {
   background-color: $highlight-background;
   border-left: 4px solid $primary-color;
-  padding: 12px 15px;
   margin: 15px 0;
   max-width: 600px;
+  padding: 12px 15px;
 
   h4 {
-    margin-top: 0;
     margin-bottom: 8px;
+    margin-top: 0;
   }
 }
 
 /* Select Field */
+
 .select-wrapper {
-  position: relative;
   display: inline-block;
+  position: relative;
 
   select {
-    padding-right: 30px;
     appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
+    padding-right: 30px;
   }
 
   &::after {
+    color: $secondary-text-color;
     content: '\25BC';
+    font-size: 12px;
+    pointer-events: none;
     position: absolute;
     right: 10px;
     top: 50%;
     transform: translateY(-50%);
-    pointer-events: none;
-    font-size: 12px;
-    color: $secondary-text-color;
   }
 }
 
 /* Currency Symbol Preview */
+
 .currency-preview {
-  margin-left: 15px;
-  padding: 3px 8px;
   background: $light-background;
   border-radius: 4px;
   font-family: monospace;
+  margin-left: 15px;
+  padding: 3px 8px;
 }
 
 /* PDF Settings styles */
+
 .file-preview-wrapper {
   margin-bottom: 10px;
   max-width: 500px;
 }
 
 .file-preview {
-  display: flex;
   align-items: center;
-  margin: 0 0 5px 0;
+  display: flex;
+  margin: 0 0 5px;
 }
 
 .file-icon {
@@ -152,48 +159,49 @@ $max-width: 800px;
 
 .file-name {
   display: block;
-  font-weight: normal;
   font-size: 13px;
-  white-space: nowrap;
+  font-weight: normal;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 
   a {
-    text-decoration: none;
     color: $primary-color;
+    text-decoration: none;
 
     &:hover {
-      text-decoration: underline;
       color: $primary-hover-color;
+      text-decoration: underline;
     }
   }
 }
 
 /* File info text below the file upload input */
+
 .file-upload-info {
-  display: block;
-  margin-top: 5px;
-  font-size: 12px;
   color: $light-text-color;
+  display: block;
+  font-size: 12px;
   font-style: italic;
+  margin-top: 5px;
 }
 
 .file-upload-wrapper {
-  margin-top: 5px;
   margin-bottom: 15px;
+  margin-top: 5px;
 }
 
 .select-file-button,
 .remove-file-button {
-  padding: 0 10px !important;
+  background: $button-background !important;
+  border: 1px solid $border-color !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  color: $text-color !important;
+  font-size: 12px !important;
   height: 30px !important;
   line-height: 28px !important;
-  font-size: 12px !important;
-  background: $button-background !important;
-  color: $text-color !important;
-  border: 1px solid $border-color !important;
-  box-shadow: none !important;
-  border-radius: 3px !important;
+  padding: 0 10px !important;
   text-decoration: none !important;
   text-shadow: none !important;
   transition: all 0.1s !important;
@@ -219,12 +227,13 @@ $max-width: 800px;
 }
 
 /* Additional info text below upload field */
+
 .upload-instructions {
-  display: block;
-  margin-top: 5px;
-  font-size: 12px;
   color: $light-text-color;
+  display: block;
+  font-size: 12px;
   font-style: italic;
+  margin-top: 5px;
 }
 
 .required {
@@ -238,9 +247,10 @@ $max-width: 800px;
 }
 
 /* Rich Text Editor fields */
+
 .wp-editor-wrap {
-  max-width: $max-width;
   margin-bottom: 15px;
+  max-width: $max-width;
 }
 
 .html-active .wp-editor-area {
@@ -248,26 +258,30 @@ $max-width: 800px;
 }
 
 /* Make sure RTE fields have proper spacing */
+
 #pdf_footer_text_wrapper,
 #pdf_footer_contact_details_content_wrapper {
   margin-bottom: 15px;
 }
 
 /* Textarea field for footer text */
+
 #pdf_footer_text {
-  width: 100%;
   max-width: $max-width;
   min-height: 100px;
+  width: 100%;
 }
 
 #pdf_footer_contact_details_content {
-  width: 100%;
   max-width: $max-width;
   min-height: 100px;
+  width: 100%;
 }
 
 /* Responsive Adjustments */
+
 @media screen and (max-width: 782px) {
+
   .currency-preview {
     display: block;
     margin-left: 0;

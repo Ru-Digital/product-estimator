@@ -2,21 +2,24 @@
  * Customer Details Edit Interface Styling
  * These styles enhance the user experience when editing customer details
  */
+
 @use 'sass:color';
+
 @use 'variables' as *;
 
 /* Header with edit/delete buttons */
+
 .customer-details-header {
+  align-items: center;
   display: flex;
   justify-content: space-between;
-  align-items: center;
   margin-bottom: 12px;
   
   h4 {
-    margin: 0;
-    padding: 0;
     font-size: 16px;
     font-weight: 600;
+    margin: 0;
+    padding: 0;
   }
 }
 
@@ -26,14 +29,15 @@
 }
 
 /* Edit and Delete buttons */
+
 .edit-customer-details,
 .delete-customer-details {
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: $border-radius-sm;
-  border: 1px solid $border-color-dark;
   background: $bg-lighter;
+  border: 1px solid $border-color-dark;
+  border-radius: $border-radius-sm;
   cursor: pointer;
+  font-size: 12px;
+  padding: 4px 10px;
   transition: $transition-base;
 }
 
@@ -50,37 +54,39 @@
 }
 
 /* Edit form section */
+
 .customer-details-edit-form {
   background-color: $bg-light;
-  border-radius: $border-radius;
-  padding: 15px;
-  margin-top: 10px;
   border: 1px solid $border-color;
+  border-radius: $border-radius;
   box-shadow: $shadow-sm;
+  margin-top: 10px;
+  padding: 15px;
   
   h4 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 16px;
     color: $text-color;
+    font-size: 16px;
+    margin-bottom: 15px;
+    margin-top: 0;
   }
 }
 
 /* Edit form actions */
+
 .customer-details-edit-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
+  justify-content: flex-end;
   margin-top: 15px;
 }
 
 .save-customer-details,
 .cancel-edit-customer-details {
-  padding: 6px 12px;
-  border-radius: $border-radius-sm;
-  font-size: 13px;
-  cursor: pointer;
   border: 1px solid transparent;
+  border-radius: $border-radius-sm;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 12px;
   transition: $transition-base;
 }
 
@@ -104,36 +110,41 @@
 }
 
 /* Loading state */
+
 .customer-details-confirmation.loading {
   opacity: 0.6;
   pointer-events: none;
   position: relative;
   
   &::after {
+    animation: spin 1s linear infinite;
+    border: 3px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 3px solid $primary-color;
     content: "";
+    height: 24px;
+    left: 50%;
     position: absolute;
     top: 50%;
-    left: 50%;
     transform: translate(-50%, -50%);
     width: 24px;
-    height: 24px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid $primary-color;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
   }
 }
 
 @keyframes spin {
+
   0% { transform: translate(-50%, -50%) rotate(0deg); }
+
   100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
 /* Mobile responsiveness */
+
 @media screen and (max-width: $breakpoint-md) {
+
   .customer-details-header {
-    flex-direction: column;
     align-items: flex-start;
+    flex-direction: column;
   }
 
   .customer-details-actions {
@@ -146,13 +157,15 @@
 
   .save-customer-details,
   .cancel-edit-customer-details {
-    width: 100%;
     text-align: center;
+    width: 100%;
   }
 }
 
 /* Adjust button styles when in modal */
+
 .product-estimator-modal {
+
   .edit-customer-details,
   .delete-customer-details {
     background-color: $bg-color;

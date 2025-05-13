@@ -5,15 +5,16 @@
  * Follows the ES6 module architecture used in the project.
  */
 
+import { createLogger } from '@utils';
+
 import { saveCustomerDetails, clearCustomerDetails } from './CustomerStorage'; // Import the new functions
 import DataService from "./DataService";
 
-import { createLogger } from '@utils';
 const logger = createLogger('CustomerDetailsManager');
 class CustomerDetailsManager {
   /**
    * Initialize the CustomerDetailsManager
-   * @param {Object} config - Configuration options
+   * @param {object} config - Configuration options
    * @param {DataService} dataService - The data service instance
    */
   constructor(config = {}, dataService) {
@@ -85,7 +86,7 @@ class CustomerDetailsManager {
 
   /**
    * Check if email was added and update the form accordingly
-   * @param {Object} details - The updated customer details
+   * @param {object} details - The updated customer details
    */
   checkAndUpdateEmailField(details) {
     const hasEmail = details && details.email && details.email.trim() !== '';
@@ -344,8 +345,8 @@ class CustomerDetailsManager {
 
   /**
    * Handle successful save response
-   * @param {Object} data - Response data
-   * @param {Object} updatedDetails - The details that were updated
+   * @param {object} data - Response data
+   * @param {object} updatedDetails - The details that were updated
    */
   handleSaveSuccess(data, updatedDetails) {
     // Update the displayed customer details
@@ -475,7 +476,7 @@ class CustomerDetailsManager {
 
   /**
    * Handle successful delete response
-   * @param {Object} data - Response data
+   * @param {object} data - Response data
    * @param {HTMLElement} confirmationContainer - The container element
    */
   handleDeleteSuccess(data, confirmationContainer) {
@@ -521,7 +522,7 @@ class CustomerDetailsManager {
 
   /**
    * Update the displayed customer details in the DOM
-   * @param {Object} details - The updated details
+   * @param {object} details - The updated details
    */
   updateDisplayedDetails(details) {
     const detailsContainers = document.querySelectorAll(this.config.selectors.detailsContainer);

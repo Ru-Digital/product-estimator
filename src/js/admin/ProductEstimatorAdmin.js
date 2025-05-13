@@ -4,8 +4,7 @@
  * General admin functionality for the Product Estimator plugin in the ADMIN
  * Note: Tab management functionality has been moved to ProductEstimatorSettings.js
  */
-import { showNotice, showFieldError, clearFieldError, validateEmail } from '@utils';
-import { createLogger } from '@utils';
+import { showFieldError, clearFieldError, validateEmail, createLogger } from '@utils';
 const logger = createLogger('ProductEstimatorAdmin');
 
 class ProductEstimatorAdmin {
@@ -177,6 +176,7 @@ class ProductEstimatorAdmin {
   /**
    * Handle window beforeunload event
    * @param {Event} e - BeforeUnload event
+   * @returns {string|undefined} Confirmation message or undefined if no changes
    */
   handleBeforeUnload(e) {
     if (this.formChanged) {
@@ -193,8 +193,10 @@ class ProductEstimatorAdmin {
   }
 }
 
-// Create instance and make globally available
-const admin = new ProductEstimatorAdmin();
+// Create instance
+new ProductEstimatorAdmin();
+// Log initialization
+logger.log('ProductEstimatorAdmin initialized');
 
 // Export for module use
 export default ProductEstimatorAdmin;

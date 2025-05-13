@@ -4,8 +4,7 @@
  * Handles common functionality for the settings page and serves as a base class for specific settings modules.
  * Modified to work with separate forms for each tab and support module extension.
  */
-import { ajax, dom, validation, log } from '@utils'; // log is the specific logging utility used here
-import { createLogger as createModuleLogger } from '@utils'; // For use by modules if needed, or base can use its own logger
+import { ajax, validation, createLogger } from '@utils';
 
 class ProductEstimatorSettings {
   /**
@@ -18,11 +17,11 @@ class ProductEstimatorSettings {
    */
   constructor(moduleOptions = null) {
     this.$ = jQuery;
-    // Use createModuleLogger for consistency if preferred, or the existing `log` for the orchestrator.
+    // Use createLogger for consistency if preferred, or the existing `log` for the orchestrator.
     // For simplicity, the orchestrator part will continue using the imported `log` as per original.
     // Modules will typically define their own `createLogger` instance.
     // This logger is for the base class methods when they log.
-    this.baseClassLogger = createModuleLogger(this.constructor.name);
+    this.baseClassLogger = createLogger(this.constructor.name);
 
     if (moduleOptions && moduleOptions.isModule) {
       // Path for when used as a base for a specific settings module
@@ -36,7 +35,8 @@ class ProductEstimatorSettings {
         if (typeof this.moduleInit === 'function') {
           this.moduleInit();
         } else {
-            }
+          // No moduleInit method defined in subclass - skipping initialization
+        }
       });
     } else {
       // Original constructor path for the main settings page orchestrator
@@ -107,8 +107,10 @@ class ProductEstimatorSettings {
 
     // Diagnostic logs (keep these or similar)
     if (typeof localizedSettings.actions === 'undefined') { // Check original localizedSettings
+      this.logger.warn('ProductEstimatorSettings: actions is undefined in localizedSettings');
     }
     if (typeof localizedSettings.selectors === 'undefined') { // Check original localizedSettings
+      this.logger.warn('ProductEstimatorSettings: selectors is undefined in localizedSettings');
     }
 
   }
@@ -384,6 +386,7 @@ class ProductEstimatorSettings {
   /**
    * Handle beforeunload event to warn about unsaved changes (orchestrator).
    * @param {Event} e - BeforeUnload event.
+   * @returns {string|undefined} Warning message if there are unsaved changes, undefined otherwise
    */
   handleBeforeUnload(e) {
     let hasChanges = false;
@@ -436,7 +439,7 @@ class ProductEstimatorSettings {
   /**
    * Public method to show notice. Uses the 'validation' utility.
    * @param {string} message - The message to show.
-   * @param {string} [type='success'] - Notice type ('success' or 'error').
+   * @param {string} [type] - Notice type ('success' or 'error').
    */
   showNotice(message, type = 'success') {
     validation.showNotice(message, type);
@@ -444,10 +447,9 @@ class ProductEstimatorSettings {
 
   /**
    * Initialize a Select2 dropdown with standardized configuration
-   *
    * @param {jQuery} $element - jQuery element to initialize Select2 on
    * @param {string} placeholderText - Placeholder text to display
-   * @param {Object} config - Additional configuration options for Select2
+   * @param {object} config - Additional configuration options for Select2
    * @returns {jQuery|null} The initialized element or null if initialization failed
    */
   initSelect2($element, placeholderText, config = {}) {
@@ -486,10 +488,9 @@ class ProductEstimatorSettings {
 
   /**
    * Initializes multiple Select2 dropdowns in batch
-   *
-   * @param {Object} options - Configuration options
+   * @param {object} options - Configuration options
    * @param {Array} options.elements - Array of elements to initialize
-   * @param {Object} options.i18n - Internationalization strings (defaults to this.settings.i18n)
+   * @param {object} options.i18n - Internationalization strings (defaults to this.settings.i18n)
    * @param {string} options.moduleName - Module name for logging (defaults to this.settings.tab_id)
    * @param {number} options.delay - Delay in ms before initialization (defaults to 100)
    * @returns {void}
@@ -503,6 +504,8 @@ class ProductEstimatorSettings {
     } = options;
 
     if (!this.$ || !this.$.fn.select2) {
+      const logger = createLogger(moduleName);
+      logger.warn(`Select2 not available for ${moduleName}`);
       return;
     }
 
@@ -522,9 +525,8 @@ class ProductEstimatorSettings {
 
   /**
    * Destroy and re-initialize Select2 components (useful when elements were hidden)
-   *
    * @param {jQuery} $element - Select2 element to refresh
-   * @param {Object} config - Configuration to apply when re-initializing
+   * @param {object} config - Configuration to apply when re-initializing
    * @returns {jQuery|null} The refreshed element or null if refresh failed
    */
   refreshSelect2($element, config = {}) {

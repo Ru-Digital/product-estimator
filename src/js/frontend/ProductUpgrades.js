@@ -4,11 +4,12 @@
  * Handles all product upgrade related functionality for the Product Estimator plugin.
  * Manages display and selection of product upgrade options in the estimator.
  */
+import { createLogger } from '@utils';
 
 class ProductUpgrades {
   /**
    * Initialize the ProductUpgrades module
-   * @param {Object} config - Configuration options
+   * @param {object} config - Configuration options
    */
   constructor(config = {}) {
     // Default configuration
@@ -272,7 +273,7 @@ class ProductUpgrades {
   /**
    * Render a single upgrade option
    * @param {HTMLElement} container - Container element
-   * @param {Object} upgrade - Upgrade configuration
+   * @param {object} upgrade - Upgrade configuration
    */
   renderUpgradeOption(container, upgrade) {
     // Create the upgrade option with the tiles display mode
@@ -305,7 +306,7 @@ class ProductUpgrades {
   /**
    * Create a dropdown upgrade option (Legacy method, no longer used)
    * @param {HTMLElement} container - Container element
-   * @param {Object} upgrade - Upgrade configuration
+   * @param {object} upgrade - Upgrade configuration
    * @deprecated Since all upgrades now use the tiles display mode
    */
   createDropdownUpgrade(container, upgrade) {
@@ -317,7 +318,7 @@ class ProductUpgrades {
   /**
    * Create radio button upgrade options (Legacy method, no longer used)
    * @param {HTMLElement} container - Container element
-   * @param {Object} upgrade - Upgrade configuration
+   * @param {object} upgrade - Upgrade configuration
    * @deprecated Since all upgrades now use the tiles display mode
    */
   createRadioUpgrade(container, upgrade) {
@@ -329,7 +330,7 @@ class ProductUpgrades {
   /**
    * Create image tiles upgrade options
    * @param {HTMLElement} container - Container element
-   * @param {Object} upgrade - Upgrade configuration
+   * @param {object} upgrade - Upgrade configuration
    */
   createTilesUpgrade(container, upgrade) {
     const tilesContainer = document.createElement('div');
@@ -601,7 +602,8 @@ class ProductUpgrades {
    */
   log(...args) {
     if (this.config.debug) {
-      console.log('[ProductUpgrades]', ...args);
+      const logger = createLogger('ProductUpgrades');
+      logger.log(...args);
     }
   }
 

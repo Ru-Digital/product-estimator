@@ -308,8 +308,7 @@ class DataService {
         // Critical validation: If getProductDataForStorage failed or returned no response
         if (!productDataResponse) {
           const errorMsg = 'Failed to get comprehensive product data from server - null/undefined response.';
-          logger.error(errorMsg);
-          console.error(errorMsg); // Critical: Log to console for user visibility
+          logger.error(errorMsg); // Critical error - high priority
           return { 
             success: false, 
             error: new Error(errorMsg),
@@ -320,8 +319,7 @@ class DataService {
         // Critical validation: If getProductDataForStorage returned no product_data
         if (!productDataResponse.product_data) {
           const errorMsg = 'Failed to get comprehensive product data from server - missing product_data property.';
-          logger.error(errorMsg, productDataResponse);
-          console.error(errorMsg, productDataResponse); // Critical: Log to console for user visibility
+          logger.error(errorMsg, productDataResponse); // Critical error - high priority
           return { 
             success: false, 
             error: new Error(errorMsg),
@@ -332,8 +330,7 @@ class DataService {
         // Critical validation: If this is a fallback response from a failed request
         if (productDataResponse.isFallback === true) {
           const errorMsg = `Unable to get product data from server for product ID ${productId}. This is a required server request.`;
-          logger.error(errorMsg);
-          console.error(errorMsg); // Critical: Log to console for user visibility
+          logger.error(errorMsg); // Critical error - high priority
           return { 
             success: false, 
             error: new Error(errorMsg),
@@ -419,7 +416,7 @@ class DataService {
             // Here we're using the console.error for visibility, but in a real app
             // you might want to show a modal dialog or other UI element
             const errorMsg = localResult.error?.message || 'Critical error: Unable to add product to room.';
-            console.error('CRITICAL ERROR:', errorMsg);
+            logger.error('CRITICAL ERROR:', errorMsg);
             
             // This should be replaced with your app's error display mechanism
             if (typeof window.productEstimatorShowError === 'function') {

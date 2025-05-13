@@ -85,7 +85,7 @@ class AjaxService {
 
         // If we're allowed to fail, return a fallback empty response
         if (allowFailure) {
-          console.warn(`AJAX request to '${action}' failed but continuing with fallback data.`);
+          logger.warn(`AJAX request to '${action}' failed but continuing with fallback data.`);
           // Return an empty success response as fallback
           return { success: true, data: {}, isFallback: true };
         }

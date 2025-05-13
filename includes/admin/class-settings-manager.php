@@ -112,17 +112,17 @@ class SettingsManager {
     private function initialize_modules() {
         // Define the module classes to load
         $module_classes = [
-            'GeneralSettingsModule',
-            'NetsuiteSettingsModule',
-            'ProductAdditionsSettingsModule',
-            'PricingRulesSettingsModule',
+//            'GeneralSettingsModule',
+//            'NetsuiteSettingsModule',
+//            'ProductAdditionsSettingsModule',
+//            'PricingRulesSettingsModule',
             #TODO
 
-//            'SimilarProductsSettingsModule',
-            'ProductUpgradesSettingsModule',
-            'NotificationSettingsModule',
-            'LabelsSettingsModule',
-            'FeatureSwitchesSettingsModule',
+            'SimilarProductsSettingsModule',
+//            'ProductUpgradesSettingsModule',
+//            'NotificationSettingsModule',
+//            'LabelsSettingsModule',
+//            'FeatureSwitchesSettingsModule',
 
         ];
 

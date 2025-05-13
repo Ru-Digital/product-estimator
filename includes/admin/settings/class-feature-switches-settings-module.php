@@ -167,12 +167,7 @@ final class FeatureSwitchesSettingsModule extends SettingsModuleBase implements 
      * @access   public
      */
     public function enqueue_styles() {
-        wp_enqueue_style(
-            $this->plugin_name . '-feature-switch-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/feature-switches.css',
-            array($this->plugin_name . '-settings'),
-            $this->version
-        );
+        parent::enqueue_styles();
     }
 
 

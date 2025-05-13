@@ -1,0 +1,21 @@
+/**
+ * Main admin styles entry point
+ */
+
+// Use modern @use rule instead of @import
+@use 'ProductEstimatorAdmin';
+@use 'AdminTables';
+@use 'AdminVerticalTabs';
+@use 'ProductEstimatorSettings';
+@use 'CustomerEstimatesAdmin';
+
+// Import module styles
+@use 'modules/FeatureSwitches';
+@use 'modules/GeneralSettings';
+@use 'modules/LabelSettings';
+@use 'modules/NetsuiteSettings';
+@use 'modules/NotificationSettings';
+@use 'modules/PricingRules';
+@use 'modules/ProductAdditionsSettings';
+@use 'modules/ProductUpgradesSettings';
+@use 'modules/SimilarProductsSettings';

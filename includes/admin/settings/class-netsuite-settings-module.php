@@ -251,12 +251,7 @@ final class NetsuiteSettingsModule extends SettingsModuleBase implements Setting
      * @access   public
      */
     public function enqueue_styles() {
-        wp_enqueue_style(
-            $this->plugin_name . '-netsuite-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/netsuite-settings.css',
-            array($this->plugin_name . '-settings'),
-            $this->version
-        );
+        parent::enqueue_styles();
     }
 
     /**

@@ -268,14 +268,6 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
             [],
             '4.1.0-rc.0'
         );
-
-        // Module-specific CSS
-        wp_enqueue_style(
-            $this->plugin_name . '-similar-products-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/similar-products-settings.css',
-            [$this->plugin_name . '-admin-tables', 'select2-css'],
-            $this->version
-        );
     }
 
     /**

@@ -1,0 +1,298 @@
+/**
+ * Generic Admin Tables CSS
+ *
+ * Provides common styling for admin interface tables, forms within tables,
+ * and list management UIs used across various settings modules.
+ */
+
+// Variables
+$border-color: #ccd0d4;
+$light-border-color: #eee;
+$row-border-color: #f0f0f1;
+$background-color: #fff;
+$header-background: #f6f7f7;
+$hover-background: #f0f6fc;
+$input-border-color: #8c8f94;
+$text-color: #50575e;
+$description-color: #646970;
+$primary-color: #2271b1;
+$shadow-color: rgba(0, 0, 0, 0.04);
+$max-input-width: 350px;
+$container-max-width: 1200px;
+
+/* Generic Table Module Container */
+.pe-admin-table-container {
+  margin: 20px 0;
+  max-width: $container-max-width;
+}
+
+/* Form Container (for add/edit forms) */
+.pe-admin-table-form-container {
+  background: $background-color;
+  border: 1px solid $border-color;
+  box-shadow: 0 1px 1px $shadow-color;
+  margin-bottom: 20px;
+  padding: 20px;
+  border-radius: 4px;
+  display: none; /* Initially hidden, JS will toggle */
+  animation: pe-slide-down 0.3s ease-out;
+
+  .form-title {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid $light-border-color;
+    font-size: 1.3em;
+    font-weight: 600;
+    margin-bottom: 15px;
+  }
+
+  /* Generic Form Table (WordPress style) */
+  .form-table {
+    margin-top: 0;
+    width: 100%;
+
+    th {
+      width: 200px;
+      padding: 15px 10px 15px 0;
+      vertical-align: top;
+      text-align: left;
+      font-weight: normal;
+    }
+
+    td {
+      padding: 10px;
+      vertical-align: top;
+    }
+
+    select,
+    textarea,
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="url"],
+    input[type="password"] {
+      width: 100%;
+      max-width: $max-input-width;
+      padding: 6px 8px;
+      border: 1px solid $input-border-color;
+      border-radius: 3px;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,.07);
+      height: 30px;
+      line-height: normal;
+      box-sizing: border-box;
+    }
+
+    textarea {
+      min-height: 80px;
+      height: auto;
+    }
+
+    .description {
+      font-size: 0.9em;
+      color: $description-color;
+      margin-top: 4px;
+      display: block;
+    }
+  }
+
+  /* Form Actions (Save, Cancel buttons) */
+  .form-actions {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid $light-border-color;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+
+    .spinner {
+      float: none;
+      vertical-align: middle;
+    }
+  }
+}
+
+@keyframes pe-slide-down {
+  0% { 
+    opacity: 0; 
+    transform: translateY(-10px); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+/* List Table Styles */
+.pe-admin-list-table-wrapper {
+  margin-top: 20px;
+  position: relative;
+
+  > h3 {
+    font-size: 1.4em;
+    font-weight: 400;
+    margin: 0 0 10px 0;
+    padding: 0;
+  }
+}
+
+.pe-admin-list-table {
+  border-spacing: 0;
+  width: 100%;
+  clear: both;
+  border: 1px solid $border-color;
+  box-shadow: 0 1px 1px $shadow-color;
+  background: $background-color;
+  border-radius: 3px;
+
+  thead th,
+  tfoot th {
+    font-weight: 600;
+    padding: 10px;
+    line-height: 1.4em;
+    font-size: 14px;
+    text-align: left;
+    background-color: $header-background;
+    border-bottom: 1px solid $border-color;
+  }
+
+  tfoot th {
+    border-top: 1px solid $border-color;
+    border-bottom: none;
+  }
+
+  tbody {
+    td {
+      vertical-align: middle;
+      padding: 8px 10px;
+      border-bottom: 1px solid $row-border-color;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    tr {
+      &:last-child td {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: $hover-background;
+      }
+    }
+  }
+
+  .actions {
+    .button {
+      margin-right: 5px;
+
+      &:last-child {
+        margin-right: 0;
+      }
+    }
+  }
+}
+
+/* "Add New" Button */
+.pe-add-new-item-button {
+  margin-bottom: 15px !important;
+}
+
+/* "No items" Message */
+.pe-no-items-message {
+  padding: 20px;
+  background: $background-color;
+  border: 1px solid $border-color;
+  border-radius: 3px;
+  color: $text-color;
+  font-style: italic;
+  text-align: center;
+  margin-top: 15px;
+  box-shadow: 0 1px 1px $shadow-color;
+}
+
+/* Loading spinner on buttons */
+.pe-loading {
+  opacity: 0.7;
+  position: relative;
+
+  &::after {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-left: 8px;
+    border: 2px solid #f3f3f3;
+    border-top-color: $primary-color;
+    border-radius: 50%;
+    animation: pe-spin 0.8s linear infinite;
+    vertical-align: middle;
+  }
+}
+
+@keyframes pe-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+  .pe-admin-table-form-container {
+    .form-table {
+      th,
+      td {
+        display: block;
+        width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      th {
+        padding-bottom: 5px;
+        font-weight: 600;
+      }
+
+      td {
+        padding-top: 0;
+        padding-bottom: 15px;
+      }
+
+      select,
+      textarea,
+      input[type="text"],
+      input[type="number"],
+      input[type="email"],
+      input[type="url"],
+      input[type="password"],
+      .select2-container {
+        max-width: 100%;
+        width: 100% !important;
+      }
+    }
+
+    .form-actions {
+      flex-direction: column;
+
+      button {
+        width: 100%;
+        margin-bottom: 10px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+
+  /* Responsive List Table */
+  .pe-admin-list-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .pe-admin-list-table {
+    min-width: 600px;
+
+    .actions {
+      white-space: nowrap;
+    }
+  }
+}

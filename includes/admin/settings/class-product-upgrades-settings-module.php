@@ -147,14 +147,6 @@ final class ProductUpgradesSettingsModule extends SettingsModuleWithTableBase im
         
         // Load Select2 CSS for enhanced dropdowns
         wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', array(), '4.1.0-rc.0');
-
-        // Load module-specific styles
-        wp_enqueue_style(
-            $this->plugin_name . '-product-upgrades',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/product-upgrades-settings.css',
-            array($this->plugin_name . '-settings', $this->plugin_name . '-admin-tables', 'select2'),
-            $this->version
-        );
     }
 
     /**

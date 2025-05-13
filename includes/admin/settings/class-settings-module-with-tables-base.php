@@ -549,7 +549,6 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
     public function enqueue_styles()
     {
         parent::enqueue_styles();
-        wp_enqueue_style($this->plugin_name . '-admin-tables', PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/admin-tables.css', array($this->plugin_name . '-settings'), $this->version);
     }
 
     protected function register_hooks()

@@ -243,12 +243,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
 
     public function enqueue_styles() {
-        wp_enqueue_style(
-            $this->plugin_name . '-label-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/label-settings.css',
-            [ $this->plugin_name . '-settings', $this->plugin_name . '-vertical-tabs-layout' ],
-            $this->version
-        );
+        parent::enqueue_styles();
     }
 
     public function get_defined_label_types() {

@@ -193,40 +193,17 @@ class AdminScriptHandler {
         }
 
         // Ensure PRODUCT_ESTIMATOR_PLUGIN_URL is defined
-        $admin_css_url = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/product-estimator-admin.css' : '';
-        $settings_css_url = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/product-estimator-settings.css' : '';
-        $vertical_tabs_css_url = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/admin-vertical-tabs.css' : '';
-
-        // Enqueue the admin styles
-        if ($admin_css_url) {
+        $admin_styles_url = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/admin-styles-bundled.css' : '';
+        
+        // Enqueue the compiled admin styles
+        if ($admin_styles_url) {
             wp_enqueue_style(
-                $this->plugin_name . '-admin',
-                $admin_css_url,
+                $this->plugin_name . '-admin-styles',
+                $admin_styles_url,
                 array(),
                 $this->version,
                 'all'
             );
-        }
-
-
-        // Enqueue settings-specific styles if on settings page
-        if (strpos($hook_suffix, $this->plugin_name . '-settings') !== false) {
-            if ($settings_css_url) {
-                wp_enqueue_style(
-                    $this->plugin_name . '-settings',
-                    $settings_css_url,
-                    array($this->plugin_name . '-admin'), // Depend on main admin styles
-                    $this->version
-                );
-            }
-            if ($vertical_tabs_css_url) {
-                wp_enqueue_style(
-                    $this->plugin_name . '-vertical-tabs-layout',
-                    $vertical_tabs_css_url,
-                    array($this->plugin_name . '-settings'), // Depend on settings styles
-                    $this->version
-                );
-            }
         }
     }
 

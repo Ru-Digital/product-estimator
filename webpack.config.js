@@ -6,7 +6,10 @@ module.exports = {
     'product-estimator': './src/js/index.js',
 
     // Admin entry point including all module scripts
-    'admin/product-estimator-admin': './src/js/admin.js'
+    'admin/product-estimator-admin': './src/js/admin.js',
+    
+    // Admin styles entry
+    'admin/admin-styles': './src/styles/admin/Index.scss'
   },
   output: {
     filename: '[name].bundle.js',
@@ -23,7 +26,8 @@ module.exports = {
       '@utils': path.resolve(__dirname, 'src/js/utils'),
       '@frontend': path.resolve(__dirname, 'src/js/frontend'),
       '@admin': path.resolve(__dirname, 'src/js/admin'),
-      '@templates': path.resolve(__dirname, 'src/templates') // Add templates alias
+      '@templates': path.resolve(__dirname, 'src/templates'), // Add templates alias
+      '@styles': path.resolve(__dirname, 'src/styles')
     }
   },
   module: {
@@ -38,6 +42,28 @@ module.exports = {
             plugins: ['@babel/plugin-transform-runtime']
           }
         }
+      },
+      {
+        test: /\.s[ac]ss$/i,
+        use: [
+          {
+            loader: 'file-loader',
+            options: {
+              name: 'admin-styles-bundled.css',
+              outputPath: '../../admin/css/'
+            }
+          },
+          {
+            loader: 'sass-loader',
+            options: {
+              // Use modern API
+              sassOptions: {
+                outputStyle: 'compressed'
+              },
+              api: 'modern'
+            }
+          }
+        ]
       },
       {
         // Add the HTML loader for handling template imports

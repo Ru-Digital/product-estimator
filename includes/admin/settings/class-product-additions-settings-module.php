@@ -307,14 +307,6 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
             array(),
             '4.1.0-rc.0'
         );
-
-        // Your module-specific CSS (if it exists and has content)
-        wp_enqueue_style(
-            $this->plugin_name . '-product-additions-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/product-additions-settings.css',
-            [$this->plugin_name . '-admin-tables', 'select2-css'], // Depends on admin-tables and select2-css
-            $this->version
-        );
     }
 
     public function render_section_description()

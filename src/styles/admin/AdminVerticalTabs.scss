@@ -1,0 +1,312 @@
+/**
+ * Admin Vertical Tabs CSS
+ *
+ * General styles for a vertical tab layout in the WordPress admin.
+ * These styles are intended to be reusable across different settings modules.
+ */
+
+// Variables
+$background-color: #fff;
+$border-color: #ccd0d4;
+$separator-color: #dcdcde;
+$light-separator-color: #e0e0e0;
+$hover-background: #f0f0f1;
+$nav-background: #f6f7f7;
+$text-color: #2c3338;
+$secondary-text-color: #50575e;
+$light-text-color: #757575;
+$primary-color: #135e96;
+$code-text-color: #3c434a;
+$shadow-color: rgba(0, 0, 0, 0.04);
+$nav-width: 200px;
+$sidebar-width: 280px;
+$max-input-width: 450px;
+
+/* Wrapper for the entire vertical tabs interface */
+.pe-vtabs-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+/* Main container for navigation and content panels */
+.pe-vtabs-main-container {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  background: $background-color;
+  border: 1px solid $border-color;
+  border-radius: 3px;
+  box-shadow: 0 1px 1px $shadow-color;
+}
+
+/* Area containing the vertical navigation tabs */
+.pe-vtabs-nav-area {
+  width: $nav-width;
+  border-right: 1px solid $separator-color;
+  background-color: $nav-background;
+}
+
+/* List holding the navigation tab items */
+.pe-vtabs-nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Individual navigation tab item */
+.pe-vtabs-nav-item {
+  margin: 0;
+  padding: 0;
+  border-bottom: 1px solid $separator-color;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  a {
+    display: block;
+    padding: 12px 15px;
+    text-decoration: none;
+    color: $text-color;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+      background-color: $hover-background;
+      color: $primary-color;
+    }
+  }
+
+  &.active a {
+    background-color: $background-color;
+    color: $primary-color;
+    border-left-color: $primary-color;
+  }
+}
+
+/* Area containing the content panels for each tab */
+.pe-vtabs-content-area {
+  flex: 1;
+  padding: 0;
+  min-height: 400px;
+}
+
+/* Individual content panel for a tab */
+.pe-vtabs-tab-panel {
+  display: none;
+  padding: 25px;
+
+  &.active {
+    display: block;
+  }
+}
+
+/* Description text at the top of a tab panel */
+.pe-vtabs-tab-description {
+  margin-top: 0;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid $light-separator-color;
+  color: $secondary-text-color;
+  font-size: 14px;
+}
+
+/* Form specific adjustments within a tab panel */
+.pe-vtabs-tab-form {
+  .form-table {
+    margin-top: 0;
+
+    th {
+      padding-top: 15px;
+      padding-bottom: 15px;
+      width: 220px;
+    }
+
+    td {
+      padding-top: 15px;
+      padding-bottom: 15px;
+      vertical-align: middle;
+    }
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    width: 100%;
+    max-width: $max-input-width;
+  }
+
+  textarea {
+    min-height: 100px;
+  }
+
+  /* Submit button area within a form */
+  .submit {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid $light-separator-color;
+  }
+
+  /* Spinner next to submit button */
+  .spinner {
+    float: none;
+    margin: 4px 5px 0 5px;
+    vertical-align: middle;
+  }
+}
+
+/* Generic Sidebar Panel for Vertical Tab Layouts */
+.pe-vtabs-sidebar-panel {
+  flex: 0 0 $sidebar-width;
+  background: $background-color;
+  border: 1px solid $border-color;
+  border-radius: 3px;
+  padding: 20px;
+  box-shadow: 0 1px 1px $shadow-color;
+  align-self: flex-start;
+  position: sticky;
+  top: 48px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+
+  h3 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid $light-separator-color;
+    font-size: 16px;
+    font-weight: 600;
+    color: $text-color;
+  }
+
+  h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    color: $text-color;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  p {
+    font-size: 13px;
+    color: $secondary-text-color;
+    line-height: 1.6;
+    margin-bottom: 15px;
+
+    small {
+      display: block;
+      margin-top: 10px;
+      color: $light-text-color;
+    }
+  }
+
+  ul {
+    margin: 10px 0 0 0;
+    padding-left: 0;
+    list-style: none;
+
+    li {
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: $secondary-text-color;
+    }
+  }
+
+  code,
+  ul li code {
+    display: inline-block;
+    background: $hover-background;
+    padding: 3px 6px;
+    border-radius: 3px;
+    margin-right: 5px;
+    font-size: 13px;
+    color: $code-text-color;
+    border: 1px solid $separator-color;
+  }
+}
+
+/* Responsive Adjustments for the vertical tab layout */
+@media screen and (max-width: 1200px) {
+  .pe-vtabs-wrapper {
+    flex-direction: column;
+
+    .pe-vtabs-sidebar-panel {
+      flex: 0 0 auto;
+      position: static;
+      max-height: none;
+      margin-top: 30px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+  }
+}
+
+@media screen and (max-width: 782px) {
+  .pe-vtabs-main-container {
+    flex-direction: column;
+  }
+
+  .pe-vtabs-nav-area {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid $separator-color;
+  }
+
+  .pe-vtabs-nav-list {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .pe-vtabs-nav-item {
+    border-bottom: none;
+    flex-grow: 1;
+    text-align: center;
+
+    &:not(:last-child) {
+      border-right: 1px solid $separator-color;
+    }
+
+    a {
+      padding: 10px 12px;
+      border-left: none;
+      border-bottom: 3px solid transparent;
+    }
+
+    &.active a {
+      border-left-color: transparent;
+      border-bottom-color: $primary-color;
+      background-color: $hover-background;
+    }
+  }
+
+  .pe-vtabs-content-area {
+    min-height: auto;
+  }
+
+  .pe-vtabs-tab-panel {
+    padding: 20px;
+  }
+
+  .pe-vtabs-tab-form {
+    .form-table {
+      th,
+      td {
+        padding: 10px 0;
+        display: block;
+        width: 100%;
+      }
+
+      th {
+        padding-bottom: 5px;
+        font-weight: 600;
+      }
+    }
+  }
+}

@@ -772,14 +772,6 @@ final class PricingRulesSettingsModule extends SettingsModuleWithTableBase imple
 
         // Enqueue Select2 CSS for enhanced dropdowns
         wp_enqueue_style('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css', [], '4.1.0-rc.0');
-
-        // Enqueue module-specific styles
-        wp_enqueue_style(
-            $this->plugin_name . '-pricing-rules',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/pricing-rules.css',
-            array($this->plugin_name . '-settings'),
-            $this->version
-        );
     }
 
     /**

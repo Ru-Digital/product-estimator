@@ -6,7 +6,12 @@
  * specific responsibilities to specialized manager classes.
  */
 
-import { format, createLogger } from '@utils';
+import { createLogger } from '@utils';
+
+// Import services and utils first
+import { loadEstimateData, saveEstimateData, clearEstimateData } from '../EstimateStorage';
+import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails } from '../CustomerStorage';
+import TemplateEngine from '../TemplateEngine';
 
 // Import specialized managers
 import EstimateManager from './EstimateManager';
@@ -14,11 +19,6 @@ import RoomManager from './RoomManager';
 import ProductManager from './ProductManager';
 import FormManager from './FormManager';
 import UIManager from './UIManager';
-
-// Import services and utils
-import { loadEstimateData, saveEstimateData, clearEstimateData } from '../EstimateStorage';
-import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails } from '../CustomerStorage';
-import TemplateEngine from '../TemplateEngine';
 
 const logger = createLogger('ModalManager');
 

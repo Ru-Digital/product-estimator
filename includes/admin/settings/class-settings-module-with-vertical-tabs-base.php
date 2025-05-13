@@ -238,11 +238,13 @@ abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
             ],
             'selectors' => [
                 // Common selectors for vertical tab UI elements managed by a shared JS component
-                'verticalTabNav'     => '.pe-vtabs-nav',
-                'verticalTabNavItem' => '.pe-vtabs-nav-item',
-                'verticalTabContent' => '.pe-vtabs-content',
-                'verticalTabPane'    => '.pe-vtabs-pane',
-                'saveSubTabButton'   => '.save-subtab-settings-button', // Example if there's a common save button per sub-tab
+                'verticalTabNav'        => '.pe-vtabs-nav-list, .vertical-tabs-nav',
+                'verticalTabNavItem'    => '.pe-vtabs-nav-item, .tab-item',
+                'verticalTabNavArea'    => '.pe-vtabs-nav-area, .vertical-tabs',
+                'verticalTabContent'    => '.pe-vtabs-content',
+                'verticalTabContentArea'=> '.pe-vtabs-content-area, .vertical-tabs-content',
+                'verticalTabPane'       => '.pe-vtabs-tab-panel, .vertical-tab-content',
+                'saveSubTabButton'      => '.save-subtab-settings-button',
             ],
             // 'ajaxActionPrefix' might be useful if there's a common pattern for saving sub-tabs,
             // e.g., if AJAX save is per sub-tab. The current setup saves all fields under one option_name

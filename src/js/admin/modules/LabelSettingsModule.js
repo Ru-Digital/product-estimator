@@ -3,22 +3,24 @@
  *
  * Handles functionality specific to the label settings tab.
  * Extends VerticalTabbedModule for common vertical tab and form handling.
+ *
+ * This module relies on abstract base classes for common functionality,
+ * selectors, and internationalization strings.
  */
-import VerticalTabbedModule from '../common/VerticalTabbedModule'; // Adjust path as needed
-import { validation } from '@utils'; // Assuming @utils provides these
-
-// Note: showFieldError, clearFieldError, showNotice are inherited or use global ProductEstimatorSettings
+import VerticalTabbedModule from '../common/VerticalTabbedModule';
+import { validation } from '@utils';
 import { createLogger } from '@utils';
-const logger = createLogger('LabelSettings'); // Corrected logger name for consistency
+
+const logger = createLogger('LabelSettings');
+
 class LabelSettingsModule extends VerticalTabbedModule {
   constructor() {
     super({
       mainTabId: 'labels',
-      defaultSubTabId: 'labels-general', // Default vertical tab for labels
-      ajaxActionPrefix: 'save_labels',   // Results in 'save_labels_settings'
-      localizedDataName: 'labelsSettings' // CORRECTED: Was 'labelSettings', now matches PHP context name
+      defaultSubTabId: 'labels-general',
+      ajaxActionPrefix: 'save_labels',
+      localizedDataName: 'labelsSettings'
     });
-    // Specific properties for LabelSettingsModule can be initialized here if needed
     logger.log('LabelSettingsModule instance created.');
   }
 
@@ -27,16 +29,13 @@ class LabelSettingsModule extends VerticalTabbedModule {
    * Common events are bound by the parent class.
    */
   bindModuleSpecificEvents() {
-    super.bindModuleSpecificEvents(); // Call parent if it ever has common specific events
+    super.bindModuleSpecificEvents();
 
     if (!this.$container || !this.$container.length) {
       logger.warn('LabelSettingsModule: $container not available in bindModuleSpecificEvents.');
       return;
     }
-    // const $ = jQuery; // Already available via this.$ from ProductEstimatorSettings
 
-    // Example: Email validation if labels module had email fields directly
-    // this.$container.on('change', 'input[type="email"]', this.handleEmailValidation.bind(this));
     logger.log('LabelSettingsModule specific events bound (if any).');
   }
 
@@ -44,9 +43,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
    * Override for actions when the main "Labels" tab is activated.
    */
   onMainTabActivated() {
-    super.onMainTabActivated(); // Good practice to call parent
-    // Any specific setup for Labels when its main tab is shown,
-    // e.g., initializing a specific type of editor if one was used for labels.
+    super.onMainTabActivated();
     logger.log('Labels main tab activated - specific setup can go here.');
   }
 }

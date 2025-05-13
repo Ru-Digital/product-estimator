@@ -202,20 +202,35 @@ final class LabelsSettingsModule extends SettingsModuleWithTableBase implements 
      * @return   array Associative array of module-specific script data.
      */
     protected function get_module_specific_script_data() {
-        // This data was previously in the $module_specific_data array in enqueue_scripts.
-        return [
-            'option_name'       => $this->option_name, // Explicitly include option_name
-            'defaultSubTabId'   => 'labels-general', // Default vertical tab to show
-            // 'mainTabId' (as 'tab_id') is inherited, already in common data.
-            'ajaxActionPrefix'  => 'save_labels', // Used by JS if VTM has specific save logic per sub-tab (not default)
-            'defined_label_types' => array_keys($this->defined_label_types), // For JS to know available sub-tabs/types
-            'i18n' => [ // Module-specific i18n, merges with/overrides common data
-                'saveSuccess' => __('Label settings saved successfully.', 'product-estimator'),
-                'saveError'   => __('Error saving label settings.', 'product-estimator'),
-            ],
-            // 'actions' and 'selectors' are typically inherited from SettingsModuleWithVerticalTabsBase
-            // and are sufficient for standard vertical tab settings forms.
+        // Get the module specific configuration
+        $data = [
+            'option_name'         => $this->option_name,
+            'defaultSubTabId'     => 'labels-general',
+            'ajaxActionPrefix'    => 'save_labels',
+            'defined_label_types' => array_keys($this->defined_label_types),
         ];
+
+        // Module-specific i18n strings that should override the default ones
+        // Only include strings that need to be different from the base implementation
+//        $data['i18n'] = [
+//            // Example of overriding common strings with module-specific versions:
+//            'saveSuccess' => __('Label settings saved successfully.', 'product-estimator'),
+//            'saveError'   => __('Error saving label settings.', 'product-estimator'),
+//
+//            // Example of adding module-specific strings that don't exist in the base class:
+//            'labelCopied' => __('Label copied to clipboard.', 'product-estimator'),
+//            'confirmLabelReset' => __('Are you sure you want to reset this label to default?', 'product-estimator'),
+//        ];
+
+        // Module-specific selectors (if needed)
+        // Only include selectors that need to be different from the base implementation
+//        $data['selectors'] = [
+//            // Example of adding module-specific selectors:
+//            'labelCopyButton' => '.pe-copy-label-button',
+//            'labelResetButton' => '.pe-reset-label-button',
+//        ];
+
+        return $data;
     }
 
     /**
@@ -253,6 +268,17 @@ final class LabelsSettingsModule extends SettingsModuleWithTableBase implements 
 
     public function get_defined_label_types() {
         return $this->defined_label_types;
+    }
+
+    /**
+     * Get the human-readable label for the item type managed by this module.
+     *
+     * @since X.X.X
+     * @return string The item type label (singular)
+     */
+    protected function get_item_type_label()
+    {
+        return __('label', 'product-estimator');
     }
 
     /**

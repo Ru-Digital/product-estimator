@@ -103,9 +103,11 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     // These forms should have class 'pe-vtabs-tab-form'
     this.$container.on('submit.vtm', 'form.pe-vtabs-tab-form', this.handleVTMFormSubmit.bind(this));
 
-    // Click handling for vertical tab navigation links
-    this.$container.on('click.vtm', '.pe-vtabs-nav-list a, .vertical-tabs-nav a', this.handleVerticalTabClick.bind(this));
-    logger.log(`[${this.settings.tab_id}] Common VTM events bound.`);
+    // Click handling for vertical tab navigation links - use selectors from PHP's get_common_script_data
+    const navSelector = this.settings.selectors.verticalTabNav || '.pe-vtabs-nav-list, .vertical-tabs-nav';
+    this.$container.on('click.vtm', `${navSelector} a`, this.handleVerticalTabClick.bind(this));
+
+    logger.log(`[${this.settings.tab_id}] Common VTM events bound using shared selectors.`);
   }
 
   /**
@@ -139,8 +141,13 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
       return;
     }
     logger.log(`[${this.settings.tab_id}] Setting up vertical tabs.`);
-    const $verticalTabsNav = this.$container.find('.pe-vtabs-nav-list, .vertical-tabs-nav');
-    const $verticalTabContents = this.$container.find('.pe-vtabs-tab-panel, .vertical-tab-content');
+
+    // Use selectors from settings that are provided by PHP via get_common_script_data
+    const navSelector = this.settings.selectors.verticalTabNav || '.pe-vtabs-nav-list, .vertical-tabs-nav';
+    const contentSelector = this.settings.selectors.verticalTabPane || '.pe-vtabs-tab-panel, .vertical-tab-content';
+
+    const $verticalTabsNav = this.$container.find(navSelector);
+    const $verticalTabContents = this.$container.find(contentSelector);
 
     if (!$verticalTabsNav.length || !$verticalTabContents.length) {
       logger.warn(`[${this.settings.tab_id}] Vertical tab navigation or content panels not found. Vertical tabs may not function.`);
@@ -193,8 +200,14 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
 
   adjustTabContentHeight() {
     if (!this.$container || !this.$container.length) return;
-    const $nav = this.$container.find('.pe-vtabs-nav-area, .vertical-tabs');
-    const $contentWrapper = this.$container.find('.pe-vtabs-content-area, .vertical-tabs-content');
+
+    // Use provided selectors with fallbacks
+    const navAreaSelector = this.settings.selectors.verticalTabNavArea || '.pe-vtabs-nav-area, .vertical-tabs';
+    const contentAreaSelector = this.settings.selectors.verticalTabContentArea || '.pe-vtabs-content-area, .vertical-tabs-content';
+
+    const $nav = this.$container.find(navAreaSelector);
+    const $contentWrapper = this.$container.find(contentAreaSelector);
+
     if ($nav.length && $contentWrapper.length) {
       const navHeight = $nav.outerHeight();
       if (navHeight) { // Ensure navHeight is a valid number
@@ -212,13 +225,22 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
       });
       return;
     }
-    const $verticalTabsNav = this.$container.find('.pe-vtabs-nav-list, .vertical-tabs-nav');
-    const $verticalTabContents = this.$container.find('.pe-vtabs-tab-panel, .vertical-tab-content');
 
-    $verticalTabsNav.find('.pe-vtabs-nav-item, .tab-item').removeClass('active');
-    $verticalTabsNav.find(`a[data-tab="${subTabId}"]`).closest('.pe-vtabs-nav-item, .tab-item').addClass('active');
+    // Use shared selectors from settings with fallbacks
+    const navSelector = this.settings.selectors.verticalTabNav || '.pe-vtabs-nav-list, .vertical-tabs-nav';
+    const contentSelector = this.settings.selectors.verticalTabPane || '.pe-vtabs-tab-panel, .vertical-tab-content';
+    const navItemSelector = this.settings.selectors.verticalTabNavItem || '.pe-vtabs-nav-item, .tab-item';
 
+    const $verticalTabsNav = this.$container.find(navSelector);
+    const $verticalTabContents = this.$container.find(contentSelector);
+
+    $verticalTabsNav.find(navItemSelector).removeClass('active');
+    $verticalTabsNav.find(`a[data-tab="${subTabId}"]`).closest(navItemSelector).addClass('active');
+
+    // Hide and deactivate all tab content panels
     $verticalTabContents.hide().removeClass('active');
+
+    // Find and activate the selected content panel
     const $activeContentPanel = this.$container.find(`#${subTabId.replace(/[^a-zA-Z0-9-_]/g, '')}`);
     if ($activeContentPanel.length) {
       $activeContentPanel.show().addClass('active');

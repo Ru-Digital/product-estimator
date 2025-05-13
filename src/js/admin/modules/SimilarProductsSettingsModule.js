@@ -169,7 +169,7 @@ class SimilarProductsSettingsModule extends AdminTableManager {
     this._updateSelectedAttributesInput();
   }
 
-  _fetchAttributesForCategories(categoryIds) {
+  _fetchAttributesForCategories(categoryIds, selectedAttributes = null) {
     this.logger.log('Fetching attributes for categories:', categoryIds);
 
     if (!this.settings.actions || !this.settings.actions.get_attributes) {
@@ -182,8 +182,11 @@ class SimilarProductsSettingsModule extends AdminTableManager {
     this.dom.attributesLoading.show();
     this.dom.attributesList.hide();
 
-    // Get currently selected attributes
-    const currentlySelectedAttributes = this.dom.selectedAttributesInput.val().split(',').filter(Boolean);
+    // Get currently selected attributes - either from parameter or from the input field
+    const currentlySelectedAttributes = selectedAttributes ||
+                                       this.dom.selectedAttributesInput.val().split(',').filter(Boolean);
+
+    this.logger.log('Using currently selected attributes:', currentlySelectedAttributes);
 
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl,
@@ -276,15 +279,20 @@ class SimilarProductsSettingsModule extends AdminTableManager {
     const attributes = Array.isArray(itemData.attributes) ? itemData.attributes :
                       (itemData.attributes ? itemData.attributes.split(',') : []);
 
+    // Set the hidden input value for selected attributes first
+    this.dom.selectedAttributesInput.val(attributes.join(','));
+
     // Use setTimeout to allow dependent field visibility changes to complete
     setTimeout(() => {
       // Set source categories and trigger change to load attributes
       this.dom.sourceCategoriesSelect?.val(sourceCategories).trigger('change.select2');
 
-      // Set the hidden input value for selected attributes
-      this.dom.selectedAttributesInput.val(attributes.join(','));
-
-      // When attributes are loaded, they'll be selected based on the hidden input value
+      // If we have both categories and attributes selected, manually fetch the attributes
+      // This ensures attributes are loaded and selected when editing an existing item
+      if (sourceCategories.length > 0 && attributes.length > 0) {
+        this.logger.log('Manually fetching attributes for edit form with categories:', sourceCategories);
+        this._fetchAttributesForCategories(sourceCategories, attributes);
+      }
 
       this.formModified = false; // Reset modified flag after populating
     }, 150); // Small delay

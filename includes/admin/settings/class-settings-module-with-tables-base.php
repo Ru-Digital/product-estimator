@@ -261,12 +261,14 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
 
     protected function get_add_new_button_label()
     {
-        return __('Add New Item', 'product-estimator');
+        return sprintf(__('Add New %s', 'product-estimator'), $this->get_item_type_label());
     }
 
     protected function get_form_title($is_edit_mode = false)
     {
-        return $is_edit_mode ? __('Edit Item', 'product-estimator') : __('Add New Item', 'product-estimator');
+        return $is_edit_mode ?
+            sprintf(__('Edit %s', 'product-estimator'), $this->get_item_type_label()) :
+            sprintf(__('Add New %s', 'product-estimator'), $this->get_item_type_label());
     }
 
     /**
@@ -349,7 +351,7 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         $this->verify_item_ajax_request();
         $item_id = isset($_POST['item_id']) ? sanitize_text_field(wp_unslash($_POST['item_id'])) : null;
         if (empty($item_id)) {
-            wp_send_json_error(['message' => __('Invalid item ID provided for update.', 'product-estimator')], 400);
+            wp_send_json_error(['message' => sprintf(__('Invalid %s ID provided for update.', 'product-estimator'), $this->get_item_type_label())], 400);
             exit;
         }
         $item_data_from_post = isset($_POST['item_data']) ? wp_unslash($_POST['item_data']) : [];
@@ -358,7 +360,7 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         }
         $items = $this->get_items_for_table();
         if (!is_array($items) || !isset($items[$item_id])) {
-            wp_send_json_error(['message' => __('Item to update not found.', 'product-estimator')], 404);
+            wp_send_json_error(['message' => sprintf(__('%s to update not found.', 'product-estimator'), ucfirst($this->get_item_type_label()))], 404);
             exit;
         }
         $original_item = $items[$item_id];
@@ -398,12 +400,12 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         $this->verify_item_ajax_request();
         $item_id = isset($_POST['item_id']) ? sanitize_text_field(wp_unslash($_POST['item_id'])) : '';
         if (empty($item_id)) {
-            wp_send_json_error(['message' => __('Invalid item ID for deletion.', 'product-estimator')], 400);
+            wp_send_json_error(['message' => sprintf(__('Invalid %s ID for deletion.', 'product-estimator'), $this->get_item_type_label())], 400);
             exit;
         }
         $items = $this->get_items_for_table();
         if (!is_array($items) || !isset($items[$item_id])) {
-            wp_send_json_error(['message' => __('Item to delete not found.', 'product-estimator')], 404);
+            wp_send_json_error(['message' => sprintf(__('%s to delete not found.', 'product-estimator'), ucfirst($this->get_item_type_label()))], 404);
             exit;
         }
         unset($items[$item_id]);
@@ -433,17 +435,17 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
         $this->verify_item_ajax_request();
         $item_id = isset($_POST['item_id']) ? sanitize_text_field(wp_unslash($_POST['item_id'])) : '';
         if (empty($item_id)) {
-            wp_send_json_error(['message' => __('Invalid item ID for retrieval.', 'product-estimator')], 400);
+            wp_send_json_error(['message' => sprintf(__('Invalid %s ID for retrieval.', 'product-estimator'), $this->get_item_type_label())], 400);
             exit;
         }
         $items = $this->get_items_for_table();
         if (!is_array($items) || !array_key_exists($item_id, $items)) {
-            wp_send_json_error(['message' => __('Item not found.', 'product-estimator')], 404);
+            wp_send_json_error(['message' => sprintf(__('%s not found.', 'product-estimator'), ucfirst($this->get_item_type_label()))], 404);
             exit;
         }
         $item_data_from_collection = $items[$item_id];
         if (!is_array($item_data_from_collection)) {
-            wp_send_json_error(['message' => __('Error: Item data is corrupt or in an unexpected format.', 'product-estimator')], 500);
+            wp_send_json_error(['message' => sprintf(__('Error: %s data is corrupt or in an unexpected format.', 'product-estimator'), ucfirst($this->get_item_type_label()))], 500);
             exit;
         }
         $item_for_form = $this->prepare_item_for_form_population($item_data_from_collection);
@@ -501,17 +503,17 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
 
     protected function get_item_added_message()
     {
-        return __('Item added successfully.', 'product-estimator');
+        return sprintf(__('%s added successfully.', 'product-estimator'), $this->get_item_type_label());
     }
 
     protected function get_item_updated_message()
     {
-        return __('Item updated successfully.', 'product-estimator');
+        return sprintf(__('%s updated successfully.', 'product-estimator'), $this->get_item_type_label());
     }
 
     protected function get_item_deleted_message()
     {
-        return __('Item deleted successfully.', 'product-estimator');
+        return sprintf(__('%s deleted successfully.', 'product-estimator'), $this->get_item_type_label());
     }
 
     protected function prepare_item_for_response(array $saved_item)
@@ -522,6 +524,21 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
     protected function prepare_item_for_form_population(array $item_data)
     {
         return $item_data;
+    }
+
+    /**
+     * Get the human-readable label for the item type managed by this module.
+     *
+     * This method is used to create context-specific i18n strings.
+     * Child classes should override this to provide a specific label.
+     *
+     * @since X.X.X
+     * @return string The item type label (singular)
+     */
+    protected function get_item_type_label()
+    {
+        // Default implementation - child classes should override with specific item type
+        return __('item', 'product-estimator');
     }
 
     public function enqueue_scripts()
@@ -757,19 +774,20 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
             ],
             'i18n' => [
                 // Common i18n strings for table item management
-                'confirmDelete'       => __('Are you sure you want to delete this item?', 'product-estimator'),
-                'itemSavedSuccess'    => __('Item saved successfully.', 'product-estimator'),
+                // Using item_type to make messages more specific
+                'confirmDelete'       => sprintf(__('Are you sure you want to delete this %s?', 'product-estimator'), $this->get_item_type_label()),
+                'itemSavedSuccess'    => sprintf(__('%s saved successfully.', 'product-estimator'), $this->get_item_type_label()),
                 'itemAddedSuccess'    => $this->get_item_added_message(),   // From method
                 'itemUpdatedSuccess'  => $this->get_item_updated_message(), // From method
                 'itemDeletedSuccess'  => $this->get_item_deleted_message(), // From method
-                'errorSavingItem'     => __('Error saving item.', 'product-estimator'),
-                'errorDeletingItem'   => __('Error deleting item.', 'product-estimator'),
-                'errorLoadingItem'    => __('Error loading item details.', 'product-estimator'),
+                'errorSavingItem'     => sprintf(__('Error saving %s.', 'product-estimator'), $this->get_item_type_label()),
+                'errorDeletingItem'   => sprintf(__('Error deleting %s.', 'product-estimator'), $this->get_item_type_label()),
+                'errorLoadingItem'    => sprintf(__('Error loading %s details.', 'product-estimator'), $this->get_item_type_label()),
                 'addItemButtonLabel'  => $this->get_add_new_button_label(),
                 'editItemFormTitle'   => $this->get_form_title(true),
                 'addItemFormTitle'    => $this->get_form_title(false),
-                'saveChangesButton'   => __('Save Changes', 'product-estimator'), // Generic save button text for items
-                'updateChangesButton' => __('Update Changes', 'product-estimator'),// Generic update button text
+                'saveChangesButton'   => sprintf(__('Save %s', 'product-estimator'), $this->get_item_type_label()),
+                'updateChangesButton' => sprintf(__('Update %s', 'product-estimator'), $this->get_item_type_label()),
                 'deleting'            => __('Deleting...', 'product-estimator'),
                 'editButtonLabel'     => __('Edit', 'product-estimator'),
                 'deleteButtonLabel'   => __('Delete', 'product-estimator'),

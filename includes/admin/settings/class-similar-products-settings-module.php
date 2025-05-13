@@ -233,126 +233,15 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
 
     /**
      * Provide script data for localization
-     * This method combines base data with module-specific data and localizes it
+     * This method uses the parent class implementation which leverages shared selectors
      *
      * @return array The combined script data
      */
     public function provide_script_data_for_localization() {
-        // Get common table data from SettingsModuleWithTableBase
-        $data = [
-            'option_name' => $this->option_name,
-            'tab_id' => $this->tab_id,
-            'nonce' => wp_create_nonce($this->get_nonce_action_base() . '_nonce'),
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'actions' => [
-                'add_item' => 'add_' . $this->get_nonce_action_base() . '_item',
-                'update_item' => 'update_' . $this->get_nonce_action_base() . '_item',
-                'delete_item' => 'delete_' . $this->get_nonce_action_base() . '_item',
-                'get_item' => 'get_' . $this->get_nonce_action_base() . '_item',
-                'get_attributes' => 'pe_get_category_attributes',
-            ],
-            'selectors' => [
-                'formContainer' => '.pe-item-form-container',
-                'form' => '.pe-item-form',
-                'itemsTable' => '.pe-items-table',
-                'addButton' => '.pe-add-item-button',
-                'saveButton' => '.pe-save-item-button',
-                'cancelButton' => '.pe-cancel-item-button',
-                'editButton' => '.pe-edit-item-button',
-                'deleteButton' => '.pe-delete-item-button',
-                'listTableBody' => '.pe-list-table-body',
-                'idInput' => 'input[name="item_id"]',
-                'sourceCategoriesSelect' => '#similar-product-source-categories',
-                'attributesContainer' => '.attributes-selection-container',
-                'attributesList' => '.attributes-list',
-                'attributesLoading' => '.attributes-loading',
-                'selectedAttributesInput' => '.selected-attributes-input',
-                // Add missing selectors from error logs
-                'formTitle' => '.pe-form-title',
-                'listItemRow' => '.pe-list-item',
-                'listTableContainer' => '.pe-list-table-container',
-                'listTable' => '.pe-list-table',
-                'noItemsMessage' => '.pe-no-items-message',
-                // Additional selectors from error logs
-                'formComplete' => '.item-form-complete',
-                'itemSuccess' => '.item-saved-success',
-                'itemDeleted' => '.item-deleted-success',
-                'errorSaving' => '.error-saving-settings',
-                'errorDeleting' => '.error-deleting-item',
-                'saving' => '.saving-indicator',
-                'deleting' => '.deleting-indicator',
-                'deleteButtonLabel' => '.delete-button-label',
-                'editButtonLabel' => '.edit-button-label',
-                'errorSavingItem' => '.error-saving-item',
-                'errorDeletingItem' => '.error-deleting-item',
-                'editItemFormTitle' => '.edit-item-form-title',
-                'saveChangesButton' => '.save-changes-button',
-                'updateChangesButton' => '.update-changes-button',
-                'validationFailed' => '.validation-failed',
-                'confirmCancelEditing' => '.confirm-cancel-editing',
-                'errorLoadingItem' => '.error-loading-item',
-                'listItemBody' => '.pe-list-item-body',
-            ],
-            'i18n' => [
-                'addItemButtonLabel' => $this->get_add_new_button_label(),
-                'saveItemButtonLabel' => __('Save', 'product-estimator'),
-                'updateItemButtonLabel' => __('Update', 'product-estimator'),
-                'cancelButtonLabel' => __('Cancel', 'product-estimator'),
-                'confirmDelete' => __('Are you sure you want to delete this item?', 'product-estimator'),
-                'itemAdded' => __('Item added successfully!', 'product-estimator'),
-                'itemUpdated' => __('Item updated successfully!', 'product-estimator'),
-                'itemDeleted' => __('Item deleted successfully!', 'product-estimator'),
-                'errorSaving' => __('Error saving item.', 'product-estimator'),
-                'errorDeleting' => __('Error deleting item.', 'product-estimator'),
-                'loadingAttributes' => __('Loading attributes...', 'product-estimator'),
-                'selectCategory' => __('Please select categories first.', 'product-estimator'),
-                'noAttributes' => __('No product attributes found for these categories.', 'product-estimator'),
-                'errorLoading' => __('Error loading attributes. Please try again.', 'product-estimator'),
-                'selectCategoryError' => __('Please select at least one source category.', 'product-estimator'),
-                'selectAttributesError' => __('Please select at least one attribute.', 'product-estimator'),
-                'addRuleButtonLabel' => __('Add New Rule', 'product-estimator'),
-                'saveRuleButtonLabel' => __('Save Rule', 'product-estimator'),
-                'updateRuleButtonLabel' => __('Update Rule', 'product-estimator'),
-                'ruleSavedSuccess' => __('Rule saved successfully!', 'product-estimator'),
-                'ruleDeletedSuccess' => __('Rule deleted successfully!', 'product-estimator'),
-                'selectTargetCategory' => __('Please select a target product category.', 'product-estimator'),
-                'itemSaveSuccess' => __('Item saved successfully!', 'product-estimator'),
-                'formConfirmDelete' => __('Are you sure you want to delete this item?', 'product-estimator'),
-                // Add missing i18n strings from error logs
-                'errorSavingItem' => __('Error saving item.', 'product-estimator'),
-                'errorDeletingItem' => __('Error deleting item.', 'product-estimator'),
-                'editItemFormTitle' => __('Edit Item', 'product-estimator'),
-                'addItemFormTitle' => __('Add New Item', 'product-estimator'),
-                'saveChangesButton' => __('Save Changes', 'product-estimator'),
-                'updateChangesButton' => __('Update Changes', 'product-estimator'),
-                'confirmCancelEditing' => __('You have unsaved changes. Are you sure you want to cancel?', 'product-estimator'),
-                'errorLoadingItem' => __('Error loading item details.', 'product-estimator'),
-                'deleteButtonLabel' => __('Delete', 'product-estimator'),
-                'editButtonLabel' => __('Edit', 'product-estimator'),
-                'saving' => __('Saving...', 'product-estimator'),
-                'deleting' => __('Deleting...', 'product-estimator'),
-                'validationFailed' => __('Please correct the errors in the form.', 'product-estimator'),
-                'fieldRequired' => __('This field is required.', 'product-estimator'),
-            ],
-        ];
-
-        // Get module specific data
-        $module_data = $this->get_module_specific_script_data();
-
-        // Merge the data
-        foreach ($module_data as $key => $value) {
-            if (isset($data[$key]) && is_array($data[$key]) && is_array($value)) {
-                $data[$key] = array_merge($data[$key], $value);
-            } else {
-                $data[$key] = $value;
-            }
-        }
-
-        // Localize the script
-        $context_name = $this->get_js_context_name();
-        wp_localize_script($this->plugin_name . '-admin', $context_name, $data);
-
-        return $data;
+        // Call parent implementation which will properly combine all the data
+        // This will use get_common_table_script_data() from SettingsModuleWithTableBase
+        // and get_module_specific_script_data() from this class
+        return parent::provide_script_data_for_localization();
     }
 
     /**
@@ -697,6 +586,17 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
     }
 
     /**
+     * Get the human-readable label for the item type managed by this module.
+     *
+     * @since X.X.X
+     * @return string The item type label (singular)
+     */
+    protected function get_item_type_label()
+    {
+        return __('rule', 'product-estimator');
+    }
+
+    /**
      * Generate a unique ID for new items
      *
      * @param array $validated_item_data The validated item data
@@ -802,6 +702,30 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
                 'ruleSavedSuccess'       => __('Rule saved successfully!', 'product-estimator'),
                 'ruleDeletedSuccess'     => __('Rule deleted successfully!', 'product-estimator'),
                 'selectTargetCategory'   => __('Please select a target product category.', 'product-estimator'),
+                // Common table actions i18n
+                'cancelButtonLabel'     => __('Cancel', 'product-estimator'),
+                'confirmDelete'         => __('Are you sure you want to delete this item?', 'product-estimator'),
+                'itemAdded'             => __('Item added successfully!', 'product-estimator'),
+                'itemUpdated'           => __('Item updated successfully!', 'product-estimator'),
+                'itemDeleted'           => __('Item deleted successfully!', 'product-estimator'),
+                'errorSaving'           => __('Error saving item.', 'product-estimator'),
+                'errorDeleting'         => __('Error deleting item.', 'product-estimator'),
+                'itemSaveSuccess'       => __('Item saved successfully!', 'product-estimator'),
+                'formConfirmDelete'     => __('Are you sure you want to delete this item?', 'product-estimator'),
+                'errorSavingItem'       => __('Error saving item.', 'product-estimator'),
+                'errorDeletingItem'     => __('Error deleting item.', 'product-estimator'),
+                'editItemFormTitle'     => __('Edit Item', 'product-estimator'),
+                'addItemFormTitle'      => __('Add New Item', 'product-estimator'),
+                'saveChangesButton'     => __('Save Changes', 'product-estimator'),
+                'updateChangesButton'   => __('Update Changes', 'product-estimator'),
+                'confirmCancelEditing'  => __('You have unsaved changes. Are you sure you want to cancel?', 'product-estimator'),
+                'errorLoadingItem'      => __('Error loading item details.', 'product-estimator'),
+                'deleteButtonLabel'     => __('Delete', 'product-estimator'),
+                'editButtonLabel'       => __('Edit', 'product-estimator'),
+                'saving'                => __('Saving...', 'product-estimator'),
+                'deleting'              => __('Deleting...', 'product-estimator'),
+                'validationFailed'      => __('Please correct the errors in the form.', 'product-estimator'),
+                'fieldRequired'         => __('This field is required.', 'product-estimator'),
             ],
             'table_columns' => [
                 'source_categories' => __('Source Categories', 'product-estimator'),

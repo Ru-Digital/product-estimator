@@ -1,0 +1,20 @@
+{
+  "ignoreMatches": [
+    "@templates/*",
+    "@utils/*",
+    "@frontend/*",
+    "@admin/*",
+    "@styles/*"
+  ],
+  "ignoreDirs": [
+    "node_modules",
+    "dist",
+    "vendor"
+  ],
+  "ignorePatterns": [
+    "*.min.js"
+  ],
+  "specials": [
+    "webpack"
+  ]
+}

@@ -417,6 +417,27 @@
 
 /* Print Styles */
 @media print {
+  /* Set minimum lines for paragraph breaks */
+  p, li, tr {
+    orphans: 3; /* Minimum lines at bottom of page before break */
+    widows: 3;  /* Minimum lines at top of page after break */
+  }
+  
+  /* Avoid breaks inside these elements */
+  h1, h2, h3, h4, h5, h6, 
+  .option-group,
+  .form-group,
+  tr, 
+  .result-table thead {
+    page-break-inside: avoid;
+  }
+  
+  /* Force page breaks before these elements */
+  h1, h2, h3 {
+    page-break-before: auto;
+    page-break-after: avoid;
+  }
+  
   .product-estimator-container {
     box-shadow: none;
     padding: 0;

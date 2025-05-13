@@ -59,7 +59,7 @@
 }
 
 .pe-dialog-btn {
-  @include button-base(#f1f1f1, $text-color, #e5e5e5);
+  @include button-base($bg-lighter, $text-color, color.adjust($bg-lighter, $lightness: -5%));
   font-size: 0.9rem;
   
   &:focus {

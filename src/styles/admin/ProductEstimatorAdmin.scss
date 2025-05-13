@@ -190,6 +190,36 @@ $link-color: #0073aa;
 
 /* Print Styles */
 @media print {
+  /* Set minimum lines for paragraph breaks */
+  p, li, tr {
+    orphans: 3; /* Minimum lines at bottom of page before break */
+    widows: 3;  /* Minimum lines at top of page after break */
+  }
+  
+  /* Avoid breaks inside these elements */
+  h1, h2, h3, h4, 
+  .postbox,
+  tr, 
+  thead {
+    page-break-inside: avoid;
+  }
+  
+  /* Force page breaks before these elements */
+  h1, h2, h3 {
+    page-break-before: auto;
+    page-break-after: avoid;
+  }
+  
+  /* Ensure tables have header rows on each page */
+  thead {
+    display: table-header-group;
+  }
+  
+  /* Avoid breaks in the middle of images */
+  img {
+    page-break-inside: avoid;
+  }
+
   .nav-tab-wrapper,
   .report-filters,
   .submit {

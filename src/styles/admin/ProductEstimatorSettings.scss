@@ -4,23 +4,20 @@
  * Styles for the main settings page.
  */
 
-// Variables
-$primary-color: #2271b1;
-$border-color: #ccc;
-$error-color: #d63638;
-$input-border-color: #8c8f94;
-$highlight-color: #2271b1;
-$background-color: #fff;
-$text-color: #666;
+// Import shared variables and animations
+@use '../admin/variables' as *;
+@use '../admin/animations' as *;
+@use 'sass:color';
+
+// Additional variables needed for this module
 $placeholder-color: #757575;
-$secondary-text-color: #3c434a;
-$option-hover-color: #2271b1;
-$option-selected-color: #f0f0f1;
+$option-hover-color: $primary-color;
+$option-selected-color: $light-background;
 $disabled-color: #a0a5aa;
-$choice-background: #f0f0f1;
+$choice-background: $light-background;
 $choice-border: #c3c4c7;
-$remove-color: #ff0000;
-$clear-color: #50575e;
+$remove-color: $error-color;
+$clear-color: $secondary-text-color;
 $dropdown-shadow: rgba(0, 0, 0, 0.1);
 $spinner-color: #f3f3f3;
 
@@ -72,15 +69,11 @@ textarea.error {
     border: 2px solid $spinner-color;
     border-top: 2px solid $primary-color;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: 1s linear infinite spin;
   }
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
+// Animation keyframes now imported from _animations.scss
 
 /* Required Fields */
 .form-table th.required label::after {
@@ -187,18 +180,18 @@ textarea.error {
       float: left;
       margin-right: 4px;
       margin-top: 3px;
-      padding: 2px 18px 2px 2px !important;
+      padding: 2px 18px 2px 2px;
       line-height: 1.5;
       white-space: nowrap;
     }
 
     .select2-selection__choice__remove {
-      color: $remove-color !important;
+      color: $remove-color;
       cursor: pointer;
       display: inline-block;
-      position: relative !important;
+      position: relative;
       font-weight: bold;
-      margin-left: 0 !important;
+      margin-left: 0;
       float: none;
       vertical-align: middle;
 
@@ -226,7 +219,7 @@ textarea.error {
       padding: 0 3px;
       margin: 3px 0 2px 0;
       width: 100%;
-      min-width: 320px !important;
+      min-width: 320px;
       vertical-align: baseline;
       box-sizing: border-box;
     }
@@ -257,7 +250,7 @@ textarea.error {
 
     &--highlighted[aria-selected] {
       background-color: $option-hover-color;
-      color: white;
+      color: $background-color;
     }
 
     &--selected {
@@ -287,18 +280,18 @@ textarea.error {
 .select2-selection__choice__remove,
 .select2-container--default .select2-selection--single .select2-selection__clear,
 .select2-container--default .select2-selection--multiple .select2-selection__clear {
-  color: $remove-color !important;
+  color: $remove-color;
   cursor: pointer;
   display: inline-block;
-  position: relative !important;
+  position: relative;
   font-weight: bold;
-  margin-left: 0 !important;
+  margin-left: 0;
   float: none;
   vertical-align: middle;
 }
 
 .select2-dropdown {
-  background-color: white;
+  background-color: $background-color;
   border: 1px solid $input-border-color;
   border-top: none;
   border-radius: 0 0 3px 3px;
@@ -328,7 +321,7 @@ textarea.error {
     textarea,
     .select2-container {
       min-width: 100%;
-      width: 100% !important;
+      width: 100%;
     }
   }
 }

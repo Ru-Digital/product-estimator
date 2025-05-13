@@ -10,6 +10,24 @@
 @use 'variables' as *;
 @use 'mixins' as *;
 
+/* Animation Keyframes */
+@keyframes pe-slide-down {
+  0% { 
+    opacity: 0; 
+    transform: translateY(-10px); 
+  }
+  100% { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes pe-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Generic Table Module Container */
 .pe-admin-table-container {
   margin: 20px 0;
@@ -90,17 +108,6 @@
   }
 }
 
-@keyframes pe-slide-down {
-  0% { 
-    opacity: 0; 
-    transform: translateY(-10px); 
-  }
-  100% { 
-    opacity: 1; 
-    transform: translateY(0); 
-  }
-}
-
 /* List Table Styles */
 .pe-admin-list-table-wrapper {
   margin-top: 20px;
@@ -172,7 +179,12 @@
 
 /* "Add New" Button */
 .pe-add-new-item-button {
-  margin-bottom: 15px !important;
+  margin-bottom: 15px;
+  
+  &:hover {
+    background-color: $primary-hover-color;
+    border-color: $primary-hover-color;
+  }
 }
 
 /* "No items" Message */
@@ -192,12 +204,14 @@
 .pe-loading {
   opacity: 0.7;
   position: relative;
+  display: inline-block; /* Ensure proper display context */
   @include loading-spinner(16px, 2px);
-}
-
-@keyframes pe-spin {
-  to {
-    transform: rotate(360deg);
+  
+  &::after {
+    position: absolute; /* Ensure proper positioning of spinner */
+    top: 50%;
+    right: -24px; /* Position to the right of text */
+    margin-top: -8px; /* Half of spinner height */
   }
 }
 
@@ -214,13 +228,23 @@
   /* Responsive List Table */
   .pe-admin-list-table-wrapper {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* Better scrolling on iOS */
   }
 
   .pe-admin-list-table {
-    min-width: 600px;
+    min-width: 500px; /* Reduced from 600px for smaller devices */
+    width: 100%;
+    table-layout: fixed; /* Helps with responsive layouts */
 
     .actions {
       white-space: nowrap;
     }
+  }
+}
+
+/* Extra small devices */
+@media screen and (max-width: $breakpoint-sm) {
+  .pe-admin-list-table {
+    min-width: 450px; /* Even smaller minimum width */
   }
 }

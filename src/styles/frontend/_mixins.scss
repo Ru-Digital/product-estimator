@@ -1,0 +1,256 @@
+/**
+ * Mixins for Product Estimator frontend styles
+ *
+ * A collection of reusable patterns and components used throughout the
+ * frontend UI styles.
+ */
+@use 'sass:color';
+@use 'variables' as *;
+
+// =======================================================
+// Button Styles
+// =======================================================
+
+/// Base button style
+/// @param {Color} $bg-color - The button background color
+/// @param {Color} $text-color - The button text color
+/// @param {Color} $hover-bg-color - Background color on hover
+@mixin button-base($bg-color, $text-color, $hover-bg-color) {
+  display: inline-block;
+  padding: 8px 16px;
+  background-color: $bg-color;
+  color: $text-color;
+  border: 1px solid transparent;
+  border-radius: $border-radius;
+  font-size: $font-size-base;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: $transition-base;
+  
+  &:hover {
+    background-color: $hover-bg-color;
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba($bg-color, 0.3);
+  }
+}
+
+/// Primary button style (green)
+@mixin button-primary {
+  @include button-base($primary-color, white, $primary-hover);
+}
+
+/// Secondary button style (orange)
+@mixin button-secondary {
+  @include button-base($secondary-color, white, $secondary-hover);
+}
+
+/// Info button style (blue)
+@mixin button-info {
+  @include button-base($info-color, white, color.scale($info-color, $lightness: -10%));
+}
+
+/// Danger/error button style (red)
+@mixin button-danger {
+  @include button-base($error-color, white, color.scale($error-color, $lightness: -10%));
+}
+
+/// Ghost/outline button style
+@mixin button-ghost($color: $text-color) {
+  @include button-base(transparent, $color, rgba($color, 0.1));
+  border: 1px solid $color;
+}
+
+// =======================================================
+// Layout Components
+// =======================================================
+
+/// Card/panel container style
+/// @param {Color} $bg-color - Background color (default: white)
+/// @param {Color} $border-color - Border color (default: light border)
+@mixin card-container($bg-color: $bg-color, $border-color: $border-color) {
+  background-color: $bg-color;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  padding: $spacing-md;
+  box-shadow: $shadow-sm;
+}
+
+/// Flex container with various alignment options
+/// @param {String} $direction - flex-direction (default: row)
+/// @param {String} $justify - justify-content (default: flex-start)
+/// @param {String} $align - align-items (default: center)
+/// @param {String} $wrap - flex-wrap (default: nowrap)
+/// @param {String} $gap - gap between items (default: 0)
+@mixin flex($direction: row, $justify: flex-start, $align: center, $wrap: nowrap, $gap: 0) {
+  display: flex;
+  flex-direction: $direction;
+  justify-content: $justify;
+  align-items: $align;
+  flex-wrap: $wrap;
+  gap: $gap;
+}
+
+// =======================================================
+// Modal/Dialog Components
+// =======================================================
+
+/// Full-screen overlay backdrop
+/// @param {Color} $bg-color - Background color with opacity
+/// @param {Number} $z-index - z-index value
+@mixin overlay-backdrop($bg-color: $bg-overlay, $z-index: $z-index-overlay) {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  background-color: $bg-color;
+  z-index: $z-index;
+}
+
+/// Centered modal/dialog container
+/// @param {Number} $max-width - Maximum width of container
+/// @param {Number} $z-index - z-index value
+@mixin modal-container($max-width: 600px, $z-index: $z-index-modal) {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: $max-width;
+  max-height: 90vh;
+  background-color: $bg-color;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-lg;
+  z-index: $z-index;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/// Modal/dialog header
+/// @param {Color} $bg-color - Background color
+/// @param {Color} $border-color - Bottom border color
+@mixin modal-header($bg-color: $bg-dark, $border-color: $border-color) {
+  padding: $spacing-md $spacing-lg;
+  background-color: $bg-color;
+  border-bottom: 1px solid $border-color;
+  @include flex(row, space-between, center);
+}
+
+/// Modal/dialog footer
+/// @param {Color} $bg-color - Background color
+/// @param {Color} $border-color - Top border color
+@mixin modal-footer($bg-color: $bg-lighter, $border-color: $border-color) {
+  padding: $spacing-md $spacing-lg;
+  background-color: $bg-color;
+  border-top: 1px solid $border-color;
+  @include flex(row, flex-end, center, nowrap, $spacing-sm);
+}
+
+// =======================================================
+// Loading Indicators
+// =======================================================
+
+/// Loading spinner
+/// @param {Number} $size - Size of spinner
+/// @param {Color} $color - Color of spinner
+@mixin loading-spinner($size: 20px, $color: $primary-color) {
+  position: relative;
+  
+  &::after {
+    content: "";
+    display: block;
+    width: $size;
+    height: $size;
+    border-radius: 50%;
+    border: 2px solid rgba($color, 0.2);
+    border-top-color: $color;
+    animation: spin 1s linear infinite;
+  }
+}
+
+/// Loading text dots animation (e.g., "Loading...")
+@mixin loading-dots {
+  &::after {
+    content: "";
+    animation: loading-dots 1.5s infinite;
+  }
+}
+
+// =======================================================
+// Responsive Patterns
+// =======================================================
+
+/// Stack elements vertically on small screens
+@mixin stack-on-mobile {
+  @media screen and (max-width: $breakpoint-md) {
+    flex-direction: column;
+    align-items: flex-start;
+    
+    > * {
+      width: 100%;
+      margin-bottom: $spacing-sm;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
+
+/// Make buttons full-width on small screens
+@mixin full-width-buttons-on-mobile {
+  @media screen and (max-width: $breakpoint-md) {
+    display: block;
+    width: 100%;
+  }
+}
+
+/// Hide elements on small screens
+@mixin hide-on-mobile {
+  @media screen and (max-width: $breakpoint-md) {
+    display: none;
+  }
+}
+
+// =======================================================
+// Typography Patterns
+// =======================================================
+
+/// Truncate text with ellipsis
+/// @param {Number} $lines - Number of lines to display
+@mixin truncate-text($lines: 1) {
+  @if $lines == 1 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  } @else {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/// Section heading style
+/// @param {String} $size - Size variant (small, medium, large)
+/// @param {Color} $color - Text color
+@mixin section-heading($size: medium, $color: $text-color) {
+  margin: 0 0 $spacing-md;
+  font-weight: 600;
+  color: $color;
+  
+  @if $size == small {
+    font-size: $font-size-base;
+  } @else if $size == large {
+    font-size: $font-size-xlarge;
+  } @else {
+    font-size: $font-size-large;
+  }
+}

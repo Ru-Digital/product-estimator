@@ -1,0 +1,284 @@
+/**
+ * Utility classes for Product Estimator frontend styles
+ *
+ * A collection of helper classes that can be used directly in HTML.
+ */
+@use 'sass:color';
+@use 'variables' as *;
+@use 'mixins' as *;
+@use 'animations';
+
+// =======================================================
+// Display utilities
+// =======================================================
+
+.pe-hidden {
+  display: none !important;
+}
+
+.pe-visible {
+  display: block !important;
+}
+
+.pe-invisible {
+  visibility: hidden !important;
+}
+
+// =======================================================
+// Flex utilities
+// =======================================================
+
+.pe-flex {
+  display: flex !important;
+}
+
+.pe-flex-column {
+  flex-direction: column !important;
+}
+
+.pe-flex-center {
+  @include flex(row, center, center);
+}
+
+.pe-flex-between {
+  @include flex(row, space-between, center);
+}
+
+.pe-flex-start {
+  @include flex(row, flex-start, center);
+}
+
+.pe-flex-end {
+  @include flex(row, flex-end, center);
+}
+
+.pe-flex-wrap {
+  flex-wrap: wrap !important;
+}
+
+// =======================================================
+// Spacing utilities
+// =======================================================
+
+// Margin utilities
+.pe-mt-0 { margin-top: 0 !important; }
+.pe-mt-xs { margin-top: $spacing-xs !important; }
+.pe-mt-sm { margin-top: $spacing-sm !important; }
+.pe-mt-md { margin-top: $spacing-md !important; }
+.pe-mt-lg { margin-top: $spacing-lg !important; }
+.pe-mt-xl { margin-top: $spacing-xl !important; }
+
+.pe-mb-0 { margin-bottom: 0 !important; }
+.pe-mb-xs { margin-bottom: $spacing-xs !important; }
+.pe-mb-sm { margin-bottom: $spacing-sm !important; }
+.pe-mb-md { margin-bottom: $spacing-md !important; }
+.pe-mb-lg { margin-bottom: $spacing-lg !important; }
+.pe-mb-xl { margin-bottom: $spacing-xl !important; }
+
+// Padding utilities
+.pe-p-0 { padding: 0 !important; }
+.pe-p-xs { padding: $spacing-xs !important; }
+.pe-p-sm { padding: $spacing-sm !important; }
+.pe-p-md { padding: $spacing-md !important; }
+.pe-p-lg { padding: $spacing-lg !important; }
+.pe-p-xl { padding: $spacing-xl !important; }
+
+// =======================================================
+// Text utilities
+// =======================================================
+
+.pe-text-center {
+  text-align: center !important;
+}
+
+.pe-text-left {
+  text-align: left !important;
+}
+
+.pe-text-right {
+  text-align: right !important;
+}
+
+.pe-text-bold {
+  font-weight: 600 !important;
+}
+
+.pe-text-normal {
+  font-weight: 400 !important;
+}
+
+.pe-text-small {
+  font-size: $font-size-small !important;
+}
+
+.pe-text-large {
+  font-size: $font-size-large !important;
+}
+
+.pe-text-xl {
+  font-size: $font-size-xlarge !important;
+}
+
+.pe-text-primary {
+  color: $primary-color !important;
+}
+
+.pe-text-secondary {
+  color: $secondary-color !important;
+}
+
+.pe-text-dark {
+  color: $text-color !important;
+}
+
+.pe-text-light {
+  color: $text-light !important;
+}
+
+.pe-text-lighter {
+  color: $text-lighter !important;
+}
+
+.pe-text-error {
+  color: $error-color !important;
+}
+
+.pe-text-success {
+  color: $success-color !important;
+}
+
+.pe-text-truncate {
+  @include truncate-text(1);
+}
+
+// =======================================================
+// Border utilities
+// =======================================================
+
+.pe-border {
+  border: 1px solid $border-color !important;
+}
+
+.pe-border-top {
+  border-top: 1px solid $border-color !important;
+}
+
+.pe-border-bottom {
+  border-bottom: 1px solid $border-color !important;
+}
+
+.pe-border-dashed {
+  border-style: dashed !important;
+}
+
+.pe-rounded {
+  border-radius: $border-radius !important;
+}
+
+.pe-rounded-lg {
+  border-radius: $border-radius-lg !important;
+}
+
+// =======================================================
+// Background utilities
+// =======================================================
+
+.pe-bg-white {
+  background-color: $bg-color !important;
+}
+
+.pe-bg-light {
+  background-color: $bg-light !important;
+}
+
+.pe-bg-lighter {
+  background-color: $bg-lighter !important;
+}
+
+.pe-bg-primary {
+  background-color: $primary-color !important;
+  color: white !important;
+}
+
+.pe-bg-secondary {
+  background-color: $secondary-color !important;
+  color: white !important;
+}
+
+// =======================================================
+// State utilities
+// =======================================================
+
+.pe-loading {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.pe-loading-dots {
+  @include loading-dots;
+}
+
+.pe-loading-spinner {
+  @include loading-spinner;
+}
+
+.pe-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+// =======================================================
+// Animation utilities
+// =======================================================
+
+.pe-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.pe-fade-out {
+  animation: fade-out 0.3s ease-out;
+}
+
+.pe-slide-down {
+  animation: slide-down 0.3s ease-out;
+}
+
+.pe-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.pe-pulse {
+  animation: pulse 2s infinite;
+}
+
+// =======================================================
+// Responsive utilities
+// =======================================================
+
+.pe-hide-sm {
+  @media screen and (max-width: $breakpoint-sm) {
+    display: none !important;
+  }
+}
+
+.pe-hide-md {
+  @media screen and (max-width: $breakpoint-md) {
+    display: none !important;
+  }
+}
+
+.pe-show-sm {
+  display: none !important;
+  @media screen and (max-width: $breakpoint-sm) {
+    display: block !important;
+  }
+}
+
+.pe-show-md {
+  display: none !important;
+  @media screen and (max-width: $breakpoint-md) {
+    display: block !important;
+  }
+}

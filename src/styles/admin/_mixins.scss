@@ -30,7 +30,7 @@
     width: $size;
     height: $size;
     margin-left: 8px;
-    border: $border-width solid #f3f3f3;
+    border: $border-width solid $light-background; // Using variable instead of #f3f3f3
     border-top-color: $primary-color;
     border-radius: 50%;
     animation: pe-spin 0.8s linear infinite;
@@ -76,21 +76,35 @@
     input[type="password"],
     .select2-container {
       max-width: 100%;
-      width: 100% !important;
+      width: 100%; /* Removed !important */
     }
   }
 }
 
 // Button group responsive adjustments
-@mixin responsive-button-group {
-  flex-direction: column;
+@mixin responsive-button-group($direction: column, $full-width: true, $spacing: 10px) {
+  flex-direction: $direction;
   
-  button {
-    width: 100%;
-    margin-bottom: 10px;
+  button, 
+  .button, 
+  input[type="button"], 
+  input[type="submit"] {
+    @if $full-width {
+      width: 100%;
+    }
     
-    &:last-child {
-      margin-bottom: 0;
+    @if $direction == column {
+      margin-bottom: $spacing;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    } @else {
+      margin-right: $spacing;
+      
+      &:last-child {
+        margin-right: 0;
+      }
     }
   }
 }
@@ -137,5 +151,11 @@
   &:hover {
     background: $light-background;
     border-color: $input-border-color;
+  }
+  
+  &:focus {
+    box-shadow: 0 0 0 1px white, 0 0 0 3px $secondary-color;
+    outline: none;
+    border-color: $secondary-color;
   }
 }

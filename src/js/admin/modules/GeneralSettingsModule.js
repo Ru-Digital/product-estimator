@@ -115,8 +115,16 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
         <div class="file-preview">
           <span class="file-icon dashicons dashicons-pdf"></span>
           <div class="file-details">
-            <span class="file-name"><a href="${attachment.url}" target="_blank">${attachment.filename}</a></span>
-            <span class="file-meta">${this._formatFileSize(attachment.filesizeInBytes || 0)} - PDF Document</span>
+            <span class="file-name">
+              <a href="${attachment.url}" target="_blank" title="Click to view file">
+                ${attachment.filename}
+              </a>
+            </span>
+            <span class="file-meta">
+              <span class="file-size">${this._formatFileSize(attachment.filesizeInBytes || 0)}</span>
+              <span class="file-type">PDF Document</span>
+              <span class="file-uploaded">Just uploaded</span>
+            </span>
           </div>
         </div>
       `);

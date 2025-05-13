@@ -12,8 +12,7 @@
     "lint:scss": "stylelint 'src/styles/**/*.scss'",
     "lint": "npm run lint:js && npm run lint:scss",
     "lint:fix": "npm run lint:js -- --fix && npm run lint:scss -- --fix",
-    "lint:build": "npm run lint > lint-report.txt || (echo 'Linting issues found. See lint-report.txt' && exit 0)",
-    "prepare": "husky install"
+    "lint:build": "npm run lint > lint-report.txt || (echo 'Linting issues found. See lint-report.txt' && exit 0)"
   },
   "repository": {
     "type": "git",
@@ -46,7 +45,6 @@
     "eslint-plugin-jsdoc": "^48.3.0",
     "file-loader": "^6.2.0",
     "html-loader": "^5.1.0",
-    "husky": "^8.0.3",
     "postcss": "^8.4.37",
     "prettier": "^3.1.1",
     "sass": "^1.75.0",

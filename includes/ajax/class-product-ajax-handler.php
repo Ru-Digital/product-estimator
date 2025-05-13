@@ -1,0 +1,647 @@
+<?php
+namespace RuDigital\ProductEstimator\Includes\Ajax;
+
+use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
+
+/**
+ * Product-related AJAX handlers
+ */
+class ProductAjaxHandler extends AjaxHandlerBase {
+    use EstimateDbHandler;
+
+    /**
+     * Register WordPress hooks for AJAX endpoints
+     *
+     * @return void
+     */
+    protected function register_hooks() {
+        $this->register_ajax_endpoint('get_variation_estimator', 'getVariationEstimator');
+        $this->register_ajax_endpoint('search_category_products', 'ajaxSearchCategoryProducts');
+        $this->register_ajax_endpoint('get_category_products', 'get_category_products');
+        $this->register_ajax_endpoint('get_product_data_for_storage', 'get_product_data_for_storage');
+    }
+
+    public function getVariationEstimator() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get variation ID
+        $variation_id = isset($_POST['variation_id']) ? intval($_POST['variation_id']) : 0;
+
+        if (!$variation_id) {
+            wp_send_json_error([
+                'message' => __('Variation ID is required', 'product-estimator')
+            ]);
+            return;
+        }
+
+        try {
+            // Get variation
+            $variation = wc_get_product($variation_id);
+
+            if (!$variation || !$variation->is_type('variation')) {
+                throw new \Exception(__('Invalid variation', 'product-estimator'));
+            }
+
+            // Check if estimator is enabled for this variation
+            if (!\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation_id)) {
+                throw new \Exception(__('Estimator not enabled for this variation', 'product-estimator'));
+            }
+
+            // Get parent product ID
+            $parent_id = $variation->get_parent_id();
+
+            // Start output buffer to capture estimator HTML
+            ob_start();
+
+            // Include the estimator partial with variation context
+            $atts = [
+                'title' => __('Product Estimate', 'product-estimator'),
+                'button_text' => __('Calculate', 'product-estimator'),
+                'product_id' => $variation_id,
+                'parent_id' => $parent_id,
+                'is_variation' => true
+            ];
+            include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-display.php';
+
+            // Get HTML
+            $html = ob_get_clean();
+
+            wp_send_json_success([
+                'html' => $html
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * AJAX handler for searching products within a category
+     */
+    public function ajaxSearchCategoryProducts()
+    {
+        // Check nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_product_additions_nonce')) {
+            wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
+            return;
+        }
+
+        // Check permissions
+        if (!current_user_can('manage_product_terms')) {
+            wp_send_json_error(array('message' => __('You do not have permission to perform this action.', 'product-estimator')));
+            return;
+        }
+
+        // Get search parameters
+        $search_term = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
+        $category_id = isset($_POST['category']) ? absint($_POST['category']) : 0;
+
+        if (empty($search_term) || empty($category_id)) {
+            wp_send_json_error(array('message' => __('Invalid search parameters.', 'product-estimator')));
+            return;
+        }
+
+        try {
+            // Query products
+            $args = array(
+                'post_type' => 'product',
+                'post_status' => 'publish',
+                'posts_per_page' => 20,
+                's' => $search_term,
+                'tax_query' => array(
+                    array(
+                        'taxonomy' => 'product_cat',
+                        'field' => 'term_id',
+                        'terms' => $category_id,
+                    ),
+                ),
+            );
+
+            $query = new \WP_Query($args);
+            $products = array();
+
+            if ($query->have_posts()) {
+                while ($query->have_posts()) {
+                    $query->the_post();
+                    $product_id = get_the_ID();
+                    $product = wc_get_product($product_id);
+
+                    if ($product) {
+                        $products[] = array(
+                            'id' => $product_id,
+                            'name' => $product->get_name(),
+                            'price' => $product->get_price(),
+                            'formatted_price' => wc_price($product->get_price()),
+                        );
+                    }
+                }
+                wp_reset_postdata();
+            }
+
+            wp_send_json_success(array(
+                'products' => $products,
+            ));
+        } catch (\Exception $e) {
+            wp_send_json_error(array(
+                'message' => __('Error searching products:', 'product-estimator') . ' ' . $e->getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Get products from specified categories
+     */
+    public function get_category_products() {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        // Get category IDs
+        $category_ids = isset($_POST['categories']) ? sanitize_text_field($_POST['categories']) : '';
+
+        if (empty($category_ids)) {
+            wp_send_json_error([
+                'message' => __('Category IDs are required', 'product-estimator')
+            ]);
+            return;
+        }
+
+        // Convert comma-separated string to array
+        $categories = explode(',', $category_ids);
+        $categories = array_map('intval', $categories);
+
+        // Query products in these categories
+        $args = [
+            'post_type' => 'product',
+            'post_status' => 'publish',
+            'posts_per_page' => 50, // Limit to 50 products for performance
+            'tax_query' => [
+                [
+                    'taxonomy' => 'product_cat',
+                    'field' => 'term_id',
+                    'terms' => $categories,
+                    'operator' => 'IN'
+                ]
+            ],
+            'fields' => 'ids' // Only get post IDs for efficiency
+        ];
+
+        $product_query = new \WP_Query($args);
+        $products = [];
+
+        if ($product_query->have_posts()) {
+            foreach ($product_query->posts as $product_id) {
+                $product = wc_get_product($product_id);
+
+                if ($product) {
+                    // Only include products with estimator enabled
+                    if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($product_id)) {
+                        $products[] = [
+                            'id' => $product_id,
+                            'name' => $product->get_name(),
+                            'price' => $product->get_price(),
+                            'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
+                        ];
+                    }
+                }
+            }
+        }
+
+        wp_send_json_success([
+            'products' => $products
+        ]);
+    }
+
+    /**
+     * AJAX handler to get comprehensive product data for local storage.
+     * Ensures room_suggested_products is a numerically indexed array.
+     *
+     * @since 1.0.0
+     */
+    public function get_product_data_for_storage()
+    {
+        // Verify nonce
+        check_ajax_referer('product_estimator_nonce', 'nonce');
+
+        $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+
+        // Ensure 'null' string from JS is converted to actual null for PHP
+        $room_width_raw = $_POST['room_width'] ?? null;
+        $room_length_raw = $_POST['room_length'] ?? null;
+
+        $room_width = ($room_width_raw === 'null' || $room_width_raw === null) ? null : floatval($room_width_raw);
+        $room_length = ($room_length_raw === 'null' || $room_length_raw === null) ? null : floatval($room_length_raw);
+
+        // --- Parsing block for room_products ---
+        $room_products_input = $_POST['room_products'] ?? '';
+        $room_products_ids_for_suggestions = [];
+
+        if (is_string($room_products_input) && $room_products_input !== '') {
+            $ids_from_string = explode(',', $room_products_input);
+            $temp_ids = [];
+            foreach ($ids_from_string as $id_str) {
+                $trimmed_id_str = trim($id_str);
+                if (ctype_digit($trimmed_id_str)) {
+                    $id_val = intval($trimmed_id_str);
+                    if ($id_val > 0) {
+                        $temp_ids[] = $id_val;
+                    }
+                }
+            }
+            if (!empty($temp_ids)) {
+                $room_products_ids_for_suggestions = array_values(array_unique($temp_ids));
+            }
+        }
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('AJAX get_product_data_for_storage: Raw room_products_input from POST: \'' . ($_POST['room_products'] ?? 'not set') . '\'');
+            error_log('AJAX get_product_data_for_storage: Processed $room_products_ids_for_suggestions (array of IDs): ' . print_r($room_products_ids_for_suggestions, true));
+        }
+        // --- End of parsing block ---
+
+
+        if (!$product_id) {
+            wp_send_json_error(['message' => __('Product ID is required', 'product-estimator')]);
+            return;
+        }
+
+        try {
+            $product = wc_get_product($product_id);
+            if (!$product) {
+                wp_send_json_error(['message' => __('Product not found', 'product-estimator')]);
+                return;
+            }
+
+            $room_area = 0;
+            if ($room_width !== null && $room_length !== null && is_numeric($room_width) && is_numeric($room_length)) {
+                $room_area = floatval($room_width) * floatval($room_length);
+            }
+
+            if (!function_exists('product_estimator_get_product_price')) {
+                $helper_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/helpers.php';
+                if (file_exists($helper_path)) {
+                    require_once $helper_path;
+                    if (!function_exists('product_estimator_get_product_price')) {
+                        wp_send_json_error(['message' => __('Pricing helper function not available after include attempt.', 'product-estimator')]);
+                        return;
+                    }
+                } else {
+                    wp_send_json_error(['message' => __('Pricing helper file not found.', 'product-estimator')]);
+                    return;
+                }
+            }
+            $pricing_data = product_estimator_get_product_price($product_id, $room_area, false);
+
+            $product_data = [
+                'id' => $product_id,
+                'name' => $product->get_name(),
+                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
+                'min_price' => $pricing_data['min_price'],
+                'max_price' => $pricing_data['max_price'],
+                'pricing_method' => $pricing_data['pricing_method'],
+                'pricing_source' => $pricing_data['pricing_source'],
+                'room_area' => $room_area,
+                'additional_products' => [],
+                'additional_notes' => [],
+                'min_price_total' => 0,
+                'max_price_total' => 0,
+                'similar_products' => [],
+                'room_suggested_products' => [] // Initialize as empty array
+            ];
+
+            if ($pricing_data['pricing_method'] === 'sqm' && $room_area > 0) {
+                $product_data['min_price_total'] = $pricing_data['min_price'] * $room_area;
+                $product_data['max_price_total'] = $pricing_data['max_price'] * $room_area;
+            } else {
+                $product_data['min_price_total'] = $pricing_data['min_price'];
+                $product_data['max_price_total'] = $pricing_data['max_price'];
+            }
+
+            $product_id_for_categories = $product->is_type('variation') ? $product->get_parent_id() : $product_id;
+            $product_categories = wp_get_post_terms($product_id_for_categories, 'product_cat', array('fields' => 'ids'));
+            if (is_wp_error($product_categories)) {
+                $product_categories = [];
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('AJAX get_product_data_for_storage: Error fetching product categories: ' . $product_categories->get_error_message());
+                }
+            }
+
+            $fqcn_pa = '\\RuDigital\\ProductEstimator\\Includes\\Frontend\\ProductAdditionsFrontend';
+            $product_additions_frontend_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-product-additions-frontend.php';
+            $product_additions_manager = null;
+
+            if (!class_exists($fqcn_pa)) {
+                if (file_exists($product_additions_frontend_path)) {
+                    require_once $product_additions_frontend_path;
+                }
+            }
+
+            if (class_exists($fqcn_pa)) {
+                try {
+                    if (!defined('PRODUCT_ESTIMATOR_VERSION')) {
+                        if (function_exists('get_plugin_data') && file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'product-estimator.php')) {
+                            $plugin_data = get_plugin_data(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'product-estimator.php');
+                            define('PRODUCT_ESTIMATOR_VERSION', $plugin_data['Version'] ?? '1.0.0');
+                        } else {
+                            define('PRODUCT_ESTIMATOR_VERSION', '1.0.0');
+                        }
+                    }
+                    $product_additions_manager = new $fqcn_pa('product-estimator', PRODUCT_ESTIMATOR_VERSION);
+                } catch (\Throwable $e) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('AJAX Handler FATAL: Failed to instantiate ' . $fqcn_pa . '. Error: ' . $e->getMessage());
+                    }
+                    $product_additions_manager = null;
+                }
+            }
+
+            if ($product_additions_manager instanceof $fqcn_pa) {
+                // Auto-add products and notes logic...
+                $auto_add_products_ids = [];
+                $auto_add_notes_texts = [];
+
+                if (is_array($product_categories)) {
+                    foreach ($product_categories as $category_id) {
+                        $cat_auto_add_prods = $product_additions_manager->get_auto_add_products_for_category($category_id);
+                        if (!empty($cat_auto_add_prods)) {
+                            $auto_add_products_ids = array_merge($auto_add_products_ids, $cat_auto_add_prods);
+                        }
+                        $cat_auto_add_notes = $product_additions_manager->get_auto_add_notes_for_category($category_id);
+                        if (!empty($cat_auto_add_notes)) {
+                            $auto_add_notes_texts = array_merge($auto_add_notes_texts, $cat_auto_add_notes);
+                        }
+                    }
+                }
+                $auto_add_products_ids = array_values(array_unique($auto_add_products_ids)); // Ensure unique and re-indexed
+                $auto_add_notes_texts = array_values(array_unique($auto_add_notes_texts));   // Ensure unique and re-indexed
+
+                foreach ($auto_add_products_ids as $related_product_id) {
+                    if ($related_product_id == $product_id) continue;
+                    $related_product_obj = wc_get_product($related_product_id);
+                    if ($related_product_obj) {
+                        $related_pricing_data = product_estimator_get_product_price($related_product_id, $room_area, false);
+                        $additional_product_entry = [
+                            'id' => $related_product_id,
+                            'name' => $related_product_obj->get_name(),
+                            'image' => wp_get_attachment_image_url($related_product_obj->get_image_id(), 'thumbnail'),
+                            'min_price' => $related_pricing_data['min_price'],
+                            'max_price' => $related_pricing_data['max_price'],
+                            'pricing_method' => $related_pricing_data['pricing_method'],
+                            'min_price_total' => ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $related_pricing_data['min_price'] * $room_area : $related_pricing_data['min_price'],
+                            'max_price_total' => ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $related_pricing_data['max_price'] * $room_area : $related_pricing_data['max_price'],
+                        ];
+                        $product_data['additional_products'][] = $additional_product_entry;
+                    }
+                }
+                foreach ($auto_add_notes_texts as $note_text) {
+                    $product_data['additional_notes'][] = ['id' => 'note_' . uniqid(), 'type' => 'note', 'note_text' => $note_text];
+                }
+
+                // Generate room suggestions.
+                // $room_products_ids_for_suggestions is already an array of product IDs.
+                // Format it for get_suggestions_for_room which expects an array of items, each with an 'id' key.
+
+                $features = product_estimator_features(); // Get feature flags
+
+                if ($features->suggested_products_enabled) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('AJAX get_product_data_for_storage: Suggested products ENABLED. Generating suggestions.');
+                    }
+                    // Format $room_products_ids_for_suggestions_context for get_suggestions_for_room
+                    // which expects an array of items, each with an 'id' key.
+                    $current_room_contents_for_suggestions_formatted = [];
+                    foreach ($room_products_ids_for_suggestions as $pid) {
+                        $current_room_contents_for_suggestions_formatted[] = ['id' => intval($pid)];
+                    }
+
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('AJAX get_product_data_for_storage: Calling get_suggestions_for_room with formatted items: ' . print_r($current_room_contents_for_suggestions_formatted, true) . ' for room_area ' . $room_area);
+                    }
+
+                    $raw_suggestions = $product_additions_manager->get_suggestions_for_room($current_room_contents_for_suggestions_formatted, $room_area);
+
+                    if (is_array($raw_suggestions)) {
+                        // Ensure the suggestions are a numerically indexed array for JSON
+                        $product_data['room_suggested_products'] = array_values($raw_suggestions);
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log('AJAX get_product_data_for_storage: Suggestions returned (and re-indexed): ' . print_r($product_data['room_suggested_products'], true));
+                        }
+                    } else {
+                        // If $raw_suggestions is not an array, default to an empty array.
+                        $product_data['room_suggested_products'] = [];
+                        if (defined('WP_DEBUG') && WP_DEBUG) {
+                            error_log('AJAX get_product_data_for_storage: get_suggestions_for_room did not return an array. Value: ' . print_r($raw_suggestions, true) . '. Defaulting to empty array for room_suggested_products.');
+                        }
+                    }
+                } else {
+                    // If suggested_products_enabled is false, ensure room_suggested_products is an empty array.
+                    $product_data['room_suggested_products'] = [];
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('AJAX get_product_data_for_storage: Suggested products DISABLED. Setting room_suggested_products to empty array.');
+                    }
+                }
+                // **END MODIFIED PART**
+
+            } else {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('AJAX Handler Warning: ProductAdditionsFrontend manager is NOT available. Auto-add products and suggestions will be skipped.');
+                }
+                $product_data['room_suggested_products'] = []; // Ensure it's an empty array if manager is not available
+            }
+
+            $similar_products_list = $this->fetch_and_format_similar_products($product_id, $room_area);
+            $product_data['similar_products'] = $similar_products_list;
+
+            wp_send_json_success([
+                'message' => __('Product data retrieved successfully', 'product-estimator'),
+                'product_data' => $product_data
+            ]);
+
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Exception in get_product_data_for_storage: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+                error_log('Trace: ' . $e->getTraceAsString());
+            }
+            wp_send_json_error([
+                'message' => __('An error occurred while retrieving product data', 'product-estimator'),
+                'error_detail' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get the appropriate pricing rule for a product
+     *
+     * @param int $product_id The product ID
+     * @return array The pricing rule with 'method' and 'source' keys, or default values
+     */
+    private function getPricingRuleForProduct($product_id)
+    {
+        // Get global settings
+        $settings = get_option('product_estimator_settings');
+
+        // Use defaults from settings if available, otherwise fall back to hardcoded defaults
+        $default_rule = [
+            'method' => isset($settings['default_pricing_method']) ? $settings['default_pricing_method'] : 'sqm',
+            'source' => isset($settings['default_pricing_source']) ? $settings['default_pricing_source'] : 'website'
+        ];
+
+        // Return default rule if WooCommerce is not active or product ID is invalid
+        if (!function_exists('wp_get_post_terms') || empty($product_id)) {
+            return $default_rule;
+        }
+        // Check if product is a variation and get parent if needed
+        $product = wc_get_product($product_id);
+        $parent_product_id = null;
+
+        if ($product && $product->is_type('variation')) {
+            $parent_product_id = $product->get_parent_id();
+        }
+
+        // Get product categories
+        if ($parent_product_id) {
+            $product_categories = wp_get_post_terms($parent_product_id, 'product_cat', ['fields' => 'ids']);
+        } else {
+            $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+        }
+
+        if (empty($product_categories) || is_wp_error($product_categories)) {
+            return $default_rule;
+        }
+
+        // Get all pricing rules
+        $pricing_rules = get_option('product_estimator_pricing_rules', []);
+
+        if (empty($pricing_rules)) {
+            return $default_rule;
+        }
+
+        // Check each rule to find one that applies to this product's categories
+        foreach ($pricing_rules as $rule) {
+            if (!isset($rule['categories']) || !is_array($rule['categories'])) {
+                continue;
+            }
+
+            // Check if any of this product's categories match the rule's categories
+            $matching_categories = array_intersect($product_categories, $rule['categories']);
+
+            if (!empty($matching_categories)) {
+                // Found a matching rule, return its method and source
+                return [
+                    'method' => isset($rule['pricing_method']) ? $rule['pricing_method'] : $default_rule['method'],
+                    'source' => isset($rule['pricing_source']) ? $rule['pricing_source'] : $default_rule['source']
+                ];
+            }
+        }
+
+        // No matching rule found, return default
+        return $default_rule;
+    }
+
+    /**
+     * Get pricing method for a product based on pricing rules
+     *
+     * @param int $product_id The product ID
+     * @return string The pricing method ('sqm' or 'fixed')
+     */
+    private function getPricingMethodForProduct($product_id)
+    {
+        // Get settings
+        $settings = get_option('product_estimator_settings');
+
+        // Default to setting from options, or 'sqm' if not set
+        $default_method = isset($settings['default_pricing_method']) ? $settings['default_pricing_method'] : 'sqm';
+
+        // Get product categories
+        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+
+        if (empty($product_categories)) {
+            return $default_method;
+        }
+
+        // Get all pricing rules
+        $pricing_rules = get_option('product_estimator_pricing_rules', []);
+
+        if (empty($pricing_rules)) {
+            return $default_method;
+        }
+
+        // Check each rule for matching categories
+        foreach ($pricing_rules as $rule) {
+            if (!isset($rule['categories']) || !is_array($rule['categories'])) {
+                continue;
+            }
+
+            // Check if this product's categories match any in the rule
+            $matching_categories = array_intersect($product_categories, $rule['categories']);
+
+            if (!empty($matching_categories)) {
+                // Found a matching rule, return its method
+                return isset($rule['pricing_method']) ? $rule['pricing_method'] : $default_method;
+            }
+        }
+
+        return $default_method;
+    }
+
+    /**
+     * Helper method to prepare additional product data for replacement
+     * Enhanced to maintain consistent product ID references for multiple replacements
+     *
+     * @param int $product_id Product ID
+     * @param float $room_area Room area
+     * @param int|null $original_id Original product ID to maintain reference consistency
+     * @return array|false Product data array or false on failure
+     */
+    private function prepareAdditionalProductData($product_id, $room_area, $original_id = null)
+    {
+        try {
+            // Get product data
+            $product = wc_get_product($product_id);
+            if (!$product) {
+                return false;
+            }
+
+            // Get pricing data
+            $pricing_data = product_estimator_get_product_price($product_id, $room_area, false);
+
+            // Prepare product data
+            $product_data = [
+                'id' => $product_id,
+                'name' => $product->get_name(),
+                'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail'),
+                'min_price' => $pricing_data['min_price'],
+                'max_price' => $pricing_data['max_price'],
+                'pricing_method' => $pricing_data['pricing_method'],
+                'pricing_source' => $pricing_data['pricing_source']
+            ];
+
+            // If an original ID was provided, store it for reference consistency
+            // This is crucial for maintaining multiple upgrades
+            if ($original_id) {
+                $product_data['original_id'] = $original_id;
+            }
+
+            // Calculate price totals
+            if ($pricing_data['pricing_method'] === 'sqm' && $room_area > 0) {
+                $min_total = $pricing_data['min_price'] * $room_area;
+                $max_total = $pricing_data['max_price'] * $room_area;
+
+                $product_data['min_price_total'] = $min_total;
+                $product_data['max_price_total'] = $max_total;
+            } else {
+                $product_data['min_price_total'] = $pricing_data['min_price'];
+                $product_data['max_price_total'] = $pricing_data['max_price'];
+            }
+
+            return $product_data;
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Error preparing additional product data: ' . $e->getMessage());
+            }
+            return false;
+        }
+    }
+}

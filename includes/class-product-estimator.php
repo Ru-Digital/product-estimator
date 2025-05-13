@@ -4,7 +4,6 @@ namespace RuDigital\ProductEstimator;
 use RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend;
 use RuDigital\ProductEstimator\Includes\Integration\NetsuiteIntegration;
 use RuDigital\ProductEstimator\Includes\PDFRouteHandler;
-use RuDigital\ProductEstimator\Includes\SessionHandler;
 use RuDigital\ProductEstimator\Includes\AjaxHandler;
 use RuDigital\ProductEstimator\Includes\Frontend\ScriptHandler;
 use RuDigital\ProductEstimator\Includes\Frontend\Shortcodes;
@@ -334,7 +333,7 @@ class ProductEstimator {
             } else {
                 error_log("Product Estimator Error: ProductEstimatorAdmin class file not found at: " . $product_estimator_admin_path);
             }
-        }-
+        }
 
         // Set up conditional features after the query is parsed
         add_action('wp', array($this, 'setupConditionalFeatures'));

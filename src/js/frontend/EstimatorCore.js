@@ -8,7 +8,7 @@
 import { createLogger, closeMainPluginLogGroup } from '@utils'; // Make sure closeMainPluginLogGroup is imported
 
 import DataService from './DataService';
-import ModalManager from './ModalManager';
+import ModalManager from './managers/ModalManager';
 import VariationHandler from './VariationHandler';
 import CustomerDetailsManager from './CustomerDetailsManager';
 

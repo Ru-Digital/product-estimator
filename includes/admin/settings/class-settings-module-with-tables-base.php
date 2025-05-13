@@ -760,7 +760,7 @@ abstract class SettingsModuleWithTableBase extends SettingsModuleWithVerticalTab
                 'formContainer'      => '.pe-admin-table-form-container',
                 'form'               => '.pe-item-management-form',
                 'formTitle'          => '.pe-form-title',
-                'idInput'            => 'input[name="item_id"]', // Assuming 'item_id' is the name of your hidden ID field
+                'idInput'            => '.pe-item-id-input', // Using the class instead of name since we now use unique names
                 'saveButton'         => '.pe-save-item-button',
                 'cancelButton'       => '.pe-cancel-form-button',
                 'addButton'          => '.pe-add-new-item-button',

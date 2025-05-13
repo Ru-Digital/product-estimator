@@ -352,4 +352,27 @@ class SettingsManager {
     public function get_module($tab_id) {
         return isset($this->modules[$tab_id]) ? $this->modules[$tab_id] : null;
     }
+
+    /**
+     * Output WordPress settings fields with a unique nonce ID.
+     * This method modifies the standard settings_fields() function to prevent duplicate IDs.
+     *
+     * @since    1.3.0
+     * @access   public
+     * @param    string    $option_group    The option group name.
+     * @param    string    $unique_suffix   A unique suffix to add to the nonce ID.
+     * @return   void
+     */
+    public function settings_fields_unique($option_group, $unique_suffix) {
+        // Capture the output of settings_fields
+        ob_start();
+        settings_fields($option_group);
+        $settings_fields = ob_get_clean();
+        
+        // Add unique ID to _wpnonce field
+        $settings_fields = str_replace('id="_wpnonce"', 'id="_wpnonce_' . esc_attr($unique_suffix) . '"', $settings_fields);
+        
+        // Output the modified fields
+        echo $settings_fields;
+    }
 }

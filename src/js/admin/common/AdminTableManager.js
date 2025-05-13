@@ -182,10 +182,17 @@ class AdminTableManager extends VerticalTabbedModule {
     if (this.$container && this.$container.length) {
       for (const key in this.settings.selectors) {
         if (Object.prototype.hasOwnProperty.call(this.settings.selectors, key)) {
-          this.dom[key] = this.$container.find(this.settings.selectors[key]);
+          // Special handling for idInput to only select the one in our form
+          if (key === 'idInput') {
+            // Find the hidden item_id input within this specific form
+            this.dom[key] = this.$container.find(this.settings.selectors.form).find(this.settings.selectors[key]);
+          } else {
+            this.dom[key] = this.$container.find(this.settings.selectors[key]);
+          }
         }
       }
     } else {
+      this.logger.warn('Container not found for DOM caching');
     }
   }
 
@@ -270,7 +277,11 @@ class AdminTableManager extends VerticalTabbedModule {
 
     if (this.dom.idInput && this.dom.idInput.length) {
       this.dom.idInput.val(this.currentItemId);
+      
+      // Set data attribute to track that we've set the ID (for debugging purposes)
+      this.dom.idInput.attr('data-item-set', 'true');
     } else {
+      this.logger.warn('Could not find idInput field to set ID. Check DOM selectors.');
     }
 
     this.dom.formTitle?.text(this.settings.i18n.editItemFormTitle || `Edit Item #${itemId}`);
@@ -393,16 +404,36 @@ class AdminTableManager extends VerticalTabbedModule {
     formFields.forEach(field => {
       const fieldName = field.name;
       const fieldValue = field.value;
-      if (fieldName.endsWith('[]')) {
-        const actualName = fieldName.slice(0, -2);
+      
+      // Find the field element
+      const $fieldElement = this.dom.form.find(`[name="${fieldName}"]`);
+      
+      // Check for renamed item_id field (which now has a suffix)
+      const originalName = $fieldElement.data('original-name');
+      
+      // Don't include the item_id field from the form data
+      // We'll use this.currentItemId for edit mode instead
+      if (originalName === 'item_id' || fieldName === 'item_id') {
+        // Skip item_id field as we handle it separately below
+        return;
+      }
+      
+      // Use the standard name for other fields if they have an original-name
+      const nameToUse = originalName || fieldName;
+      
+      if (nameToUse.endsWith('[]')) {
+        const actualName = nameToUse.slice(0, -2);
         if (!dataPayload.item_data[actualName]) {
           dataPayload.item_data[actualName] = [];
         }
         dataPayload.item_data[actualName].push(fieldValue);
       } else {
-        dataPayload.item_data[fieldName] = fieldValue;
+        dataPayload.item_data[nameToUse] = fieldValue;
       }
     });
+    
+    // Always use the currentItemId value for edit operations
+    // This ensures consistency and avoids issues with renamed form fields
 
     if (this.isEditMode && this.currentItemId) {
       dataPayload.item_id = this.currentItemId;
@@ -483,21 +514,152 @@ class AdminTableManager extends VerticalTabbedModule {
     this.dom.form[0]?.reset();
     if (this.dom.idInput && this.dom.idInput.length) {
       this.dom.idInput.val('');
+      // Also clear the data attribute we set for debugging
+      this.dom.idInput.removeAttr('data-item-set');
+    } else {
+      this.logger.warn('idInput not found during form reset');
     }
     this.formModified = false;
     this.dom.form?.find('.error').removeClass('error');
     this.dom.form?.find('.field-error').remove();
   }
 
+  /**
+   * Populates the form with data from an item
+   * This new implementation uses a cleaner, more systematic approach
+   * @param {Object} itemData - The data to populate the form with
+   */
   populateFormWithData(itemData) {
-    if (itemData && itemData.id) {
-      if (this.dom.idInput && this.dom.idInput.length) {
-        this.dom.idInput.val(itemData.id);
-      } else {
+    if (!itemData) {
+      this.logger.warn('populateFormWithData called with empty itemData');
+      return;
+    }
+
+    // Log the item data we're trying to populate for debugging
+    this.logger.log('Populating form with data:', itemData);
+
+    // First set the ID field if it exists
+    if (itemData.id && this.dom.idInput && this.dom.idInput.length) {
+      this.dom.idInput.val(itemData.id);
+      this.dom.idInput.attr('data-item-set', 'true');
+      this.logger.log('Set ID field to:', itemData.id);
+    } else if (!this.dom.idInput || !this.dom.idInput.length) {
+      this.logger.warn('ID input field not found in form');
+    }
+
+    // Get all form inputs except the hidden ID field we already handled
+    const $formInputs = this.dom.form.find('input, select, textarea').not('.pe-item-id-input');
+    
+    // Process each input field
+    $formInputs.each((index, element) => {
+      const $input = this.$(element);
+      const fieldName = $input.attr('name');
+      
+      if (!fieldName) return; // Skip inputs without a name
+      
+      // Handle array notation for multi-selects
+      const baseName = fieldName.endsWith('[]') ? 
+        fieldName.substring(0, fieldName.length - 2) : 
+        fieldName;
+      
+      // Special handling for product upgrades module field mapping
+      let dataField = baseName;
+      
+      // Map form field names to data field names for product upgrades
+      if (this.settings.tab_id === 'product_upgrades') {
+        if (baseName === 'upgrade_title') dataField = 'title';
+        if (baseName === 'upgrade_description') dataField = 'description';
+      }
+      
+      // Check if this field exists in the item data
+      if (itemData[dataField] !== undefined) {
+        const fieldValue = itemData[dataField];
+        this.logger.log(`Setting field ${baseName} from data field ${dataField} with value:`, fieldValue);
+        
+        // Set the field value based on field type
+        this._setFieldValue($input, fieldValue);
+      } else if (itemData[baseName] !== undefined) {
+        // Try with the original field name if the mapped one wasn't found
+        const fieldValue = itemData[baseName];
+        this.logger.log(`Setting field ${baseName} with value:`, fieldValue);
+        
+        // Set the field value based on field type
+        this._setFieldValue($input, fieldValue);
+      }
+    });
+    
+    this.formModified = false;
+  }
+  
+  /**
+   * Helper method to set a field value based on its type
+   * @private
+   * @param {jQuery} $field - The jQuery field object
+   * @param {*} fieldValue - The value to set
+   */
+  _setFieldValue($field, fieldValue) {
+    if ($field.is('select[multiple]')) {
+      this._setMultiSelectValue($field, fieldValue);
+    } else if ($field.is(':checkbox')) {
+      $field.prop('checked', !!fieldValue);
+    } else if ($field.is(':radio')) {
+      this.dom.form.find(`[name="${$field.attr('name')}"][value="${fieldValue}"]`).prop('checked', true);
+    } else if ($field.is('textarea')) {
+      $field.val(fieldValue);
+      
+      // Handle TinyMCE editor
+      const editorId = $field.attr('id');
+      if (editorId && typeof window.tinyMCE !== 'undefined' && window.tinyMCE.get(editorId)) {
+        window.tinyMCE.get(editorId).setContent(fieldValue);
       }
     } else {
+      // Regular inputs
+      $field.val(fieldValue);
     }
-    this.formModified = false;
+  }
+  
+  /**
+   * Helper method to set multi-select values
+   * @private
+   * @param {jQuery} $field - The jQuery select field object
+   * @param {Array} fieldValue - The array of values to set
+   */
+  _setMultiSelectValue($field, fieldValue) {
+    if (!Array.isArray(fieldValue)) {
+      this.logger.warn(`Expected array for select multiple but got:`, fieldValue);
+      return;
+    }
+    
+    // Convert all values to strings for proper comparison
+    const stringValues = fieldValue.map(val => String(val));
+    
+    // Set the value directly first
+    $field.val(stringValues);
+    
+    // Handle Select2 specially
+    if ($field.hasClass('pe-select2')) {
+      // For Select2, we need to handle initialization and UI updates
+      
+      // Wait a bit to ensure Select2 is initialized
+      setTimeout(() => {
+        // For modern Select2 (4.0+)
+        if (typeof jQuery.fn.select2 === 'function') {
+          // Clear all current selections
+          $field.val(null).trigger('change');
+          
+          // For each value, find the matching option and select it
+          stringValues.forEach(value => {
+            const $option = $field.find(`option[value="${value}"]`);
+            if ($option.length) {
+              $option.prop('selected', true);
+            }
+          });
+          
+          // Trigger final change to update the UI
+          $field.trigger('change');
+        }
+      }, 100); // Small delay to ensure Select2 is ready
+    }
   }
 
   validateForm() {
@@ -605,24 +767,27 @@ class AdminTableManager extends VerticalTabbedModule {
     // Extract just the tag name without any attribute selectors
     const tagName = listItemRowSelector.split('.')[0].replace(/\[(.*?)\]/g, '');
 
-    // Create the row with the correct tag and data-id attribute
-    const $row = this.$(`<${tagName} data-id="${itemData.id}"></${tagName}>`);
+    // Generate a unique row ID based on tab ID, current timestamp, and item ID
+    const uniqueRowIdPrefix = `${this.settings.tab_id}_row_${itemData.id}_`;
+    const uniqueRowId = `${uniqueRowIdPrefix}${Date.now()}`;
 
-    // Debug the row element that's being created
+    // Create the row with the correct tag, data-id attribute, and unique ID
+    const $row = this.$(`<${tagName} data-id="${itemData.id}" id="${uniqueRowId}"></${tagName}>`);
 
     // If listItemRowSelector includes classes, add them: e.g., 'tr.my-custom-row-class'
     if (listItemRowSelector.includes('.')) {
       $row.addClass(listItemRowSelector.substring(listItemRowSelector.indexOf('.') + 1).replace(/\./g, ' '));
     }
 
-
     // Create each cell using the column IDs from PHP
     Object.entries(tableColumns).forEach(([columnId, columnTitle]) => {
+      // Generate unique cell ID based on row ID and column
+      const uniqueCellId = `${uniqueRowId}_cell_${columnId}`;
+      
       const $cell = this.$('<td></td>')
         .addClass(`column-${columnId}`) // Match the PHP class naming convention
-        .attr('data-colname', columnTitle); // Set the column title for responsive display
-
-      // Log column creation for debugging
+        .attr('data-colname', columnTitle) // Set the column title for responsive display
+        .attr('id', uniqueCellId); // Add unique ID to cell
 
       // Hook points for column customization:
       // 1. Child class can implement a specific method for a column
@@ -638,16 +803,22 @@ class AdminTableManager extends VerticalTabbedModule {
         // Default handling for actions column
         $cell.addClass('actions');
 
-        // Create edit button
+        // Generate unique button IDs
+        const editButtonId = `${uniqueRowId}_edit_btn`;
+        const deleteButtonId = `${uniqueRowId}_delete_btn`;
+
+        // Create edit button with unique ID
         const $editButton = this.$('<button></button>')
           .attr('type', 'button')
+          .attr('id', editButtonId)
           .addClass(`button button-small ${editButtonClass}`)
           .text(i18n.editButtonLabel || 'Edit')
           .data('id', itemData.id);
 
-        // Create delete button
+        // Create delete button with unique ID
         const $deleteButton = this.$('<button></button>')
           .attr('type', 'button')
+          .attr('id', deleteButtonId)
           .addClass(`button button-small ${deleteButtonClass}`)
           .text(i18n.deleteButtonLabel || 'Delete')
           .data('id', itemData.id);
@@ -663,8 +834,6 @@ class AdminTableManager extends VerticalTabbedModule {
       // Add the cell to the row
       $row.append($cell);
     });
-
-    // Debug the final row structure
 
     // Allow child classes to perform post-processing on the row
     if (typeof this.afterRowCreated === 'function') {

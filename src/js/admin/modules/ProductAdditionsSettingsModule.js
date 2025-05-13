@@ -37,7 +37,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     // The event name uses this.config.mainTabId.
     // Note: this.config.mainTabId is from the config passed to super(), available after super() call.
     this.$(document).on(`admin_table_manager_ready_${this.config.mainTabId}`, () => { // POTENTIAL ERROR HERE
-      this.logger.log('Base AdminTableManager is ready. Initializing ProductAdditions specifics.');
       this._cacheProductAdditionsDOM();
       this._bindSpecificEvents();
       this._initializeSelect2();
@@ -68,9 +67,7 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
       this.dom.clearProductButton = this.$container.find(paSelectors.clearProductButton);
       this.dom.noteTextInput = this.$container.find(paSelectors.noteTextInput);
       this.dom.noteRow = this.$container.find(paSelectors.noteRow);
-      this.logger.log('Product Additions specific DOM elements cached.');
     } else {
-      this.logger.warn('Cannot cache Product Additions specific DOM elements: this.settings.selectors not available.');
     }
   }
 
@@ -83,7 +80,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   _bindSpecificEvents() {
     // Ensure this.dom elements are available (cached by _cacheProductAdditionsDOM or base)
     if (!this.dom.form || !this.dom.form.length) {
-      this.logger.error('ProductAdditions: Form DOM element not found, cannot bind specific events.');
       return;
     }
     this.dom.form.on('click.productAdditions', '.product-result-item', this._handleProductResultClick.bind(this));
@@ -92,7 +88,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     this.dom.targetCategorySelect?.on('change.productAdditions', this._handleTargetCategoryChange.bind(this));
     this.dom.productSearchInput?.on('keyup.productAdditions', this._handleProductSearchKeyup.bind(this));
     this.dom.clearProductButton?.on('click.productAdditions', this._handleClearProduct.bind(this));
-    this.logger.log('Product Additions specific events bound.');
   }
 
   /**
@@ -131,7 +126,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
    */
   onMainTabActivated() {
     super.onMainTabActivated(); // Call parent method
-    this.logger.log('Product Additions main tab activated.');
 
     // Refresh Select2 components if they're already initialized
     if (this.dom.sourceCategorySelect && this.dom.sourceCategorySelect.hasClass("select2-hidden-accessible")) {
@@ -151,7 +145,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
    */
   _handleRelationTypeChange() {
     const actionType = this.dom.relationTypeSelect?.val();
-    this.logger.log('Relation type changed to:', actionType);
 
     // Check feature flags to determine UI behavior
 
@@ -172,7 +165,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
       if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {
         this.dom.targetCategoryRow?.show();
       } else {
-        this.logger.warn('Suggest products feature is disabled, target category row for this type will not be shown.');
       }
     }
   }
@@ -183,7 +175,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   _handleTargetCategoryChange() {
     const categoryId = this.dom.targetCategorySelect?.val();
     const actionType = this.dom.relationTypeSelect?.val();
-    this.logger.log('Target category changed to:', categoryId, 'Action type:', actionType);
     this._clearProductSelectionFields(); // Clear previous product search/selection
     if (categoryId && actionType === 'auto_add_by_category') {
       this.dom.productSearchRow?.show();
@@ -216,10 +207,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   }
 
   _searchProducts(searchTerm, categoryId) {
-    this.logger.log('Searching products with term:', searchTerm, 'in category:', categoryId);
     // this.settings.actions and other properties from ProductEstimatorSettings base
     if (!this.settings.actions || !this.settings.actions.search_products) {
-      this.logger.error('Product search AJAX action not defined in settings.actions.');
       this.dom.productSearchResults?.html(`<p>${(this.settings.i18n && this.settings.i18n.errorSearching) || 'Error: Search action not configured.'}</p>`).show();
       return;
     }
@@ -234,7 +223,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
       }
     })
       .then(response => {
-        this.logger.log('Raw response from ajax.ajaxRequest for product search:', response);
         let productsArray = null;
         // Standardize response checking
         if (response && response.success && response.data && Array.isArray(response.data.products)) {
@@ -245,7 +233,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
 
         if (productsArray) {
-          this.logger.log('Product data found. Processing products array.');
           let resultsHtml = '';
           if (productsArray.length > 0) {
             resultsHtml = '<ul class="product-results-list">';
@@ -260,12 +247,10 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
           }
           this.dom.productSearchResults?.html(resultsHtml).show();
         } else {
-          this.logger.error('Product search failed or returned invalid/unexpected data structure:', response);
           this.dom.productSearchResults?.html(`<p>${(this.settings.i18n && this.settings.i18n.errorSearching) || 'Error searching products'}</p>`).show();
         }
       })
       .catch(error => {
-        this.logger.error('Product search AJAX request failed:', error);
         this.dom.productSearchResults?.html(`<p>${(this.settings.i18n && this.settings.i18n.errorSearching) || 'Error searching products'}</p>`).show();
       });
   }
@@ -274,7 +259,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     const $item = this.$(e.currentTarget);
     const productId = $item.data('id');
     const productName = $item.data('name'); // Already escaped if set by _searchProducts
-    this.logger.log('Product selected from search:', productId, productName);
 
     this.dom.selectedProductIdInput?.val(productId);
     this.dom.selectedProductDisplay?.find('.selected-product-info').html(`<strong>${productName}</strong> (ID: ${productId})`);
@@ -285,7 +269,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   }
 
   _handleClearProduct() {
-    this.logger.log('Clear product selection.');
     this._clearProductSelectionFields();
     this.dom.productSearchInput?.focus();
     this.formModified = true; // Mark form as modified
@@ -309,7 +292,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     this.dom.productSearchRow?.hide();
     this.dom.noteRow?.hide();
 
-    this.logger.log('Product Additions form fields specifically reset.');
   }
 
   /**
@@ -317,7 +299,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
    */
   populateFormWithData(itemData) {
     super.populateFormWithData(itemData); // Sets item ID, calls base logic
-    this.logger.log('Populating Product Additions form with full item data:', itemData);
 
     const relationType = itemData.relation_type || '';
     const sourceCategories = itemData.source_category || []; // Expecting array for multi-select
@@ -342,7 +323,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
           this.dom.selectedProductDisplay?.show();
         } else if (productId) {
           // Fallback if product_name is missing
-          this.logger.warn("Product ID present but product_name missing in data for edit form population.");
           this.dom.selectedProductIdInput?.val(productId);
           this.dom.selectedProductDisplay?.find('.selected-product-info').html(`Product ID: ${productId} (Name not available)`);
           this.dom.selectedProductDisplay?.show();
@@ -363,7 +343,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
    */
   validateForm() {
     let isValid = super.validateForm(); // Perform base validation first
-    this.logger.log('Validating Product Additions form.');
 
     // Get values
     const actionType = this.dom.relationTypeSelect?.val();
@@ -415,7 +394,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
         isValid = false;
       }
     }
-    this.logger.log('Product Additions form validation result:', isValid);
     return isValid;
   }
 
@@ -452,7 +430,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     if (this.dom.listTableBody && this.dom.listTableBody.length) {
       // Bind the view product button click event
       this.dom.listTableBody.on('click.productAdditions', '.pe-view-product-button', this.handleViewProduct.bind(this));
-      this.logger.log('Product Additions custom action buttons bound');
     }
   }
 
@@ -466,7 +443,6 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     const itemId = $button.data('id');
     const productId = $button.data('product-id');
 
-    this.logger.log('View Product button clicked for item ID:', itemId, 'Product ID:', productId);
 
     if (!productId) {
       this.showNotice('Error: Could not determine the product to view.', 'error');

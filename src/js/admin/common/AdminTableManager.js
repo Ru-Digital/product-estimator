@@ -44,16 +44,11 @@ class AdminTableManager extends VerticalTabbedModule {
     const loggerName = `AdminTableManager:${config.mainTabId || 'Generic'}`;
 
     this.logger = createLogger(loggerName); // Pass the pre-constructed string
-    this.logger = createLogger(`${config.mainTabId || 'Generic'}`);
 
     // `this.settings` is initialized by the `super(vtmConfig)` call chain (ProductEstimatorSettings).
     // `this.settings.tab_id` will hold the mainTabId.
     // A check for its presence after super() is good practice.
     if (!this.settings || !this.settings.tab_id) {
-      this.logger.error('AdminTableManager Critical Error: this.settings.tab_id (mainTabId) is missing after super() call. This indicates a problem with config propagation or parent constructor.', {
-        passedConfigToVTM: vtmConfig, // What was passed to VerticalTabbedModule
-        effectiveSettings: this.settings // What ProductEstimatorSettings established
-      });
     }
 
     this.formModified = false;
@@ -68,7 +63,6 @@ class AdminTableManager extends VerticalTabbedModule {
    */
   _validateSettings() {
     if (!this.settings || this.settings.tab_id === undefined) {
-      this.logger.error(`AdminTableManager Critical Error: this.settings or this.settings.tab_id is undefined. This usually means ProductEstimatorSettings/VerticalTabbedModule constructor failed to initialize it. Config used by AdminTableManager:`, { vtmConfigUsedForSuper: this.vtmConfig });
       throw new Error(`AdminTableManager: Essential property 'this.settings.tab_id' was not initialized by the parent class. Cannot validate settings.`);
     }
 
@@ -77,7 +71,6 @@ class AdminTableManager extends VerticalTabbedModule {
       if (this.settingsObjectName) {
         errorMsg += ` (expected from window.${this.settingsObjectName}). This might happen if the global object is empty or not correctly populated.`;
       }
-      this.logger.error(errorMsg);
       throw new Error(errorMsg + ` Cannot proceed with empty settings for tab "${this.settings.tab_id}".`);
     }
 
@@ -88,49 +81,42 @@ class AdminTableManager extends VerticalTabbedModule {
     };
 
     let allValid = true;
-    if (this.settings.ajaxUrl === undefined) { this.logger.error(`Missing required setting: ajaxUrl`); allValid = false; }
-    if (this.settings.nonce === undefined) { this.logger.error(`Missing required setting: nonce`); allValid = false; }
-    if (this.settings.option_name === undefined) { this.logger.error(`Missing required setting: option_name`); allValid = false; }
+    if (this.settings.ajaxUrl === undefined) { allValid = false; }
+    if (this.settings.nonce === undefined) { allValid = false; }
+    if (this.settings.option_name === undefined) { allValid = false; }
 
     if (this.settings.actions) {
       for (const key of required.actions) {
         if (this.settings.actions[key] === undefined) {
-          this.logger.error(`Missing required action: actions.${key} (expected in ${this.settingsObjectName}) for tab "${this.settings.tab_id}"`);
           allValid = false;
         }
       }
     } else {
-      this.logger.error(`Required setting object 'actions' is missing from settings for tab "${this.settings.tab_id}".`);
       allValid = false;
     }
 
     if (this.settings.selectors) {
       for (const key of required.selectors) {
         if (this.settings.selectors[key] === undefined) {
-          this.logger.error(`Missing required selector: selectors.${key} (expected in ${this.settingsObjectName}) for tab "${this.settings.tab_id}"`);
           allValid = false;
         }
       }
     } else {
-      this.logger.error(`Required setting object 'selectors' is missing from settings for tab "${this.settings.tab_id}".`);
       allValid = false;
     }
 
     if (this.settings.i18n) {
       for (const key of required.i18n_keys) {
         if (this.settings.i18n[key] === undefined) {
-          this.logger.warn(`Potentially missing i18n string: i18n.${key} (in ${this.settingsObjectName}) for tab "${this.settings.tab_id}"`);
         }
       }
     } else {
-      this.logger.error(`Required setting object 'i18n' is missing from settings for tab "${this.settings.tab_id}".`);
       allValid = false;
     }
 
     if (!allValid) {
       throw new Error(`AdminTableManager: Settings validation failed due to missing critical settings in this.settings for tab "${this.settings.tab_id}". Check console for details.`);
     }
-    this.logger.log('Settings (this.settings) validated successfully for tab:', this.settings.tab_id);
   }
 
   /**
@@ -140,10 +126,8 @@ class AdminTableManager extends VerticalTabbedModule {
   moduleInit() {
     super.moduleInit(); // Calls VerticalTabbedModule.moduleInit() which sets up $container etc.
 
-    this.logger.log('AdminTableManager: Overridden moduleInit() called for tab:', this.settings.tab_id);
 
     if (!this.$container || !this.$container.length) {
-      this.logger.error(`AdminTableManager: Main container #${this.settings.tab_id} not found after super.moduleInit(). Module will not initialize further.`);
       if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
         window.ProductEstimatorSettingsInstance.showNotice(`Critical error: Table manager UI container #${this.settings.tab_id} missing.`, 'error');
       }
@@ -153,7 +137,6 @@ class AdminTableManager extends VerticalTabbedModule {
     try {
       this._validateSettings();
     } catch (error) {
-      this.logger.error(`AdminTableManager: Settings validation failed for tab "${this.settings.tab_id}". Halting init.`, error);
       if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
         window.ProductEstimatorSettingsInstance.showNotice(
           `Error initializing table manager for ${this.settings.tab_id}: Configuration validation failed. Check console. Details: ${error.message}`, 'error'
@@ -166,10 +149,8 @@ class AdminTableManager extends VerticalTabbedModule {
     if (this._checkEssentialDOM()) {
       this.bindEvents();
       this.updateNoItemsMessageVisibility();
-      this.logger.log('AdminTableManager specific setup completed for tab:', this.settings.tab_id);
       this.$(document).trigger(`admin_table_manager_ready_${this.settings.tab_id}`, [this]);
     } else {
-      this.logger.error('AdminTableManager initialization failed: missing essential DOM elements for tab:', this.settings.tab_id);
       if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
         const tabDisplayName = this.settings.tab_id;
         window.ProductEstimatorSettingsInstance.showNotice(
@@ -182,13 +163,11 @@ class AdminTableManager extends VerticalTabbedModule {
   _checkEssentialDOM() {
     let essentialFound = true;
     if (!this.settings || !this.settings.selectors) {
-      this.logger.error('AdminTableManager _checkEssentialDOM: Invariant violated - this.settings or this.settings.selectors missing after _validateSettings.');
       return false;
     }
     const essentialSelectors = ['formContainer', 'form', 'addButton', 'listTableBody', 'listTableContainer', 'listTable', 'noItemsMessage', 'formTitle', 'idInput', 'saveButton', 'cancelButton'];
     for (const key of essentialSelectors) {
       if (!this.dom[key] || !this.dom[key].length) {
-        this.logger.error(`Essential DOM element for AdminTableManager not found using selector key '${key}': Expected selector string was "${this.settings.selectors[key]}" within container #${this.settings.tab_id}.`);
         essentialFound = false;
       }
     }
@@ -198,7 +177,6 @@ class AdminTableManager extends VerticalTabbedModule {
   cacheDOM() {
     this.dom = {};
     if (!this.settings || !this.settings.selectors) {
-      this.logger.error('AdminTableManager cacheDOM: Invariant violated - this.settings or this.settings.selectors missing after _validateSettings.');
       return;
     }
     if (this.$container && this.$container.length) {
@@ -208,9 +186,7 @@ class AdminTableManager extends VerticalTabbedModule {
         }
       }
     } else {
-      this.logger.error('AdminTableManager cacheDOM: this.$container is not available or empty. DOM elements cannot be cached.');
     }
-    this.logger.log('DOM elements cached for tab:', this.settings.tab_id);
   }
 
   /**
@@ -219,7 +195,6 @@ class AdminTableManager extends VerticalTabbedModule {
    */
   bindEvents() {
     if (!this.dom || Object.keys(this.dom).length === 0) {
-      this.logger.error("AdminTableManager bindEvents: DOM elements not cached (this.dom is empty/undefined). Cannot bind events.");
       return;
     }
     this.dom.addButton?.on('click.adminTableManager', this.handleAddNew.bind(this));
@@ -232,18 +207,15 @@ class AdminTableManager extends VerticalTabbedModule {
       if (editButtonSelector) {
         this.dom.listTableBody.on('click.adminTableManager', editButtonSelector, this.handleEdit.bind(this));
       } else {
-        this.logger.warn('Edit button selector (settings.selectors.editButton) is undefined. Skipping bind for edit.');
       }
       if (deleteButtonSelector) {
         this.dom.listTableBody.on('click.adminTableManager', deleteButtonSelector, this.handleDelete.bind(this));
       } else {
-        this.logger.warn('Delete button selector (settings.selectors.deleteButton) is undefined. Skipping bind for delete.');
       }
 
       // Bind custom action buttons if they exist
       this.bindCustomActionButtons();
     } else {
-      this.logger.warn('listTableBody DOM element not found for tab:', this.settings.tab_id, '- Edit/delete events for items not bound.');
     }
 
     this.dom.form?.on('submit.adminTableManager', this.handleSubmit.bind(this));
@@ -253,7 +225,6 @@ class AdminTableManager extends VerticalTabbedModule {
       this.formModified = true;
     });
 
-    this.logger.log('AdminTableManager common events bound for tab:', this.settings.tab_id);
   }
 
   /**
@@ -272,7 +243,6 @@ class AdminTableManager extends VerticalTabbedModule {
 
   handleAddNew(e) {
     e.preventDefault();
-    this.logger.log('Add New clicked for tab:', this.settings.tab_id);
     this.isEditMode = false;
     this.currentItemId = null;
     this.resetForm();
@@ -288,10 +258,8 @@ class AdminTableManager extends VerticalTabbedModule {
     const $row = $button.closest(this.settings.selectors.listItemRow);
     const itemId = $row.data('id');
 
-    this.logger.log('Edit clicked for item ID:', itemId, 'on tab:', this.settings.tab_id);
 
     if (!itemId) {
-      this.logger.error('Could not find item ID for editing on tab:', this.settings.tab_id);
       this.showNotice('Error: Could not determine the item to edit.', 'error');
       return;
     }
@@ -303,7 +271,6 @@ class AdminTableManager extends VerticalTabbedModule {
     if (this.dom.idInput && this.dom.idInput.length) {
       this.dom.idInput.val(this.currentItemId);
     } else {
-      this.logger.warn("Hidden ID input (dom.idInput) not found in form. Item ID might not be set correctly for submission during edit.");
     }
 
     this.dom.formTitle?.text(this.settings.i18n.editItemFormTitle || `Edit Item #${itemId}`);
@@ -329,24 +296,20 @@ class AdminTableManager extends VerticalTabbedModule {
           } else {
             const errorMsg = (response && response.message) ? response.message : (this.settings.i18n.errorLoadingItem || 'Error loading item details.');
             this.showNotice(errorMsg, 'error');
-            this.logger.error('Error loading item details for edit:', response);
-          }
+                }
         })
         .catch(error => {
           this.showNotice(error.message || this.settings.i18n.errorLoadingItem || 'AJAX error loading item.', 'error');
-          this.logger.error('AJAX error loading item for editing:', error);
         })
         .finally(() => {
           this.showFormLoadingSpinner(false, this.dom.saveButton);
         });
     } else {
-      this.logger.warn(`No 'get_item' action defined in settings.actions for tab "${this.settings.tab_id}".`);
       const itemDataFromButton = $button.data();
       if (Object.keys(itemDataFromButton).length > 1) {
         itemDataFromButton.id = itemId;
         this.populateFormWithData(itemDataFromButton);
       } else {
-        this.logger.log("Button data attributes did not yield sufficient data for form population.");
         this.showNotice('Note: Full item details might not be loaded. Displaying basic form for editing.', 'info');
       }
       this.dom.formContainer?.slideDown();
@@ -359,10 +322,8 @@ class AdminTableManager extends VerticalTabbedModule {
     const $button = this.$(e.currentTarget);
     const $row = $button.closest(this.settings.selectors.listItemRow);
     const itemId = $row.data('id');
-    this.logger.log('Delete clicked for item ID:', itemId, 'on tab:', this.settings.tab_id);
 
     if (!itemId) {
-      this.logger.error('Could not find item ID for deletion on tab:', this.settings.tab_id);
       this.showNotice('Error: Could not determine item to delete.', 'error');
       return;
     }
@@ -399,17 +360,14 @@ class AdminTableManager extends VerticalTabbedModule {
       })
       .catch(error => {
         this.showNotice(error.message || this.settings.i18n.errorDeletingItem || 'AJAX error deleting item.', 'error');
-        this.logger.error('AJAX error deleting item:', error);
         $button.prop('disabled', false).text(originalButtonText);
       });
   }
 
   handleSubmit(e) {
     e.preventDefault();
-    this.logger.log('Form submitted. Edit mode:', this.isEditMode, 'Current Item ID:', this.currentItemId);
 
     if (!this.validateForm()) {
-      this.logger.warn('Form validation failed for tab:', this.settings.tab_id);
       this.showNotice(this.settings.i18n.validationFailed || 'Please correct the errors in the form.', 'error');
       return;
     }
@@ -418,7 +376,6 @@ class AdminTableManager extends VerticalTabbedModule {
     const determinedAction = this.isEditMode ? this.settings.actions.update_item : this.settings.actions.add_item;
 
     if (!determinedAction) {
-      this.logger.error('Form submission action (add_item or update_item) is not defined in settings.actions for tab:', this.settings.tab_id);
       this.showNotice(this.settings.i18n.errorSavingItem || 'Configuration error: Save action not defined.', 'error');
       this.showFormLoadingSpinner(false, this.dom.saveButton);
       return;
@@ -451,35 +408,25 @@ class AdminTableManager extends VerticalTabbedModule {
       dataPayload.item_id = this.currentItemId;
     }
 
-    this.logger.log('AJAX data payload for save:', dataPayload);
 
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl,
       data: dataPayload
     })
       .then(response => {
-        this.logger.log('AJAX save response received:', response);
 
         // Enhanced response validation with detailed logging
         if (!response) {
-          this.logger.error('Empty response received from server');
           this.showNotice(this.settings.i18n.errorSavingItem || 'Error: Empty response from server', 'error');
           return;
         }
 
-        this.logger.log('Response structure:', {
-          hasItemProperty: !!response.item,
-          itemType: response.item ? typeof response.item : 'N/A',
-          itemKeys: response.item ? Object.keys(response.item) : 'N/A',
-          message: response.message || 'No message'
-        });
 
         if (response && response.item) {
           this.showNotice(response.message || this.settings.i18n.itemSavedSuccess || 'Item saved.', 'success');
 
           // CRITICAL: Handling the first item scenario directly
           const isFirstItem = !this.dom.listTableBody.find('tr').length;
-          this.logger.log('Is this the first item?', isFirstItem);
 
           if (this.isEditMode) {
             this.updateTableRow(response.item);
@@ -488,7 +435,6 @@ class AdminTableManager extends VerticalTabbedModule {
 
             // Special handling for first item
             if (isFirstItem) {
-              this.logger.log('FIRST ITEM ADDED - Ensuring table visibility');
               this.dom.listTable.show();
               this.dom.noItemsMessage.hide();
 
@@ -507,13 +453,11 @@ class AdminTableManager extends VerticalTabbedModule {
           const errorMsg = (response && response.message) ? response.message : this.settings.i18n.errorSavingItem || 'Error saving item or response format incorrect.';
           const errorsDetail = (response && response.errors) ? `<br><pre>${JSON.stringify(response.errors, null, 2)}</pre>` : '';
           this.showNotice(errorMsg + errorsDetail, 'error');
-          this.logger.error('Error saving item or item data missing/invalid in response structure:', response);
         }
       })
       .catch(error => {
         const errorMsg = error.message || this.settings.i18n.errorSavingItem || 'AJAX error during save.';
         this.showNotice(errorMsg, 'error');
-        this.logger.error('AJAX error during save operation:', error);
       })
       .finally(() => {
         this.showFormLoadingSpinner(false, this.dom.saveButton);
@@ -522,7 +466,6 @@ class AdminTableManager extends VerticalTabbedModule {
 
   handleCancel(e) {
     e.preventDefault();
-    this.logger.log('Cancel form clicked for tab:', this.settings.tab_id);
     if (this.formModified) {
       if (!confirm(this.settings.i18n.confirmCancelEditing || "You have unsaved changes. Are you sure you want to cancel?")) {
         return;
@@ -544,25 +487,20 @@ class AdminTableManager extends VerticalTabbedModule {
     this.formModified = false;
     this.dom.form?.find('.error').removeClass('error');
     this.dom.form?.find('.field-error').remove();
-    this.logger.log('Form reset for tab:', this.settings.tab_id);
   }
 
   populateFormWithData(itemData) {
-    this.logger.log('Populating form with data (base method) for tab:', this.settings.tab_id, 'Item Data:', itemData);
     if (itemData && itemData.id) {
       if (this.dom.idInput && this.dom.idInput.length) {
         this.dom.idInput.val(itemData.id);
       } else {
-        this.logger.warn("AdminTableManager: dom.idInput (hidden item ID field) not found during populateFormWithData.");
       }
     } else {
-      this.logger.warn('AdminTableManager: populateFormWithData called without itemData or itemData.id. Hidden ID field not populated.', itemData);
     }
     this.formModified = false;
   }
 
   validateForm() {
-    this.logger.log('Validating form (base method) for tab:', this.settings.tab_id);
     let isValid = true;
     this.dom.form?.find('.error').removeClass('error');
     this.dom.form?.find('.field-error').remove();
@@ -588,61 +526,37 @@ class AdminTableManager extends VerticalTabbedModule {
   }
 
   addTableRow(itemData) {
-    this.logger.log('Adding table row for tab:', this.settings.tab_id, itemData);
 
     // Debug table state before adding row
-    const preAddInfo = {
-      hasListTable: !!this.dom.listTable?.length,
-      hasListTableBody: !!this.dom.listTableBody?.length,
-      tableSelector: this.dom.listTable?.selector || 'N/A',
-      tableBodySelector: this.dom.listTableBody?.selector || 'N/A',
-      isTableVisible: this.dom.listTable?.is(':visible'),
-      existingRows: this.dom.listTableBody?.find('tr').length || 0
-    };
-    this.logger.log('Pre-add table state:', preAddInfo);
 
     // Create the row
     const $row = this.createTableRow(itemData);
-    this.logger.log('Created row:', $row && $row.length ? 'Successfully' : 'Failed');
 
     // Add the row to the table
     if ($row && this.dom.listTableBody && this.dom.listTableBody.length) {
       this.dom.listTableBody.append($row);
-      this.logger.log('Row appended to table body');
 
       // Always make table visible after adding a row, and hide the "no items" message
       if (this.dom.listTable) {
-        this.logger.log('Making table visible after row added');
         this.dom.listTable.show();
       }
 
       if (this.dom.noItemsMessage) {
-        this.logger.log('Hiding no items message after row added');
         this.dom.noItemsMessage.hide();
       }
 
       // Skip updateNoItemsMessageVisibility() since we're explicitly handling visibility
 
       // Debug table state after adding row
-      const postAddInfo = {
-        isTableVisible: this.dom.listTable?.is(':visible'),
-        rowCount: this.dom.listTableBody?.find('tr').length || 0,
-        isNoItemsVisible: this.dom.noItemsMessage?.is(':visible')
-      };
-      this.logger.log('Post-add table state:', postAddInfo);
     } else {
-      this.logger.error('Failed to add table row: createTableRow returned invalid value or listTableBody not found for tab:', this.settings.tab_id);
     }
   }
 
   updateTableRow(itemData) {
-    this.logger.log('Updating table row for tab:', this.settings.tab_id, itemData);
     if (!itemData.id) {
-      this.logger.error('Cannot update table row: itemData missing ID for tab:', this.settings.tab_id, itemData);
       return;
     }
     if (!this.settings.selectors || !this.settings.selectors.listItemRow) {
-      this.logger.error('Cannot update table row: listItemRow selector missing in settings.selectors.');
       return;
     }
     const $existingRow = this.dom.listTableBody?.find(`${this.settings.selectors.listItemRow}[data-id="${itemData.id}"]`);
@@ -651,10 +565,8 @@ class AdminTableManager extends VerticalTabbedModule {
       if ($newRow) {
         $existingRow.replaceWith($newRow);
       } else {
-        this.logger.error('Failed to update table row: createTableRow returned null for tab:', this.settings.tab_id);
       }
     } else {
-      this.logger.warn('Could not find row to update with ID:', itemData.id, '- Appending as new for tab:', this.settings.tab_id);
       this.addTableRow(itemData);
     }
   }
@@ -668,9 +580,7 @@ class AdminTableManager extends VerticalTabbedModule {
    * @returns {jQuery} - The jQuery object representing the row.
    */
   createTableRow(itemData) {
-    this.logger.log('AdminTableManager: Creating table row with data:', itemData);
     if (!itemData || !itemData.id) {
-      this.logger.error('Cannot create table row: itemData or itemData.id is missing.');
       // Return a valid jQuery object for a row, even for an error.
       const colspan = this.dom.listTable?.find('thead th').length || 4;
       return this.$(`<tr><td colspan="${colspan}">Error: Invalid item data provided to createTableRow.</td></tr>`);
@@ -679,7 +589,6 @@ class AdminTableManager extends VerticalTabbedModule {
     // Get column information from the settings passed from PHP
     const tableColumns = this.settings.table_columns || {};
     if (Object.keys(tableColumns).length === 0) {
-      this.logger.error('Table columns data is missing in settings. Settings must include table_columns data.');
       const colspan = this.dom.listTable?.find('thead th').length || 4;
       return this.$(`<tr><td colspan="${colspan}">Error: table_columns data missing in settings for ${this.settings.tab_id}.</td></tr>`);
     }
@@ -700,14 +609,12 @@ class AdminTableManager extends VerticalTabbedModule {
     const $row = this.$(`<${tagName} data-id="${itemData.id}"></${tagName}>`);
 
     // Debug the row element that's being created
-    this.logger.log(`Creating row with tag: "${tagName}", selector was: "${listItemRowSelector}"`);
 
     // If listItemRowSelector includes classes, add them: e.g., 'tr.my-custom-row-class'
     if (listItemRowSelector.includes('.')) {
       $row.addClass(listItemRowSelector.substring(listItemRowSelector.indexOf('.') + 1).replace(/\./g, ' '));
     }
 
-    this.logger.log(`Creating row for item ID ${itemData.id} with columns:`, Object.keys(tableColumns));
 
     // Create each cell using the column IDs from PHP
     Object.entries(tableColumns).forEach(([columnId, columnTitle]) => {
@@ -716,7 +623,6 @@ class AdminTableManager extends VerticalTabbedModule {
         .attr('data-colname', columnTitle); // Set the column title for responsive display
 
       // Log column creation for debugging
-      this.logger.log(`Creating column "${columnId}" for row ${itemData.id}`);
 
       // Hook points for column customization:
       // 1. Child class can implement a specific method for a column
@@ -727,11 +633,9 @@ class AdminTableManager extends VerticalTabbedModule {
       const methodName = `populateColumn_${columnId.replace(/[^a-zA-Z0-9_]/g, '_')}`;
       if (typeof this[methodName] === 'function') {
         // Let the child class handle this specific column
-        this.logger.log(`Using custom handler ${methodName} for column "${columnId}"`);
         this[methodName]($cell, itemData, columnId);
       } else if (columnId === 'item_actions' || columnId.endsWith('_actions')) {
         // Default handling for actions column
-        this.logger.log(`Creating actions column with default buttons`);
         $cell.addClass('actions');
 
         // Create edit button
@@ -753,7 +657,6 @@ class AdminTableManager extends VerticalTabbedModule {
         // Default handling for other columns - just use the display field if available
         const displayField = `${columnId}_display`;
         const displayValue = itemData[displayField] || itemData[columnId] || '';
-        this.logger.log(`Setting text for column "${columnId}": "${displayValue}"`);
         $cell.text(displayValue);
       }
 
@@ -762,10 +665,6 @@ class AdminTableManager extends VerticalTabbedModule {
     });
 
     // Debug the final row structure
-    this.logger.log(`Final row structure for item ${itemData.id}:`, {
-      html: $row.prop('outerHTML'),
-      cellCount: $row.find('td').length
-    });
 
     // Allow child classes to perform post-processing on the row
     if (typeof this.afterRowCreated === 'function') {
@@ -777,27 +676,16 @@ class AdminTableManager extends VerticalTabbedModule {
 
   updateNoItemsMessageVisibility() {
     if (!this.settings.selectors || !this.settings.selectors.listItemRow) {
-      this.logger.warn('Cannot update "no items" message: listItemRow selector missing in settings.selectors.');
       return;
     }
 
     // Debug info
-    const debugInfo = {
-      hasNoItemsMessage: !!this.dom.noItemsMessage?.length,
-      hasListTableBody: !!this.dom.listTableBody?.length,
-      hasListTable: !!this.dom.listTable?.length,
-      listItemRowSelector: this.settings.selectors.listItemRow,
-      tableBodyContent: this.dom.listTableBody ? this.dom.listTableBody.html() : 'N/A',
-      rowsFound: this.dom.listTableBody ? this.dom.listTableBody.find(this.settings.selectors.listItemRow).length : -1
-    };
-    this.logger.log('updateNoItemsMessageVisibility debug info:', debugInfo);
 
     if (this.dom.noItemsMessage && this.dom.noItemsMessage.length && this.dom.listTableBody && this.dom.listTable) {
       const rowSelector = this.settings.selectors.listItemRow;
       const $foundRows = this.dom.listTableBody.find(rowSelector);
       const hasItems = $foundRows.length > 0;
 
-      this.logger.log(`Looking for rows matching "${rowSelector}" in table body - found: ${$foundRows.length}`);
 
       if (hasItems) {
         this.dom.noItemsMessage.hide();
@@ -806,9 +694,7 @@ class AdminTableManager extends VerticalTabbedModule {
         this.dom.noItemsMessage.show();
         this.dom.listTable.hide();
       }
-      this.logger.log('"No items" message visibility updated for tab:', this.settings.tab_id, 'Has items:', hasItems);
     } else {
-      this.logger.warn('Cannot update "no items" message visibility: one or more DOM elements (noItemsMessage, listTableBody, listTable) are missing for tab:', this.settings.tab_id);
     }
   }
 

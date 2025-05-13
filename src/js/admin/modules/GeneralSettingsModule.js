@@ -42,7 +42,6 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
 
     // Validate all fields on load if needed, or on tab activation
     // this.validateAllFields(); // Consider if this is needed on init or tab change
-    logger.log('General Settings Module Initialized');
   }
 
   /**
@@ -67,7 +66,6 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
       ['pdf_footer_text', 'pdf_footer_contact_details_content'],
       '#general' // Assuming '#general' is the ID of the tab content
     );
-    logger.log('WP Editors setup/refreshed for General Settings.');
   }
 
   handleFileUpload(e) {
@@ -91,18 +89,14 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
 
     this.mediaFrame.on('select', () => {
       const attachment = this.mediaFrame.state().get('selection').first().toJSON();
-      logger.log('Selected attachment:', attachment);
 
       if (attachment && attachment.id) {
         // Use the target input selector from the data attribute
         if (targetInputSelector) {
           this.$(targetInputSelector).val(attachment.id).trigger('change');
-          logger.log(`Updated input ${targetInputSelector} with attachment ID: ${attachment.id}`);
         } else {
-          logger.error('Target input selector not found in data-target-input attribute');
         }
       } else {
-        logger.error('Attachment or attachment.id is missing!', attachment);
       }
 
       // Use the target preview selector from the data attribute
@@ -148,9 +142,6 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
 
     if (targetInputSelector) {
       this.$(targetInputSelector).val('').trigger('change');
-      logger.log(`Cleared input ${targetInputSelector}`);
-    } else {
-      logger.error('Target input selector not found in data-target-input attribute');
     }
 
     if (targetPreviewSelector) {
@@ -165,7 +156,6 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
     // Update the text on the upload button from "Replace File" to "Upload File"
     if (uploadButton.length) {
       uploadButton.text('Upload File');
-      logger.log('Reset upload button text to "Upload File"');
     }
 
     // Remove the upload instructions if they were added
@@ -214,7 +204,6 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
   handleTabChanged(e, tabId) {
     if (tabId === this.settings.tab_id) { // Use this.settings.tab_id from base class
       this.setupWpEditors(); // Refresh editors when tab becomes active
-      logger.log('General Settings tab activated, refreshing editors.');
     }
     this.clearSubTabFromUrl(); // Common URL clearing
   }
@@ -228,7 +217,6 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
           editor.save();
         }
       });
-      logger.log('TinyMCE editor content saved.');
     }
   }
 
@@ -240,7 +228,6 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
     if (!this.validateMarkup({ currentTarget: this.$('#default_markup')[0] })) isValid = false;
     if (!this.validateExpiryDays({ currentTarget: this.$('#estimate_expiry_days')[0] })) isValid = false;
 
-    logger.log('All fields validation result:', isValid);
     return isValid;
   }
 

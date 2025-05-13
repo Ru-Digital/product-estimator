@@ -34,7 +34,6 @@ class NetsuiteSettingsModule extends ProductEstimatorSettings {
    * Module-specific initialization.
    */
   moduleInit() {
-    logger.log('Initializing NetSuite Settings Module');
     this.bindEvents();
     this.setupDependentFields(); // Call after DOM is ready and elements are available
   }
@@ -53,7 +52,6 @@ class NetsuiteSettingsModule extends ProductEstimatorSettings {
 
   setupDependentFields() {
     this.toggleNetsuiteFields(); // Initial toggle based on current state
-    logger.log('NetSuite dependent fields setup complete.');
   }
 
   toggleNetsuiteFields() {
@@ -69,7 +67,6 @@ class NetsuiteSettingsModule extends ProductEstimatorSettings {
       $fields.fadeOut(200);
       $testButtonContainer.fadeOut(200);
     }
-    logger.log(`NetSuite fields visibility toggled: ${enabled}`);
   }
 
   testNetsuiteConnection() {
@@ -81,7 +78,6 @@ class NetsuiteSettingsModule extends ProductEstimatorSettings {
     const i18n = this.settings.i18n || (window.netsuiteSettings && window.netsuiteSettings.i18n) || {};
     $button.prop('disabled', true);
     $result.html(`<span style="color:#666;">${i18n.testing || 'Testing connection...'}</span>`);
-    logger.log('Testing NetSuite connection...');
 
     ajaxRequest({ // Using imported ajaxRequest directly as in original
       url: this.settings.ajaxUrl, // Use ajaxUrl from this.settings
@@ -95,12 +91,10 @@ class NetsuiteSettingsModule extends ProductEstimatorSettings {
         // Assuming response is { success: true/false, data: { message: "..." } } or { message: "..." }
         const message = (response.data && response.data.message) ? response.data.message : response.message;
         $result.html(`<span style="color:green;">${message || 'Connection successful.'}</span>`);
-        logger.log('Connection test successful:', response);
       })
       .catch(error => {
         const errorMessage = (error && error.message) ? error.message : (i18n.error || 'Error');
         $result.html(`<span style="color:red;">${errorMessage}</span>`);
-        logger.error('Connection test failed:', error);
       })
       .finally(() => {
         $button.prop('disabled', false);
@@ -110,7 +104,6 @@ class NetsuiteSettingsModule extends ProductEstimatorSettings {
   handleTabChanged(e, tabId) {
     if (tabId === this.settings.tab_id) {
       this.toggleNetsuiteFields(); // Refresh field visibility when tab becomes active
-      logger.log('NetSuite Settings tab activated, refreshing fields.');
     }
     this.clearSubTabFromUrl();
   }
@@ -179,7 +172,6 @@ class NetsuiteSettingsModule extends ProductEstimatorSettings {
     });
 
     $settingsTable.before(infoSection);
-    logger.log('Added dynamic info section to NetSuite settings.');
   }
 }
 

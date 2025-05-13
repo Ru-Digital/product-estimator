@@ -6,6 +6,7 @@
 import AdminTableManager from '../common/AdminTableManager'; // Adjust path as needed
 import { ajax, validation } from '@utils'; // Assuming @utils provides these. Removed dom, format as they weren't explicitly used in this file's logic directly.
 import { createLogger } from '@utils';
+
 class SimilarProductsSettingsModule extends AdminTableManager {
   /**
    * Constructor for SimilarProductsSettingsModule
@@ -21,14 +22,10 @@ class SimilarProductsSettingsModule extends AdminTableManager {
     super(config); // Calls AdminTableManager constructor
 
     this.$(document).on(`admin_table_manager_ready_${this.config.mainTabId}`, () => { // POTENTIAL ERROR HERE
-      this.logger.log('Base AdminTableManager is ready. Initializing SimilarProducts specifics.');
       this._cacheSimilarProductsDOM();
       this._bindSpecificEvents();
       this._initializeSelect2();
-      this.logger.log('SimilarProducts specific features initialized.');
     });
-
-    this.logger.log('SimilarProducts constructor completed.');
   }
 
   /**
@@ -45,9 +42,7 @@ class SimilarProductsSettingsModule extends AdminTableManager {
       this.dom.attributesList = this.$container.find(selectors.attributesList);
       this.dom.attributesLoading = this.$container.find(selectors.attributesLoading);
       this.dom.selectedAttributesInput = this.$container.find(selectors.selectedAttributesInput);
-      this.logger.log('Similar Products specific DOM elements cached.');
     } else {
-      this.logger.warn('Cannot cache Similar Products specific DOM elements: this.settings.selectors not available.');
     }
 
   }
@@ -57,12 +52,10 @@ class SimilarProductsSettingsModule extends AdminTableManager {
    */
   _bindSpecificEvents() {
     if (!this.dom.form || !this.dom.form.length) {
-      this.logger.error('SimilarProducts: Form DOM element not found, cannot bind specific events.');
       return;
     }
 
     this.dom.sourceCategoriesSelect?.on('change.SimilarProducts', this._handleSourceCategoriesChange.bind(this));
-    this.logger.log('Similar Products specific events bound.');
   }
 
   /**
@@ -95,7 +88,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
    */
   onMainTabActivated() {
     super.onMainTabActivated(); // Call parent method
-    this.logger.log('Similar Products main tab activated.');
     // Specific actions for Product Additions when its tab is shown.
     // For example, if Select2 or other components need re-initialization or refresh when tab becomes visible.
     // The `admin_table_manager_ready` event handles initial setup. This is for subsequent activations.
@@ -111,7 +103,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
 
   _handleSourceCategoriesChange() {
     const categoryIds = this.dom.sourceCategoriesSelect?.val();
-    this.logger.log('Source categories changed to:', categoryIds);
 
     if (categoryIds && categoryIds.length > 0) {
       this._fetchAttributesForCategories(categoryIds);
@@ -167,10 +158,8 @@ class SimilarProductsSettingsModule extends AdminTableManager {
   }
 
   _fetchAttributesForCategories(categoryIds, selectedAttributes = null) {
-    this.logger.log('Fetching attributes for categories:', categoryIds);
 
     if (!this.settings.actions || !this.settings.actions.get_attributes) {
-      this.logger.error('Get Attributes AJAX action not defined in settings.actions.');
       return;
     }
 
@@ -183,7 +172,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
     const currentlySelectedAttributes = selectedAttributes ||
                                        this.dom.selectedAttributesInput.val().split(',').filter(Boolean);
 
-    this.logger.log('Using currently selected attributes:', currentlySelectedAttributes);
 
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl,
@@ -194,7 +182,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
       }
     })
     .then(response => {
-      this.logger.log('Raw response from ajax.ajaxRequest for get_attributes:', response);
       let attributesArray = null;
 
       // Standardize response checking
@@ -205,7 +192,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
       }
 
       if (attributesArray) {
-        this.logger.log('Attributes data found. Processing attributes array:', attributesArray);
         if (attributesArray.length > 0) {
           this._updateAttributeSelectionField(attributesArray, currentlySelectedAttributes);
         } else {
@@ -213,13 +199,11 @@ class SimilarProductsSettingsModule extends AdminTableManager {
           this.dom.attributesList.hide();
         }
       } else {
-        this.logger.error('Get Attributes failed or returned invalid/unexpected data structure:', response);
         this.dom.attributesLoading.text(this.settings.i18n.errorLoading || 'Error loading attributes. Please try again.');
         this.dom.attributesList.hide();
       }
     })
     .catch(error => {
-      this.logger.error('get_attributes AJAX request failed:', error);
       this.dom.attributesLoading.text(this.settings.i18n.errorLoading || 'Error loading attributes. Please try again.');
       this.dom.attributesList.hide();
     });
@@ -246,7 +230,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
     });
 
     this.dom.selectedAttributesInput.val(selectedAttributes.join(','));
-    this.logger.log('Updated selected attributes:', selectedAttributes);
   }
 
   /**
@@ -262,7 +245,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
     this.dom.attributesLoading.show();
     this.dom.selectedAttributesInput.val('');
 
-    this.logger.log('Similar Products form fields specifically reset.');
   }
 
   /**
@@ -270,7 +252,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
    */
   populateFormWithData(itemData) {
     super.populateFormWithData(itemData); // Sets item ID, calls base logic
-    this.logger.log('Similar Products form with full item data:', itemData);
 
     const sourceCategories = itemData.source_categories || []; // Expecting array for multi-select
     const attributes = Array.isArray(itemData.attributes) ? itemData.attributes :
@@ -287,7 +268,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
       // If we have both categories and attributes selected, manually fetch the attributes
       // This ensures attributes are loaded and selected when editing an existing item
       if (sourceCategories.length > 0 && attributes.length > 0) {
-        this.logger.log('Manually fetching attributes for edit form with categories:', sourceCategories);
         this._fetchAttributesForCategories(sourceCategories, attributes);
       }
 
@@ -300,7 +280,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
    */
   validateForm() {
     let isValid = super.validateForm(); // Perform base validation first
-    this.logger.log('Validating Similar Products form.');
 
     // Get values
     const sourceCategories = this.dom.sourceCategoriesSelect?.val(); // Returns array for multi-select
@@ -323,7 +302,6 @@ class SimilarProductsSettingsModule extends AdminTableManager {
       isValid = false;
     }
 
-    this.logger.log('Similar Products form validation result:', isValid);
     return isValid;
   }
 

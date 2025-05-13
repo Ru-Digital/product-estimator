@@ -21,7 +21,6 @@ class LabelSettingsModule extends VerticalTabbedModule {
       ajaxActionPrefix: 'save_labels',
       localizedDataName: 'labelsSettings'
     });
-    logger.log('LabelSettingsModule instance created.');
   }
 
   /**
@@ -32,11 +31,9 @@ class LabelSettingsModule extends VerticalTabbedModule {
     super.bindModuleSpecificEvents();
 
     if (!this.$container || !this.$container.length) {
-      logger.warn('LabelSettingsModule: $container not available in bindModuleSpecificEvents.');
       return;
     }
 
-    logger.log('LabelSettingsModule specific events bound (if any).');
   }
 
   /**
@@ -44,7 +41,6 @@ class LabelSettingsModule extends VerticalTabbedModule {
    */
   onMainTabActivated() {
     super.onMainTabActivated();
-    logger.log('Labels main tab activated - specific setup can go here.');
   }
 }
 
@@ -56,16 +52,13 @@ jQuery(document).ready(function($) { // Pass $ to use it directly
     if (!window.ProductEstimatorLabelSettingsModuleInstance) {
       try {
         window.ProductEstimatorLabelSettingsModuleInstance = new LabelSettingsModule();
-        logger.log('LabelSettingsModule instance successfully created and assigned to window.');
       } catch (error) {
-        logger.error('Error instantiating LabelSettingsModule:', error);
         if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
           window.ProductEstimatorSettingsInstance.showNotice('Failed to initialize Label Settings. Check console for errors.', 'error');
         }
       }
     }
   } else {
-    logger.warn('Main container #labels not found. LabelSettingsModule will not be initialized.');
   }
 });
 

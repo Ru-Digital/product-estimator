@@ -29,7 +29,6 @@ class CustomerEstimatesAdmin {
   init() {
     this.bindEvents();
     this.initializeActions();
-    logger.log('Initialized');
   }
 
   /**

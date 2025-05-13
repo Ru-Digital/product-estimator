@@ -26,7 +26,6 @@ class FeatureSwitchesSettingsModule extends ProductEstimatorSettings {
    * Module-specific initialization, called by the base class constructor on document.ready.
    */
   moduleInit() {
-    logger.log('Initializing Feature Switches Settings Module');
     this.bindEvents();
     // Add any initial setup logic for feature switch fields here if needed
   }
@@ -50,7 +49,6 @@ class FeatureSwitchesSettingsModule extends ProductEstimatorSettings {
   handleTabChanged(e, tabId) {
     // If our tab becomes active, perform any necessary re-initialization or setup
     if (tabId === this.settings.tab_id) {
-      logger.log('Feature Switches tab activated');
       // You can call setup functions here if needed when the tab becomes visible
       // this.setupFeatureSwitchFields();
     }
@@ -60,7 +58,7 @@ class FeatureSwitchesSettingsModule extends ProductEstimatorSettings {
   // Add other methods as needed for client-side functionality
   // Example:
   // setupFeatureSwitchFields() {
-  //   logger.log('Setting up feature switch fields');
+  //
   //   // Add logic to set initial states, attach event listeners, etc.
   // }
 }

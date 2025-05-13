@@ -190,7 +190,6 @@ class ProductEstimatorAdmin {
    */
   loadInitialReport() {
     // This would load report data from the server via AJAX
-    logger.log('Loading initial report data');
   }
 }
 

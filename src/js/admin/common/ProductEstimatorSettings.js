@@ -36,8 +36,7 @@ class ProductEstimatorSettings {
         if (typeof this.moduleInit === 'function') {
           this.moduleInit();
         } else {
-          this.baseClassLogger.warn('Module does not implement moduleInit():', moduleOptions.settingsObjectName);
-        }
+            }
       });
     } else {
       // Original constructor path for the main settings page orchestrator
@@ -102,17 +101,14 @@ class ProductEstimatorSettings {
     // The 'option_name' should ideally always come from localizedSettings.
     // If it might be missing, you'd need a strategy (e.g., a global default or error).
     if (typeof this.settings.option_name === 'undefined') {
-      this.baseClassLogger.warn(`'option_name' is missing from localizedSettings for ${settingsObjectName}. This is usually critical.`);
       // Consider a fallback if appropriate:
       // this.settings.option_name = 'product_estimator_settings'; // Example global default
     }
 
     // Diagnostic logs (keep these or similar)
     if (typeof localizedSettings.actions === 'undefined') { // Check original localizedSettings
-      this.baseClassLogger.warn(`Original 'actions' object was missing from localizedSettings for ${settingsObjectName}. Defaulted/merged.`);
     }
     if (typeof localizedSettings.selectors === 'undefined') { // Check original localizedSettings
-      this.baseClassLogger.warn(`Original 'selectors' object was missing from localizedSettings for ${settingsObjectName}. Defaulted/merged.`);
     }
 
   }
@@ -125,7 +121,6 @@ class ProductEstimatorSettings {
     const updatedLocalizedSettingsOnReady = window[settingsObjectName] || {};
     if (updatedLocalizedSettingsOnReady.nonce) {
       this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
-      this.baseClassLogger.log(`Nonce updated for ${settingsObjectName} via _finalizeModuleSettings`);
     }
   }
 
@@ -159,7 +154,6 @@ class ProductEstimatorSettings {
    * Initialize the main Settings Manager (orchestrator).
    */
   mainInit() {
-    log('ProductEstimatorSettings', 'Initializing Settings Manager Orchestrator...'); // Original logging style
 
     const urlTab = this.getTabFromUrl();
     this.currentTab = urlTab !== null ? urlTab : 'general';
@@ -174,7 +168,6 @@ class ProductEstimatorSettings {
     this.initFormChangeTracking();
     this.initializeValidation(); // Global validation for forms handled by orchestrator
 
-    log('ProductEstimatorSettings', 'Settings manager orchestrator initialized with tab:', this.currentTab);
   }
 
   /**
@@ -186,16 +179,13 @@ class ProductEstimatorSettings {
     this.$(document).on('submit', 'form.product-estimator-form', (e) => {
       const $form = this.$(e.currentTarget);
       if ($form.hasClass('pe-vtabs-tab-form') && $form.attr('data-sub-tab-id')) {
-        log('ProductEstimatorSettings', 'Orchestrator: Form is vtab, letting specialized handler process.', $form[0]);
-        return;
+          return;
       }
-      log('ProductEstimatorSettings', 'Orchestrator: Processing form submission.', $form[0]);
       e.preventDefault();
       this.handleAjaxFormSubmit(e, $form);
     });
 
     this.$(window).on('beforeunload', this.handleBeforeUnload.bind(this));
-    log('ProductEstimatorSettings', 'Orchestrator events bound');
   }
 
   /**
@@ -207,9 +197,6 @@ class ProductEstimatorSettings {
     $form = $form || this.$(e.target);
     const tabId = $form.closest('.tab-content').attr('id') || $form.data('tab');
     let formData = $form.serialize();
-    const currentLogger = window.createLogger ? window.createLogger(`PES-Orchestrator:${tabId || 'unknown_tab'}`) : console;
-
-    currentLogger.log('Serialized form data (orchestrator):', formData);
 
     $form.find('input[type="checkbox"]').each((i, el) => {
       const $cb = this.$(el);
@@ -226,7 +213,6 @@ class ProductEstimatorSettings {
     formData = formData.replace(/^&+/, '').replace(/&&+/g, '&');
 
     this.showFormLoading($form);
-    currentLogger.log(`Submitting form for tab: ${tabId}`);
 
     const ajaxAction = `save_${tabId}_settings`;
     const localizedData = window.productEstimatorSettings || { nonce: '', ajax_url: ajaxurl, i18n: {} };
@@ -237,7 +223,6 @@ class ProductEstimatorSettings {
       form_data: formData
     };
 
-    currentLogger.log('Orchestrator sending AJAX with payload:', ajaxDataPayload);
 
     ajax.ajaxRequest({
       url: localizedData.ajax_url,
@@ -252,12 +237,10 @@ class ProductEstimatorSettings {
         if (tabId === this.currentTab) {
           this.formChanged = false;
         }
-        currentLogger.log(`Settings saved successfully for tab: ${tabId} (via orchestrator)`);
       })
       .catch(error => {
         const errorMessage = (error && error.message) ? error.message : localizedData.i18n.saveError;
         this.showNotice(errorMessage, 'error');
-        currentLogger.error(`Error saving settings for tab ${tabId} (via orchestrator):`, error);
       })
       .finally(() => {
         this.hideFormLoading($form);
@@ -309,7 +292,6 @@ class ProductEstimatorSettings {
         }
       });
     });
-    log('ProductEstimatorSettings', 'Orchestrator form change tracking initialized');
   }
 
   /**
@@ -348,7 +330,6 @@ class ProductEstimatorSettings {
         });
       }
     });
-    log('ProductEstimatorSettings', 'Orchestrator form validation initialized');
   }
 
   /**
@@ -398,7 +379,6 @@ class ProductEstimatorSettings {
     this.formChanged = (this.formChangeTrackers && this.formChangeTrackers[tabId]) || false;
 
     this.$(document).trigger('product_estimator_tab_changed', [tabId, previousTab]);
-    log('ProductEstimatorSettings', `Orchestrator switched to tab: ${tabId} from ${previousTab}`);
   }
 
   /**
@@ -433,7 +413,6 @@ class ProductEstimatorSettings {
     if (url.searchParams.has('sub_tab')) {
       url.searchParams.delete('sub_tab');
       window.history.replaceState({}, '', url.toString());
-      this.baseClassLogger.log('Cleared sub_tab from URL.');
     }
   }
 
@@ -473,12 +452,10 @@ class ProductEstimatorSettings {
    */
   initSelect2($element, placeholderText, config = {}) {
     if (!$element || !$element.length) {
-      this.baseClassLogger.warn('Select2 target element not found or empty');
       return null;
     }
 
     if (!this.$ || !this.$.fn.select2) {
-      this.baseClassLogger.error('Select2 library not available');
       return null;
     }
 
@@ -503,7 +480,6 @@ class ProductEstimatorSettings {
 
       return $element;
     } catch (error) {
-      this.baseClassLogger.error('Error initializing Select2:', error);
       return null;
     }
   }
@@ -527,7 +503,6 @@ class ProductEstimatorSettings {
     } = options;
 
     if (!this.$ || !this.$.fn.select2) {
-      this.baseClassLogger.error(`jQuery or Select2 not available for ${moduleName}`);
       return;
     }
 
@@ -535,7 +510,6 @@ class ProductEstimatorSettings {
     setTimeout(() => {
       elements.forEach(el => {
         if (!el || !el.element) {
-          this.baseClassLogger.warn(`Invalid element configuration in ${moduleName}`);
           return;
         }
 
@@ -543,7 +517,6 @@ class ProductEstimatorSettings {
         this.initSelect2(el.element, placeholder, el.config || {});
       });
 
-      this.baseClassLogger.log(`Select2 components initialized for ${moduleName}`);
     }, delay);
   }
 
@@ -567,7 +540,6 @@ class ProductEstimatorSettings {
       $element.select2('destroy');
       return this.initSelect2($element, placeholder, config);
     } catch (error) {
-      this.baseClassLogger.error('Error refreshing Select2:', error);
       return null;
     }
   }

@@ -34,7 +34,6 @@ class NotificationSettingsModule extends VerticalTabbedModule {
     this.$container.on('click', '.image-remove-button', this.handleImageRemove.bind(this));
     this.$container.on('change', 'input[type="email"]', this.handleEmailValidation.bind(this)); // e.g. #from_email
 
-    logger.log('NotificationSettingsModule specific events bound.');
   }
 
   /**
@@ -46,12 +45,10 @@ class NotificationSettingsModule extends VerticalTabbedModule {
     this.setupNotificationEditors(); // e.g. TinyMCE
     // this.setupMediaUploader(); // Media uploader is more general, could be in init if not already.
     // Or ensure it's setup if it relies on tab being visible.
-    logger.log('Notifications main tab activated - specific setup executed.');
   }
 
   setupNotificationEditors() {
     if (!this.$container || !this.localizedData) return;
-    logger.log('Setting up rich text editors for notifications.');
     // Example: If using setupTinyMCEHTMLPreservation for specific editors in notifications
     // const editorIds = this.localizedData.notification_types.map(type => `notification_${type}_content`);
     // setupTinyMCEHTMLPreservation(editorIds, `#${this.config.mainTabId}`);
@@ -73,14 +70,12 @@ class NotificationSettingsModule extends VerticalTabbedModule {
     const $ = jQuery;
     const $globalEnableCheckbox = this.$container.find('#enable_notifications');
     if (!$globalEnableCheckbox.length) {
-      logger.warn('#enable_notifications checkbox not found.');
       return;
     }
     const isEnabled = $globalEnableCheckbox.is(':checked');
     const $verticalTabsNavList = this.$container.find('.pe-vtabs-nav-list, .vertical-tabs-nav');
     const $allNotificationTypeForms = this.$container.find('.pe-vtabs-tab-form[data-tab-id*="notification_type_"]');
 
-    logger.log(`Global notifications toggle: ${isEnabled}`);
 
     if (isEnabled) {
       $verticalTabsNavList.removeClass('pe-vtabs-nav-disabled'); // Use class from admin-vertical-tabs.css
@@ -111,14 +106,12 @@ class NotificationSettingsModule extends VerticalTabbedModule {
     const $form = this.$container.find(`.pe-vtabs-tab-form[data-sub-tab-id="notification-type-${formDataType}"]`);
 
     if (!$form.length) {
-      logger.warn(`Form for notification type ${formDataType} not found.`);
       return;
     }
 
     // Only proceed if global notifications are enabled
     const $globalEnableCheckbox = this.$container.find('#enable_notifications');
     if ($globalEnableCheckbox.length && !$globalEnableCheckbox.is(':checked')) {
-      logger.log('Global notifications are disabled, individual toggles have no effect on field state.');
       // Fields should remain disabled by handleToggleAllNotifications
       return;
     }
@@ -146,7 +139,6 @@ class NotificationSettingsModule extends VerticalTabbedModule {
       this.mediaFrame.off('select');
     } else {
       if (typeof wp === 'undefined' || !wp.media) {
-        logger.error('WordPress Media Library not available');
         return;
       }
       this.mediaFrame = wp.media({

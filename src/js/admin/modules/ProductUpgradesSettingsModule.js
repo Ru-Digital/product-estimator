@@ -29,14 +29,11 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
 
     // Defer DOM-dependent specific initializations until the base AdminTableManager signals it's ready
     this.$(document).on(`admin_table_manager_ready_${this.config.mainTabId}`, () => {
-      this.logger.log('Base AdminTableManager is ready. Initializing ProductUpgrades specifics.');
       this._cacheProductUpgradesDOM();
       this._bindSpecificEvents();
       this._initializeSelect2();
-      this.logger.log('ProductUpgradesSettingsModule specific features initialized.');
     });
 
-    this.logger.log('ProductUpgradesSettingsModule constructor completed.');
   }
 
   /**
@@ -52,9 +49,7 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
       this.dom.upgradeCategories = this.$container.find(puSelectors.upgradeCategories);
       this.dom.upgradeTitle = this.$container.find(puSelectors.upgradeTitle);
       this.dom.upgradeDescription = this.$container.find(puSelectors.upgradeDescription);
-      this.logger.log('Product Upgrades specific DOM elements cached.');
     } else {
-      this.logger.warn('Cannot cache Product Upgrades specific DOM elements: this.settings.selectors not available.');
     }
   }
 
@@ -66,13 +61,11 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
   _bindSpecificEvents() {
     // Ensure this.dom elements are available
     if (!this.dom.form || !this.dom.form.length) {
-      this.logger.error('ProductUpgrades: Form DOM element not found, cannot bind specific events.');
       return;
     }
 
     // Any product upgrades specific events can be bound here
 
-    this.logger.log('Product Upgrades specific events bound.');
   }
 
   /**
@@ -114,7 +107,6 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
    */
   onMainTabActivated() {
     super.onMainTabActivated(); // Call parent method
-    this.logger.log('Product Upgrades main tab activated.');
 
     // Refresh Select2 components if they're already initialized
     if (this.dom.baseCategories && this.dom.baseCategories.hasClass("select2-hidden-accessible")) {
@@ -137,7 +129,6 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
     this.dom.upgradeTitle?.val('');
     this.dom.upgradeDescription?.val('');
 
-    this.logger.log('Product Upgrades form fields specifically reset.');
   }
 
   /**
@@ -145,7 +136,6 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
    */
   populateFormWithData(itemData) {
     super.populateFormWithData(itemData); // Sets item ID, calls base logic
-    this.logger.log('Populating Product Upgrades form with full item data:', itemData);
 
     const baseCategories = itemData.base_categories || [];
     const upgradeCategories = itemData.upgrade_categories || [];
@@ -154,7 +144,6 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
     const title = itemData.upgrade_title || itemData.title || '';
     const description = itemData.upgrade_description || itemData.description || '';
 
-    this.logger.log('Populating title and description fields:', { title, description });
 
     // Use setTimeout to allow dependent field visibility changes to complete
     setTimeout(() => {
@@ -172,7 +161,6 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
    */
   validateForm() {
     let isValid = super.validateForm(); // Perform base validation first
-    this.logger.log('Validating Product Upgrades form.');
 
     // Get values
     const baseCategories = this.dom.baseCategories?.val();
@@ -195,7 +183,6 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
       isValid = false;
     }
 
-    this.logger.log('Product Upgrades form validation result:', isValid);
     return isValid;
   }
 
@@ -204,12 +191,6 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
    * This method follows the naming convention for column handlers in AdminTableManager
    */
   populateColumn_base_categories($cell, itemData) {
-    this.logger.log('Populating base_categories column with data:', {
-      item_id: itemData.id,
-      base_categories: itemData.base_categories,
-      base_category_names: itemData.base_category_names,
-      base_categories_display: itemData.base_categories_display
-    });
 
     // Look in all possible data fields to find the display value
     const displayValue = itemData.base_categories_display ||
@@ -224,12 +205,6 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
    * Custom column population method for 'upgrade_categories' column
    */
   populateColumn_upgrade_categories($cell, itemData) {
-    this.logger.log('Populating upgrade_categories column with data:', {
-      item_id: itemData.id,
-      upgrade_categories: itemData.upgrade_categories,
-      upgrade_category_names: itemData.upgrade_category_names,
-      upgrade_categories_display: itemData.upgrade_categories_display
-    });
 
     // Look in all possible data fields to find the display value
     const displayValue = itemData.upgrade_categories_display ||

@@ -3,15 +3,15 @@
  */
 // import './CustomerEstimatesAdmin';
 import './ProductEstimatorAdmin';
-// import './common/ProductEstimatorSettings';
-// import './modules/GeneralSettingsModule';
-// import './modules/NetsuiteSettingsModule';
-// import './modules/NotificationSettingsModule';
-// import './modules/ProductAdditionsSettingsModule';
-// import './modules/LabelSettingsModule';
-// import './modules/FeatureSwitchesSettingsModule';
-// import './modules/PricingRulesSettingsModule';
-// import './modules/ProductUpgradesSettingsModule';
+import './common/ProductEstimatorSettings';
+import './modules/GeneralSettingsModule';
+import './modules/NetsuiteSettingsModule';
+import './modules/NotificationSettingsModule';
+import './modules/ProductAdditionsSettingsModule';
+import './modules/LabelSettingsModule';
+import './modules/FeatureSwitchesSettingsModule';
+import './modules/PricingRulesSettingsModule';
+import './modules/ProductUpgradesSettingsModule';
 import './modules/SimilarProductsSettingsModule';
 
 // This is the main entry point for the frontend script bundle

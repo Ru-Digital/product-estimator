@@ -120,7 +120,11 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
           </div>
         </div>
       `);
-      button.siblings('.remove-file-button').removeClass('hidden')
+      // Show the remove button
+      button.siblings('.remove-file-button').removeClass('hidden');
+
+      // Update the button text to "Replace File"
+      button.text('Replace File');
     });
     this.mediaFrame.open();
   }
@@ -130,6 +134,7 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
     const button = this.$(e.currentTarget);
     const targetInputSelector = button.data('target-input');
     const targetPreviewSelector = button.data('target-preview');
+    const uploadButton = button.siblings('.select-file-button');
 
     if (targetInputSelector) {
       this.$(targetInputSelector).val('').trigger('change');
@@ -144,7 +149,14 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
       button.siblings('.file-preview-wrapper').empty();
     }
 
-    button.addClass('hidden')
+    // Hide the remove button
+    button.addClass('hidden');
+
+    // Update the text on the upload button from "Replace File" to "Upload File"
+    if (uploadButton.length) {
+      uploadButton.text('Upload File');
+      logger.log('Reset upload button text to "Upload File"');
+    }
   }
 
   setupValidation() {

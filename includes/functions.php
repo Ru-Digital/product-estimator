@@ -144,9 +144,9 @@ function product_estimator_get_product_price($product_id, $room_area = null, $ap
     $result['pricing_method'] = $pricing_rule['method'];
     $result['pricing_source'] = $pricing_rule['source'];
 
-    // Get markup from settings or use custom value if provided
-    $options = get_option('product_estimator_settings');
-    $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+    // Get markup from pricing rules settings or use custom value if provided
+    $pricing_rules = get_option('product_estimator_pricing_rules');
+    $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
     $markup = ($custom_markup !== null) ? floatval($custom_markup) : $default_markup;
 
     // Initialize pricing data
@@ -259,9 +259,9 @@ function product_estimator_get_product_price_for_display($product_id, $room_area
     $result['pricing_method'] = $pricing_rule['method'];
     $result['pricing_source'] = $pricing_rule['source'];
 
-    // Get markup from settings or use custom value if provided
-    $options = get_option('product_estimator_settings');
-    $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+    // Get markup from pricing rules settings or use custom value if provided
+    $pricing_rules = get_option('product_estimator_pricing_rules');
+    $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
     $markup = ($custom_markup !== null) ? floatval($custom_markup) : $default_markup;
 
     // Initialize pricing data

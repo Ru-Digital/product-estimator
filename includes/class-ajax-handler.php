@@ -1032,9 +1032,9 @@ class AjaxHandler {
                 }
                 $_SESSION['product_estimator']['customer_details'] = $customer_details;
 
-                // Get default markup from settings
-             $settings = get_option('product_estimator_settings');
-            $default_markup = isset($settings['default_markup']) ? floatval($settings['default_markup']) : 0;
+                // Get default markup from pricing rules settings
+             $pricing_rules = get_option('product_estimator_pricing_rules');
+            $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
 
                 // Create new estimate data
                 $estimate_data = [
@@ -1079,8 +1079,8 @@ class AjaxHandler {
                 $customer_details = $customer_details_manager->getDetails();
             }
 
-            $settings = get_option('product_estimator_settings');
-            $default_markup = isset($settings['default_markup']) ? floatval($settings['default_markup']) : 0;
+            $pricing_rules = get_option('product_estimator_pricing_rules');
+            $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
 
             // Create new estimate data
             $estimate_data = [
@@ -1953,8 +1953,8 @@ class AjaxHandler {
             $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
             if ($default_markup === 0) {
                 // Fall back to global settings
-                $options = get_option('product_estimator_settings');
-                $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+                $pricing_rules = get_option('product_estimator_pricing_rules');
+                $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
             }
 
             // Get pricing data using our helper function

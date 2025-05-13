@@ -60,7 +60,7 @@ final class PricingRulesSettingsModule extends SettingsModuleWithTableBase imple
      */
     public function has_setting($key) {
         // Check if it's a default setting field
-        if ($key === 'default_pricing_method' || $key === 'default_pricing_source') {
+        if ($key === 'default_pricing_method' || $key === 'default_pricing_source' || $key === 'default_markup') {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('PricingRulesSettingsModule: has_setting: TRUE for default setting ' . $key);
             }
@@ -166,6 +166,20 @@ final class PricingRulesSettingsModule extends SettingsModuleWithTableBase imple
                     'attributes' => [
                         'id' => 'default_pricing_source',
                         'class' => 'regular-text'
+                    ]
+                ),
+                'default_markup' => array(
+                    'id' => 'default_markup',
+                    'title' => __('Default Markup (%)', 'product-estimator'),
+                    'type' => 'number',
+                    'description' => __('Default markup percentage for price ranges', 'product-estimator'),
+                    'default' => 10,
+                    'option_name' => $this->option_name,
+                    'attributes' => [
+                        'id' => 'default_markup',
+                        'class' => 'regular-text',
+                        'min' => 0,
+                        'max' => 100
                     ]
                 ),
             );
@@ -795,6 +809,23 @@ final class PricingRulesSettingsModule extends SettingsModuleWithTableBase imple
      */
     protected function get_nonce_action_base() {
         return 'product_estimator_pricing_rules_items';
+    }
+    
+    /**
+     * Get number fields with constraints for validation
+     *
+     * @since    1.1.0
+     * @access   protected
+     * @return   array
+     */
+    protected function get_number_fields()
+    {
+        return [
+            'default_markup' => [
+                'min' => 0,
+                'max' => 100
+            ]
+        ];
     }
 
     /**

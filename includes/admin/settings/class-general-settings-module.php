@@ -20,7 +20,6 @@ final class GeneralSettingsModule extends SettingsModuleBase implements Settings
      * @var      array    $module_settings    Settings keys managed by this module
      */
     private $module_settings = [
-        'default_markup',
         'estimate_expiry_days',
         // Add any other settings managed by this module
     ];
@@ -85,10 +84,6 @@ final class GeneralSettingsModule extends SettingsModuleBase implements Settings
      */
     protected function get_number_fields() {
         return [
-            'default_markup' => [
-                'min' => 0,
-                'max' => 100
-            ],
             'estimate_expiry_days' => [
                 'min' => 1,
                 'max' => 365
@@ -112,11 +107,6 @@ final class GeneralSettingsModule extends SettingsModuleBase implements Settings
         $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
 
         $estimator_fields = [
-            'default_markup' => [
-                'title' => __('Default Markup (%)', 'product-estimator'),
-                'type' => 'number', 'description' => __('Default markup percentage for price ranges', 'product-estimator'),
-                'default' => 10, 'min' => 0, 'max' => 100,
-            ],
             'estimate_expiry_days' => [
                 'title' => __('Estimate Validity (Days)', 'product-estimator'),
                 'type' => 'number', 'description' => __('Number of days an estimate remains valid', 'product-estimator'),

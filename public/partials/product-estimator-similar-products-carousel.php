@@ -105,8 +105,8 @@ if (isset($product['id']) && !empty($product['id'])):
 
             // If no markup found in the estimate, fall back to global settings
             if ($default_markup === 0) {
-                $options = get_option('product_estimator_settings');
-                $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+                $pricing_rules = get_option('product_estimator_pricing_rules');
+                $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
             }
             ?>
             <!-- This is a similar products carousel - should be bound by product-item -->

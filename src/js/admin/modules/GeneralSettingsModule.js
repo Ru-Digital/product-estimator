@@ -86,7 +86,7 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
       title: 'Select or Upload PDF Template',
       button: { text: 'Use this file' },
       multiple: false,
-      library: { type: acceptType ? [acceptType.split('/')[0]] : null }
+      library: { type: 'application/pdf' } // Only allow PDF files
     });
 
     this.mediaFrame.on('select', () => {
@@ -110,24 +110,26 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
         this.$(targetPreviewSelector) :
         button.siblings('.file-preview-wrapper');
 
-      // Create a nicer preview with file icon and more details
+      // Create a simpler preview that matches the design in the second image
+      const fileSize = this._formatFileSize(attachment.filesizeInBytes || 0);
       $previewWrapper.html(`
         <div class="file-preview">
           <span class="file-icon dashicons dashicons-pdf"></span>
           <div class="file-details">
             <span class="file-name">
-              <a href="${attachment.url}" target="_blank" title="Click to view file">
+              <a href="${attachment.url}" target="_blank">
                 ${attachment.filename}
               </a>
-            </span>
-            <span class="file-meta">
-              <span class="file-size">${this._formatFileSize(attachment.filesizeInBytes || 0)}</span>
-              <span class="file-type">PDF Document</span>
-              <span class="file-uploaded">Just uploaded</span>
+               ${fileSize ? `(${fileSize} PDF Document)` : ''}
             </span>
           </div>
         </div>
       `);
+
+      // Add the file info text below the file preview if not already present
+      if (!this.$('.upload-instructions').length) {
+        $previewWrapper.after(`<span class="upload-instructions">Upload a PDF template file (optional) *<br>Accepted format: application/pdf</span>`);
+      }
       // Show the remove button
       button.siblings('.remove-file-button').removeClass('hidden');
 
@@ -165,6 +167,9 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
       uploadButton.text('Upload File');
       logger.log('Reset upload button text to "Upload File"');
     }
+
+    // Remove the upload instructions if they were added
+    this.$('.upload-instructions').remove();
   }
 
   setupValidation() {

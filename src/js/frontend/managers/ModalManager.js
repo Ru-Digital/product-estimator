@@ -18,6 +18,7 @@ import UIManager from './UIManager';
 // Import services and utils
 import { loadEstimateData, saveEstimateData, clearEstimateData } from '../EstimateStorage';
 import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails } from '../CustomerStorage';
+import TemplateEngine from '../TemplateEngine';
 
 const logger = createLogger('ModalManager');
 
@@ -43,7 +44,8 @@ class ModalManager {
         roomSelection: '#room-selection-form-wrapper',
         newEstimateForm: '#new-estimate-form-wrapper',
         newRoomForm: '#new-room-form-wrapper'
-      }
+      },
+      i18n: window.productEstimatorVars?.i18n || {}
     }, config);
     
     // Store DataService
@@ -66,7 +68,10 @@ class ModalManager {
     
     // State
     this.isOpen = false;
+    this.currentView = null;
     this.currentProductId = null;
+    this.initialized = false;
+    this.eventHandlers = {};
     
     // Storage functions
     this.loadEstimateData = loadEstimateData;
@@ -89,6 +94,9 @@ class ModalManager {
     this.hideLoading = this.hideLoading.bind(this);
     this.openModal = this.openModal.bind(this);
     this.closeModal = this.closeModal.bind(this);
+    
+    // Initialize the modal
+    this.init();
   }
   
   /**
@@ -96,21 +104,45 @@ class ModalManager {
    * @returns {ModalManager} The instance for chaining
    */
   init() {
+    if (this.initialized) {
+      logger.log('ModalManager already initialized');
+      return this;
+    }
+    
     logger.log('Initializing ModalManager');
     
     try {
-      // Initialize elements
-      this.initializeElements();
+      // Find the existing modal in the DOM
+      this.modal = document.querySelector(this.config.selectors.modalContainer);
       
-      // Set up the loading indicator safety checks
-      this.setupLoaderSafety();
+      if (!this.modal) {
+        logger.log('Warning: Modal element not found in DOM. The PHP partial may not be included.');
+        // Don't attempt to create it - the partial should be included by PHP
+      } else {
+        logger.log('Found existing modal in DOM, initializing elements');
+      }
       
-      // Initialize specialized managers
-      this.initializeManagers();
+      // Initialize modal elements if modal exists
+      if (this.modal) {
+        // Initialize elements
+        this.initializeElements();
+        
+        // Set up the loading indicator safety checks
+        this.setupLoaderSafety();
+        
+        // Initialize specialized managers
+        this.initializeManagers();
+        
+        // Bind base events
+        this.bindEvents();
+        
+        // Hide any loading indicators that might be visible
+        setTimeout(() => {
+          this.ensureLoaderHidden();
+        }, 500);
+      }
       
-      // Bind base events
-      this.bindEvents();
-      
+      this.initialized = true;
       logger.log('ModalManager initialized successfully');
     } catch (error) {
       logger.error('Error initializing ModalManager:', error);
@@ -126,28 +158,41 @@ class ModalManager {
     logger.log('Initializing DOM elements');
     
     try {
-      // Modal elements
-      this.modal = document.querySelector(this.config.selectors.modalContainer);
       if (!this.modal) {
-        logger.error('Modal container not found:', this.config.selectors.modalContainer);
+        logger.error('Modal element not available for initializing elements');
         return;
       }
       
+      // Find core modal elements
       this.overlay = this.modal.querySelector(this.config.selectors.modalOverlay);
       this.closeButton = this.modal.querySelector(this.config.selectors.closeButton);
       this.contentContainer = this.modal.querySelector(this.config.selectors.contentContainer);
       this.loadingIndicator = this.modal.querySelector(this.config.selectors.loadingIndicator);
       
-      // View containers
+      // Find view containers - ASSUME they are now in the PHP template
       this.estimatesList = this.modal.querySelector(this.config.selectors.estimatesList);
       this.estimateSelection = this.modal.querySelector(this.config.selectors.estimateSelection);
+      this.estimateSelectionForm = this.modal.querySelector('#estimate-selection-form-wrapper'); // If this is also a persistent wrapper
       this.roomSelectionForm = this.modal.querySelector(this.config.selectors.roomSelection);
       this.newEstimateForm = this.modal.querySelector(this.config.selectors.newEstimateForm);
       this.newRoomForm = this.modal.querySelector(this.config.selectors.newRoomForm);
       
-      // Optional elements that might not exist
-      if (this.estimateSelection) {
-        this.estimateSelectionForm = this.estimateSelection.querySelector('form');
+      // Add checks and potential error handling if essential elements are missing
+      if (!this.estimatesList) {
+        logger.error('Critical: #estimates div not found in modal template!');
+        // You might want to disable the modal or show a fatal error message here
+      }
+      
+      // Create missing containers if needed
+      if (!this.loadingIndicator) {
+        logger.warn('Loading indicator not found, creating one');
+        this.loadingIndicator = document.createElement('div');
+        this.loadingIndicator.className = 'product-estimator-modal-loading';
+        this.loadingIndicator.innerHTML = `
+          <div class="loading-spinner"></div>
+          <div class="loading-text">${this.config.i18n.loading || 'Loading...'}</div>
+        `;
+        this.modal.appendChild(this.loadingIndicator);
       }
       
       logger.log('DOM elements initialized');
@@ -223,15 +268,35 @@ class ModalManager {
    * Show the loading indicator
    */
   showLoading() {
-    if (!this.loadingIndicator) return;
+    if (!this.loadingIndicator) {
+      logger.warn('Loading indicator not available - creating one');
+      // Try to initialize a loading indicator
+      if (this.modal) {
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.className = 'product-estimator-modal-loading';
+        loadingIndicator.style.display = 'flex';
+        loadingIndicator.innerHTML = `
+          <div class="loading-spinner"></div>
+          <div class="loading-text">${this.config.i18n.loading || 'Loading...'}</div>
+        `;
+        this.modal.appendChild(loadingIndicator);
+        this.loadingIndicator = loadingIndicator;
+      } else {
+        logger.error('Cannot create loading indicator - modal not available');
+        return;
+      }
+    }
     
     try {
-      this.loadingIndicator.style.display = 'block';
+      this.loadingIndicator.style.display = 'flex';
       
       // Set a safety timeout in case something goes wrong
       this._loadingTimeout = setTimeout(() => {
         this.ensureLoaderHidden();
       }, 10000); // 10 seconds safety timeout
+      
+      // Track loading start time for debugging
+      this.loadingStartTime = Date.now();
     } catch (error) {
       logger.error('Error showing loading indicator:', error);
     }
@@ -241,7 +306,13 @@ class ModalManager {
    * Hide the loading indicator
    */
   hideLoading() {
-    if (!this.loadingIndicator) return;
+    // Reset loading start time
+    this.loadingStartTime = 0;
+    
+    if (!this.loadingIndicator) {
+      logger.warn('Loading indicator not available during hide operation');
+      return;
+    }
     
     try {
       this.loadingIndicator.style.display = 'none';
@@ -262,34 +333,65 @@ class ModalManager {
    * @param {boolean} forceListView - Force showing the estimates list
    */
   openModal(productId = null, forceListView = false) {
-    logger.log('Opening modal', { productId, forceListView });
+    logger.log('MODAL OPEN CALLED WITH:', {
+      productId: productId,
+      forceListView: forceListView,
+      typeOfProductId: typeof productId
+    });
+    
+    // Make sure modal exists and is initialized
+    if (!this.modal) {
+      logger.error('Cannot open modal - not found in DOM');
+      this.showError('Modal element not found. Please contact support.');
+      return;
+    }
     
     try {
-      // Show the modal
-      if (this.modal) {
-        this.modal.style.display = 'block';
-        this.isOpen = true;
-      } else {
-        logger.error('Modal container not found');
-        return;
-      }
-      
-      // Store the product ID
-      this.currentProductId = productId;
-      
-      // Reset modal state - hide all views
+      // Reset any previous modal state (hides all view wrappers)
       this.resetModalState();
       
-      // Show loading indicator while deciding what to show
+      // Store product ID
+      this.currentProductId = productId;
+      
+      // Set data attribute on modal
+      if (productId) {
+        this.modal.dataset.productId = productId;
+      } else {
+        delete this.modal.dataset.productId;
+      }
+      
+      // Always show loader at the start of openModal
       this.showLoading();
       
-      // Placeholder - this will delegate to specialized managers
-      // when they are implemented
-      this.hideLoading();
-      logger.log('Modal opened, but delegation to specialized managers not yet implemented');
+      // Make sure modal is visible
+      this.modal.style.display = 'block';
+      
+      // Add modal-open class to body
+      document.body.classList.add('modal-open');
+      this.isOpen = true;
+      
+      // Now delegate to specialized managers to handle the specific flow
+      if (productId && !forceListView) {
+        // Product flow: Navigate to estimate selection or new estimate form
+        if (this.estimateManager) {
+          this.estimateManager.handleProductFlow(productId);
+        } else {
+          logger.error('EstimateManager not available for handleProductFlow');
+          this.hideLoading();
+        }
+      } else {
+        // List view flow: Show list of estimates
+        if (this.estimateManager) {
+          this.estimateManager.showEstimatesList();
+        } else {
+          logger.error('EstimateManager not available for showEstimatesList');
+          this.hideLoading();
+        }
+      }
     } catch (error) {
       logger.error('Error opening modal:', error);
       this.hideLoading();
+      this.showError('An error occurred opening the modal. Please try again.');
     }
   }
   
@@ -314,6 +416,16 @@ class ModalManager {
       // Reset the current product ID
       this.currentProductId = null;
       
+      // Remove modal-open class from body
+      document.body.classList.remove('modal-open');
+      
+      // Notify any specialized managers about modal closing
+      if (this.estimateManager) this.estimateManager.onModalClosed();
+      if (this.roomManager) this.roomManager.onModalClosed();
+      if (this.productManager) this.productManager.onModalClosed();
+      if (this.formManager) this.formManager.onModalClosed();
+      if (this.uiManager) this.uiManager.onModalClosed();
+      
       // Dispatch modal closed event
       const event = new CustomEvent('productEstimatorModalClosed');
       document.dispatchEvent(event);
@@ -323,30 +435,80 @@ class ModalManager {
   }
   
   /**
+   * Show an error message in the modal
+   * @param {string} message - The error message to display
+   */
+  showError(message) {
+    try {
+      // Ensure loading is hidden
+      this.hideLoading();
+      
+      // Show error using the TemplateEngine if available
+      if (this.modal && TemplateEngine) {
+        const formContainer = this.modal.querySelector('.product-estimator-modal-form-container');
+        if (formContainer) {
+          TemplateEngine.showMessage(message, 'error', formContainer);
+        } else {
+          logger.error('Form container not found for error display');
+          
+          // Fallback error display
+          alert(message);
+        }
+      } else {
+        // Ultimate fallback
+        alert(message);
+      }
+    } catch (error) {
+      logger.error('Error showing error message:', error);
+    }
+  }
+  
+  /**
    * Set up safety mechanism for the loading indicator
    */
   setupLoaderSafety() {
+    // Log when setting up safety
+    logger.log('Setting up loader safety mechanisms');
+    
     // Monitor all API calls and ensure loading indicator is hidden in case of errors
-    const originalFetch = window.fetch;
-    window.fetch = (...args) => {
-      const fetchPromise = originalFetch(...args);
+    try {
+      const originalFetch = window.fetch;
+      window.fetch = (...args) => {
+        const fetchPromise = originalFetch(...args);
+        
+        return fetchPromise.catch(error => {
+          // Hide loading indicator if fetch fails
+          logger.warn('Fetch error triggered loader safety:', error.message);
+          this.ensureLoaderHidden();
+          throw error;
+        });
+      };
       
-      return fetchPromise.catch(error => {
-        // Hide loading indicator if fetch fails
+      // Add global error handler to hide loader
+      window.addEventListener('error', (event) => {
+        logger.warn('Global error triggered loader safety:', event.message);
         this.ensureLoaderHidden();
-        throw error;
       });
-    };
-    
-    // Add global error handler to hide loader
-    window.addEventListener('error', () => {
-      this.ensureLoaderHidden();
-    });
-    
-    // Add unhandled promise rejection handler
-    window.addEventListener('unhandledrejection', () => {
-      this.ensureLoaderHidden();
-    });
+      
+      // Add unhandled promise rejection handler
+      window.addEventListener('unhandledrejection', (event) => {
+        logger.warn('Unhandled rejection triggered loader safety:', 
+          event.reason ? (event.reason.message || 'Unknown reason') : 'Unknown reason');
+        this.ensureLoaderHidden();
+      });
+      
+      // Set up a periodic check that no loading indicator stays visible for too long
+      this._safetyInterval = setInterval(() => {
+        if (this.loadingStartTime && (Date.now() - this.loadingStartTime > 15000)) {
+          logger.warn('Loading indicator visible for too long (15s), forcing hide');
+          this.ensureLoaderHidden();
+        }
+      }, 5000); // Check every 5 seconds
+      
+      logger.log('Loader safety mechanisms installed');
+    } catch (error) {
+      logger.error('Error setting up loader safety:', error);
+    }
   }
   
   /**
@@ -358,6 +520,9 @@ class ModalManager {
     try {
       // Force hide the loading indicator
       this.loadingIndicator.style.display = 'none';
+      
+      // Reset loading start time
+      this.loadingStartTime = 0;
       
       // Clear any pending timeout
       if (this._loadingTimeout) {

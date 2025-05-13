@@ -721,6 +721,131 @@ class TemplateEngine {
   }
 
   // Add this method to TemplateEngine class
+  /**
+   * Creates the modal container in the document body
+   * @returns {HTMLElement|null} The created modal element or null if creation failed
+   */
+  createModalContainer() {
+    logger.log('Creating modal container from template');
+    
+    try {
+      // Check if modal container already exists
+      const existingModal = document.querySelector('#product-estimator-modal');
+      if (existingModal) {
+        logger.log('Modal container already exists in DOM');
+        return existingModal;
+      }
+      
+      // Get the modal container template
+      const modalTemplate = this.getTemplate('modal-container-template');
+      if (!modalTemplate) {
+        logger.error('Modal container template not found');
+        return null;
+      }
+      
+      // Add detailed debug logging for template creation
+      logger.group('Debug: Template Creation');
+      logger.log('Template id:', 'modal-container-template');
+      logger.log('Template found:', !!modalTemplate);
+      
+      // Log template source
+      logger.log('Template outerHTML:', modalTemplate.outerHTML);
+      
+      if (modalTemplate.content) {
+        logger.log('Template has content property with:', modalTemplate.content.childNodes.length, 'child nodes');
+        // Log the first few nodes
+        Array.from(modalTemplate.content.childNodes).slice(0, 3).forEach((node, i) => {
+          logger.log(`Node[${i}]:`, node.nodeType, node.nodeName);
+        });
+        
+        // Check for specific elements in template content before creation
+        const tempDiv = document.createElement('div');
+        tempDiv.appendChild(modalTemplate.content.cloneNode(true));
+        logger.log('Template content inner HTML:', tempDiv.innerHTML.substring(0, 500) + '...');
+        
+        // Check for specific elements
+        logger.log('Template contains #estimates:', !!tempDiv.querySelector('#estimates'));
+        logger.log('Template contains #estimate-selection-wrapper:', !!tempDiv.querySelector('#estimate-selection-wrapper'));
+        logger.log('Template contains #room-selection-form-wrapper:', !!tempDiv.querySelector('#room-selection-form-wrapper'));
+      }
+      logger.groupEnd();
+      
+      // Create a fragment from the template
+      const modalFragment = this.create('modal-container-template', {
+        // Add i18n texts if needed
+        title: window.productEstimatorVars?.i18n?.productEstimator || 'Product Estimator',
+        close: window.productEstimatorVars?.i18n?.close || 'Close',
+        loading: window.productEstimatorVars?.i18n?.loading || 'Loading...'
+      });
+      
+      // Log the fragment content before adding to DOM
+      if (modalFragment) {
+        logger.log('Created fragment structure for modal:', modalFragment.childNodes.length, 'child nodes at root level');
+        
+        // Create temporary div to examine fragment content
+        const tempFragDiv = document.createElement('div');
+        tempFragDiv.appendChild(modalFragment.cloneNode(true));
+        logger.log('Fragment content before appending to DOM:', tempFragDiv.innerHTML.substring(0, 300) + '...');
+        
+        // Check for specific elements in the fragment
+        logger.log('Fragment contains #estimates:', !!tempFragDiv.querySelector('#estimates'));
+        logger.log('Fragment contains form-container:', !!tempFragDiv.querySelector('.product-estimator-modal-form-container'));
+      }
+      
+      // Append the fragment to the body
+      document.body.appendChild(modalFragment);
+      logger.log('Modal fragment appended to document body');
+      
+      // Get the modal element after it's been added to the DOM
+      const modalElement = document.querySelector('#product-estimator-modal');
+      
+      // Add detailed logging about DOM after append
+      logger.log('DOM after fragment append - modal found:', !!modalElement);
+      
+      // Add logging to verify all critical elements exist
+      if (modalElement) {
+        const elementsStatus = {
+          modal: !!modalElement,
+          container: !!modalElement.querySelector('.product-estimator-modal-container'),
+          formContainer: !!modalElement.querySelector('.product-estimator-modal-form-container'),
+          estimates: !!modalElement.querySelector('#estimates'),
+          estimateSelection: !!modalElement.querySelector('#estimate-selection-wrapper'),
+          roomSelection: !!modalElement.querySelector('#room-selection-form-wrapper'),
+          newEstimate: !!modalElement.querySelector('#new-estimate-form-wrapper'),
+          newRoom: !!modalElement.querySelector('#new-room-form-wrapper')
+        };
+        
+        logger.log('Modal element created with child elements status:', elementsStatus);
+        
+        // Log element structure regardless
+        logger.log('Modal HTML structure:', modalElement.outerHTML.substring(0, 500) + '...');
+        
+        // If any critical element is missing, log more details
+        if (!elementsStatus.estimates) {
+          logger.error('Critical element #estimates missing in created modal!');
+          
+          // Check if there's a content container
+          const formContainer = modalElement.querySelector('.product-estimator-modal-form-container');
+          if (formContainer) {
+            logger.log('Form container exists but missing #estimates. Form container HTML:', 
+                       formContainer.innerHTML);
+          }
+        }
+      }
+      
+      if (!modalElement) {
+        logger.error('Failed to find modal element after creating it');
+        return null;
+      }
+      
+      logger.log('Modal container created and added to DOM');
+      return modalElement;
+    } catch (error) {
+      logger.error('Error creating modal container:', error);
+      return null;
+    }
+  }
+  
   debugTemplates() {
     logger.group('TemplateEngine Debug');
     logger.log('Registered template IDs:', Object.keys(this.templates));

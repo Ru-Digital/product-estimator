@@ -9,6 +9,7 @@
  */
 
 import { format, createLogger } from '@utils';
+
 import { SuggestionsCarousel, initSuggestionsCarousels } from '../SuggestionsCarousel';
 import ProductDetailsToggle from '../ProductDetailsToggle';
 

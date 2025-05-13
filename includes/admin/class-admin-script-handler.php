@@ -194,16 +194,18 @@ class AdminScriptHandler {
 
         // Ensure PRODUCT_ESTIMATOR_PLUGIN_URL is defined
         $admin_styles_url = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/product-estimator-admin-bundled.css' : '';
-        
+
         // Enqueue the compiled admin styles
         if ($admin_styles_url) {
-            wp_enqueue_style(
+            wp_register_style(
                 $this->plugin_name . '-admin-styles',
                 $admin_styles_url,
                 array(),
                 $this->version,
                 'all'
             );
+
+            wp_enqueue_style($this->plugin_name . '-admin-styles');
         }
     }
 

@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ HIGHEST PRIORITY TASK ⚠️
+
+**IMPORTANT: Continue implementing the modal restructuring plan as outlined in `ModalManager-Restructuring-Plan.md`. This is the highest priority task for the project.**
+
+The modal system is being refactored to use proper HTML templates via the TemplateEngine instead of hardcoded HTML strings. Always use the TemplateEngine.insert() method with the appropriate templates when rendering UI components.
+
 ## Project Overview
 
 This repository contains the Product Estimator plugin for WordPress/WooCommerce - a tool that allows customers to create product estimates. The plugin provides an interface for users to select products, add them to rooms in an estimate, and save/share the estimate.
@@ -75,6 +81,56 @@ The project uses Stylelint with the following important configurations:
   - Instead use `color.adjust()` function with alpha parameter: `color.adjust($color, $alpha: -0.8)`
 
 ## Project Structure
+
+### Template System
+
+The plugin uses a JavaScript-based template system for rendering UI components. Templates are defined as HTML files and processed by the TemplateEngine class.
+
+```
+TemplateEngine (src/js/frontend/TemplateEngine.js)
+├── Core template rendering engine
+├── Loads and registers HTML templates
+├── Provides methods to create DOM elements from templates
+├── Handles data binding and dynamic content population
+└── Manages modal creation and UI components
+
+Available Templates:
+1. Component Templates (src/templates/components/)
+   ├── product-item.html - Individual product in a room
+   ├── room-item.html - Room container with products
+   ├── estimate-item.html - Estimate in the list view
+   ├── include-item.html - Product inclusion item
+   ├── note-item.html - Product note display
+   ├── similar-item.html - Similar product suggestion
+   ├── suggestion-item.html - Product suggestion
+   └── product-upgrade-item.html - Product upgrade option
+
+2. Form Templates (src/templates/forms/)
+   ├── estimate-selection.html - Estimate selection interface
+   ├── new-estimate-form.html - Create new estimate form
+   ├── new-room-form.html - Add new room form
+   └── room-selection-form.html - Room selection interface
+
+3. UI Templates (src/templates/ui/)
+   ├── modal-container.html - Main modal container structure
+   ├── modal-messages.html - Message display in modal
+   ├── estimates-empty.html - Empty state for estimates
+   ├── rooms-empty.html - Empty state for rooms
+   └── products-empty.html - Empty state for products
+```
+
+Template Usage Flow:
+1. Templates are loaded by template-loader.js during initialization
+2. TemplateEngine registers templates with their IDs
+3. Manager classes request templates when needed using:
+   - `TemplateEngine.create(templateId, data)` - Creates populated fragment
+   - `TemplateEngine.insert(templateId, data, container)` - Creates and inserts into DOM
+
+Template Data Binding:
+- Templates use class names as data binding targets
+- Data properties are mapped to elements with matching class names
+- Special handling for images, inputs, and nested components
+- Supports dynamic content like product lists, notes, and inclusions
 
 ### PHP Files and Classes
 
@@ -158,12 +214,21 @@ Frontend Components (src/js/frontend/)
 ├── DataService.js - Data operations
 ├── EstimateStorage.js - Estimate data storage
 ├── EstimatorCore.js - Core estimator functionality
-├── ModalManager.js - Modal dialog management
 ├── PrintEstimate.js - Estimate printing
 ├── ProductDetailsToggle.js - Product details UI
 ├── ProductUpgrades.js - Product upgrades UI
 ├── SuggestionsCarousel.js - Product suggestions carousel
-└── TemplateEngine.js - HTML template rendering
+├── TemplateEngine.js - HTML template rendering
+├── template-loader.js - Template initialization system
+└── ModalManagerOLD.js - Deprecated modal manager implementation
+
+Frontend Managers (src/js/frontend/managers/)
+├── ModalManager.js - Modal management and coordination
+├── EstimateManager.js - Estimate operations
+├── RoomManager.js - Room creation and management
+├── ProductManager.js - Product handling
+├── FormManager.js - Form processing and validation
+└── UIManager.js - UI components and carousels
 
 Admin Components (src/js/admin/)
 ├── CustomerEstimatesAdmin.js - Customer estimates admin
@@ -243,7 +308,40 @@ Frontend Styles (src/styles/frontend/)
    - Order: builtin → external → internal → parent → sibling → index
 5. Ensure JSDoc blocks are properly aligned
 6. Use path aliases for cleaner imports
-7. Always run `npm run lint:fix` before submitting code changes
+7. Always run `npm run lint:fix` before submitting code changes 
+
+## Critical Template Guidelines
+
+1. **NEVER CREATE DOM ELEMENTS DIRECTLY IN JAVASCRIPT**
+   - This is a strict rule with no exceptions
+   - All HTML must come from template files
+   - Fix template files if elements are missing, don't create elements on the fly
+   - If you need UI elements, add them to the appropriate template file
+
+2. Use the template system for rendering all UI components
+   - Every UI component must have a corresponding HTML template file
+   - Templates should be in `/src/templates/` directory
+   - Use TemplateEngine to load and render templates
+
+3. Focus on proper initialization timing with the WordPress lifecycle
+   - Use event listeners and callbacks rather than direct DOM creation
+   - Ensure templates are loaded before accessing elements
+
+4. Template integrity is more important than quick fixes
+   - If a template is missing an element, fix the template file
+   - Don't use fallback DOM creation even if it seems easier
+11. Use the Manager pattern for separating concerns
+12. Create templates in HTML files rather than in PHP files or directly in JavaScript
+
+## Legacy Code Reference
+
+The file `ModalManagerOLD.js` is kept as a reference of the original monolithic implementation before the manager pattern refactoring. Important notes:
+
+- This file is deprecated and should not be used in production code
+- Do not add new features to this file
+- Only use as a reference if stuck during the refactoring process
+- All new development should use the manager pattern and templates
+- The file contains over 4,000 lines of code that has been reorganized into specialized manager classes
 
 ## AJAX Handler Architecture
 

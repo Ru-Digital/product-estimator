@@ -9,6 +9,7 @@
  */
 
 import { format, createLogger } from '@utils';
+
 import { loadEstimateData, saveEstimateData, addEstimate, removeEstimate } from '../EstimateStorage';
 import { loadCustomerDetails, saveCustomerDetails } from '../CustomerStorage';
 import TemplateEngine from '../TemplateEngine';
@@ -186,7 +187,7 @@ class EstimateManager {
     formElement.dataset.productId = productId;
     
     // Load estimates from storage or API
-    this.dataService.getEstimates()
+    this.dataService.getEstimatesData()
       .then(estimates => {
         // Clear existing options
         selectElement.innerHTML = '';
@@ -366,30 +367,66 @@ class EstimateManager {
     }
     
     estimatesList._clickHandler = (e) => {
-      // Handle "Add New Estimate" button
-      if (e.target.closest('.add-new-estimate-button')) {
+      // Handle "Create New Estimate" button
+      if (e.target.closest('#create-estimate-btn')) {
         e.preventDefault();
         this.showNewEstimateForm();
         return;
       }
       
       // Handle estimate removal
-      if (e.target.closest('.remove-estimate-button')) {
+      if (e.target.closest('.remove-estimate')) {
         e.preventDefault();
-        const estimateItem = e.target.closest('.estimate-item');
-        if (estimateItem && estimateItem.dataset.estimateId) {
-          this.handleEstimateRemoval(estimateItem.dataset.estimateId);
+        const estimateElement = e.target.closest('.estimate-section');
+        if (estimateElement && estimateElement.dataset.estimateId) {
+          this.handleEstimateRemoval(estimateElement.dataset.estimateId);
         }
         return;
       }
       
-      // Handle estimate editing
-      if (e.target.closest('.edit-estimate-button')) {
+      // Handle print estimate
+      if (e.target.closest('.print-estimate')) {
         e.preventDefault();
-        const estimateItem = e.target.closest('.estimate-item');
-        if (estimateItem && estimateItem.dataset.estimateId) {
-          // This will be implemented in a later phase
-          logger.log('Edit estimate button clicked for ID:', estimateItem.dataset.estimateId);
+        const estimateId = e.target.closest('.print-estimate').dataset.estimateId;
+        if (estimateId) {
+          logger.log('Print estimate clicked for ID:', estimateId);
+          // Call the appropriate print function (to be implemented)
+        }
+        return;
+      }
+      
+      // Handle request contact
+      if (e.target.closest('.request-contact-estimate')) {
+        e.preventDefault();
+        const estimateId = e.target.closest('.request-contact-estimate').dataset.estimateId;
+        if (estimateId) {
+          logger.log('Request contact clicked for ID:', estimateId);
+          // Handle the contact request (to be implemented)
+        }
+        return;
+      }
+      
+      // Handle request copy
+      if (e.target.closest('.request-a-copy')) {
+        e.preventDefault();
+        const estimateId = e.target.closest('.request-a-copy').dataset.estimateId;
+        if (estimateId) {
+          logger.log('Request copy clicked for ID:', estimateId);
+          // Handle the copy request (to be implemented)
+        }
+        return;
+      }
+      
+      // Handle add room button
+      if (e.target.closest('.add-room')) {
+        e.preventDefault();
+        const estimateId = e.target.closest('.add-room').dataset.estimateId;
+        if (estimateId) {
+          logger.log('Add room clicked for estimate ID:', estimateId);
+          // Call the appropriate function to show the add room form
+          if (this.modalManager.roomManager) {
+            this.modalManager.roomManager.showNewRoomForm(estimateId);
+          }
         }
         return;
       }
@@ -397,27 +434,29 @@ class EstimateManager {
       // Handle accordion toggle for estimate details
       if (e.target.closest('.estimate-header')) {
         const header = e.target.closest('.estimate-header');
-        const estimateItem = header.closest('.estimate-item');
-        const content = estimateItem.querySelector('.estimate-content');
+        const estimateElement = header.closest('.estimate-section');
+        const content = estimateElement.querySelector('.estimate-content');
         
         if (content) {
           // Toggle the expanded state
-          const isExpanded = header.classList.contains('expanded');
+          const isExpanded = estimateElement.classList.contains('expanded');
           
           if (isExpanded) {
-            header.classList.remove('expanded');
+            estimateElement.classList.remove('expanded');
+            estimateElement.classList.add('collapsed');
             content.style.display = 'none';
           } else {
-            header.classList.add('expanded');
+            estimateElement.classList.remove('collapsed');
+            estimateElement.classList.add('expanded');
             content.style.display = 'block';
             
             // If this is the first time expanding, load the rooms
-            if (estimateItem.dataset.estimateId && !content.dataset.loaded) {
+            if (estimateElement.dataset.estimateId && !content.dataset.loaded) {
               content.dataset.loaded = 'true';
               
               // Delegate to RoomManager to load rooms for this estimate
               if (this.modalManager.roomManager) {
-                this.modalManager.roomManager.loadRoomsForEstimate(estimateItem.dataset.estimateId, content);
+                this.modalManager.roomManager.loadRoomsForEstimate(estimateElement.dataset.estimateId, content);
               }
             }
           }
@@ -447,63 +486,49 @@ class EstimateManager {
     this.modalManager.showLoading();
     
     // Load estimates from storage or API
-    return this.dataService.getEstimates()
+    return this.dataService.getEstimatesData()
       .then(estimates => {
         // Clear existing content
         estimatesList.innerHTML = '';
         
         if (!estimates || estimates.length === 0) {
-          // No estimates, show empty state
-          estimatesList.innerHTML = `
-            <div class="empty-state">
-              <h3>No Estimates Found</h3>
-              <p>You don't have any estimates yet. Create your first estimate to get started.</p>
-              <button class="add-new-estimate-button button button-primary">Create New Estimate</button>
-            </div>
-          `;
+          // No estimates, show empty state using template
+          TemplateEngine.insert('estimates-empty-template', {}, estimatesList);
         } else {
-          // Render each estimate
-          const estimatesHTML = estimates.map(estimate => {
-            return `
-              <div class="estimate-item" data-estimate-id="${estimate.id}">
-                <div class="estimate-header">
-                  <h3>${estimate.name || `Estimate #${estimate.id}`}</h3>
-                  <div class="estimate-actions">
-                    <button class="edit-estimate-button button button-small">Edit</button>
-                    <button class="remove-estimate-button button button-small button-danger">Remove</button>
-                  </div>
-                  <div class="accordion-indicator"></div>
-                </div>
-                <div class="estimate-content" style="display: none;">
-                  <div class="estimate-rooms-container">
-                    <div class="loading-placeholder">Loading rooms...</div>
-                  </div>
-                  <div class="estimate-actions-footer">
-                    <button class="add-room-button button button-primary">Add Room</button>
-                    <button class="print-estimate-button button">Print</button>
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('');
-          
-          // Add new estimate button at the bottom
-          estimatesList.innerHTML = `
-            ${estimatesHTML}
-            <div class="add-new-estimate-container">
-              <button class="add-new-estimate-button button button-primary">Create New Estimate</button>
-            </div>
-          `;
+          // Render each estimate using the estimate-item template
+          estimates.forEach(estimate => {
+            // Prepare the data for the template
+            const estimateData = {
+              id: estimate.id,
+              name: estimate.name || `Estimate #${estimate.id}`,
+              min_total: estimate.min_total || 0,
+              max_total: estimate.max_total || 0
+            };
+            
+            // Use TemplateEngine to create and insert the estimate item
+            TemplateEngine.insert('estimate-item-template', estimateData, estimatesList);
+            
+            // Find the inserted estimate element
+            const estimateElement = estimatesList.querySelector(`.estimate-section[data-estimate-id="${estimate.id}"]`);
+            if (estimateElement) {
+              // Update the estimate-id attribute on buttons inside this estimate
+              const buttons = estimateElement.querySelectorAll('[data-estimate-id]');
+              buttons.forEach(button => {
+                button.setAttribute('data-estimate-id', estimate.id);
+              });
+            }
+          });
           
           // If expandEstimateId is provided, expand that estimate
           if (expandEstimateId) {
-            const estimateToExpand = estimatesList.querySelector(`.estimate-item[data-estimate-id="${expandEstimateId}"]`);
+            const estimateToExpand = estimatesList.querySelector(`.estimate-section[data-estimate-id="${expandEstimateId}"]`);
             if (estimateToExpand) {
               const header = estimateToExpand.querySelector('.estimate-header');
               const content = estimateToExpand.querySelector('.estimate-content');
               
               if (header && content) {
-                header.classList.add('expanded');
+                estimateToExpand.classList.remove('collapsed');
+                estimateToExpand.classList.add('expanded');
                 content.style.display = 'block';
                 content.dataset.loaded = 'true';
                 

@@ -33,6 +33,12 @@ export function currency(amount, locale = 'en-US', currency = 'USD') {
   }).format(numAmount);
 }
 
+/**
+ *
+ * @param amount
+ * @param currencySymbol
+ * @param decimals
+ */
 export function formatPrice(amount, currencySymbol = '$', decimals = 2) {
   // Handle undefined or null amount
   if (amount === undefined || amount === null) {

@@ -1,5 +1,168 @@
 let pluginLogGroupHasStarted = false;
 
+// Setup global log capture system
+if (typeof window !== 'undefined' && !window._logCapture) {
+  // Initialize log capture array
+  window._logCapture = [];
+  
+  // Save original console methods
+  const originalLog = console.log;
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  const originalInfo = console.info;
+  
+  // Override console methods to capture logs
+  console.log = function() {
+    window._logCapture.push({
+      type: 'log', 
+      time: new Date().toISOString(), 
+      args: Array.from(arguments).map(arg => {
+        // Handle circular objects and DOM nodes gracefully
+        try {
+          if (arg instanceof HTMLElement) {
+            return `[HTMLElement: ${arg.tagName}${arg.id ? '#'+arg.id : ''}${arg.className ? '.'+arg.className.replace(/\s+/g, '.') : ''}]`;
+          }
+          
+          // Safely stringify objects
+          if (typeof arg === 'object' && arg !== null) {
+            try {
+              return JSON.parse(JSON.stringify(arg));
+            } catch (e) {
+              return String(arg);
+            }
+          }
+          
+          return arg;
+        } catch (e) {
+          return String(arg);
+        }
+      })
+    });
+    
+    originalLog.apply(console, arguments);
+  };
+  
+  console.error = function() {
+    window._logCapture.push({
+      type: 'error', 
+      time: new Date().toISOString(), 
+      args: Array.from(arguments).map(arg => {
+        try {
+          if (arg instanceof Error) {
+            return {
+              message: arg.message,
+              stack: arg.stack,
+              name: arg.name
+            };
+          }
+          return arg;
+        } catch (e) {
+          return String(arg);
+        }
+      })
+    });
+    
+    originalError.apply(console, arguments);
+  };
+  
+  console.warn = function() {
+    window._logCapture.push({
+      type: 'warn', 
+      time: new Date().toISOString(), 
+      args: Array.from(arguments).map(arg => {
+        try {
+          if (typeof arg === 'object' && arg !== null) {
+            try {
+              return JSON.parse(JSON.stringify(arg));
+            } catch (e) {
+              return String(arg);
+            }
+          }
+          return arg;
+        } catch (e) {
+          return String(arg);
+        }
+      })
+    });
+    
+    originalWarn.apply(console, arguments);
+  };
+  
+  console.info = function() {
+    window._logCapture.push({
+      type: 'info', 
+      time: new Date().toISOString(), 
+      args: Array.from(arguments).map(arg => {
+        try {
+          if (typeof arg === 'object' && arg !== null) {
+            try {
+              return JSON.parse(JSON.stringify(arg));
+            } catch (e) {
+              return String(arg);
+            }
+          }
+          return arg;
+        } catch (e) {
+          return String(arg);
+        }
+      })
+    });
+    
+    originalInfo.apply(console, arguments);
+  };
+  
+  // Add export function to window
+  window.exportLogs = function(filename = null, maxSize = 5000) {
+    if (!window._logCapture || !window._logCapture.length) {
+      console.error('No logs to export');
+      return;
+    }
+    
+    if (!filename) {
+      // Generate filename with date and component id
+      filename = `product-estimator-logs-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    }
+    
+    // Limit log size if needed
+    let logs = window._logCapture;
+    if (logs.length > maxSize) {
+      const truncated = logs.length - maxSize;
+      logs = logs.slice(-maxSize);
+      logs.unshift({
+        type: 'warn',
+        time: new Date().toISOString(),
+        args: [`Log file truncated. ${truncated} earliest entries removed.`]
+      });
+    }
+    
+    // Create blob and download
+    const data = JSON.stringify(logs, null, 2);
+    const blob = new Blob([data], {type: 'application/json'});
+    const e = document.createEvent('MouseEvents');
+    const a = document.createElement('a');
+    
+    a.download = filename;
+    a.href = window.URL.createObjectURL(blob);
+    a.dataset.downloadurl = ['application/json', a.download, a.href].join(':');
+    e.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+    a.dispatchEvent(e);
+    
+    console.log(`Logs exported to ${filename}`);
+    return filename;
+  };
+  
+  // Add clear function to window
+  window.clearLogs = function() {
+    const count = window._logCapture.length;
+    window._logCapture = [];
+    console.log(`Log buffer cleared. ${count} entries removed.`);
+  };
+  
+  // Log initialization
+  console.info('Debug: Log capture system initialized');
+  console.info('Available commands:\n - window.exportLogs() - Export logs to file\n - window.clearLogs() - Clear log buffer');
+}
+
 /**
  * Closes the main plugin log group if it was started.
  * Used to properly group related log messages in the console.

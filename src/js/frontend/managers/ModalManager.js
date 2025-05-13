@@ -112,43 +112,72 @@ class ModalManager {
     logger.log('Initializing ModalManager');
     
     try {
-      // Find the existing modal in the DOM
+      // First check if the modal already exists in the DOM (for backward compatibility)
       this.modal = document.querySelector(this.config.selectors.modalContainer);
       
       if (!this.modal) {
-        logger.log('Warning: Modal element not found in DOM. The PHP partial may not be included.');
-        // Don't attempt to create it - the partial should be included by PHP
+        logger.log('Modal element not found in DOM. Creating from template...');
+        
+        // Create the modal using TemplateEngine
+        this.modal = TemplateEngine.createModalContainer();
+        
+        if (this.modal) {
+          logger.log('Modal created successfully from template');
+          this.completeInitialization();
+        } else {
+          logger.error('Failed to create modal from template');
+          return this;
+        }
       } else {
         logger.log('Found existing modal in DOM, initializing elements');
-      }
-      
-      // Initialize modal elements if modal exists
-      if (this.modal) {
-        // Initialize elements
-        this.initializeElements();
-        
-        // Set up the loading indicator safety checks
-        this.setupLoaderSafety();
-        
-        // Initialize specialized managers
-        this.initializeManagers();
-        
-        // Bind base events
-        this.bindEvents();
-        
-        // Hide any loading indicators that might be visible
-        setTimeout(() => {
-          this.ensureLoaderHidden();
-        }, 500);
+        this.completeInitialization();
       }
       
       this.initialized = true;
-      logger.log('ModalManager initialized successfully');
+      logger.log('ModalManager initialization completed successfully');
     } catch (error) {
       logger.error('Error initializing ModalManager:', error);
     }
     
     return this;
+  }
+  
+  /**
+   * Complete initialization once modal is found
+   * @private
+   */
+  completeInitialization() {
+    if (!this.modal) {
+      logger.error('Cannot complete initialization - modal element not available');
+      return;
+    }
+    
+    // When using templates, we need to allow time for the DOM to fully update
+    // before trying to find elements within the newly created template
+    logger.log('Modal found, allowing time for DOM to fully update before initializing elements');
+    
+    // Give a small delay to ensure the DOM is fully updated with the template content
+    setTimeout(() => {
+      // Initialize elements
+      this.initializeElements();
+      
+      // Set up the loading indicator safety checks
+      this.setupLoaderSafety();
+      
+      // Initialize specialized managers
+      this.initializeManagers();
+      
+      // Bind base events
+      this.bindEvents();
+      
+      // Hide any loading indicators that might be visible
+      setTimeout(() => {
+        this.ensureLoaderHidden();
+      }, 100);
+      
+      this.initialized = true;
+      logger.log('ModalManager initialization completed successfully');
+    }, 50); // A short delay to allow DOM rendering to complete
   }
   
   /**
@@ -163,24 +192,36 @@ class ModalManager {
         return;
       }
       
-      // Find core modal elements
-      this.overlay = this.modal.querySelector(this.config.selectors.modalOverlay);
-      this.closeButton = this.modal.querySelector(this.config.selectors.closeButton);
-      this.contentContainer = this.modal.querySelector(this.config.selectors.contentContainer);
-      this.loadingIndicator = this.modal.querySelector(this.config.selectors.loadingIndicator);
+      // Find core modal elements - Use direct CSS selectors instead of config selectors
+      this.overlay = this.modal.querySelector('.product-estimator-modal-overlay');
+      this.closeButton = this.modal.querySelector('.product-estimator-modal-close');
+      this.contentContainer = this.modal.querySelector('.product-estimator-modal-form-container');
+      this.loadingIndicator = this.modal.querySelector('.product-estimator-modal-loading');
       
-      // Find view containers - ASSUME they are now in the PHP template
-      this.estimatesList = this.modal.querySelector(this.config.selectors.estimatesList);
-      this.estimateSelection = this.modal.querySelector(this.config.selectors.estimateSelection);
-      this.estimateSelectionForm = this.modal.querySelector('#estimate-selection-form-wrapper'); // If this is also a persistent wrapper
-      this.roomSelectionForm = this.modal.querySelector(this.config.selectors.roomSelection);
-      this.newEstimateForm = this.modal.querySelector(this.config.selectors.newEstimateForm);
-      this.newRoomForm = this.modal.querySelector(this.config.selectors.newRoomForm);
+      // Find view containers - Use direct ID selectors
+      this.estimatesList = this.modal.querySelector('#estimates');
+      this.estimateSelection = this.modal.querySelector('#estimate-selection-wrapper');
+      this.estimateSelectionForm = this.modal.querySelector('#estimate-selection-form-wrapper');
+      this.roomSelectionForm = this.modal.querySelector('#room-selection-form-wrapper');
+      this.newEstimateForm = this.modal.querySelector('#new-estimate-form-wrapper');
+      this.newRoomForm = this.modal.querySelector('#new-room-form-wrapper');
       
-      // Add checks and potential error handling if essential elements are missing
+      // Add simple logging for container elements
+      logger.log('Container elements status:', {
+        modal: this.modal ? 'found' : 'missing',
+        contentContainer: this.contentContainer ? 'found' : 'missing',
+        estimatesList: this.estimatesList ? 'found' : 'missing',
+        estimateSelection: this.estimateSelection ? 'found' : 'missing',
+        estimateSelectionForm: this.estimateSelectionForm ? 'found' : 'missing',
+        roomSelectionForm: this.roomSelectionForm ? 'found' : 'missing',
+        newEstimateForm: this.newEstimateForm ? 'found' : 'missing',
+        newRoomForm: this.newRoomForm ? 'found' : 'missing'
+      });
+      
+      // Log the modal's HTML to help diagnose template issues
       if (!this.estimatesList) {
         logger.error('Critical: #estimates div not found in modal template!');
-        // You might want to disable the modal or show a fatal error message here
+        logger.log('Modal content structure:', this.modal.innerHTML.substring(0, 500) + '...');
       }
       
       // Create missing containers if needed
@@ -346,6 +387,18 @@ class ModalManager {
       typeOfProductId: typeof productId
     });
     
+    // Debounce logic - prevent rapid open/close calls
+    if (this._modalActionInProgress) {
+      logger.log('Modal action already in progress, ignoring open request');
+      return;
+    }
+    this._modalActionInProgress = true;
+    
+    // Reset the debounce after a short delay
+    setTimeout(() => {
+      this._modalActionInProgress = false;
+    }, 300); // 300ms debounce
+    
     // Make sure modal exists and is initialized
     if (!this.modal) {
       logger.error('Cannot open modal - not found in DOM');
@@ -414,6 +467,18 @@ class ModalManager {
    */
   closeModal() {
     if (!this.isOpen) return;
+    
+    // Debounce logic - prevent rapid open/close calls
+    if (this._modalActionInProgress) {
+      logger.log('Modal action already in progress, ignoring close request');
+      return;
+    }
+    this._modalActionInProgress = true;
+    
+    // Reset the debounce after a short delay
+    setTimeout(() => {
+      this._modalActionInProgress = false;
+    }, 300); // 300ms debounce
     
     logger.log('Closing modal');
     

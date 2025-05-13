@@ -198,7 +198,7 @@ class AjaxHandler {
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
         // Force session initialization
-        $this->session->startSession();
+        $this->session->ensureSessionStarted();
 
         // Get all estimates and check if there are any
         $estimates = $this->session->getEstimates();
@@ -465,7 +465,7 @@ class AjaxHandler {
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
         // Force session initialization
-        $this->session->startSession();
+        $this->session->ensureSessionStarted();
 
         // Get all estimates
         $estimates = $this->session->getEstimates();
@@ -515,7 +515,7 @@ class AjaxHandler {
 
         try {
             // Force session initialization
-            $this->session->startSession();
+            $this->session->ensureSessionStarted();
 
             // Check if CustomerDetails class exists and is accessible
             if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\CustomerDetails')) {
@@ -667,7 +667,7 @@ class AjaxHandler {
 
         try {
             // Force session initialization
-            $this->session->startSession();
+            $this->session->ensureSessionStarted();
 
             // Create room data with explicit values - USING STRICT TYPE CONVERSION
             $room_width = (float)$form_data['room_width'];
@@ -951,7 +951,7 @@ class AjaxHandler {
      */
     private function updateTotals($estimate_id) {
         // Ensure session is started
-        $this->session->startSession();
+        $this->session->ensureSessionStarted();
 
         // Reference to session data for direct manipulation
         $estimates = &$_SESSION['product_estimator']['estimates'];
@@ -2360,7 +2360,7 @@ class AjaxHandler {
 
         try {
             // Ensure session is started
-            $this->session->startSession();
+            $this->session->ensureSessionStarted();
 
             // Initialize customer details manager
             $customer_details_manager = new CustomerDetails();

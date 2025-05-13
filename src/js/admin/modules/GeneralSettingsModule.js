@@ -110,7 +110,16 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
         this.$(targetPreviewSelector) :
         button.siblings('.file-preview-wrapper');
 
-      $previewWrapper.html(`<p class="file-preview"><a href="${attachment.url}" target="_blank">${attachment.filename}</a></p>`);
+      // Create a nicer preview with file icon and more details
+      $previewWrapper.html(`
+        <div class="file-preview">
+          <span class="file-icon dashicons dashicons-pdf"></span>
+          <div class="file-details">
+            <span class="file-name"><a href="${attachment.url}" target="_blank">${attachment.filename}</a></span>
+            <span class="file-meta">${this._formatFileSize(attachment.filesizeInBytes || 0)} - PDF Document</span>
+          </div>
+        </div>
+      `);
       button.siblings('.remove-file-button').removeClass('hidden')
     });
     this.mediaFrame.open();
@@ -208,6 +217,21 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
 
     logger.log('All fields validation result:', isValid);
     return isValid;
+  }
+
+  /**
+   * Format file size in bytes to a human-readable format
+   * @param {number} bytes - Size in bytes
+   * @return {string} Formatted size (e.g., "256 KB")
+   */
+  _formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
   // showFieldError, clearFieldError, showNotice are inherited from ProductEstimatorSettings

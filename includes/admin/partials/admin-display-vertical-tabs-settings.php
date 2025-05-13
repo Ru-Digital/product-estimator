@@ -74,8 +74,12 @@ if ( ! empty( trim( $section_description_content ) ) ) :
                     // Generate class for list item
                     $li_class = 'pe-vtabs-nav-item' . ( $is_active ? ' active' : '' );
                     ?>
-                    <li class="<?php echo esc_attr( $li_class ); ?>">
-                        <a href="<?php echo esc_url( $tab_url ); ?>" data-tab="<?php echo esc_attr( $tab_data['id'] ); ?>">
+                    <li class="<?php echo esc_attr( $li_class ); ?> pe-vtabs-nav-item-<?php echo esc_attr( $tab_data['id'] ); ?>">
+                        <a href="<?php echo esc_url( $tab_url ); ?>"
+                           data-tab="<?php echo esc_attr( $tab_data['id'] ); ?>"
+                           data-tab-query="<?php echo esc_attr( $tab_data['id'] ); ?>"
+                           data-tabid="<?php echo esc_attr( $tab_data['id'] ); ?>"
+                           class="pe-vtabs-link pe-vtabs-link-<?php echo esc_attr( $tab_data['id'] ); ?>">
                             <?php echo esc_html( $tab_data['title'] ); ?>
                         </a>
                     </li>

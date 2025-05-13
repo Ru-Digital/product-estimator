@@ -15,11 +15,13 @@ class PricingRulesSettingsModule extends AdminTableManager {
   constructor() {
     const config = {
       mainTabId: 'pricing_rules',
+      defaultSubTabId: 'pricing_rules_table', // Specify default sub-tab ID to match PHP definitions
       localizedDataName: 'pricingRulesSettings'
       // AdminTableManager passes this to VerticalTabbedModule,
       // which passes relevant parts to ProductEstimatorSettings.
     };
     super(config); // Calls AdminTableManager constructor
+
 
     // this.logger is initialized by AdminTableManager
     // this.settings is populated by ProductEstimatorSettings via the super chain
@@ -203,6 +205,7 @@ jQuery(document).ready(function ($) {
       // Instantiate the module once
       if (!window.PricingRulesSettingsModuleInstance) {
         try {
+          // Create a properly configured instance with the correct defaultSubTabId
           window.PricingRulesSettingsModuleInstance = new PricingRulesSettingsModule();
           createLogger('PricingRulesInit').log('PricingRulesSettingsModule instance initiated.');
         } catch (error) {

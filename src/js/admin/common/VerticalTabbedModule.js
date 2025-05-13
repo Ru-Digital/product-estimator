@@ -104,10 +104,44 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     this.$container.on('submit.vtm', 'form.pe-vtabs-tab-form', this.handleVTMFormSubmit.bind(this));
 
     // Click handling for vertical tab navigation links - use selectors from PHP's get_common_script_data
+    // ENHANCEMENT: Use a very broad selector that will catch all possible tab links
     const navSelector = this.settings.selectors.verticalTabNav || '.pe-vtabs-nav-list, .vertical-tabs-nav';
-    this.$container.on('click.vtm', `${navSelector} a`, this.handleVerticalTabClick.bind(this));
+
+    // Use a more robust selector that will catch any links in the nav area
+    this.$container.on('click.vtm', `${navSelector} a, .pe-vtabs-nav-item a, .tab-item a`, this.handleVerticalTabClick.bind(this));
+
+    // Fix data attributes on tab links during binding phase
+    this.setTabAttributesOnLinks();
 
     logger.log(`[${this.settings.tab_id}] Common VTM events bound using shared selectors.`);
+  }
+
+  /**
+   * Sets data-tab attributes on any tab links that are missing them.
+   * This ensures all links have consistent data attributes.
+   */
+  setTabAttributesOnLinks() {
+    // Find all potential tab links
+    const navSelector = this.settings.selectors.verticalTabNav || '.pe-vtabs-nav-list, .vertical-tabs-nav';
+    const $navLinks = this.$container.find(`${navSelector} a`);
+
+    logger.log(`Found ${$navLinks.length} tab links to check for data-tab attributes`);
+
+    // For each link, ensure it has the proper data-tab attribute based on the URL
+    $navLinks.each((i, link) => {
+      const $link = this.$(link);
+      const href = $link.attr('href') || '';
+
+      // If no data-tab attribute but the href has sub_tab parameter
+      if (!$link.attr('data-tab') && href.includes('sub_tab=')) {
+        const match = href.match(/[?&]sub_tab=([^&#]*)/i);
+        if (match && match[1]) {
+          const subTabId = decodeURIComponent(match[1].replace(/\+/g, ' '));
+          logger.log(`Setting missing data-tab attribute on link: ${subTabId}`);
+          $link.attr('data-tab', subTabId);
+        }
+      }
+    });
   }
 
   /**
@@ -154,6 +188,10 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
       return;
     }
 
+    // Make sure all tab links have data-tab attributes
+    // This ensures data attributes are added right before tab initialization
+    this.setTabAttributesOnLinks();
+
     let activeSubTabId = this.vtmConfig.defaultSubTabId;
     const urlParams = new URLSearchParams(window.location.search);
     const urlSubTab = urlParams.get('sub_tab');
@@ -189,12 +227,136 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
   handleVerticalTabClick(e) {
     e.preventDefault();
     const $targetLink = this.$(e.currentTarget);
-    const subTabId = $targetLink.data('tab');
 
+    // CRITICAL: Explicitly log the HTML element to debug
+    const element = $targetLink[0];
+    logger.log('DEBUG HTML element clicked:', element ? element.outerHTML : 'undefined element');
+
+    // Multiple ways to get the subTabId, with fallbacks
+    let subTabId = null;
+
+    // Direct DOM attribute access - most reliable for elements with data-* attributes
+    // Based on the console log, we can see the markup has data-tab attribute
+    const domTabAttr = element ? element.getAttribute('data-tab') : null;
+    if (domTabAttr) {
+      subTabId = domTabAttr;
+      logger.log(`Found subTabId from direct DOM attribute: ${subTabId}`);
+    }
+    // Check if there's a data-tabid attribute
+    else if (element && element.hasAttribute('data-tabid')) {
+      subTabId = element.getAttribute('data-tabid');
+      logger.log(`Found subTabId from direct DOM data-tabid attribute: ${subTabId}`);
+    }
+    // Try all possible jQuery data-* attribute methods
+    else if ($targetLink.attr('data-tab')) {
+      // Direct attribute access tends to be more reliable
+      subTabId = $targetLink.attr('data-tab');
+      logger.log(`Found subTabId from attr('data-tab'): ${subTabId}`);
+    } else if ($targetLink.attr('data-tabid')) {
+      subTabId = $targetLink.attr('data-tabid');
+      logger.log(`Found subTabId from attr('data-tabid'): ${subTabId}`);
+    } else if ($targetLink.attr('data-tab-query')) {
+      subTabId = $targetLink.attr('data-tab-query');
+      logger.log(`Found subTabId from attr('data-tab-query'): ${subTabId}`);
+    } else if ($targetLink.data('tab')) {
+      subTabId = $targetLink.data('tab');
+      logger.log(`Found subTabId from data('tab'): ${subTabId}`);
+    } else if ($targetLink.data('tabQuery')) {
+      subTabId = $targetLink.data('tabQuery');
+      logger.log(`Found subTabId from data('tabQuery'): ${subTabId}`);
+    }
+
+    // Enhanced debug info
+    logger.log(`Vertical tab link clicked:`, {
+      href: $targetLink.attr('href'),
+      elementId: $targetLink.attr('id'),
+      elementClasses: $targetLink.attr('class'),
+      dataTabAttribute: $targetLink.attr('data-tab'),
+      dataTabIdAttribute: $targetLink.attr('data-tabid'),
+      dataTabQueryAttribute: $targetLink.attr('data-tab-query'),
+      linkText: $targetLink.text().trim(),
+      allDataAttrs: $targetLink.data(),
+      resolvedSubTabId: subTabId
+    });
+
+    // If we have a subTabId from any of the data-* attributes
     if (subTabId) {
       this.showVerticalTab(subTabId, true); // true to update history
-    } else {
-      logger.warn(`[${this.settings.tab_id}] Vertical tab link clicked but no subTabId found in data-tab attribute.`);
+      return;
+    }
+
+    // No data-* attributes found, try the URL as last resort
+    // THIS IS THE MOST IMPORTANT FALLBACK - we prioritize this approach for more reliability
+    logger.warn(`[${this.settings.tab_id}] No subTabId found in any data-* attributes. Trying URL extraction which is more reliable.`);
+    const href = $targetLink.attr('href');
+
+    // Direct regex extraction for sub_tab parameter - most reliable method
+    // This works even when URL is relative or malformed
+    if (href) {
+      const subTabMatch = href.match(/[?&]sub_tab=([^&#]*)/i);
+      if (subTabMatch && subTabMatch[1]) {
+        const subTabFromRegex = decodeURIComponent(subTabMatch[1].replace(/\+/g, ' '));
+        logger.log(`Found subTabId from regex extraction: ${subTabFromRegex}`);
+        this.showVerticalTab(subTabFromRegex, true);
+
+        // Fix the data-tab attribute for future clicks
+        $targetLink.attr('data-tab', subTabFromRegex);
+        return;
+      }
+
+      // As a backup, try standard URL parsing
+      if (href.includes('sub_tab=')) {
+        try {
+          const hrefUrl = new URL(href, window.location.origin);
+          const subTabFromHref = hrefUrl.searchParams.get('sub_tab');
+          if (subTabFromHref) {
+            logger.log(`Fallback to sub_tab from href URL: ${subTabFromHref}`);
+            this.showVerticalTab(subTabFromHref, true);
+            // Fix the data-tab attribute to prevent future issues
+            $targetLink.attr('data-tab', subTabFromHref);
+            return;
+          }
+        } catch (e) {
+          // If URL parsing fails, try a more direct approach with URLSearchParams
+          try {
+            const queryString = href.split('?')[1];
+            if (queryString) {
+              const subTabFromHref = new URLSearchParams(queryString).get('sub_tab');
+              if (subTabFromHref) {
+                logger.log(`Fallback to sub_tab from query string: ${subTabFromHref}`);
+                this.showVerticalTab(subTabFromHref, true);
+                // Fix the data-tab attribute to prevent future issues
+                $targetLink.attr('data-tab', subTabFromHref);
+                return;
+              }
+            }
+          } catch (e2) {
+            logger.error('Error parsing URL or query string:', e2);
+          }
+        }
+      }
+    }
+
+    // If we get here, all attempts failed
+    logger.error(`Could not determine tab ID from link:`, $targetLink[0]);
+
+    // Last resort: try to extract tab ID from class or text
+    const parentLi = $targetLink.closest('li');
+    if (parentLi.length) {
+      let tabIdFromClass = '';
+      const classes = parentLi.attr('class').split(/\s+/);
+      for (const cls of classes) {
+        if (cls.includes('-tab-') || cls.includes('_tab_')) {
+          tabIdFromClass = cls.split(/[-_]tab[-_]/)[1];
+          if (tabIdFromClass) {
+            logger.log(`Last resort: Found possible tabId from class: ${tabIdFromClass}`);
+            this.showVerticalTab(tabIdFromClass, true);
+            // Fix the data-tab attribute to prevent future issues
+            $targetLink.attr('data-tab', tabIdFromClass);
+            return;
+          }
+        }
+      }
     }
   }
 
@@ -234,18 +396,89 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     const $verticalTabsNav = this.$container.find(navSelector);
     const $verticalTabContents = this.$container.find(contentSelector);
 
+    // Remove active class from all nav items
     $verticalTabsNav.find(navItemSelector).removeClass('active');
-    $verticalTabsNav.find(`a[data-tab="${subTabId}"]`).closest(navItemSelector).addClass('active');
+
+    // Find the tab link directly using data attribute
+    let $activeLink = $verticalTabsNav.find(`a[data-tab="${subTabId}"]`);
+
+    // If not found, try other ways to find the link
+    if (!$activeLink.length) {
+      // Look for links with matching href containing the tab ID
+      $activeLink = $verticalTabsNav.find(`a[href*="sub_tab=${subTabId}"]`);
+
+      // If still not found, try more aggressive matching
+      if (!$activeLink.length) {
+        $verticalTabsNav.find('a').each((i, link) => {
+          const $link = this.$(link);
+          const href = $link.attr('href') || '';
+
+          // If this link's href contains our tab ID
+          if (href.includes(subTabId)) {
+            $activeLink = $link;
+            // Set the data-tab attribute to fix future lookups
+            $link.attr('data-tab', subTabId);
+            logger.log(`Fixed missing data-tab attribute on tab nav link for: ${subTabId}`);
+          }
+        });
+      }
+    }
+
+    // Now add active class to the parent li of the found link
+    if ($activeLink.length) {
+      $activeLink.closest(navItemSelector).addClass('active');
+    } else {
+      logger.warn(`Could not find nav link for tab ID: ${subTabId}`);
+    }
 
     // Hide and deactivate all tab content panels
     $verticalTabContents.hide().removeClass('active');
 
     // Find and activate the selected content panel
-    const $activeContentPanel = this.$container.find(`#${subTabId.replace(/[^a-zA-Z0-9-_]/g, '')}`);
+    // First try exact ID match
+    const sanitizedTabId = subTabId.replace(/[^a-zA-Z0-9-_]/g, '');
+    let $activeContentPanel = this.$container.find(`#${sanitizedTabId}`);
+
+    // If not found, try more flexible selectors
+    if (!$activeContentPanel.length) {
+      // Try panel with a class that contains the tab ID
+      $activeContentPanel = this.$container.find(`.pe-vtabs-tab-panel-${sanitizedTabId}, [data-tab-id="${sanitizedTabId}"], [data-tab-content="${sanitizedTabId}"]`);
+    }
+
+    // If still not found, try searching for a panel that contains the tab ID in class or id
+    if (!$activeContentPanel.length) {
+      $activeContentPanel = this.$container.find(`[id*="${sanitizedTabId}"], [class*="${sanitizedTabId}"]`).filter('.pe-vtabs-tab-panel, .vertical-tab-content');
+    }
+
     if ($activeContentPanel.length) {
       $activeContentPanel.show().addClass('active');
+      logger.log(`Found and activated content panel for tab "${subTabId}": `, $activeContentPanel[0]);
     } else {
-      logger.warn(`[${this.settings.tab_id}] Content panel for sub-tab ID "${subTabId}" not found.`);
+      logger.warn(`[${this.settings.tab_id}] Content panel for sub-tab ID "${subTabId}" not found after trying multiple selectors.`);
+
+      // Last resort: try to find a panel with a similar ID/class
+      const partialMatches = [];
+      const contentPanels = this.$container.find(contentSelector);
+      contentPanels.each((i, panel) => {
+        const $panel = this.$(panel);
+        const panelId = $panel.attr('id') || '';
+        const panelClass = $panel.attr('class') || '';
+
+        // Check if panel ID or class contains parts of the tab ID
+        if (panelId.includes(sanitizedTabId.substring(0, 5)) ||
+            panelClass.includes(sanitizedTabId.substring(0, 5))) {
+          partialMatches.push($panel);
+        }
+      });
+
+      if (partialMatches.length === 1) {
+        // If we have exactly one partial match, use it
+        partialMatches[0].show().addClass('active');
+        logger.log(`Found and activated partial match panel for tab "${subTabId}": `, partialMatches[0][0]);
+      } else if (partialMatches.length > 1) {
+        logger.warn(`Multiple potential content panels found for tab "${subTabId}". Using first match.`);
+        partialMatches[0].show().addClass('active');
+      }
     }
 
     if (updateHistory) {

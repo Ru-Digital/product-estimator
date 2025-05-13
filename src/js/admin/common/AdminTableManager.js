@@ -23,8 +23,9 @@ class AdminTableManager extends VerticalTabbedModule {
 
     // Configuration for the VerticalTabbedModule parent class
     const vtmConfig = {
-      ...config, // Includes mainTabId, localizedDataName
-      defaultSubTabId: config.mainTabId + '-atm-default-subcontent',
+      ...config, // Includes mainTabId, localizedDataName, and possibly defaultSubTabId
+      // Only set defaultSubTabId if not already provided in config
+      defaultSubTabId: config.defaultSubTabId || config.mainTabId + '_table', // Use more predictable format
       ajaxActionPrefix: `atm_form_save_${config.mainTabId}`
     };
 

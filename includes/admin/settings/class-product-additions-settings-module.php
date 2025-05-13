@@ -36,18 +36,7 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
      */
     private $product_categories = null;
 
-    /**
-     * Callback for rendering the section description
-     *
-     * This function is called by WordPress when rendering the settings section.
-     * It outputs the descriptive text that appears at the top of the section.
-     *
-     * @return void
-     */
-    public function your_section_callback_function() {
-        echo '<p>' . esc_html__('These are the general settings for Product Additions.', 'product-estimator') . '</p>';
-        echo '<p>' . esc_html__('Configure global behavior for product additions, suggestions, and notes.', 'product-estimator') . '</p>';
-    }
+    // Removed the section callback function that was used for the General PA Settings tab
 
     /**
      * Determines if this module handles a specific setting key
@@ -66,14 +55,6 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
      * @return boolean True if this module handles the setting key
      */
     public function has_setting($key) {
-        // Check if it's a general setting field
-        if ($key === 'my_pa_setting_field_id') {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Product Additions: has_setting: TRUE for ' . $key);
-            }
-            return true;
-        }
-
         // Check if it's a table item - item keys typically start with 'rel_' prefix
         if (is_string($key) && strpos($key, 'rel_') === 0) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -484,31 +465,14 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 'description' => __('Manage rules for product additions and suggestions based on categories.', 'product-estimator'),
                 'content_type'=> 'table',                     // This tab displays table-based content
             ],
-
-            // Additional settings tab for general configuration options
-            [
-                'id'          => 'pa_general_settings',       // Unique ID for this settings tab
-                'title'       => __('General PA Settings', 'product-estimator'),
-                'content_type'=> 'settings',                  // This tab displays WordPress settings fields
-            ],
         ];
     }
 
     /**
      * Registers WordPress settings fields for vertical tabs
      *
-     * This method is called by SettingsModuleWithVerticalTabsBase for each vertical tab
-     * to register settings fields with the WordPress Settings API. The fields are rendered
-     * automatically when a tab with 'content_type' => 'settings' is active.
-     *
-     * Each tab can have its own sections and fields:
-     * - For 'rules_table_tab', no settings are needed as it uses table display
-     * - For 'pa_general_settings', we register standard WordPress settings fields
-     *
-     * The registration process has three components:
-     * 1. Register a settings section using add_settings_section()
-     * 2. Register individual fields with add_settings_field()
-     * 3. Store field data in the module using store_field_for_sub_tab()
+     * This is a simplified implementation since we only have the table tab now.
+     * No additional fields need to be registered.
      *
      * @param string $vertical_tab_id     Current tab ID being registered
      * @param string $page_slug_for_wp_api Page slug for WordPress Settings API
@@ -520,53 +484,6 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
             // No settings fields to register - table content is handled separately
             // via render_table_content_for_tab() from SettingsModuleWithTableBase
             return;
-        }
-
-        // Register fields for the general settings tab
-        if ($vertical_tab_id === 'pa_general_settings') {
-            // Create a unique section ID by combining the base section ID with a suffix
-            $section_id = $this->section_id . '_pa_general';
-
-            // Register the settings section
-            add_settings_section(
-                $section_id,                                          // Section ID
-                __('General Settings Section Title', 'product-estimator'), // Section title
-                [$this, 'your_section_callback_function'],            // Section description callback
-                $page_slug_for_wp_api                                 // Page slug
-            );
-
-            // Define a checkbox field with all necessary properties
-            $field_args_for_general = [
-                'id'          => 'my_pa_setting_field_id',            // Field ID in the database
-                'title'       => __('Enable Feature X', 'product-estimator'), // Field title
-                'type'        => 'checkbox',                           // Field type (checkbox, text, select, etc.)
-                'description' => __('Tick to enable Feature X for product additions.', 'product-estimator'),
-                'default'     => '0',                                  // Default value if not set
-                'option_name' => $this->option_name,                   // Option name for data storage
-                'attributes'  => [
-                    'id' => 'my_pa_setting_field_id_html'             // HTML element ID attribute
-                ],
-                'checkbox_label' => __('Enable this awesome feature', 'product-estimator') // Label next to checkbox
-            ];
-
-            // Register the field with WordPress Settings API
-            add_settings_field(
-                'my_pa_setting_field_id',                             // Field ID
-                __('Enable Feature X Label', 'product-estimator'),     // Field label in the UI
-                [$this, 'render_field'],                              // Callback to render the field
-                $page_slug_for_wp_api,                                // Page slug
-                $section_id,                                          // Section ID this field belongs to
-                $field_args_for_general                               // Field arguments
-            );
-
-            // Store field data in module for validation and form handling
-            $this->store_field_for_sub_tab($vertical_tab_id, 'my_pa_setting_field_id', $field_args_for_general);
-
-            // Debug logging to help troubleshoot field registration
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Product Additions: Stored field for tab ' . $vertical_tab_id . ': my_pa_setting_field_id');
-                error_log('Product Additions: Field args: ' . print_r($field_args_for_general, true));
-            }
         }
     }
 

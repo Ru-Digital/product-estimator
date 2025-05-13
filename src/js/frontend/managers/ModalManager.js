@@ -215,6 +215,13 @@ class ModalManager {
     this.formManager = new FormManager(this.config, this.dataService, this);
     this.uiManager = new UIManager(this.config, this.dataService, this);
     
+    // Initialize each manager
+    if (this.estimateManager) this.estimateManager.init();
+    if (this.roomManager) this.roomManager.init();
+    if (this.productManager) this.productManager.init();
+    if (this.formManager) this.formManager.init();
+    if (this.uiManager) this.uiManager.init();
+    
     logger.log('Specialized managers initialized');
   }
   
@@ -369,6 +376,13 @@ class ModalManager {
       // Add modal-open class to body
       document.body.classList.add('modal-open');
       this.isOpen = true;
+      
+      // Initialize carousels through UIManager
+      if (this.uiManager) {
+        setTimeout(() => {
+          this.uiManager.initializeCarousels();
+        }, 300); // Short delay to ensure DOM is ready
+      }
       
       // Now delegate to specialized managers to handle the specific flow
       if (productId && !forceListView) {
@@ -552,11 +566,28 @@ class ModalManager {
         this.newRoomForm
       ];
       
-      viewContainers.forEach(container => {
-        if (container) {
-          container.style.display = 'none';
-        }
-      });
+      // If UIManager is available, use it to hide elements
+      if (this.uiManager) {
+        viewContainers.forEach(container => {
+          if (container) {
+            this.uiManager.hideElement(container);
+          }
+        });
+      } else {
+        // Fallback if UIManager not available
+        viewContainers.forEach(container => {
+          if (container) {
+            container.style.display = 'none';
+          }
+        });
+      }
+      
+      // Clear any stored data attributes safely
+      if (this.roomSelectionForm) this.roomSelectionForm.removeAttribute('data-estimate-id');
+      if (this.newRoomForm) {
+        this.newRoomForm.removeAttribute('data-estimate-id');
+        this.newRoomForm.removeAttribute('data-product-id');
+      }
     } catch (error) {
       logger.error('Error resetting modal state:', error);
     }
@@ -568,44 +599,16 @@ class ModalManager {
    * @returns {HTMLElement} The element
    */
   forceElementVisibility(element) {
-    if (!element) return null;
-    
-    try {
-      // Apply inline styles with !important to override any CSS rules
-      element.style.cssText += 'display: block !important; visibility: visible !important; opacity: 1 !important; height: auto !important;';
-      
-      // Remove any hiding classes
-      ['hidden', 'hide', 'invisible', 'd-none', 'display-none'].forEach(cls => {
-        if (element.classList.contains(cls)) {
-          element.classList.remove(cls);
-        }
-      });
-      
-      // Add visible classes (some frameworks use these)
-      element.classList.add('visible', 'd-block');
-      
-      // Ensure parent elements are also visible
-      let parent = element.parentElement;
-      const checkedParents = new Set(); // Prevent infinite loops
-      
-      while (parent && parent !== document.body && !checkedParents.has(parent)) {
-        checkedParents.add(parent);
-        
-        const parentStyle = window.getComputedStyle(parent);
-        if (parentStyle.display === 'none') {
-          parent.style.cssText += 'display: block !important;';
-        }
-        parent = parent.parentElement;
-      }
-      
-      // Use jQuery as a fallback if available
-      if (typeof jQuery !== 'undefined') {
-        jQuery(element).show();
-      }
-    } catch (error) {
-      logger.error('Error forcing element visibility:', error);
+    // Delegate to UIManager if available
+    if (this.uiManager) {
+      return this.uiManager.forceElementVisibility(element);
     }
     
+    // Fallback if UIManager is not available
+    if (!element) return null;
+    
+    logger.log('Using fallback forceElementVisibility (UIManager not available)');
+    element.style.display = 'block';
     return element;
   }
 }

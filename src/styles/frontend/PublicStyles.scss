@@ -1,0 +1,477 @@
+/**
+ * Public styles for the Product Estimator plugin
+ */
+@use 'sass:color';
+@use 'variables' as *;
+
+/* Product Estimator Button Styles */
+.product-estimator-button {
+  &.product-estimator-category-button {
+    width: 38px;
+    height: 38px;
+    font-size: 14px;
+    border-radius: 3px;
+    border-color: $secondary-color !important;
+    color: #ffffff !important;
+    background-color: $secondary-color !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    line-height: 1.4;
+    white-space: nowrap;
+    padding: 10px 10px;
+    
+    &:hover {
+      border-color: #fff !important;
+    }
+  }
+}
+
+/* Product Card Actions */
+.product-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px; /* Space between buttons */
+  margin: 15px 0;
+  position: absolute;
+  min-height: 38px; /* Match the height of floori button */
+  left: 10px;
+  bottom: 0;
+  
+  .visualiser-button-wrapper {
+    position: relative !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    flex: 1;
+  }
+  
+  .estimator-button-wrapper {
+    flex: 1;
+    z-index: 2;
+  }
+  
+  &.visualiser-enabled.estimator-enabled {
+    .visualiser-button-wrapper .floori-additional-button-wrapper .floori-additional-button {
+      width: 133px !important;
+    }
+  }
+}
+
+@media screen and (max-width: $breakpoint-sm) {
+  .product-card-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    
+    .visualiser-button-wrapper,
+    .estimator-button-wrapper {
+      width: 100%;
+    }
+    
+    .product-estimator-button {
+      width: 100%;
+    }
+  }
+}
+
+/* Container Styles */
+.product-estimator-container {
+  max-width: 800px;
+  margin: $spacing-xl auto;
+  padding: $spacing-lg;
+  background: $bg-color;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow;
+  font-family: $font-family;
+}
+
+/* Header Styles */
+.estimator-header {
+  margin-bottom: $spacing-xl;
+  text-align: center;
+  
+  h2 {
+    font-size: 1.8rem;
+    margin: 0 0 $spacing-sm;
+    color: $text-color;
+  }
+}
+
+.estimator-description {
+  color: $text-light;
+  font-size: $font-size-base;
+  line-height: 1.5;
+}
+
+/* Form Styles */
+.estimator-form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-lg;
+}
+
+.form-group {
+  margin-bottom: $spacing-lg;
+  
+  label {
+    display: block;
+    margin-bottom: $spacing-sm;
+    font-weight: 600;
+    color: $text-color;
+    
+    &.required::after {
+      content: '*';
+      color: $error-color;
+      margin-left: $spacing-xs;
+    }
+  }
+}
+
+.field-description {
+  display: block;
+  margin-top: $spacing-xs;
+  font-size: $font-size-small;
+  color: $text-light;
+}
+
+/* Input Styles */
+.estimator-form {
+  select,
+  input[type="number"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #c3c4c7;
+    border-radius: $border-radius;
+    font-size: $font-size-base;
+    line-height: 1.5;
+    transition: border-color 0.15s ease-in-out;
+    
+    &:focus {
+      border-color: $info-color;
+      box-shadow: 0 0 0 1px $info-color;
+      outline: none;
+    }
+  }
+  
+  input.error {
+    border-color: $error-color;
+  }
+}
+
+/* Options Group Styles */
+.options-group {
+  background: $bg-lighter;
+  padding: $spacing-lg;
+  border-radius: $border-radius;
+  margin-top: $spacing-lg;
+  
+  h3 {
+    margin: 0 0 $spacing-md;
+    font-size: 1.2rem;
+    color: $text-color;
+  }
+}
+
+.option-group {
+  margin-bottom: $spacing-lg;
+  padding-bottom: $spacing-lg;
+  border-bottom: 1px solid #c3c4c7;
+  
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+.option-group-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 $spacing-md;
+  color: $text-color;
+}
+
+.option-item {
+  margin-bottom: 0.75rem;
+}
+
+.option-label {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.option-title {
+  flex-grow: 1;
+}
+
+.option-price {
+  color: $info-color;
+  font-weight: 600;
+}
+
+.option-description {
+  margin-left: 1.75rem;
+  font-size: $font-size-small;
+  color: $text-light;
+}
+
+/* Results Styles */
+.calculation-results {
+  background: #f0f6fc;
+  padding: $spacing-lg;
+  border-radius: $border-radius;
+  margin-top: $spacing-lg;
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  
+  th, td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #c3c4c7;
+  }
+  
+  tr:last-child {
+    th, td {
+      border-bottom: none;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+  }
+}
+
+/* Button Styles */
+.form-actions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+}
+
+.calculate-button,
+.reset-button,
+.download-pdf {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: $border-radius;
+  font-size: $font-size-base;
+  font-weight: 500;
+  cursor: pointer;
+  transition: $transition-base;
+}
+
+.calculate-button {
+  background: $info-color;
+  color: white;
+  
+  &:hover {
+    background: color.adjust($info-color, $lightness: -10%);
+  }
+}
+
+.reset-button {
+  background: $bg-lighter;
+  color: $text-color;
+  
+  &:hover {
+    background: #dcdcde;
+  }
+}
+
+.download-pdf {
+  background: $primary-color;
+  color: white;
+  
+  &:hover {
+    background: $primary-hover;
+  }
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid $info-color;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: $spacing-md;
+  color: $text-color;
+  font-weight: 500;
+}
+
+/* Error Messages */
+.error-messages {
+  background: #fcf0f1;
+  border-left: 4px solid $error-color;
+  padding: $spacing-md;
+  margin: $spacing-md 0;
+}
+
+.error-content {
+  color: $text-color;
+  font-size: $font-size-small;
+  line-height: 1.5;
+}
+
+/* Tooltip Styles */
+.estimator-tooltip {
+  position: absolute;
+  z-index: 1000;
+  background: #1e1e1e;
+  color: white;
+  padding: $spacing-sm $spacing-md;
+  border-radius: $border-radius;
+  font-size: $font-size-small;
+  max-width: 200px;
+  box-shadow: $shadow;
+}
+
+.tooltip-arrow {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  margin-left: -6px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid #1e1e1e;
+}
+
+.single_add_to_estimator_button {
+  background: $secondary-color !important;
+  color: white !important;
+  border: none !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  height: 42px !important;
+  margin-top: 10px !important;
+}
+
+.single-cart-options {
+  margin-bottom: 0 !important;
+}
+
+.floori-button-wrapper {
+  padding-top: 0 !important;
+}
+
+/* Animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive Styles */
+@media screen and (max-width: $breakpoint-sm) {
+  .product-estimator-container {
+    padding: $spacing-md;
+    margin: $spacing-md;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .calculate-button,
+  .reset-button,
+  .download-pdf {
+    width: 100%;
+  }
+
+  .option-label {
+    flex-wrap: wrap;
+  }
+
+  .option-price {
+    width: 100%;
+    margin-left: 1.75rem;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .product-estimator-container {
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .form-actions,
+  .loading-overlay {
+    display: none;
+  }
+
+  .calculation-results {
+    background: none;
+    padding: 0;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .product-estimator-container {
+    background: #2c3338;
+    color: white;
+  }
+
+  .estimator-header h2 {
+    color: white;
+  }
+
+  .form-group label {
+    color: white;
+  }
+
+  .options-group,
+  .calculation-results {
+    background: #1e1e1e;
+  }
+
+  .option-group-title {
+    color: white;
+  }
+
+  .result-table th,
+  .result-table td {
+    border-color: #50575e;
+  }
+
+  .reset-button {
+    background: #50575e;
+    color: white;
+  }
+
+  .error-messages {
+    background: #2c1315;
+  }
+
+  .error-content {
+    color: white;
+  }
+}

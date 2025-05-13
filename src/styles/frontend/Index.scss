@@ -1,0 +1,21 @@
+/**
+ * Main SCSS file for Product Estimator frontend styles
+ *
+ * This file imports all frontend stylesheets for the Product Estimator plugin.
+ */
+
+// Make sass:color available to all modules
+@forward 'sass:color';
+
+// Forward variables so they're available to all imported files
+@forward 'variables';
+
+// Use modern @use syntax for all component styles
+@use 'PublicStyles';          // Base styles
+@use 'Modal';                 // Modal window styles
+@use 'Dialog';                // Dialog styles
+@use 'Carousel';              // Carousel styles
+@use 'SimilarProducts';       // Similar products styles 
+@use 'CustomerDetails';       // Customer details styles
+@use 'DetailsToggle';         // Details toggle styles
+@use 'ProductUpgrades';       // Product upgrades styles

@@ -9,7 +9,10 @@ module.exports = {
     'admin/product-estimator-admin': './src/js/admin.js',
     
     // Admin styles entry
-    'admin/admin-styles': './src/styles/admin/Index.scss'
+    'admin/admin-styles': './src/styles/admin/Index.scss',
+    
+    // Frontend styles entry
+    'frontend-styles': './src/styles/frontend/Index.scss'
   },
   output: {
     filename: '[name].bundle.js',
@@ -49,8 +52,20 @@ module.exports = {
           {
             loader: 'file-loader',
             options: {
-              name: 'admin-styles-bundled.css',
-              outputPath: '../../admin/css/'
+              name(resourcePath) {
+                // Output different filenames based on the input path
+                if (resourcePath.includes('admin/Index.scss')) {
+                  return 'product-estimator-admin-bundled.css';
+                }
+                return 'product-estimator-frontend-bundled.css';
+              },
+              outputPath(url, resourcePath) {
+                // Output to different directories based on the input path
+                if (resourcePath.includes('admin/Index.scss')) {
+                  return '../../admin/css/' + url;
+                }
+                return '../../public/css/' + url;
+              }
             }
           },
           {

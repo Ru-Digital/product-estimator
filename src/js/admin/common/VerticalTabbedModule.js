@@ -228,56 +228,19 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     e.preventDefault();
     const $targetLink = this.$(e.currentTarget);
 
-    // CRITICAL: Explicitly log the HTML element to debug
-    const element = $targetLink[0];
-    logger.log('DEBUG HTML element clicked:', element ? element.outerHTML : 'undefined element');
-
     // Multiple ways to get the subTabId, with fallbacks
     let subTabId = null;
+    const element = $targetLink[0];
 
     // Direct DOM attribute access - most reliable for elements with data-* attributes
-    // Based on the console log, we can see the markup has data-tab attribute
     const domTabAttr = element ? element.getAttribute('data-tab') : null;
     if (domTabAttr) {
       subTabId = domTabAttr;
-      logger.log(`Found subTabId from direct DOM attribute: ${subTabId}`);
     }
     // Check if there's a data-tabid attribute
     else if (element && element.hasAttribute('data-tabid')) {
       subTabId = element.getAttribute('data-tabid');
-      logger.log(`Found subTabId from direct DOM data-tabid attribute: ${subTabId}`);
     }
-    // Try all possible jQuery data-* attribute methods
-    else if ($targetLink.attr('data-tab')) {
-      // Direct attribute access tends to be more reliable
-      subTabId = $targetLink.attr('data-tab');
-      logger.log(`Found subTabId from attr('data-tab'): ${subTabId}`);
-    } else if ($targetLink.attr('data-tabid')) {
-      subTabId = $targetLink.attr('data-tabid');
-      logger.log(`Found subTabId from attr('data-tabid'): ${subTabId}`);
-    } else if ($targetLink.attr('data-tab-query')) {
-      subTabId = $targetLink.attr('data-tab-query');
-      logger.log(`Found subTabId from attr('data-tab-query'): ${subTabId}`);
-    } else if ($targetLink.data('tab')) {
-      subTabId = $targetLink.data('tab');
-      logger.log(`Found subTabId from data('tab'): ${subTabId}`);
-    } else if ($targetLink.data('tabQuery')) {
-      subTabId = $targetLink.data('tabQuery');
-      logger.log(`Found subTabId from data('tabQuery'): ${subTabId}`);
-    }
-
-    // Enhanced debug info
-    logger.log(`Vertical tab link clicked:`, {
-      href: $targetLink.attr('href'),
-      elementId: $targetLink.attr('id'),
-      elementClasses: $targetLink.attr('class'),
-      dataTabAttribute: $targetLink.attr('data-tab'),
-      dataTabIdAttribute: $targetLink.attr('data-tabid'),
-      dataTabQueryAttribute: $targetLink.attr('data-tab-query'),
-      linkText: $targetLink.text().trim(),
-      allDataAttrs: $targetLink.data(),
-      resolvedSubTabId: subTabId
-    });
 
     // If we have a subTabId from any of the data-* attributes
     if (subTabId) {
@@ -287,7 +250,6 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
 
     // No data-* attributes found, try the URL as last resort
     // THIS IS THE MOST IMPORTANT FALLBACK - we prioritize this approach for more reliability
-    logger.warn(`[${this.settings.tab_id}] No subTabId found in any data-* attributes. Trying URL extraction which is more reliable.`);
     const href = $targetLink.attr('href');
 
     // Direct regex extraction for sub_tab parameter - most reliable method
@@ -296,7 +258,6 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
       const subTabMatch = href.match(/[?&]sub_tab=([^&#]*)/i);
       if (subTabMatch && subTabMatch[1]) {
         const subTabFromRegex = decodeURIComponent(subTabMatch[1].replace(/\+/g, ' '));
-        logger.log(`Found subTabId from regex extraction: ${subTabFromRegex}`);
         this.showVerticalTab(subTabFromRegex, true);
 
         // Fix the data-tab attribute for future clicks
@@ -310,7 +271,6 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
           const hrefUrl = new URL(href, window.location.origin);
           const subTabFromHref = hrefUrl.searchParams.get('sub_tab');
           if (subTabFromHref) {
-            logger.log(`Fallback to sub_tab from href URL: ${subTabFromHref}`);
             this.showVerticalTab(subTabFromHref, true);
             // Fix the data-tab attribute to prevent future issues
             $targetLink.attr('data-tab', subTabFromHref);
@@ -323,7 +283,6 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
             if (queryString) {
               const subTabFromHref = new URLSearchParams(queryString).get('sub_tab');
               if (subTabFromHref) {
-                logger.log(`Fallback to sub_tab from query string: ${subTabFromHref}`);
                 this.showVerticalTab(subTabFromHref, true);
                 // Fix the data-tab attribute to prevent future issues
                 $targetLink.attr('data-tab', subTabFromHref);
@@ -332,28 +291,6 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
             }
           } catch (e2) {
             logger.error('Error parsing URL or query string:', e2);
-          }
-        }
-      }
-    }
-
-    // If we get here, all attempts failed
-    logger.error(`Could not determine tab ID from link:`, $targetLink[0]);
-
-    // Last resort: try to extract tab ID from class or text
-    const parentLi = $targetLink.closest('li');
-    if (parentLi.length) {
-      let tabIdFromClass = '';
-      const classes = parentLi.attr('class').split(/\s+/);
-      for (const cls of classes) {
-        if (cls.includes('-tab-') || cls.includes('_tab_')) {
-          tabIdFromClass = cls.split(/[-_]tab[-_]/)[1];
-          if (tabIdFromClass) {
-            logger.log(`Last resort: Found possible tabId from class: ${tabIdFromClass}`);
-            this.showVerticalTab(tabIdFromClass, true);
-            // Fix the data-tab attribute to prevent future issues
-            $targetLink.attr('data-tab', tabIdFromClass);
-            return;
           }
         }
       }

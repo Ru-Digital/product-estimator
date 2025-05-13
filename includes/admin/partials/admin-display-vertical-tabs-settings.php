@@ -64,17 +64,21 @@ if ( ! empty( trim( $section_description_content ) ) ) :
                     if ( empty( $tab_data['id'] ) ) {
                         continue;
                     }
-                    
+
                     // Generate URL for this tab
                     $tab_url = add_query_arg( 'sub_tab', $tab_data['id'], $base_url );
-                    
+
                     // Check if this is the active tab
                     $is_active = ( $active_tab_id === $tab_data['id'] );
-                    
+
                     // Generate class for list item
                     $li_class = 'pe-vtabs-nav-item' . ( $is_active ? ' active' : '' );
                     ?>
-                    <li class="<?php echo esc_attr( $li_class ); ?> pe-vtabs-nav-item-<?php echo esc_attr( $tab_data['id'] ); ?>">
+                    <li class="<?php echo esc_attr( $li_class ); ?> pe-vtabs-nav-item-<?php echo esc_attr( $tab_data['id'] ); ?>"
+                        data-tab="<?php echo esc_attr( $tab_data['id'] ); ?>"
+                        data-tab-query="<?php echo esc_attr( $tab_data['id'] ); ?>"
+                        data-tabid="<?php echo esc_attr( $tab_data['id'] ); ?>"
+                    >
                         <a href="<?php echo esc_url( $tab_url ); ?>"
                            data-tab="<?php echo esc_attr( $tab_data['id'] ); ?>"
                            data-tab-query="<?php echo esc_attr( $tab_data['id'] ); ?>"
@@ -95,10 +99,10 @@ if ( ! empty( trim( $section_description_content ) ) ) :
                 if ( empty( $tab_data['id'] ) ) {
                     continue;
                 }
-                
+
                 // Check if this is the active panel
                 $is_panel_active = ( $active_tab_id === $tab_data['id'] );
-                
+
                 // Determine content type for this tab (settings form or table)
                 $content_type = isset($tab_data['content_type']) ? $tab_data['content_type'] : 'settings';
                 ?>
@@ -108,12 +112,12 @@ if ( ! empty( trim( $section_description_content ) ) ) :
                     <?php if ( ! $is_panel_active ) echo 'style="display:none;"'; // Initially hide non-active tabs ?>
                 >
                     <h3>
-                        <?php 
+                        <?php
                         // Display tab title, adding "Settings" suffix for settings-type tabs
-                        echo esc_html( $tab_data['title'] . ( $content_type === 'settings' ? ' ' . __( 'Settings', 'product-estimator' ) : '' ) ); 
+                        echo esc_html( $tab_data['title'] . ( $content_type === 'settings' ? ' ' . __( 'Settings', 'product-estimator' ) : '' ) );
                         ?>
                     </h3>
-                    
+
                     <?php if ( ! empty( $tab_data['description'] ) ) : ?>
                         <!-- Optional tab description -->
                         <p class="pe-vtabs-tab-description"><?php echo esc_html( $tab_data['description'] ); ?></p>
@@ -132,8 +136,8 @@ if ( ! empty( trim( $section_description_content ) ) ) :
                         ?>
                     <?php else : // Default to 'settings' content type ?>
                         <!-- Settings form for this tab -->
-                        <form method="post" action="javascript:void(0);" class="pe-vtabs-tab-form product-estimator-form" 
-                              data-tab-id="<?php echo esc_attr($this->get_tab_id()); ?>" 
+                        <form method="post" action="javascript:void(0);" class="pe-vtabs-tab-form product-estimator-form"
+                              data-tab-id="<?php echo esc_attr($this->get_tab_id()); ?>"
                               data-sub-tab-id="<?php echo esc_attr( $tab_data['id'] ); ?>">
                             <?php
                             // The page slug for settings_fields and do_settings_sections

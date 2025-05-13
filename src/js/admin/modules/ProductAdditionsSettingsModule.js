@@ -41,10 +41,8 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
       this._cacheProductAdditionsDOM();
       this._bindSpecificEvents();
       this._initializeSelect2();
-      this.logger.log('ProductAdditionsSettingsModule specific features initialized.');
     });
 
-    this.logger.log('ProductAdditionsSettingsModule constructor completed.');
   }
 
   /**

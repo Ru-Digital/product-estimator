@@ -115,7 +115,6 @@ class ProductEstimatorSettings {
       this.baseClassLogger.warn(`Original 'selectors' object was missing from localizedSettings for ${settingsObjectName}. Defaulted/merged.`);
     }
 
-    this.baseClassLogger.log(`Base module settings initialized for ${settingsObjectName}. Effective settings:`, JSON.stringify(this.settings));
   }
   /**
    * Finalize module settings on document.ready (e.g., update nonce).

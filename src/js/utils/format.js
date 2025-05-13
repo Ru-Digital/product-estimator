@@ -11,6 +11,28 @@
  * @param {number} decimals - Number of decimal places
  * @returns {string} Formatted price
  */
+/**
+ * Format a value as currency using the browser's Intl.NumberFormat
+ * @param {number|string} amount - Amount to format
+ * @param {string} locale - Locale string (e.g., 'en-US')
+ * @param {string} currency - Currency code (e.g., 'USD')
+ * @returns {string} Formatted currency string
+ */
+export function currency(amount, locale = 'en-US', currency = 'USD') {
+  // Handle undefined or null amount
+  if (amount === undefined || amount === null || isNaN(amount)) {
+    amount = 0;
+  }
+  
+  // Convert string to number if needed
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: currency
+  }).format(numAmount);
+}
+
 export function formatPrice(amount, currencySymbol = '$', decimals = 2) {
   // Handle undefined or null amount
   if (amount === undefined || amount === null) {

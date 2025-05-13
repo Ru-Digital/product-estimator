@@ -74,27 +74,20 @@ class PricingRulesSettingsModule extends AdminTableManager {
    * @private
    */
   _initializeSelect2() {
-    const initSelect2 = ($element, placeholderText) => {
-      if ($element && $element.length && this.$.fn.select2) {
-        $element.select2({
-          placeholder: placeholderText,
-          width: 'resolve', // 'style' or '100%' might be better depending on CSS
-          allowClear: true,
-          dropdownCssClass: 'product-estimator-dropdown' // Custom class for styling
-        }).val(null).trigger('change'); // Ensure it's cleared initially
-      } else if ($element && !$element.length) {
-        this.logger.warn('Select2 target element not found:', $element.selector);
-      } else if (!$element) {
-        this.logger.warn('Select2 target element is undefined (likely missing from DOM cache).');
-      }
-    };
-
-    // Use a small timeout to ensure Select2 can properly initialize if elements were just shown/manipulated.
-    setTimeout(() => {
-      // this.settings.i18n is from ProductEstimatorSettings base
-      initSelect2(this.dom.categoriesSelect, (this.settings.i18n && this.settings.i18n.selectCategories) || 'Select categories');
-      this.logger.log('Select2 components initialized for Pricing Rules.');
-    }, 100); // 100ms delay
+    this.initializeSelect2Dropdowns({
+      elements: [
+        {
+          element: this.dom.categoriesSelect,
+          placeholderKey: 'selectCategories',
+          fallbackText: 'Select categories',
+          name: 'categories',
+          config: {
+            clearInitial: true
+          }
+        }
+      ],
+      moduleName: 'Pricing Rules'
+    });
   }
 
   /**
@@ -103,9 +96,10 @@ class PricingRulesSettingsModule extends AdminTableManager {
   onMainTabActivated() {
     super.onMainTabActivated(); // Call parent method
     this.logger.log('Pricing Rules main tab activated.');
-    // Specific actions for Pricing Rules when its tab is shown
+
+    // Refresh Select2 components if they're already initialized
     if (this.dom.categoriesSelect && this.dom.categoriesSelect.hasClass("select2-hidden-accessible")) {
-      // just trigger a resize/redraw if needed
+      this.refreshSelect2(this.dom.categoriesSelect);
     }
   }
 

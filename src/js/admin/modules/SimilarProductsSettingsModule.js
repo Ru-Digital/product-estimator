@@ -68,29 +68,26 @@ class SimilarProductsSettingsModule extends AdminTableManager {
   /**
    * Initialize Select2 components.
    * This is called after the `admin_table_manager_ready` event.
+   * Using the base class Select2 initialization methods.
    * @private
    */
   _initializeSelect2() {
-    const initSelect2 = ($element, placeholderText) => {
-      if ($element && $element.length && this.$.fn.select2) {
-        $element.select2({
-          placeholder: placeholderText,
-          width: 'resolve', // 'style' or '100%' might be better depending on CSS
-          allowClear: true,
-          dropdownCssClass: 'product-estimator-dropdown' // Custom class for styling
-        }).val(null).trigger('change'); // Ensure it's cleared initially
-      } else if ($element && !$element.length) {
-        this.logger.warn('Select2 target element not found:', $element.selector);
-      } else if (!$element) {
-        this.logger.warn('Select2 target element is undefined (likely missing from DOM cache).');
-      }
-    };
-    // Use a small timeout to ensure Select2 can properly initialize if elements were just shown/manipulated.
-    setTimeout(() => {
-      // this.settings.i18n is from ProductEstimatorSettings base
-      initSelect2(this.dom.sourceCategoriesSelect, (this.settings.i18n && this.settings.i18n.selectCategoryError) || 'Select source categories');
-      this.logger.log('Select2 components initialized for Similar Products.');
-    }, 100); // 100ms delay
+    // Use the base class initializeSelect2Dropdowns method with our specific configuration
+    this.initializeSelect2Dropdowns({
+      elements: [
+        {
+          element: this.dom.sourceCategoriesSelect,
+          placeholderKey: 'selectCategoryError',
+          fallbackText: 'Select source categories',
+          name: 'source categories',
+          config: {
+            clearInitial: true
+          }
+        }
+      ],
+      // Settings and i18n are automatically provided by the base method
+      moduleName: 'Similar Products'
+    });
   }
 
   /**

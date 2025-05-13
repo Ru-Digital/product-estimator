@@ -405,7 +405,6 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
      * @return array|WP_Error Validated data or error object
      */
     protected function validate_item_data(array $raw_item_data, $item_id = null, $original_item_data = null) {
-        error_log("[DEBUG][VALIDATE_DATA]");
         $validated_data = [];
         $errors = new \WP_Error();
 
@@ -453,7 +452,6 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
             return $errors;
         }
 
-        error_log("[DEBUG][DATA]: ". print_r($validated_data, true));
         return $validated_data;
     }
 
@@ -527,7 +525,6 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
      * @return array Prepared item for response
      */
     protected function prepare_item_for_response(array $saved_item) {
-        error_log("[DEBUG][PREPARE_ITEM_FOR_RESPONSE]" . print_r($saved_item, true));
         $response_item = $saved_item;
 
         // Add formatted source categories

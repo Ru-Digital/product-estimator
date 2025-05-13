@@ -463,6 +463,115 @@ class ProductEstimatorSettings {
   showNotice(message, type = 'success') {
     validation.showNotice(message, type);
   }
+
+  /**
+   * Initialize a Select2 dropdown with standardized configuration
+   *
+   * @param {jQuery} $element - jQuery element to initialize Select2 on
+   * @param {string} placeholderText - Placeholder text to display
+   * @param {Object} config - Additional configuration options for Select2
+   * @returns {jQuery|null} The initialized element or null if initialization failed
+   */
+  initSelect2($element, placeholderText, config = {}) {
+    if (!$element || !$element.length) {
+      this.baseClassLogger.warn('Select2 target element not found or empty');
+      return null;
+    }
+
+    if (!this.$ || !this.$.fn.select2) {
+      this.baseClassLogger.error('Select2 library not available');
+      return null;
+    }
+
+    // Default configuration options
+    const defaultConfig = {
+      placeholder: placeholderText || 'Select an option',
+      width: 'resolve', // 'style' or '100%' might be better depending on CSS
+      allowClear: true,
+      dropdownCssClass: 'product-estimator-dropdown' // Custom class for styling
+    };
+
+    // Merge with custom config, with custom taking precedence
+    const mergedConfig = { ...defaultConfig, ...config };
+
+    try {
+      $element.select2(mergedConfig);
+
+      // Option to clear initial selection
+      if (config.clearInitial) {
+        $element.val(null).trigger('change');
+      }
+
+      return $element;
+    } catch (error) {
+      this.baseClassLogger.error('Error initializing Select2:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Initializes multiple Select2 dropdowns in batch
+   *
+   * @param {Object} options - Configuration options
+   * @param {Array} options.elements - Array of elements to initialize
+   * @param {Object} options.i18n - Internationalization strings (defaults to this.settings.i18n)
+   * @param {string} options.moduleName - Module name for logging (defaults to this.settings.tab_id)
+   * @param {number} options.delay - Delay in ms before initialization (defaults to 100)
+   * @returns {void}
+   */
+  initializeSelect2Dropdowns(options) {
+    const {
+      elements = [],
+      i18n = this.settings.i18n || {},
+      moduleName = this.settings.tab_id || 'Module',
+      delay = 100
+    } = options;
+
+    if (!this.$ || !this.$.fn.select2) {
+      this.baseClassLogger.error(`jQuery or Select2 not available for ${moduleName}`);
+      return;
+    }
+
+    // Use setTimeout to ensure elements are fully rendered
+    setTimeout(() => {
+      elements.forEach(el => {
+        if (!el || !el.element) {
+          this.baseClassLogger.warn(`Invalid element configuration in ${moduleName}`);
+          return;
+        }
+
+        const placeholder = (i18n[el.placeholderKey] || el.fallbackText || `Select ${el.name}`);
+        this.initSelect2(el.element, placeholder, el.config || {});
+      });
+
+      this.baseClassLogger.log(`Select2 components initialized for ${moduleName}`);
+    }, delay);
+  }
+
+  /**
+   * Destroy and re-initialize Select2 components (useful when elements were hidden)
+   *
+   * @param {jQuery} $element - Select2 element to refresh
+   * @param {Object} config - Configuration to apply when re-initializing
+   * @returns {jQuery|null} The refreshed element or null if refresh failed
+   */
+  refreshSelect2($element, config = {}) {
+    if (!$element || !$element.length) {
+      return null;
+    }
+
+    try {
+      // Get current placeholder if not provided
+      const placeholder = config.placeholder || $element.data('placeholder') || '';
+
+      // Destroy and re-initialize
+      $element.select2('destroy');
+      return this.initSelect2($element, placeholder, config);
+    } catch (error) {
+      this.baseClassLogger.error('Error refreshing Select2:', error);
+      return null;
+    }
+  }
 }
 
 // Initialize the main orchestrator when document is ready

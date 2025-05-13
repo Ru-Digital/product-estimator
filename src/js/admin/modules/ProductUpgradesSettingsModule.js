@@ -81,26 +81,31 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
    * @private
    */
   _initializeSelect2() {
-    const initSelect2 = ($element, placeholderText) => {
-      if ($element && $element.length && this.$.fn.select2) {
-        $element.select2({
-          placeholder: placeholderText,
-          width: '100%',
-          dropdownCssClass: 'product-estimator-dropdown'
-        }).val(null).trigger('change'); // Ensure it's cleared initially
-      } else if ($element && !$element.length) {
-        this.logger.warn('Select2 target element not found:', $element.selector);
-      } else if (!$element) {
-        this.logger.warn('Select2 target element is undefined (likely missing from DOM cache).');
-      }
-    };
-
-    // Use a small timeout to ensure Select2 can properly initialize
-    setTimeout(() => {
-      initSelect2(this.dom.baseCategories, (this.settings.i18n && this.settings.i18n.selectBaseCategories) || 'Select base categories');
-      initSelect2(this.dom.upgradeCategories, (this.settings.i18n && this.settings.i18n.selectUpgradeCategories) || 'Select upgrade categories');
-      this.logger.log('Select2 components initialized for Product Upgrades.');
-    }, 100);
+    this.initializeSelect2Dropdowns({
+      elements: [
+        {
+          element: this.dom.baseCategories,
+          placeholderKey: 'selectBaseCategories',
+          fallbackText: 'Select base categories',
+          name: 'base categories',
+          config: {
+            clearInitial: true,
+            width: '100%'
+          }
+        },
+        {
+          element: this.dom.upgradeCategories,
+          placeholderKey: 'selectUpgradeCategories',
+          fallbackText: 'Select upgrade categories',
+          name: 'upgrade categories',
+          config: {
+            clearInitial: true,
+            width: '100%'
+          }
+        }
+      ],
+      moduleName: 'Product Upgrades'
+    });
   }
 
 
@@ -111,10 +116,12 @@ class ProductUpgradesSettingsModule extends AdminTableManager {
     super.onMainTabActivated(); // Call parent method
     this.logger.log('Product Upgrades main tab activated.');
 
-    // Specific actions for Product Upgrades when its tab is shown
-    // If Select2 was initialized while hidden, it might need a refresh
+    // Refresh Select2 components if they're already initialized
     if (this.dom.baseCategories && this.dom.baseCategories.hasClass("select2-hidden-accessible")) {
-      // Refresh Select2 if needed
+      this.refreshSelect2(this.dom.baseCategories);
+    }
+    if (this.dom.upgradeCategories && this.dom.upgradeCategories.hasClass("select2-hidden-accessible")) {
+      this.refreshSelect2(this.dom.upgradeCategories);
     }
   }
 

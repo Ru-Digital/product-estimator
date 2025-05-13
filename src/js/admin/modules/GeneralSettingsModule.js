@@ -73,7 +73,8 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
   handleFileUpload(e) {
     e.preventDefault();
     const button = this.$(e.currentTarget);
-    const fieldId = button.data('field-id');
+    const targetInputSelector = button.data('target-input'); // Use the data-target-input attribute
+    const targetPreviewSelector = button.data('target-preview'); // Use the data-target-preview attribute
     const acceptType = button.data('accept') || '';
 
     if (this.mediaFrame) {
@@ -93,13 +94,24 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
       logger.log('Selected attachment:', attachment);
 
       if (attachment && attachment.id) {
-        this.$(`#${fieldId}`).val(attachment.id).trigger('change');
+        // Use the target input selector from the data attribute
+        if (targetInputSelector) {
+          this.$(targetInputSelector).val(attachment.id).trigger('change');
+          logger.log(`Updated input ${targetInputSelector} with attachment ID: ${attachment.id}`);
+        } else {
+          logger.error('Target input selector not found in data-target-input attribute');
+        }
       } else {
         logger.error('Attachment or attachment.id is missing!', attachment);
       }
-      const $previewWrapper = button.siblings('.file-preview-wrapper');
+
+      // Use the target preview selector from the data attribute
+      const $previewWrapper = targetPreviewSelector ?
+        this.$(targetPreviewSelector) :
+        button.siblings('.file-preview-wrapper');
+
       $previewWrapper.html(`<p class="file-preview"><a href="${attachment.url}" target="_blank">${attachment.filename}</a></p>`);
-      button.siblings('.remove-file-button').removeClass('hidden');
+      button.siblings('.remove-file-button').removeClass('hidden')
     });
     this.mediaFrame.open();
   }
@@ -107,10 +119,23 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
   handleFileRemove(e) {
     e.preventDefault();
     const button = this.$(e.currentTarget);
-    const fieldId = button.data('field-id');
-    this.$(`#${fieldId}`).val('').trigger('change');
-    button.siblings('.file-preview-wrapper').empty();
-    button.addClass('hidden');
+    const targetInputSelector = button.data('target-input');
+    const targetPreviewSelector = button.data('target-preview');
+
+    if (targetInputSelector) {
+      this.$(targetInputSelector).val('').trigger('change');
+      logger.log(`Cleared input ${targetInputSelector}`);
+    } else {
+      logger.error('Target input selector not found in data-target-input attribute');
+    }
+
+    if (targetPreviewSelector) {
+      this.$(targetPreviewSelector).empty();
+    } else {
+      button.siblings('.file-preview-wrapper').empty();
+    }
+
+    button.addClass('hidden')
   }
 
   setupValidation() {

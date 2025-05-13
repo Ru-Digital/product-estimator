@@ -103,28 +103,29 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
    * @private
    */
   _initializeSelect2() {
-    const initSelect2 = ($element, placeholderText) => {
-      if ($element && $element.length && this.$.fn.select2) {
-        $element.select2({
-          placeholder: placeholderText,
-          width: 'resolve', // 'style' or '100%' might be better depending on CSS
-          allowClear: true,
-          dropdownCssClass: 'product-estimator-dropdown' // Custom class for styling
-        }).val(null).trigger('change'); // Ensure it's cleared initially
-      } else if ($element && !$element.length) {
-        this.logger.warn('Select2 target element not found:', $element.selector);
-      } else if (!$element) {
-        this.logger.warn('Select2 target element is undefined (likely missing from DOM cache).');
-      }
-    };
-
-    // Use a small timeout to ensure Select2 can properly initialize if elements were just shown/manipulated.
-    setTimeout(() => {
-      // this.settings.i18n is from ProductEstimatorSettings base
-      initSelect2(this.dom.sourceCategorySelect, (this.settings.i18n && this.settings.i18n.selectSourceCategories) || 'Select source categories');
-      initSelect2(this.dom.targetCategorySelect, (this.settings.i18n && this.settings.i18n.selectTargetCategory) || 'Select a category');
-      this.logger.log('Select2 components initialized for Product Additions.');
-    }, 100); // 100ms delay
+    this.initializeSelect2Dropdowns({
+      elements: [
+        {
+          element: this.dom.sourceCategorySelect,
+          placeholderKey: 'selectSourceCategories',
+          fallbackText: 'Select source categories',
+          name: 'source categories',
+          config: {
+            clearInitial: true
+          }
+        },
+        {
+          element: this.dom.targetCategorySelect,
+          placeholderKey: 'selectTargetCategory',
+          fallbackText: 'Select a category',
+          name: 'target category',
+          config: {
+            clearInitial: true
+          }
+        }
+      ],
+      moduleName: 'Product Additions'
+    });
   }
 
   /**
@@ -133,14 +134,15 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
   onMainTabActivated() {
     super.onMainTabActivated(); // Call parent method
     this.logger.log('Product Additions main tab activated.');
-    // Specific actions for Product Additions when its tab is shown.
-    // For example, if Select2 or other components need re-initialization or refresh when tab becomes visible.
-    // The `admin_table_manager_ready` event handles initial setup. This is for subsequent activations.
-    // If Select2 was initialized while hidden, it might need a refresh.
+
+    // Refresh Select2 components if they're already initialized
     if (this.dom.sourceCategorySelect && this.dom.sourceCategorySelect.hasClass("select2-hidden-accessible")) {
-      // this.dom.sourceCategorySelect.select2('destroy').select2({...}); // Full re-init
-      // Or just trigger a resize/redraw if that helps.
+      this.refreshSelect2(this.dom.sourceCategorySelect);
     }
+    if (this.dom.targetCategorySelect && this.dom.targetCategorySelect.hasClass("select2-hidden-accessible")) {
+      this.refreshSelect2(this.dom.targetCategorySelect);
+    }
+
     // The inherited VerticalTabbedModule.handleMainTabChanged calls setupVerticalTabs,
     // which correctly handles the sub_tab in the URL. No manual sub_tab clearing needed here.
   }

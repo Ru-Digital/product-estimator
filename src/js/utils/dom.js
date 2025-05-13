@@ -11,7 +11,7 @@ const logger = createLogger('UtilsDom');
 /**
  * Create an element with attributes and children
  * @param {string} tag - Element tag name
- * @param {Object} attributes - Element attributes
+ * @param {object} attributes - Element attributes
  * @param {Array|string} children - Child elements or text
  * @returns {HTMLElement} Created element
  */
@@ -104,7 +104,7 @@ export function toggleVisibility(element, show) {
 /**
  * Force element visibility using multiple techniques
  * @param {HTMLElement} element - Element to make visible
- * @return {HTMLElement|null} The element for chaining or null if not found
+ * @returns {HTMLElement|null} The element for chaining or null if not found
  */
 export function forceElementVisibility(element) {
   if (!element) {

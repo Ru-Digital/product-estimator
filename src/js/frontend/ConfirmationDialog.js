@@ -269,7 +269,7 @@ class ConfirmationDialog {
 
   /**
    * Check if dialog is visible
-   * @return {boolean} Whether dialog is visible
+   * @returns {boolean} Whether dialog is visible
    */
   isVisible() {
     return this.dialog && this.dialog.style.display === 'block';

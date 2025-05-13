@@ -1,0 +1,276 @@
+/**
+ * Generic Admin Tables CSS
+ *
+ * Provides common styling for admin interface tables, forms within tables,
+ * and list management UIs used across various settings modules.
+ *
+ * Uses shared variables and mixins from _variables.scss and _mixins.scss
+ */
+
+@use 'variables' as *;
+
+@use 'mixins' as *;
+
+/* Animation Keyframes */
+
+@keyframes pe-slide-down {
+
+  0% { 
+    opacity: 0; 
+    transform: translateY(-10px); 
+  }
+
+  100% { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes pe-spin {
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Generic Table Module Container */
+
+.pe-admin-table-container {
+  margin: 20px 0;
+  max-width: $container-max-width;
+}
+
+/* Form Container (for add/edit forms) */
+
+.pe-admin-table-form-container {
+
+  @include card-container;
+  animation: pe-slide-down 0.3s ease-out;
+  display: none; /* Initially hidden, JS will toggle */
+  margin-bottom: 20px;
+  padding: 20px;
+
+  .form-title {
+    border-bottom: 1px solid $light-border-color;
+    font-size: 1.3em;
+    font-weight: 600;
+    margin-bottom: 15px;
+    margin-top: 0;
+    padding-bottom: 10px;
+  }
+
+  /* Generic Form Table (WordPress style) */
+
+  .form-table {
+    margin-top: 0;
+    width: 100%;
+
+    th {
+      font-weight: normal;
+      padding: 15px 10px 15px 0;
+      text-align: left;
+      vertical-align: top;
+      width: 200px;
+    }
+
+    td {
+      padding: 10px;
+      vertical-align: top;
+    }
+
+    select,
+    textarea,
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="url"],
+    input[type="password"] {
+
+      @include form-input;
+    }
+
+    textarea {
+      height: auto;
+      min-height: 80px;
+    }
+
+    .description {
+      color: $description-color;
+      display: block;
+      font-size: 0.9em;
+      margin-top: 4px;
+    }
+  }
+
+  /* Form Actions (Save, Cancel buttons) */
+
+  .form-actions {
+    align-items: center;
+    border-top: 1px solid $light-border-color;
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 20px;
+
+    .spinner {
+      float: none;
+      vertical-align: middle;
+    }
+  }
+}
+
+/* List Table Styles */
+
+.pe-admin-list-table-wrapper {
+  margin-top: 20px;
+  position: relative;
+
+  > h3 {
+    font-size: 1.4em;
+    font-weight: 400;
+    margin: 0 0 10px;
+    padding: 0;
+  }
+}
+
+.pe-admin-list-table {
+  background: $background-color;
+  border: 1px solid $border-color;
+  border-radius: 3px;
+  border-spacing: 0;
+  box-shadow: 0 1px 1px $shadow-color;
+  clear: both;
+  width: 100%;
+
+  thead th,
+  tfoot th {
+    background-color: $header-background;
+    border-bottom: 1px solid $border-color;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4em;
+    padding: 10px;
+    text-align: left;
+  }
+
+  tfoot th {
+    border-bottom: none;
+    border-top: 1px solid $border-color;
+  }
+
+  tbody {
+
+    td {
+      border-bottom: 1px solid $row-border-color;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 8px 10px;
+      vertical-align: middle;
+    }
+
+    tr {
+
+      &:last-child td {
+        border-bottom: none;
+      }
+
+      &:hover {
+        background-color: $hover-background;
+      }
+    }
+  }
+
+  .actions {
+
+    .button {
+      margin-right: 5px;
+
+      &:last-child {
+        margin-right: 0;
+      }
+    }
+  }
+}
+
+/* "Add New" Button */
+
+.pe-add-new-item-button {
+  margin-bottom: 15px;
+  
+  &:hover {
+    background-color: $primary-hover-color;
+    border-color: $primary-hover-color;
+  }
+}
+
+/* "No items" Message */
+
+.pe-no-items-message {
+  background: $background-color;
+  border: 1px solid $border-color;
+  border-radius: 3px;
+  box-shadow: 0 1px 1px $shadow-color;
+  color: $text-color;
+  font-style: italic;
+  margin-top: 15px;
+  padding: 20px;
+  text-align: center;
+}
+
+/* Loading spinner on buttons */
+
+.pe-loading {
+  display: inline-block; /* Ensure proper display context */
+  opacity: 0.7;
+  position: relative;
+
+  @include loading-spinner(16px, 2px);
+  
+  &::after {
+    margin-top: -8px; /* Half of spinner height */
+    position: absolute; /* Ensure proper positioning of spinner */
+    right: -24px; /* Position to the right of text */
+    top: 50%;
+  }
+}
+
+/* Responsive Adjustments */
+
+@media screen and (max-width: 782px) {
+
+  .pe-admin-table-form-container {
+
+    @include responsive-form-table;
+
+    .form-actions {
+
+      @include responsive-button-group;
+    }
+  }
+
+  /* Responsive List Table */
+
+  .pe-admin-list-table-wrapper {
+    -webkit-overflow-scrolling: touch; /* Better scrolling on iOS */
+    overflow-x: auto;
+  }
+
+  .pe-admin-list-table {
+    min-width: 500px; /* Reduced from 600px for smaller devices */
+    table-layout: fixed; /* Helps with responsive layouts */
+    width: 100%;
+
+    .actions {
+      white-space: nowrap;
+    }
+  }
+}
+
+/* Extra small devices */
+
+@media screen and (max-width: $breakpoint-sm) {
+
+  .pe-admin-list-table {
+    min-width: 450px; /* Even smaller minimum width */
+  }
+}

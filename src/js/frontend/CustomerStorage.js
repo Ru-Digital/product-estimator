@@ -11,7 +11,7 @@ const logger = createLogger('CustomerStorage');
 
 /**
  * Load customer details from localStorage with fallback to sessionStorage.
- * @returns {Object} Customer details object.
+ * @returns {object} Customer details object.
  */
 export function loadCustomerDetails() {
   try {
@@ -30,7 +30,7 @@ export function loadCustomerDetails() {
 
 /**
  * Save customer details to localStorage with fallback to sessionStorage.
- * @param {Object} details - Customer details to save.
+ * @param {object} details - Customer details to save.
  */
 export function saveCustomerDetails(details) {
   try {

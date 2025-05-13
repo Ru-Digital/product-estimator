@@ -2,12 +2,30 @@
 namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
 
 /**
- * Base Settings Module Class for modules with Vertical Tabs.
+ * Base Settings Module Class for modules with Vertical Tabs
  *
  * This abstract class extends SettingsModuleBase to provide functionality
- * for settings pages that are structured with vertical tabs.
+ * for settings pages that are structured with vertical tabs (tabs along the left side).
  *
- * @since      X.X.X // TODO: Set appropriate version
+ * Class Hierarchy Position:
+ * SettingsModuleBase
+ * └── SettingsModuleWithVerticalTabsBase (THIS CLASS)
+ *     └── SettingsModuleWithTableBase
+ *         └── Concrete Module Classes
+ *
+ * Key responsibilities:
+ * - Manage a set of vertical tabs within a main settings tab
+ * - Handle tab-specific field registration
+ * - Render the tabbed interface
+ * - Support navigation between tabs
+ * - Manage form submissions for specific tabs
+ *
+ * Usage pattern:
+ * 1. Implement get_vertical_tabs() to define your tabs
+ * 2. Implement register_vertical_tab_fields() for each tab's settings
+ * 3. Use render_tab_specific_content() to output each tab's contents
+ *
+ * @since      X.X.X
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
@@ -17,10 +35,40 @@ abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
     /**
      * Defines the vertical tabs for the settings page.
      *
+     * REQUIRED: All modules extending this class MUST implement this method.
+     *
      * Each item in the returned array should be an associative array with keys:
-     * 'id'          => (string) Unique slug for the tab (e.g., 'general', 'advanced').
-     * 'title'       => (string) Translatable title for the tab navigation.
-     * 'description' => (string, optional) Translatable description displayed above the tab's content.
+     * 'id'           => (string) Unique slug for the tab (e.g., 'general', 'advanced')
+     * 'title'        => (string) Translatable title for the tab navigation
+     * 'description'  => (string, optional) Translatable description above tab content
+     * 'content_type' => (string, optional) Tab content type (e.g., 'settings', 'table', 'custom')
+     *                   This determines how tab content is rendered:
+     *                   - 'settings': Standard WordPress settings fields (default)
+     *                   - 'table': Data table with CRUD operations (used by SettingsModuleWithTableBase)
+     *                   - 'custom': Custom content rendered by a specified callback
+     *
+     * Example implementation:
+     * ```php
+     * protected function get_vertical_tabs() {
+     *   return [
+     *     [
+     *       'id' => 'general_settings',
+     *       'title' => __('General Settings', 'product-estimator'),
+     *       'description' => __('Basic configuration options', 'product-estimator')
+     *     ],
+     *     [
+     *       'id' => 'advanced_settings',
+     *       'title' => __('Advanced Options', 'product-estimator'),
+     *       'description' => __('Configuration for advanced users', 'product-estimator')
+     *     ],
+     *     [
+     *       'id' => 'data_table',
+     *       'title' => __('Data Management', 'product-estimator'),
+     *       'content_type' => 'table'
+     *     ]
+     *   ];
+     * }
+     * ```
      *
      * @since    X.X.X
      * @access   protected
@@ -167,17 +215,44 @@ abstract class SettingsModuleWithVerticalTabsBase extends SettingsModuleBase {
         // echo '<p>' . esc_html__('This is a sidebar area for the vertical tabs settings.', 'product-estimator') . '</p>';
     }
 
+    /**
+     * Get common script data for vertical tab modules.
+     *
+     * @since    X.X.X
+     * @access   protected
+     * @return   array
+     */
     protected function get_common_script_data() {
-        // Ensure this method exists and provides necessary common data for JS.
-        return [
-            'mainTabId'         => $this->get_tab_id(), // The ID of the main settings page tab (e.g., 'labels', 'notifications')
-            'ajax_url'          => admin_url('admin-ajax.php'),
-            'nonce'             => wp_create_nonce('product_estimator_settings_nonce'), // General settings nonce
+        $base_data = parent::get_base_script_data(); // Get data from SettingsModuleBase
+
+        $vertical_tab_common_data = [
+            // 'mainTabId' is already covered by 'tab_id' from get_base_script_data()
+            // 'ajax_url' is covered by get_base_script_data()
+            // 'nonce' from get_base_script_data() is used for the primary settings save.
+            // Individual vertical tabs might have their own specific AJAX actions requiring different nonces.
             'i18n'              => [
-                'saving'      => __('Saving...', 'product-estimator'),
-                'saveSuccess' => __('Settings saved successfully.', 'product-estimator'), // Generic success
-                'saveError'   => __('Error saving settings.', 'product-estimator'),       // Generic error
+                // Overwrite or add more specific i18n strings for vertical tab contexts
+                // 'saveSuccess' and 'saveError' are already fairly generic in base.
+                // We can make them slightly more specific to the sub-tab context if JS handles it.
+                'confirmCancelEditing'=> __('You have unsaved changes. Are you sure you want to cancel?', 'product-estimator'),
             ],
+            'selectors' => [
+                // Common selectors for vertical tab UI elements managed by a shared JS component
+                'verticalTabNav'        => '.pe-vtabs-nav-list, .vertical-tabs-nav',
+                'verticalTabNavItem'    => '.pe-vtabs-nav-item, .tab-item',
+                'verticalTabNavArea'    => '.pe-vtabs-nav-area, .vertical-tabs',
+                'verticalTabContent'    => '.pe-vtabs-content',
+                'verticalTabContentArea'=> '.pe-vtabs-content-area, .vertical-tabs-content',
+                'verticalTabPane'       => '.pe-vtabs-tab-panel, .vertical-tab-content',
+                'saveSubTabButton'      => '.save-subtab-settings-button',
+            ],
+            // 'ajaxActionPrefix' might be useful if there's a common pattern for saving sub-tabs,
+            // e.g., if AJAX save is per sub-tab. The current setup saves all fields under one option_name
+            // scoped by sub_tab_id in handle_ajax_save in SettingsModuleBase.
         ];
+
+        // Merge, giving priority to vertical_tab_common_data for overrides.
+        return array_replace_recursive($base_data, $vertical_tab_common_data);
     }
+
 }

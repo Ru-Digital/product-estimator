@@ -5,17 +5,17 @@
  * This file initializes the application and loads required modules in the FRONTEND.
  */
 
+import { createLogger } from '@utils';
+
 import EstimatorCore from './EstimatorCore';
 import ConfirmationDialog from './ConfirmationDialog';
-import { initSuggestionsCarousels, initCarouselOnAccordionOpen } from './SuggestionsCarousel';
-import ProductDetailsToggle from './ProductDetailsToggle';  // Import the default instance
+import { initSuggestionsCarousels } from './SuggestionsCarousel';
 import PrintEstimate from './PrintEstimate';
 import { initializeTemplates } from './template-loader';
+import detailsToggleInstance from './ProductDetailsToggle';
 
-// Initialize templates first
-const templateEngine = initializeTemplates();
-
-import { createLogger } from '@utils';
+// Initialize templates
+initializeTemplates();
 const logger = createLogger('FrontEndIndex');
 
 
@@ -91,6 +91,7 @@ function initApp() {
 
 /**
  * Initialize the estimator core
+ * @param {boolean} debugMode - Whether to enable debug mode
  */
 // In index.js (inside initEstimator function)
 
@@ -131,13 +132,13 @@ function initEstimator(debugMode) {
     window.productEstimator.printEstimate =  new PrintEstimate({ debug: debugMode }, dataServiceInstance);
 
     // Make ProductDetailsToggle available globally
-    window.productEstimator.detailsToggle = ProductDetailsToggle; // Add toggle module to global object
+    window.productEstimator.detailsToggle = detailsToggleInstance; // Add toggle module to global object
 
     // Make initSuggestionsCarousels available globally for the toggle functionality
     window.initSuggestionsCarousels = initSuggestionsCarousels;
 
     // Initialize toggle functionality explicitly
-    initializeProductDetailsToggle(debugMode);
+    initializeProductDetailsToggle();
 
     logger.log(`Product Estimator initialized${debugMode ? ' (debug mode)' : ''}`);
 
@@ -150,7 +151,7 @@ function initEstimator(debugMode) {
 /**
  * Initialize the ProductDetailsToggle functionality
  */
-function initializeProductDetailsToggle(debugMode) {
+function initializeProductDetailsToggle() {
   try {
     // Attach a global click handler to init toggle on product items
     document.addEventListener('click', function(e) {
@@ -159,9 +160,9 @@ function initializeProductDetailsToggle(debugMode) {
         // Wait for content to be visible
         setTimeout(() => {
           // Force toggle module to scan for new content
-          if (ProductDetailsToggle && typeof ProductDetailsToggle.setup === 'function') {
+          if (detailsToggleInstance && typeof detailsToggleInstance.setup === 'function') {
             logger.log('Accordion clicked, reinitializing product details toggle');
-            ProductDetailsToggle.setup();
+            detailsToggleInstance.setup();
           }
 
           // Also initialize carousels

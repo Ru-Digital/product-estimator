@@ -1,856 +1,540 @@
+// File: admin/js/modules/ProductAdditionsSettingsModule.js
+
 /**
  * Product Additions Settings JavaScript
  *
  * Handles functionality specific to the product additions settings tab.
+ * Extends AdminTableManager for common table and form management.
  */
-import { ajax, dom, format, validation } from '@utils';
-import { createLogger } from '@utils';
-const logger = createLogger('ProductAdditionsSettings');
-class ProductAdditionsSettingsModule {
+import { ajax, createLogger } from '@utils'; // Import utilities needed for this module
+
+import AdminTableManager from '../common/AdminTableManager'; // Adjust path as needed
+
+class ProductAdditionsSettingsModule extends AdminTableManager {
   /**
-   * Initialize the module
+   * Constructor for ProductAdditionsSettingsModule.
    */
   constructor() {
-    $ = jQuery; // Make jQuery available as this.$
-
-    // Access localized data with a fallback mechanism
-    const localizedSettings = window.productAdditionsSettings || {};
-
-    this.settings = {
-      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
-      nonce: localizedSettings.nonce || '', // Fallback
-      i18n: localizedSettings.i18n || {},   // Fallback
-      tab_id: localizedSettings.tab_id || 'product_additions', // Fallback
+    const config = {
+      mainTabId: 'product_additions',
+      localizedDataName: 'productAdditionsSettings'
+      // AdminTableManager passes this to VerticalTabbedModule,
+      // which passes relevant parts to ProductEstimatorSettings.
     };
+    super(config); // Calls AdminTableManager constructor
 
-    // Add a variable to track if the form has been modified
-    this.formModified = false;
+    // We can access feature flags via this.settings.feature_flags
+    // This is used in _handleRelationTypeChange to show/hide fields
 
-    // Initialize when document is ready
-    $(document).ready(() => {
-      // Re-check localizedSettings in case they are defined by another script in document.ready
-      const updatedLocalizedSettingsOnReady = window.productAdditionsSettings || {};
-      if (updatedLocalizedSettingsOnReady.nonce) {
-        this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
-      }
+    // this.logger is initialized by AdminTableManager.
+    // this.settings (formerly this.localizedData in VTM/ATM context before PES refactor)
+    // is populated by ProductEstimatorSettings via the super chain.
+    // this.config from AdminTableManager holds the original config passed here.
 
-      this.init();
+    this.productSearchTimeout = null;
+
+    // Defer DOM-dependent specific initializations until the base AdminTableManager signals it's ready.
+    // The event name uses this.config.mainTabId.
+    // Note: this.config.mainTabId is from the config passed to super(), available after super() call.
+    this.$(document).on(`admin_table_manager_ready_${this.config.mainTabId}`, () => {
+      this._cacheProductAdditionsDOM();
+      this._bindSpecificEvents();
+      this._initializeSelect2();
     });
+
   }
 
   /**
-   * Initialize the module
+   * Cache DOM elements specific to Product Additions, beyond what AdminTableManager caches.
+   * This is called after AdminTableManager's cacheDOM.
+   * @private
    */
-  init() {
-    logger.log('Initializing Product Additions Settings Module');
-    // Reset form modified state on initialization
-    this.formModified = false;
-    this.bindEvents();
-    this.setupFormHandling();
+  _cacheProductAdditionsDOM() {
+    // this.dom is initialized by AdminTableManager. Add Product Additions specific elements.
+    // Ensure selectors are defined in your localizedData (productAdditionsSettings)
+    // e.g., productAdditionsSettings.selectors.relationTypeSelect
+    if (this.settings && this.settings.selectors) { // this.settings is from ProductEstimatorSettings base
+      const paSelectors = this.settings.selectors; // Assuming selectors are flat in this.settings
+      this.dom.relationTypeSelect = this.$container.find(paSelectors.relationTypeSelect);
+      this.dom.sourceCategorySelect = this.$container.find(paSelectors.sourceCategorySelect);
+      this.dom.targetCategorySelect = this.$container.find(paSelectors.targetCategorySelect);
+      this.dom.targetCategoryRow = this.$container.find(paSelectors.targetCategoryRow);
+      this.dom.productSearchInput = this.$container.find(paSelectors.productSearchInput);
+      this.dom.productSearchRow = this.$container.find(paSelectors.productSearchRow);
+      this.dom.productSearchResults = this.$container.find(paSelectors.productSearchResults);
+      this.dom.selectedProductIdInput = this.$container.find(paSelectors.selectedProductIdInput);
+      this.dom.selectedProductDisplay = this.$container.find(paSelectors.selectedProductDisplay);
+      this.dom.clearProductButton = this.$container.find(paSelectors.clearProductButton);
+      this.dom.noteTextInput = this.$container.find(paSelectors.noteTextInput);
+      this.dom.noteRow = this.$container.find(paSelectors.noteRow);
+    } else {
+      this.logger.warn('ProductAdditionsSettingsModule: Settings or selectors not available for DOM caching');
+    }
+  }
+
+
+  /**
+   * Bind events specific to Product Additions.
+   * This is called after the `admin_table_manager_ready` event.
+   * @private
+   */
+  _bindSpecificEvents() {
+    // Ensure this.dom elements are available (cached by _cacheProductAdditionsDOM or base)
+    if (!this.dom.form || !this.dom.form.length) {
+      return;
+    }
+    this.dom.form.on('click.productAdditions', '.product-result-item', this._handleProductResultClick.bind(this));
+
+    this.dom.relationTypeSelect?.on('change.productAdditions', this._handleRelationTypeChange.bind(this));
+    this.dom.targetCategorySelect?.on('change.productAdditions', this._handleTargetCategoryChange.bind(this));
+    this.dom.productSearchInput?.on('keyup.productAdditions', this._handleProductSearchKeyup.bind(this));
+    this.dom.clearProductButton?.on('click.productAdditions', this._handleClearProduct.bind(this));
   }
 
   /**
-   * Bind event handlers
+   * Initialize Select2 components.
+   * This is called after the `admin_table_manager_ready` event.
+   * @private
    */
-  bindEvents() {
-    const $ = jQuery;
-
-    // Listen for tab changes
-    $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
-
-    // Tab-specific handlers
-    this.initRelationshipHandlers();
-
-    // Track form changes
-    $('#product-addition-form').on('change input', 'input, select, textarea', () => {
-      this.formModified = true;
-
-      // Update the global form change tracker if available
-      if (typeof ProductEstimatorSettings !== 'undefined' &&
-        typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
-        ProductEstimatorSettings.formChangeTrackers[this.settings.tab_id] = true;
-
-        // If this is the current tab, update the main formChanged flag
-        if (ProductEstimatorSettings.currentTab === this.settings.tab_id) {
-          ProductEstimatorSettings.formChanged = true;
+  _initializeSelect2() {
+    this.initializeSelect2Dropdowns({
+      elements: [
+        {
+          element: this.dom.sourceCategorySelect,
+          placeholderKey: 'selectSourceCategories',
+          fallbackText: 'Select source categories',
+          name: 'source categories',
+          config: {
+            clearInitial: true
+          }
+        },
+        {
+          element: this.dom.targetCategorySelect,
+          placeholderKey: 'selectTargetCategory',
+          fallbackText: 'Select a category',
+          name: 'target category',
+          config: {
+            clearInitial: true
+          }
         }
-      }
+      ],
+      moduleName: 'Product Additions'
     });
   }
 
   /**
-   * Set up event handlers for the relationship management UI
+   * Overridden from VerticalTabbedModule. Called when the "Product Additions" main tab is activated.
    */
-  initRelationshipHandlers() {
-    const $ = jQuery;
-    const $container = $('.product-estimator-additions');
-    const $form = $('#product-addition-form');
-    const $formContainer = $('.product-additions-form');
-    const $addButton = $('.add-new-relation');
-    const $relationTypeSelect = $('#relation_type');
-    const $targetCategoryRow = $('.target-category-row');
-    const $targetCategorySelect = $('#target_category');
-    const $productSearchRow = $('.product-search-row');
-    const $noteRow = $('.note-row');
+  onMainTabActivated() {
+    super.onMainTabActivated(); // Call parent method
 
-    // Initialize Select2 for multiple selection
-    $('#source_category').select2({
-      placeholder: 'Select source categories',
-      width: '100%',
-      dropdownCssClass: 'product-estimator-dropdown'
-    });
+    // Refresh Select2 components if they're already initialized
+    if (this.dom.sourceCategorySelect && this.dom.sourceCategorySelect.hasClass("select2-hidden-accessible")) {
+      this.refreshSelect2(this.dom.sourceCategorySelect);
+    }
+    if (this.dom.targetCategorySelect && this.dom.targetCategorySelect.hasClass("select2-hidden-accessible")) {
+      this.refreshSelect2(this.dom.targetCategorySelect);
+    }
 
-    $('#target_category').select2({
-      placeholder: 'Select a category',
-      width: '100%',
-      allowClear: true,
-      dropdownCssClass: 'product-estimator-dropdown'
-    });
+    // The inherited VerticalTabbedModule.handleMainTabChanged calls setupVerticalTabs,
+    // which correctly handles the sub_tab in the URL. No manual sub_tab clearing needed here.
+  }
 
-    // Show form when "Add New Relationship" button is clicked
-    $addButton.on('click', function() {
-      logger.log('Add New Relationship button clicked');
-      this.resetForm();
-      $('.form-title').text(this.settings.i18n.addNew || 'Add New Relationship');
-      $('.save-relation').text(this.settings.i18n.saveChanges || 'Save Changes');
-      $formContainer.slideDown();
-    }.bind(this));
 
-    // Hide form when "Cancel" button is clicked
-    $('.cancel-form').on('click', function() {
-      $formContainer.slideUp();
-      this.resetForm();
-    }.bind(this));
+  /**
+   * Handles changes in the relation type select dropdown.
+   * Shows/hides appropriate fields based on the selected relation type.
+   * @private
+   */
+  _handleRelationTypeChange() {
+    const actionType = this.dom.relationTypeSelect?.val();
 
-    // Handle action type change
-    $relationTypeSelect.on('change', function() {
-      const actionType = $(this).val();
+    // Check feature flags to determine UI behavior
 
-      // Reset dependent fields
-      $targetCategorySelect.val('').trigger('change');
-      $productSearchRow.hide();
-      $('#selected-product').hide();
-      $('#selected_product_id').val('');
-      $noteRow.hide();
-      $('#note_text').val('');
+    this.dom.targetCategoryRow?.hide();
+    this.dom.productSearchRow?.hide();
+    this.dom.noteRow?.hide();
 
-      if (actionType === 'auto_add_by_category') {
-        $targetCategoryRow.show();
-        $noteRow.hide();
-      } else if (actionType === 'auto_add_note_by_category') {
-        $targetCategoryRow.hide();
-        $noteRow.show();
-      } else if (actionType === 'suggest_products_by_category') {
-        // For suggestion type, we only need the target category
-        $targetCategoryRow.show();
-        $noteRow.hide();
-        $productSearchRow.hide();
+    this.dom.targetCategorySelect?.val(null).trigger('change.select2'); // Reset Select2
+    this._clearProductSelectionFields();
+    this.dom.noteTextInput?.val('');
+
+    if (actionType === 'auto_add_by_category') {
+      this.dom.targetCategoryRow?.show();
+    } else if (actionType === 'auto_add_note_by_category') {
+      this.dom.noteRow?.show();
+    } else if (actionType === 'suggest_products_by_category') {
+      // Only show target category row if feature is enabled
+      if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {
+        this.dom.targetCategoryRow?.show();
       } else {
-        $targetCategoryRow.hide();
-        $noteRow.hide();
-      }
-    });
-
-    // Handle target category change
-    $targetCategorySelect.on('change', function() {
-      const categoryId = $(this).val();
-      const actionType = $relationTypeSelect.val();
-
-      // Reset product search
-      $('#product_search').val('');
-      $('#product-search-results').empty();
-      $('#selected-product').hide();
-      $('#selected_product_id').val('');
-
-      if (categoryId && actionType === 'auto_add_by_category') {
-        $productSearchRow.show();
-      } else {
-        $productSearchRow.hide();
-      }
-    });
-
-    // Handle product search
-    let searchTimeout;
-    $('#product_search').on('keyup', function(e) {
-      // Use the event target instead of 'this' to ensure correct reference
-      const searchTerm = $(e.target).val() || '';
-      const categoryId = $targetCategorySelect.val();
-
-      clearTimeout(searchTimeout);
-
-      if (searchTerm.length < 3) {
-        $('#product-search-results').empty();
-        return;
-      }
-
-      searchTimeout = setTimeout(() => {
-        // Use the correctly bound function for searchProducts
-        this.searchProducts(searchTerm, categoryId);
-      }, 500);
-    }.bind(this));
-
-    // Handle clear product button
-    $('.clear-product').on('click', function() {
-      $('#selected_product_id').val('');
-      $('.selected-product-info').empty();
-      $('#selected-product').hide();
-    });
-
-    // Handle form submission
-    $form.on('submit', this.handleFormSubmission.bind(this));
-
-    // Handle edit/delete relations via event delegation
-    $('.product-additions-list').on('click', '.edit-relation', this.handleEditRelation.bind(this));
-    $('.product-additions-list').on('click', '.delete-relation', this.handleDeleteRelation.bind(this));
-  }
-
-  /**
-   * Set up form handling
-   */
-  setupFormHandling() {
-    const $ = jQuery;
-
-    // Add event delegation for the dynamic product results
-    $(document).on('click', '.product-result-item', function(e) {
-      const productId = $(e.currentTarget).data('id');
-      const productName = $(e.currentTarget).data('name');
-
-      logger.log('Product selected:', productId, productName);
-
-      // Set the selected product
-      $('#selected_product_id').val(productId);
-      logger.log('Product ID set to:', $('#selected_product_id').val());
-
-      $('.selected-product-info').html(`<strong>${productName}</strong> (ID: ${productId})`);
-      $('#selected-product').show();
-
-      // Clear search
-      $('#product_search').val('');
-      $('#product-search-results').empty();
-    });
-  }
-
-  /**
-   * Handle tab changed event
-   * @param {Event} e Tab changed event
-   * @param {string} tabId The newly active tab ID
-   */
-  handleTabChanged(e, tabId) {
-    // If our tab becomes active, refresh initialization
-    if (tabId === this.settings.tab_id) {
-      this.formModified = false; // Reset form modified state
-      this.init();
-
-      // Update the global form change tracker if available
-      if (typeof ProductEstimatorSettings !== 'undefined' &&
-        typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
-        ProductEstimatorSettings.formChangeTrackers[this.settings.tab_id] = false;
-
-        // If this is the current tab, update the main formChanged flag
-        if (ProductEstimatorSettings.currentTab === this.settings.tab_id) {
-          ProductEstimatorSettings.formChanged = false;
-        }
+        this.logger.warn('ProductAdditionsSettingsModule: Suggested products feature is disabled in feature flags');
       }
     }
   }
 
   /**
-   * Reset the form to its initial state
+   * Handles changes in the target category select dropdown.
+   * Shows/hides product search field based on the selected category and relation type.
+   * @private
+   */
+  _handleTargetCategoryChange() {
+    const categoryId = this.dom.targetCategorySelect?.val();
+    const actionType = this.dom.relationTypeSelect?.val();
+    this._clearProductSelectionFields(); // Clear previous product search/selection
+    if (categoryId && actionType === 'auto_add_by_category') {
+      this.dom.productSearchRow?.show();
+    } else {
+      this.dom.productSearchRow?.hide();
+    }
+  }
+
+  /**
+   * Clears all product selection related fields.
+   * @private
+   */
+  _clearProductSelectionFields() {
+    this.dom.productSearchInput?.val('');
+    this.dom.productSearchResults?.empty().hide();
+    this.dom.selectedProductIdInput?.val('');
+    this.dom.selectedProductDisplay?.hide().find('.selected-product-info').empty();
+  }
+
+  /**
+   * Handles keyup events in the product search input field.
+   * Triggers product search after debounce period.
+   * @param {Event} e - The keyup event
+   * @private
+   */
+  _handleProductSearchKeyup(e) {
+    const searchTerm = this.$(e.target).val()?.trim() || '';
+    const categoryId = this.dom.targetCategorySelect?.val();
+    clearTimeout(this.productSearchTimeout);
+
+    if (searchTerm.length < 3 || !categoryId) {
+      this.dom.productSearchResults?.empty().hide();
+      return;
+    }
+    // this.settings.i18n from ProductEstimatorSettings base
+    this.dom.productSearchResults?.html(`<p>${(this.settings.i18n && this.settings.i18n.searching) || 'Searching...'}</p>`).show();
+    this.productSearchTimeout = setTimeout(() => {
+      this._searchProducts(searchTerm, categoryId);
+    }, 500); // Debounce
+  }
+
+  /**
+   * Searches for products based on search term and category.
+   * Displays results in the product search results container.
+   * @param {string} searchTerm - The search term to filter products by
+   * @param {string|number} categoryId - The category ID to filter products by
+   * @private
+   */
+  _searchProducts(searchTerm, categoryId) {
+    // this.settings.actions and other properties from ProductEstimatorSettings base
+    if (!this.settings.actions || !this.settings.actions.search_products) {
+      this.dom.productSearchResults?.html(`<p>${(this.settings.i18n && this.settings.i18n.errorSearching) || 'Error: Search action not configured.'}</p>`).show();
+      return;
+    }
+
+    ajax.ajaxRequest({
+      url: this.settings.ajaxUrl,
+      data: {
+        action: this.settings.actions.search_products,
+        nonce: this.settings.nonce,
+        search: searchTerm,
+        category: categoryId,
+      }
+    })
+      .then(response => {
+        let productsArray = null;
+        // Standardize response checking
+        if (response && response.success && response.data && Array.isArray(response.data.products)) {
+          productsArray = response.data.products;
+        } else if (response && Array.isArray(response.products)) { // Fallback for older direct array
+          productsArray = response.products;
+        }
+
+
+        if (productsArray) {
+          let resultsHtml = '';
+          if (productsArray.length > 0) {
+            resultsHtml = '<ul class="product-results-list">';
+            productsArray.forEach(product => {
+              // Basic escaping for display
+              const escapedName = this.$('<div>').text(product.name || '').html();
+              resultsHtml += `<li class="product-result-item" data-id="${product.id}" data-name="${escapedName}">${escapedName || 'Unnamed Product'} (ID: ${product.id})</li>`;
+            });
+            resultsHtml += '</ul>';
+          } else {
+            resultsHtml = `<p>${(this.settings.i18n && this.settings.i18n.noProductsFound) || 'No products found'}</p>`;
+          }
+          this.dom.productSearchResults?.html(resultsHtml).show();
+        } else {
+          this.dom.productSearchResults?.html(`<p>${(this.settings.i18n && this.settings.i18n.errorSearching) || 'Error searching products'}</p>`).show();
+        }
+      })
+      .catch(() => {
+        this.dom.productSearchResults?.html(`<p>${(this.settings.i18n && this.settings.i18n.errorSearching) || 'Error searching products'}</p>`).show();
+      });
+  }
+
+  /**
+   * Handles clicks on product search results.
+   * Sets the selected product ID and displays product information.
+   * @param {Event} e - The click event
+   * @private
+   */
+  _handleProductResultClick(e) {
+    const $item = this.$(e.currentTarget);
+    const productId = $item.data('id');
+    const productName = $item.data('name'); // Already escaped if set by _searchProducts
+
+    this.dom.selectedProductIdInput?.val(productId);
+    this.dom.selectedProductDisplay?.find('.selected-product-info').html(`<strong>${productName}</strong> (ID: ${productId})`);
+    this.dom.selectedProductDisplay?.show();
+    this.dom.productSearchInput?.val(''); // Clear search input
+    this.dom.productSearchResults?.empty().hide(); // Hide results
+    this.formModified = true; // Mark form as modified, inherited from AdminTableManager
+  }
+
+  /**
+   * Handles clicks on the clear product button.
+   * Clears product selection fields and sets focus to search input.
+   * @private
+   */
+  _handleClearProduct() {
+    this._clearProductSelectionFields();
+    this.dom.productSearchInput?.focus();
+    this.formModified = true; // Mark form as modified
+  }
+
+  /**
+   * Override AdminTableManager.resetForm to include Product Additions specific fields.
+   * @override
    */
   resetForm() {
-    const $ = jQuery;
-    const $form = $('#product-addition-form');
-    $form[0].reset();
-    $('#relation_id').val('');
-    $('#selected_product_id').val('');
+    super.resetForm(); // Call base class method first
 
-    // Reset Select2 fields
-    $('#source_category').val(null).trigger('change');
-    $('#target_category').val(null).trigger('change');
+    // Reset Product Additions specific fields
+    this.dom.relationTypeSelect?.val('').trigger('change.productAdditions'); // Triggers _handleRelationTypeChange
+    this.dom.sourceCategorySelect?.val(null).trigger('change.select2'); // Clear Select2
+    // Target category and product search fields are typically handled by _handleRelationTypeChange
+    this._clearProductSelectionFields(); // Explicitly clear product fields
+    this.dom.noteTextInput?.val('');
 
-    // Reset dependent fields
-    $('#relation_type').val('').trigger('change');
-    $('.target-category-row').hide();
-    $('.product-search-row').hide();
-    $('#selected-product').hide();
-    $('#product-search-results').empty();
-    $('.note-row').hide();
+    // Ensure dependent rows are hidden according to the reset relationType
+    this.dom.targetCategoryRow?.hide();
+    this.dom.productSearchRow?.hide();
+    this.dom.noteRow?.hide();
 
-    // Reset form modified state
-    this.formModified = false;
+  }
 
-    // Update the global form change tracker if available
-    if (typeof ProductEstimatorSettings !== 'undefined' &&
-      typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
-      ProductEstimatorSettings.formChangeTrackers[this.settings.tab_id] = false;
+  /**
+   * Override AdminTableManager.populateFormWithData for Product Additions specific fields.
+   * @param {object} itemData - The data for the product addition item to populate the form with
+   * @override
+   */
+  populateFormWithData(itemData) {
+    super.populateFormWithData(itemData); // Sets item ID, calls base logic
 
-      // If this is the current tab, update the main formChanged flag
-      if (ProductEstimatorSettings.currentTab === this.settings.tab_id) {
-        ProductEstimatorSettings.formChanged = false;
+    const relationType = itemData.relation_type || '';
+    const sourceCategories = itemData.source_category || []; // Expecting array for multi-select
+    const targetCategory = itemData.target_category || '';
+    const productId = itemData.product_id || '';
+    const noteText = itemData.note_text || '';
+
+    // Set relation type first, as it might control visibility of other fields
+    this.dom.relationTypeSelect?.val(relationType).trigger('change.productAdditions');
+
+    // Use setTimeout to allow dependent field visibility changes from 'change.productAdditions' to complete
+    setTimeout(() => {
+      this.dom.sourceCategorySelect?.val(sourceCategories).trigger('change.select2');
+
+      if (relationType === 'auto_add_by_category') {
+        this.dom.targetCategorySelect?.val(targetCategory).trigger('change.select2');
+        if (productId && itemData.product_name) {
+          this.dom.selectedProductIdInput?.val(productId);
+          // Ensure productName is properly escaped if it comes directly from itemData and hasn't been
+          const escapedProductName = this.$('<div>').text(itemData.product_name).html();
+          this.dom.selectedProductDisplay?.find('.selected-product-info').html(`<strong>${escapedProductName}</strong> (ID: ${productId})`);
+          this.dom.selectedProductDisplay?.show();
+        } else if (productId) {
+          // Fallback if product_name is missing
+          this.dom.selectedProductIdInput?.val(productId);
+          this.dom.selectedProductDisplay?.find('.selected-product-info').html(`Product ID: ${productId} (Name not available)`);
+          this.dom.selectedProductDisplay?.show();
+        }
+      } else if (relationType === 'suggest_products_by_category') {
+        if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {
+          this.dom.targetCategorySelect?.val(targetCategory).trigger('change.select2');
+        }
+      } else if (relationType === 'auto_add_note_by_category') {
+        this.dom.noteTextInput?.val(noteText);
       }
-    }
+      this.formModified = false; // Reset modified flag after populating
+    }, 150); // Small delay
   }
 
   /**
-   * Toggle form state (enable/disable inputs)
-   * @param {boolean} enabled Whether to enable the form inputs
+   * Override AdminTableManager.validateForm for Product Additions specific validation.
+   * @returns {boolean} True if the form passes validation, false otherwise
+   * @override
    */
-  toggleFormState(enabled) {
-    const $ = jQuery;
-    const $form = $('#product-addition-form');
-    const $submitBtn = $form.find('.save-relation');
-    const $cancelBtn = $form.find('.cancel-form');
+  validateForm() {
+    let isValid = super.validateForm(); // Perform base validation first
 
-    $form.find('input, select, textarea').prop('disabled', !enabled);
-    $submitBtn.prop('disabled', !enabled);
-    $cancelBtn.prop('disabled', !enabled);
+    // Get values
+    const actionType = this.dom.relationTypeSelect?.val();
+    const sourceCategories = this.dom.sourceCategorySelect?.val(); // Returns array for multi-select
+    const targetCategory = this.dom.targetCategorySelect?.val();
+    const productId = this.dom.selectedProductIdInput?.val();
+    const noteText = this.dom.noteTextInput?.val()?.trim() || '';
 
-    if (!enabled) {
-      $submitBtn.text('Saving...');
-    } else {
-      $submitBtn.text($('#relation_id').val() ? 'Update Relationship' : 'Save Relationship');
-    }
+    // i18n messages from this.settings.i18n
+    const i18n = this.settings.i18n || {};
 
-    // Special handling for Select2
-    if (enabled) {
-      $('#source_category').prop('disabled', false).trigger('change');
-      $('#target_category').prop('disabled', false).trigger('change');
-    } else {
-      $('#source_category').prop('disabled', true).trigger('change');
-      $('#target_category').prop('disabled', true).trigger('change');
-    }
-  }
+    // Clear previous specific errors (showFieldError/clearFieldError are inherited)
+    this.clearFieldError(this.dom.relationTypeSelect);
+    this.clearFieldError(this.dom.sourceCategorySelect?.next('.select2-container')); // Target Select2 container for error
+    this.clearFieldError(this.dom.targetCategorySelect?.next('.select2-container'));
+    this.clearFieldError(this.dom.productSearchInput); // Or selectedProductDisplay
+    this.clearFieldError(this.dom.noteTextInput);
 
-  /**
-   * Handle form submission
-   * @param {Event} e Form submit event
-   */
-  handleFormSubmission(e) {
-    e.preventDefault();
-    const $ = jQuery;
-
-    const actionType = $('#relation_type').val();
-    const sourceCategories = $('#source_category').val();
-    const productId = $('#selected_product_id').val();
-    const noteText = $('#note_text').val();
-
-    // Validate form
     if (!actionType) {
-      alert(this.settings.i18n.selectAction || 'Please select an action type');
-      return;
+      this.showFieldError(this.dom.relationTypeSelect, i18n.selectAction || 'Please select an action type.');
+      isValid = false;
     }
-
     if (!sourceCategories || sourceCategories.length === 0) {
-      alert(this.settings.i18n.selectSourceCategories || 'Please select at least one source category');
-      return;
+      this.showFieldError(this.dom.sourceCategorySelect?.next('.select2-container'), i18n.selectSourceCategories || 'Please select source categories.');
+      isValid = false;
     }
 
     if (actionType === 'auto_add_by_category') {
-      const targetCategory = $('#target_category').val();
-
       if (!targetCategory) {
-        alert(this.settings.i18n.selectTargetCategory || 'Please select a target category');
-        return;
+        this.showFieldError(this.dom.targetCategorySelect?.next('.select2-container'), i18n.selectTargetCategory || 'Please select a target category.');
+        isValid = false;
       }
-
       if (!productId) {
-        alert(this.settings.i18n.selectProduct || 'Please select a product');
-        return;
+        // Show error near search input or the display area if visible
+        const $productErrorTarget = this.dom.selectedProductDisplay?.is(':visible') ? this.dom.selectedProductDisplay : this.dom.productSearchInput;
+        this.showFieldError($productErrorTarget, i18n.selectProduct || 'Please select a product.');
+        isValid = false;
       }
     } else if (actionType === 'suggest_products_by_category') {
-      const targetCategory = $('#target_category').val();
-
-      if (!targetCategory) {
-        alert(this.settings.i18n.selectTargetCategory || 'Please select a target category');
-        return;
+      if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {
+        if (!targetCategory) {
+          this.showFieldError(this.dom.targetCategorySelect?.next('.select2-container'), i18n.selectTargetCategory || 'Please select a target category.');
+          isValid = false;
+        }
       }
     } else if (actionType === 'auto_add_note_by_category') {
       if (!noteText) {
-        alert('Please enter a note text');
-        return;
+        this.showFieldError(this.dom.noteTextInput, i18n.noteTextRequired || 'Note text is required.');
+        isValid = false;
       }
     }
-
-    // Disable form while submitting
-    this.toggleFormState(false);
-
-    const formData = {
-      action: 'save_category_relation',
-      nonce: this.settings.nonce,
-      relation_id: $('#relation_id').val(),
-      relation_type: actionType,
-      source_category: sourceCategories,
-      target_category: $('#target_category').val(),
-      product_id: productId,
-      note_text: noteText
-    };
-
-    logger.log('Sending form data:', formData);
-
-    // Send AJAX request using ajax utility
-    ajax.ajaxRequest({
-      url: this.settings.ajaxUrl,
-      data: formData
-    })
-      .then(response => {
-        logger.log('Response received:', response);
-
-        // Show success message
-        this.showMessage('success', response.message);
-
-        // If editing an existing relation, replace the row
-        if (formData.relation_id) {
-          logger.log('Updating existing relation:', formData.relation_id);
-          const $existingRow = $('.product-additions-list').find(`tr[data-id="${formData.relation_id}"]`);
-          if ($existingRow.length) {
-            $existingRow.replaceWith(this.createRelationRow(response.relation));
-          } else {
-            // If the row doesn't exist (unlikely), append it
-            this.appendRelationRow(response.relation);
-          }
-        } else {
-          // For new relations, append the row
-          this.appendRelationRow(response.relation);
-        }
-
-        // Hide the form and reset it
-        $('.product-additions-form').slideUp();
-        this.resetForm();
-
-        // If this is the first relation, remove the "no items" message and create the table
-        const $noItems = $('.product-additions-list').find('.no-items');
-        if ($noItems.length) {
-          $noItems.remove();
-
-          // Create the table if it doesn't exist
-          if (!$('.product-additions-list').find('table').length) {
-            const tableHtml = `
-              <table class="wp-list-table widefat fixed striped product-additions-table">
-                <thead>
-                  <tr>
-                    <th scope="col">${'Source Categories'}</th>
-                    <th scope="col">${'Action'}</th>
-                    <th scope="col">${'Target/Note'}</th>
-                    <th scope="col">${'Actions'}</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            `;
-            $('.product-additions-list').find('h3').after(tableHtml);
-          }
-        }
-
-        // Reset form modified state
-        this.formModified = false;
-
-        // Update the global form change tracker if available
-        if (typeof ProductEstimatorSettings !== 'undefined' &&
-          typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
-          ProductEstimatorSettings.formChangeTrackers[this.settings.tab_id] = false;
-
-          // If this is the current tab, update the main formChanged flag
-          if (ProductEstimatorSettings.currentTab === this.settings.tab_id) {
-            ProductEstimatorSettings.formChanged = false;
-          }
-        }
-      })
-      .catch(error => {
-        // Show error message
-        this.showMessage('error', error.message || 'Error saving relationship. Please try again.');
-        logger.error('Error saving relationship:', error);
-      })
-      .finally(() => {
-        // Re-enable form
-        this.toggleFormState(true);
-      });
+    return isValid;
   }
 
   /**
-   * Handle edit relation button click
-   * @param {Event} e Click event
+   * Custom column population method for 'source_categories' column
+   * This method follows the naming convention for column handlers in AdminTableManager
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
-  handleEditRelation(e) {
-    const $ = jQuery;
-    const $btn = $(e.currentTarget);
-    const relationId = $btn.data('id');
-    const sourceCategories = String($btn.data('source') || '').split(',');
-    const targetCategory = $btn.data('target');
-    const relationType = $btn.data('type');
-    const productId = $btn.data('product-id');
-    const noteText = $btn.data('note-text');
-
-    logger.log('Edit relation:', relationId, sourceCategories, targetCategory, relationType, productId, noteText);
-
-    // Reset form
-    this.resetForm();
-
-    // Populate form with existing data
-    $('#relation_id').val(relationId);
-    $('#relation_type').val(relationType).trigger('change');
-
-    // Need to make sure Select2 has initialized
-    setTimeout(function() {
-      $('#source_category').val(sourceCategories).trigger('change');
-
-      // If it's auto_add_by_category, set target category and load product
-      if (relationType === 'auto_add_by_category' && targetCategory) {
-        $('#target_category').val(targetCategory).trigger('change');
-
-        // If we have a product ID, load its details
-        if (productId) {
-          this.loadProductDetails(productId);
-        }
-      } else if (relationType === 'suggest_products_by_category' && targetCategory) {
-        // For suggest products, we just need the target category
-        $('#target_category').val(targetCategory).trigger('change');
-      } else if (relationType === 'auto_add_note_by_category' && noteText) {
-        // Set the note text
-        $('#note_text').val(noteText);
-      }
-    }.bind(this), 100);
-
-    // Update form title and button text
-    $('.form-title').text('Edit Category Relationship');
-    $('.save-relation').text('Update Relationship');
-
-    // Show form
-    $('.product-additions-form').slideDown();
-
-    // Scroll to form
-    $('html, body').animate({
-      scrollTop: $('.product-additions-form').offset().top - 50
-    }, 300);
+  populateColumn_source_categories($cell, itemData) {
+    $cell.text(itemData.source_category_display || 'N/A');
   }
 
   /**
-   * Handle delete relation button click
-   * @param {Event} e Click event
+   * Custom column population method for 'action_type' column
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
-  handleDeleteRelation(e) {
-    const $ = jQuery;
-    const $btn = $(e.currentTarget);
-    const relationId = $btn.data('id');
+  populateColumn_action_type($cell, itemData) {
+    const $actionTypeSpan = this.$('<span></span>')
+      .addClass(`relation-type pe-relation-${itemData.relation_type || 'unknown'}`)
+      .text(itemData.action_type_display || itemData.relation_type || 'N/A');
+    $cell.append($actionTypeSpan);
+  }
 
-    logger.log('Delete relation:', relationId);
+  /**
+   * Custom column population method for 'target_details' column
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
+   */
+  populateColumn_target_details($cell, itemData) {
+    $cell.text(itemData.target_details_display || 'N/A');
+  }
 
-    if (!confirm(this.settings.i18n.confirmDelete || 'Are you sure you want to delete this relationship?')) {
-      return;
+  /**
+   * Binds event handlers for custom action buttons.
+   * This overrides the base AdminTableManager.bindCustomActionButtons method.
+   * @override
+   */
+  bindCustomActionButtons() {
+    if (this.dom.listTableBody && this.dom.listTableBody.length) {
+      // Bind the view product button click event
+      this.dom.listTableBody.on('click.productAdditions', '.pe-view-product-button', this.handleViewProduct.bind(this));
     }
-
-    // Disable button while processing
-    $btn.prop('disabled', true).text('Deleting...');
-
-    // Use ajax utility for the request
-    ajax.ajaxRequest({
-      url: this.settings.ajaxUrl,
-      data: {
-        action: 'delete_category_relation',
-        nonce: this.settings.nonce,
-        relation_id: relationId
-      }
-    })
-      .then(response => {
-        logger.log('Delete response:', response);
-
-        // Remove row from table
-        const $row = $btn.closest('tr');
-        $row.fadeOut(300, function() {
-          $row.remove();
-
-          // If no more rows, show "no items" message
-          if (!$('.product-additions-list').find('tbody tr').length) {
-            $('.product-additions-list').find('table').remove();
-            $('.product-additions-list').append('<div class="no-items">No relationships have been created yet.</div>');
-          }
-        });
-
-        // Show success message
-        this.showMessage('success', response.message);
-      })
-      .catch(error => {
-        // Show error message
-        this.showMessage('error', error.message || 'Error deleting relationship. Please try again.');
-        $btn.prop('disabled', false).text('Delete');
-        logger.error('Error deleting relationship:', error);
-      });
   }
 
   /**
-   * Search products based on search term and category
-   * @param {string} searchTerm Search term
-   * @param {number} categoryId Category ID
+   * Handles clicks on the "View Product" button.
+   * @param {Event} e - The click event
    */
-  searchProducts(searchTerm, categoryId) {
-    const $ = jQuery;
+  handleViewProduct(e) {
+    e.preventDefault();
+    const $button = this.$(e.currentTarget);
+    const productId = $button.data('product-id');
 
-    if (!searchTerm || !categoryId) {
-      $('#product-search-results').html('<p>Please enter search term and select a category</p>');
-      return;
-    }
-
-    $('#product-search-results').html('<p>Searching...</p>');
-
-    // Use ajax utility for the search request
-    ajax.ajaxRequest({
-      url: this.settings.ajaxUrl,
-      data: {
-        action: 'search_category_products',
-        nonce: this.settings.nonce,
-        search: searchTerm,
-        category: categoryId
-      }
-    })
-      .then(response => {
-        if (response.products && response.products.length > 0) {
-          let resultsHtml = '<ul class="product-results-list">';
-
-          response.products.forEach(function(product) {
-            resultsHtml += `
-              <li class="product-result-item" data-id="${product.id}" data-name="${product.name}">
-                ${product.name} (ID: ${product.id})
-              </li>
-            `;
-          });
-
-          resultsHtml += '</ul>';
-          $('#product-search-results').html(resultsHtml);
-        } else {
-          $('#product-search-results').html('<p>No products found</p>');
-        }
-      })
-      .catch(error => {
-        logger.log('AJAX error:', error);
-        $('#product-search-results').html('<p>Error searching products</p>');
-      });
-  }
-
-  /**
-   * Load product details by ID
-   * @param {number} productId Product ID
-   */
-  loadProductDetails(productId) {
-    const $ = jQuery;
 
     if (!productId) {
+      this.showNotice('Error: Could not determine the product to view.', 'error');
       return;
     }
 
-    // Use ajax utility for the request
-    ajax.ajaxRequest({
-      url: this.settings.ajaxUrl,
-      data: {
-        action: 'get_product_details',
-        nonce: this.settings.nonce,
-        product_id: productId
-      }
-    })
-      .then(response => {
-        if (response.product) {
-          const product = response.product;
-
-          // Set the selected product
-          $('#selected_product_id').val(product.id);
-          $('.selected-product-info').html(`<strong>${product.name}</strong> (ID: ${product.id})`);
-          $('#selected-product').show();
-        } else {
-          logger.log('Failed to load product details:', response);
-        }
-      })
-      .catch(error => {
-        logger.log('AJAX error while loading product details:', error);
-      });
-  }
-
-  /**
-   * Create a table row for a relation
-   * @param {Object} relation The relation data
-   * @return {jQuery} The created row
-   */
-  createRelationRow(relation) {
-    const $ = jQuery;
-
-    if (!relation || !relation.id) {
-      logger.log('Invalid relation data', relation);
-      return $('<tr><td colspan="4">Error: Invalid relation data</td></tr>');
-    }
-
-    const $row = $('<tr></tr>').attr('data-id', relation.id);
-
-    // Source categories
-    const sourceName = relation.source_name || '';
-    $row.append($('<td></td>').text(sourceName));
-
-    // Relation type
-    const $typeCell = $('<td></td>');
-    const $typeSpan = $('<span></span>')
-      .addClass('relation-type')
-      .addClass(relation.relation_type || '');
-
-    // Set appropriate label based on relation type
-    let relation_type_label = '';
-    if (relation.relation_type === 'auto_add_by_category') {
-      relation_type_label = 'Auto add product with Category';
-    } else if (relation.relation_type === 'auto_add_note_by_category') {
-      relation_type_label = 'Auto add note with Category';
-    } else if (relation.relation_type === 'suggest_products_by_category') {
-      relation_type_label = 'Suggest products when Category';
-    } else {
-      relation_type_label = relation.relation_type_label || '';
-    }
-
-    $typeSpan.text(relation_type_label);
-    $typeCell.append($typeSpan);
-    $row.append($typeCell);
-
-    // Target product cell or Note text
-    const $targetCell = $('<td></td>');
-    if (relation.relation_type === 'auto_add_by_category') {
-      if (relation.product_name) {
-        $targetCell.text(relation.product_name);
-      } else if (relation.target_name) {
-        $targetCell.text(relation.target_name + ' (Category)');
-      }
-    } else if (relation.relation_type === 'auto_add_note_by_category') {
-      // For note type, we display a preview of the note text
-      const notePreview = relation.note_text && relation.note_text.length > 50 ?
-        format.truncateText(relation.note_text, 50) : // Using format utility
-        relation.note_text || '';
-      $targetCell.text(notePreview);
-    } else if (relation.relation_type === 'suggest_products_by_category') {
-      // For suggestion type, show the target category
-      if (relation.target_name) {
-        $targetCell.text(relation.target_name + ' (Category)');
-      }
-    }
-    $row.append($targetCell);
-
-    // Action buttons
-    const $actionsCell = $('<td></td>').addClass('actions');
-
-    const sourceStr = Array.isArray(relation.source_category) ?
-      relation.source_category.join(',') :
-      (relation.source_category || '');
-
-    // Use dom utility to create buttons
-    const editBtn = dom.createElement('button', {
-      className: 'button button-small edit-relation',
-      type: 'button',
-      dataset: {
-        id: relation.id,
-        source: sourceStr,
-        target: relation.target_category || '',
-        productId: relation.product_id || '',
-        type: relation.relation_type || '',
-        noteText: relation.note_text || ''
-      }
-    }, 'Edit');
-
-    const deleteBtn = dom.createElement('button', {
-      className: 'button button-small delete-relation',
-      type: 'button',
-      dataset: {
-        id: relation.id
-      }
-    }, 'Delete');
-
-    // Convert DOM elements to jQuery and append
-    $actionsCell.append($(editBtn), ' ', $(deleteBtn));
-    $row.append($actionsCell);
-
-    return $row;
-  }
-
-  /**
-   * Append a relation row to the table
-   * @param {Object} relation The relation data
-   */
-  appendRelationRow(relation) {
-    const $ = jQuery;
-
-    if (!relation || !relation.id) {
-      logger.log('Cannot append row: Invalid relation data', relation);
-      return;
-    }
-
-    const $table = $('.product-additions-table');
-    if (!$table.length) {
-      logger.log('Cannot append row: Table not found');
-      return;
-    }
-
-    const $tbody = $table.find('tbody');
-    if (!$tbody.length) {
-      logger.log('Cannot append row: Table body not found');
-      return;
-    }
-
-    const $row = this.createRelationRow(relation);
-    $tbody.append($row);
-  }
-
-  /**
-   * Show a notice message
-   * @param {string} type The notice type ('success' or 'error')
-   * @param {string} message The message to display
-   */
-  showMessage(type, message) {
-    const $ = jQuery;
-    const $container = $('.product-estimator-additions');
-
-    if (!$container.length) {
-      logger.log('Cannot show notice: Container not found');
-      return;
-    }
-
-    const $existingNotice = $container.find('.notice');
-
-    // Remove existing notices
-    if ($existingNotice.length) {
-      $existingNotice.remove();
-    }
-
-    // Use the validation utility if available, or create a notice manually
-    if (typeof validation.showNotice === 'function') {
-      validation.showNotice(message, type);
-    } else {
-      // Create new notice using dom utility
-      const notice = dom.createElement('div', {
-        className: `notice ${type === 'success' ? 'notice-success' : 'notice-error'}`
-      });
-      const paragraph = dom.createElement('p', {}, message);
-      notice.appendChild(paragraph);
-
-      // Insert notice at the top of the container
-      $container.prepend($(notice));
-
-      // Auto-remove after 5 seconds
-      setTimeout(function() {
-        $(notice).fadeOut(500, function() {
-          $(this).remove();
-        });
-      }, 5000);
-    }
+    // Open the product in a new window/tab
+    // This could be a link to the WordPress admin edit page for the product
+    const adminUrl = window.ajaxurl ? window.ajaxurl.replace('admin-ajax.php', '') : '/wp-admin/';
+    const productUrl = `${adminUrl}post.php?post=${productId}&action=edit`;
+    window.open(productUrl, '_blank');
   }
 }
 
-// Initialize when document is ready
-jQuery(document).ready(function() {
-  // Only initialize if we're on the correct tab
-  const currentTab = jQuery('#product_additions');
-  if (currentTab.length && currentTab.is(':visible')) {
-    const module = new ProductAdditionsSettingsModule();
-    window.ProductAdditionsSettingsModule = module;
-  } else {
-    // Listen for tab change events to initialize when our tab becomes visible
-    jQuery(document).on('product_estimator_tab_changed', function(e, tabId) {
-      if (tabId === 'product_additions') {
-        setTimeout(function() {
-          const module = new ProductAdditionsSettingsModule();
-          window.ProductAdditionsSettingsModule = module;
-        }, 100);
+// Initialize the module when the DOM is ready and its main tab container exists.
+jQuery(document).ready(function ($) {
+  const mainTabId = 'product_additions'; // Specific to this module
+  const localizedDataObjectName = 'productAdditionsSettings'; // Global settings object name
+
+  if ($(`#${mainTabId}`).length) {
+    // Check if the global localized data for this module is available
+    if (window[localizedDataObjectName]) {
+      // Instantiate the module once
+      if (!window.ProductAdditionsSettingsModuleInstance) {
+        try {
+          window.ProductAdditionsSettingsModuleInstance = new ProductAdditionsSettingsModule();
+          createLogger('ProductAdditionsInit').log('ProductAdditionsSettingsModule instance initiated.');
+        } catch (error) {
+          createLogger('ProductAdditionsInit').error('Error instantiating ProductAdditionsSettingsModule:', error);
+          // Use the global notice system if ProductEstimatorSettings is available
+          if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
+            window.ProductEstimatorSettingsInstance.showNotice('Failed to initialize Product Additions settings. Check console for errors.', 'error');
+          }
+        }
       }
-    });
+    } else {
+      createLogger('ProductAdditionsInit').error(`Localized data object "${localizedDataObjectName}" not found for tab: ${mainTabId}. Module cannot be initialized.`);
+      if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
+        window.ProductEstimatorSettingsInstance.showNotice(`Configuration data for Product Additions ("${localizedDataObjectName}") is missing. Module disabled.`, 'error');
+      }
+    }
+    // The module's inherited `handleMainTabChanged` (from VerticalTabbedModule)
+    // will manage activation/deactivation logic, including calling `onMainTabActivated`.
+    // No separate `product_estimator_tab_changed` listener is needed here for re-initialization
+    // or for clearing `sub_tab` from URL, as `VerticalTabbedModule.showVerticalTab` handles URL state.
+  } else {
+    createLogger('ProductAdditionsInit').warn(`Main container #${mainTabId} not found. ProductAdditionsSettingsModule will not be initialized.`);
   }
 });
 

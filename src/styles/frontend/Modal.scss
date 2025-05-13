@@ -1,0 +1,1581 @@
+/**
+ * Modal styles for the Product Estimator plugin
+ */
+
+@use 'sass:color';
+
+@use 'variables' as *;
+
+@use 'animations' as *;
+
+/* Modal Base */
+
+.product-estimator-modal {
+  color: $text-color;
+  display: none;
+  font-family: $font-family;
+  inset: 0;
+  overflow: hidden;
+  position: fixed;
+  z-index: $z-index-modal;
+}
+
+/* Modal Overlay */
+
+.product-estimator-modal-overlay {
+  background-color: $bg-overlay;
+  cursor: pointer;
+  inset: 0;
+  position: absolute;
+}
+
+/* Modal Container */
+
+.product-estimator-modal-container {
+  background-color: $bg-color;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-lg;
+  display: flex;
+  flex-direction: column;
+  left: 50%;
+  max-height: 95vh;
+  max-width: 1000px;
+  overflow: hidden;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+}
+
+/* Modal Header */
+
+.product-estimator-modal-header {
+  background-color: $bg-dark;
+  border-bottom: 1px solid $border-color;
+  padding: 20px 25px;
+
+  h2 {
+    color: $bg-color;
+    font-size: $font-size-xlarge;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+/* Modal Close Button */
+
+.product-estimator-modal-close {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: $text-lighter;
+  cursor: pointer;
+  display: flex;
+  font-size: $font-size-xlarge;
+  font-weight: 700;
+  height: 30px;
+  justify-content: center;
+  line-height: 1;
+  padding: 5px;
+  position: absolute;
+  right: 15px;
+  top: 15px;
+  transition: $transition-base;
+  width: 30px;
+
+  &:hover {
+    background-color: rgb(0, 0, 0, 0.1);
+    color: $bg-color;
+  }
+}
+
+/* Modal Content */
+
+.product-estimator-modal-form-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 25px;
+}
+
+/* Estimates View */
+
+#estimates,
+#estimate-selection-wrapper {
+
+  h2 {
+    border-bottom: 1px solid $border-color;
+    color: $text-color;
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    margin-top: 0;
+    padding-bottom: 10px;
+  }
+}
+
+/* Room and estimate pricing display */
+
+.room-total-price {
+  color: $primary-color;
+  font-size: 0.9em;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.estimate-total-price {
+  color: $text-color;
+  font-size: 0.8em;
+  font-weight: 400;
+  margin-left: 10px;
+
+  &.amount {
+    color: $text-color;
+  }
+}
+
+.estimate-section {
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.estimate-name {
+  color: $primary-color;
+  flex-grow: 1;
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.estimate-header {
+  align-items: center;
+  background-color: $bg-lighter;
+  border-bottom: 1px solid transparent;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 15px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: color.adjust($bg-lighter, $lightness: -3%);
+  }
+
+  &::after {
+    color: $primary-color;
+    content: "\f142"; /* Dashicons minus */
+    font-family: dashicons, sans-serif;
+    font-size: 20px;
+    transition: transform 0.2s ease;
+  }
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.remove-estimate {
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: $text-lighter;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+  transition: color 0.2s ease;
+  z-index: 5;
+  
+  &:hover {
+    background: transparent;
+    color: $error-color;
+  }
+}
+
+.estimate-section.collapsed {
+
+  .estimate-header {
+    border-bottom-color: transparent;
+
+    &::after {
+      content: "\f140"; /* Dashicons plus */
+    }
+  }
+
+  .estimate-content {
+    display: none;
+  }
+}
+
+.estimate-content {
+  display: block;
+  overflow: hidden;
+  padding: 15px;
+  transition: max-height 0.3s ease;
+}
+
+/* Room Header */
+
+.room-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+
+  h4 {
+    color: $text-color;
+    font-size: 15px;
+    margin: 0;
+  }
+}
+
+/* Add Room Button */
+
+.add-room {
+  background: $primary-color;
+  border: none;
+  border-radius: $border-radius;
+  color: $bg-color;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 15px;
+  transition: $transition-base;
+
+  &:hover {
+    background: $primary-hover;
+  }
+}
+
+/* Accordion Styles */
+
+.accordion {
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  overflow: hidden;
+}
+
+.accordion-item {
+  border-bottom: 1px solid $border-color;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+/* Removal buttons styling */
+
+.accordion-header-wrapper {
+  align-items: center;
+  background-color: $bg-light;
+  border-bottom: 1px solid $border-color;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+
+  .accordion-header {
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: $text-light;
+    cursor: pointer;
+    display: flex;
+    flex-grow: 1;
+    font-size: 15px;
+    justify-content: space-between;
+    padding: 15px;
+    padding-right: 30px; /* Make room for the indicator */
+    position: relative;
+    text-align: left;
+    transition: $transition-base;
+    width: 100%;
+
+    &:hover {
+      background-color: $bg-lighter;
+    }
+
+    /* Accordion expand/collapse indicator */
+
+    &::after {
+      color: $text-lighter;
+      content: "\f140"; /* WordPress dashicons - arrow-down */
+      display: inline-block;
+      font-family: dashicons, sans-serif;
+      font-size: 20px;
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      transition: transform 0.2s ease;
+    }
+
+    &.active::after {
+      transform: translateY(-50%) rotate(180deg);
+    }
+
+    .room-name {
+      font-weight: 400;
+    }
+
+    .room-dimensions {
+      color: $text-light;
+      font-size: 15px;
+      margin-right: 10px;
+      white-space: nowrap;
+    }
+
+    .room-name,
+    .room-dimensions {
+      margin-right: 10px;
+      white-space: nowrap;
+    }
+
+    /* Additional spacing for room dimensions and total price */
+
+    .room-dimensions,
+    .room-total-price {
+      margin-right: 30px; /* Ensure text doesn't overlap with indicator */
+    }
+  }
+}
+
+.remove-room {
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: $text-lighter;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  margin-right: 10px;
+  padding: 8px;
+  transition: color 0.2s ease;
+
+  &:hover {
+    background: transparent;
+    color: $error-color;
+  }
+}
+
+.accordion-content {
+  background-color: $bg-color;
+  border-top: 1px solid $border-color;
+  display: none;
+  padding: 15px 0;
+}
+
+.room-products {
+  padding: 15px;
+
+  h5 {
+    color: $text-color;
+    font-size: $font-size-base;
+    margin-bottom: 15px;
+    margin-top: 0;
+  }
+}
+
+/* Room Products */
+
+.product-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.product-item {
+  align-items: start;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  position: relative;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.product-wrapper {
+  align-items: flex-start;
+  display: flex;
+  padding: 10px;
+  width: 100%;
+}
+
+.product-thumbnail {
+  border-radius: $border-radius;
+  height: 110px;
+  margin-right: 15px;
+  object-fit: cover;
+  width: 110px;
+}
+
+.product-details-wrapper {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding-right: 30px; /* Make room for the remove button */
+  width: 100%;
+}
+
+.product-details {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.product-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.product-room-area {
+  color: $text-light;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.product-price {
+  color: $primary-color;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.product-unit-price {
+  color: $text-light;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.remove-product {
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: $text-lighter;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  padding: 4px;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  transition: color 0.2s ease;
+
+  &:hover {
+    background: transparent;
+    color: $error-color;
+  }
+}
+
+/* Form Styles */
+
+.form-group {
+  margin-bottom: 20px;
+
+  label {
+    color: $text-color;
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  select,
+  input[type="text"],
+  input[type="number"],
+  input[type="tel"] {
+    border: 1px solid $border-color-dark;
+    border-radius: $border-radius;
+    color: $text-color;
+    font-size: $font-size-base;
+    padding: 10px 12px;
+    width: 100%;
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Button Styles */
+
+.button,
+.submit-btn,
+.cancel-btn {
+  border: none;
+  border-radius: $border-radius;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 10px 20px;
+  transition: $transition-base;
+}
+
+.submit-btn,
+.button {
+  background: $primary-color;
+  color: $bg-color;
+
+  &:hover {
+    background: $primary-hover;
+  }
+}
+
+.cancel-btn {
+  background: $bg-lighter;
+  color: $text-color;
+
+  &:hover {
+    background: color.adjust($bg-lighter, $lightness: -5%);
+  }
+}
+
+/* Room Form */
+
+.room-form-container {
+  background: white;
+  border-radius: $border-radius;
+  box-shadow: $shadow;
+  margin-bottom: 20px;
+  padding: 20px;
+
+  h2 {
+    border-bottom: none;
+    color: $text-color;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    margin-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+.inline-group {
+  display: flex;
+  gap: 15px;
+
+  .form-group {
+    flex: 1;
+  }
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+/* Loading Indicator */
+
+.product-estimator-modal-loading {
+  align-items: center;
+  background-color: rgba($bg-color, 0.8);
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+  z-index: 1;
+}
+
+.loading-spinner {
+  animation: 1s linear infinite spin;
+  border: 3px solid $bg-lighter;
+  border-radius: 50%;
+  border-top: 3px solid $primary-color;
+  height: 40px;
+  width: 40px;
+}
+
+.loading-text {
+  color: $text-color;
+  font-weight: 500;
+  margin-top: 15px;
+}
+
+/* Notice Styles */
+
+.notice {
+  background-color: $bg-lighter;
+  border-left: 4px solid $primary-color;
+  border-radius: 0 $border-radius $border-radius 0;
+  margin-bottom: 20px;
+  padding: 15px;
+}
+
+.no-estimates,
+.no-rooms,
+.no-products {
+  color: $text-light;
+  font-style: italic;
+  padding: 15px 0;
+}
+
+/* Confirmation dialog */
+
+.confirmation-dialog {
+  background: white;
+  border-radius: $border-radius;
+  box-shadow: $shadow-lg;
+  left: 50%;
+  max-width: 400px;
+  padding: 20px;
+  position: fixed;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  z-index: $z-index-dialog;
+
+  h3 {
+    margin-bottom: 15px;
+    margin-top: 0;
+  }
+}
+
+.confirmation-dialog-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.confirmation-dialog-overlay {
+  background-color: $bg-overlay;
+  inset: 0;
+  position: fixed;
+  z-index: $z-index-overlay;
+}
+
+.confirmation-dialog-cancel {
+  background: $bg-lighter;
+  color: $text-color;
+}
+
+.confirmation-dialog-confirm {
+  background: $error-color;
+  color: $bg-color;
+}
+
+.confirmation-dialog button {
+  border: none;
+  border-radius: $border-radius;
+  cursor: pointer;
+  padding: 8px 16px;
+}
+
+/* Use dashicons for the remove icons */
+
+.dashicons-trash,
+.dashicons-no {
+  font-size: 16px;
+  height: 16px;
+  width: 16px;
+}
+
+/* Animations imported from _animations.scss */
+
+/* Prevent body scrolling when modal is open */
+
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Responsive Adjustments */
+
+@media screen and (max-width: $breakpoint-md) {
+
+  .product-estimator-modal-container {
+    max-height: 95vh;
+    width: 95%;
+  }
+
+  .product-estimator-modal-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .product-estimator-modal-form-container {
+    padding: 15px;
+  }
+
+  .inline-group {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .confirmation-dialog {
+    max-width: 350px;
+    width: 95%;
+  }
+
+  .confirmation-dialog-actions {
+    flex-direction: column;
+  }
+
+  .confirmation-dialog button {
+    margin-bottom: 5px;
+    width: 100%;
+  }
+
+  .product-item {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+
+  .product-thumbnail {
+    height: 40px;
+    width: 40px;
+  }
+
+  .product-details {
+    padding-right: 30px;
+  }
+}
+
+/* Included Products styling */
+
+.product-includes {
+  border-top: 1px dashed color.adjust($border-color, $lightness: -5%);
+  box-sizing: border-box;
+  clear: both;
+  margin-left: 0;
+  margin-top: 12px;
+  padding: 10px;
+  width: 100%;
+
+  &-header {
+    align-items: center;
+    display: flex;
+    margin-bottom: 8px;
+  }
+
+  &-icon {
+    align-items: center;
+    background-color: $primary-color;
+    border-radius: 50%;
+    display: flex;
+    height: 20px;
+    justify-content: center;
+    margin-right: 6px;
+    width: 20px;
+
+    .dashicons {
+      color: $bg-color;
+      font-size: 14px;
+      height: 14px;
+      line-height: 1;
+      width: 14px;
+    }
+  }
+
+  &-title {
+    color: $text-color;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  &-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+/* Individual include item */
+
+.include-item {
+  align-items: flex-start;
+  display: flex;
+  font-size: 12px;
+  justify-content: space-between;
+  line-height: 1.4;
+  position: relative;
+
+  &-name {
+    color: $text-light;
+    flex: 1;
+    font-weight: normal;
+    padding-right: 8px;
+  }
+
+  &-prices {
+    align-items: flex-end;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &-total-price {
+    color: $primary-color;
+    font-weight: 500;
+    margin-bottom: 2px;
+    white-space: nowrap;
+  }
+
+  &-unit-price {
+    color: $text-lighter;
+    font-size: 10px;
+    font-style: italic;
+    white-space: nowrap;
+  }
+
+  &.note-item {
+    align-items: center;
+    justify-content: start;
+    padding: 8px 10px;
+  }
+
+  &-note {
+    color: $text-light;
+    font-size: 0.9em;
+    font-style: italic;
+    line-height: 1.4;
+
+    p {
+      margin: 0 0 6px;
+
+      &:last-child {
+        margin: 0;
+      }
+    }
+  }
+}
+
+/* Note styling */
+
+.product-note-item {
+  background-color: color.adjust($warning-color, $saturation: -70%, $lightness: 45%);
+  border-left: 3px solid $primary-color;
+  padding: 15px;
+}
+
+.note-details-wrapper {
+  width: 100%;
+}
+
+.note-details {
+  align-items: flex-start;
+  display: flex;
+  padding-right: 30px;
+  position: relative;
+}
+
+.note-icon {
+  color: $primary-color;
+  margin-right: 10px;
+
+  .dashicons {
+    font-size: 20px;
+    height: 20px;
+    width: 20px;
+  }
+}
+
+.note-content {
+  color: $text-light;
+  flex: 1;
+  font-style: italic;
+  line-height: 1.5;
+
+  p {
+    margin: 0 0 8px;
+
+    &:last-child {
+      margin: 0;
+    }
+  }
+}
+
+.product-notes .product-includes-icon {
+  color: $primary-color;
+}
+
+/* Product Suggestions Styling */
+
+.product-suggestions {
+  border-top: 1px dashed color.adjust($border-color, $lightness: -5%);
+  margin-top: 20px;
+  padding-top: 15px;
+
+  h5 {
+    align-items: center;
+    color: $text-color;
+    display: flex;
+    font-size: $font-size-base;
+    margin: 0 0 12px;
+
+    &::before {
+      background-color: color.adjust($success-color, $lightness: -5%);
+      border-radius: 50%;
+      content: "";
+      display: inline-block;
+      height: 18px;
+      margin-right: 8px;
+      position: relative;
+      width: 18px;
+    }
+
+    &::after {
+      color: white;
+      content: "?";
+      font-size: 12px;
+      font-weight: bold;
+      margin-left: -18px;
+      margin-top: -1px;
+      position: absolute;
+    }
+  }
+}
+
+.suggestions-list {
+  display: grid;
+  gap: 15px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  margin-top: 10px;
+}
+
+.suggestion-item {
+  background: $bg-light;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: $shadow;
+    transform: translateY(-2px);
+  }
+}
+
+.suggestion-image {
+  align-items: center;
+  display: flex;
+  height: 100px;
+  justify-content: center;
+  margin-bottom: 10px;
+  overflow: hidden;
+  width: 100%;
+
+  img {
+    max-height: 100px;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  .no-image {
+    background: $bg-lighter;
+    border-radius: $border-radius;
+    height: 80px;
+    position: relative;
+    width: 80px;
+
+    &::after {
+      color: $text-lighter;
+      content: "No Image";
+      font-size: 10px;
+      left: 50%;
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+.suggestion-details {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  margin-bottom: 10px;
+}
+
+.suggestion-name {
+  -webkit-box-orient: vertical;
+  color: $text-color;
+
+  /* For long product names */
+  display: -webkit-box;
+  font-size: 13px;
+  font-weight: 500;
+  -webkit-line-clamp: 2;
+  line-height: 1.3;
+  margin-bottom: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-price {
+  color: $primary-color;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.suggestion-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.add-suggestion-to-room {
+  background: $primary-color;
+  border: none;
+  border-radius: $border-radius;
+  color: $bg-color;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 15px;
+  transition: $transition-base;
+  width: 100%;
+
+  &:hover {
+    background: $primary-hover;
+  }
+}
+
+/* User Details Section */
+
+.customer-details-section {
+  border-top: 1px solid $border-color;
+  margin-top: 20px;
+  padding-top: 15px;
+
+  h4 {
+    color: $text-color;
+    font-size: 16px;
+    margin-bottom: 15px;
+  }
+}
+
+/* User details confirmation display */
+
+.customer-details-confirmation {
+  background-color: $bg-light;
+  border-left: 4px solid $primary-color;
+  border-radius: $border-radius;
+  margin-top: 15px;
+  padding: 15px;
+}
+
+.saved-customer-details {
+  font-size: 14px;
+  line-height: 1.4;
+
+  p {
+    margin: 5px 0;
+  }
+}
+
+/* Form fields styling */
+
+#new-estimate-form {
+
+  .form-group {
+    margin-bottom: 15px;
+  }
+
+  label {
+    color: $text-color;
+    display: block;
+    font-weight: 500;
+    margin-bottom: 5px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"] {
+    border: 1px solid $border-color-dark;
+    border-radius: $border-radius;
+    font-size: 14px;
+    padding: 10px;
+    width: 100%;
+
+    &:focus {
+      border-color: $primary-color;
+      box-shadow: 0 0 0 1px $primary-color;
+      outline: none;
+    }
+  }
+}
+
+/* Error message styling */
+
+.modal-message {
+  border-radius: $border-radius;
+  font-size: 14px;
+  margin-bottom: 20px;
+  padding: 12px 15px;
+}
+
+.modal-error-message {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+}
+
+.modal-success-message {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+}
+
+/* Estimate actions */
+
+.estimate-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 15px;
+  margin-top: 15px;
+
+  ul {
+    display: flex;
+    gap: 1rem; /* Adjust spacing between items as needed */
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+    li {
+      display: inline-block;
+
+      a {
+        align-items: center;
+        background: $primary-color;
+        border-radius: 0;
+        color: white;
+        cursor: pointer;
+        display: inline-flex;
+        padding: 0.5rem 1rem;
+        text-decoration: none;
+
+        &:hover {
+          background: $primary-hover;
+        }
+
+        .dashicons {
+          margin-right: 0.5rem;
+        }
+      }
+    }
+  }
+}
+
+/* Price Graph Container */
+
+.price-graph-container {
+  box-sizing: border-box;
+  font-family: $font-family;
+  margin: 10px 0;
+  max-width: 100%;
+  padding: 0 20px; /* ✅ Full padding around container */
+  position: relative;
+  width: 100%;
+}
+
+/* Title Row with Flex Layout */
+
+.price-range-title {
+  align-items: center;
+  display: flex;
+  font-weight: bold;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.price-title {
+  color: $primary-color;
+  flex: 1;
+  margin-right: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-price {
+  color: $text-color;
+  font-size: 0.9em;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Graph Bar - Base Container */
+
+.price-graph-bar {
+  background-color: #e0e0e0;
+  border-radius: $border-radius;
+  height: 20px;
+  margin-bottom: 6px; /* No side margins here anymore */
+  overflow: hidden;
+  position: relative !important;
+}
+
+/* Price Range Indicator */
+
+.price-graph-range {
+  background-color: $success-color;
+  border-radius: 3px;
+  bottom: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+
+  /* Gradient fade */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgb(0, 0, 0, 0.15) 5px,
+    rgb(0, 0, 0, 0.3) 10px,
+    rgb(0, 0, 0, 0.5) 15px,
+    rgb(0, 0, 0, 0.7) 20px,
+    black 40px,
+    black calc(100% - 40px),
+    rgb(0, 0, 0, 0.7) calc(100% - 20px),
+    rgb(0, 0, 0, 0.5) calc(100% - 15px),
+    rgb(0, 0, 0, 0.3) calc(100% - 10px),
+    rgb(0, 0, 0, 0.15) calc(100% - 5px),
+    transparent 100%
+  );
+  position: absolute !important;
+  top: 0 !important;
+  z-index: 2;
+
+  &.small-range {
+    animation: pulse-highlight 2s infinite;
+  }
+}
+
+@keyframes pulse-highlight {
+
+  0% { opacity: 0.9; }
+
+  50% { opacity: 1; }
+
+  100% { opacity: 0.9; }
+}
+
+/* Labels Area */
+
+.price-graph-labels {
+  box-sizing: border-box;
+  color: $text-light;
+  font-size: 10px;
+  height: 18px;
+  margin-top: 2px;
+  padding: 0; /* ✅ No padding here anymore */
+  position: relative;
+  width: 100%;
+}
+
+/* Individual Label */
+
+.price-label {
+  position: absolute;
+  text-align: center;
+  transform: translateX(-50%);
+  white-space: nowrap;
+
+  &:first-child {
+    text-align: left;
+    transform: translateX(0%); /* align start */
+  }
+
+  &:last-child {
+    text-align: right;
+    transform: translateX(-100%) !important; /* align end */
+  }
+}
+
+.price-tick {
+  background-color: $text-lighter;
+  height: 4px;
+  margin: 0 auto 1px;
+  width: 1px;
+}
+
+.price-value {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+/* Dimensions Display */
+
+.price-dimensions {
+  color: $text-light;
+  font-size: 0.9em;
+  font-weight: 400;
+  margin-left: 8px;
+}
+
+.price-notice {
+  color: $text-light;
+  font-size: 10px;
+  font-weight: normal;
+  margin-top: 5px;
+  text-align: right;
+}
+
+/* Email Prompt Modal Styles */
+
+.email-prompt-modal {
+  inset: 0;
+  position: fixed;
+  z-index: $z-index-modal + 1; /* Higher than the product estimator modal */
+}
+
+.email-prompt-overlay {
+  background-color: $bg-overlay;
+  inset: 0;
+  position: absolute;
+  z-index: $z-index-modal + 2;
+}
+
+.email-prompt-container {
+  background-color: $bg-color;
+  border-radius: $border-radius;
+  box-shadow: $shadow-lg;
+  left: 50%;
+  max-width: 400px;
+  overflow: hidden;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  z-index: $z-index-modal + 3;
+}
+
+.email-prompt-header {
+  background-color: $bg-lighter;
+  border-bottom: 1px solid $border-color-dark;
+  padding: 15px 20px;
+
+  h3 {
+    color: $text-color;
+    font-size: 18px;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.email-prompt-body {
+  padding: 20px;
+
+  p {
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0 0 15px;
+  }
+
+  .form-group {
+    margin-bottom: 15px;
+  }
+
+  label {
+    color: $text-color;
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+
+  input[type="email"] {
+    border: 1px solid $border-color-dark;
+    border-radius: $border-radius;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 8px 10px;
+    width: 100%;
+
+    &:focus {
+      border-color: $info-color;
+      box-shadow: 0 0 0 1px $info-color;
+      outline: none;
+    }
+  }
+}
+
+.email-validation-message {
+  color: $error-color;
+  font-size: 12px;
+  margin-top: 5px;
+  min-height: 18px;
+}
+
+.email-prompt-footer {
+  background-color: $bg-lighter;
+  border-top: 1px solid $border-color-dark;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 15px 20px;
+  text-align: right;
+
+  button {
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-left: 10px;
+    padding: 5px 12px;
+  }
+
+  .submit-email-btn {
+    background-color: $info-color;
+    border: 1px solid $info-color;
+    color: white;
+    flex: 1;
+    text-align: center;
+
+    &:hover {
+      background-color: color.adjust($info-color, $lightness: -10%);
+    }
+
+    &:disabled {
+      background-color: color.adjust($info-color, $lightness: 20%);
+      border-color: color.adjust($info-color, $lightness: 20%);
+      cursor: not-allowed;
+    }
+  }
+
+  .cancel-email-btn {
+    background-color: color.adjust($bg-lighter, $lightness: 2%);
+    border: 1px solid $border-color-dark;
+    color: $text-color;
+
+    &:hover {
+      background-color: $bg-lighter;
+    }
+  }
+}
+
+/* Loading state for buttons */
+
+.loading {
+  pointer-events: none;
+  position: relative;
+}
+
+.loading-dots::after {
+  animation: loading-dots 1.5s infinite;
+  content: "";
+}
+
+@keyframes loading-dots {
+
+  0% { content: "."; }
+
+  33% { content: ".."; }
+
+  66% { content: "..."; }
+
+  100% { content: "."; }
+}
+
+/* More responsive adjustments */
+
+@media screen and (max-width: $breakpoint-md) {
+
+  .product-includes {
+    padding-right: 25px;
+    width: 100%;
+  }
+
+  .product-includes-header {
+    margin-bottom: 6px;
+  }
+
+  .product-includes-icon {
+    height: 18px;
+    width: 18px;
+  }
+
+  .product-includes-title {
+    font-size: 11px;
+  }
+
+  .product-includes-items {
+    gap: 8px;
+  }
+
+  .include-item {
+    font-size: 11px;
+  }
+
+  .include-item-unit-price {
+    font-size: 9px;
+  }
+
+  .product-note-item {
+    padding: 12px;
+  }
+
+  .note-icon .dashicons {
+    font-size: 16px;
+    height: 16px;
+    width: 16px;
+  }
+
+  .price-graph-labels {
+    display: none;
+  }
+
+  .price-graph-bar {
+    height: 16px;
+  }
+
+  .suggestions-list {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+
+  .suggestion-image {
+    height: 80px;
+
+    img {
+      max-height: 80px;
+    }
+  }
+
+  .suggestion-name {
+    font-size: 12px;
+  }
+
+  .suggestion-price {
+    font-size: 13px;
+  }
+
+  .customer-details-section h4 {
+    font-size: 15px;
+  }
+
+  #new-estimate-form input[type="text"],
+  #new-estimate-form input[type="email"],
+  #new-estimate-form input[type="tel"] {
+    font-size: 13px;
+    padding: 8px;
+  }
+}
+
+@media screen and (max-width: $breakpoint-sm) {
+
+  .suggestions-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .product-card-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+
+    .visualiser-button-wrapper,
+    .estimator-button-wrapper {
+      width: 100%;
+    }
+
+    .product-estimator-button {
+      width: 100%;
+    }
+  }
+}

@@ -37,8 +37,8 @@ if (isset($estimate_id)) {
         $default_markup = floatval($estimate['default_markup']);
     } else {
         // If no markup found in the estimate, fall back to global settings
-        $options = get_option('product_estimator_settings');
-        $default_markup = isset($options['default_markup']) ? floatval($options['default_markup']) : 0;
+        $pricing_rules = get_option('product_estimator_pricing_rules');
+        $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
     }
 }
 ?>

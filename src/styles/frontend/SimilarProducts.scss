@@ -1,0 +1,192 @@
+/**
+ * Product Similar Products - Enhanced containment
+ * Fixed for proper navigation display
+ */
+
+@use 'sass:color';
+
+@use 'variables' as *;
+
+/* Container styling */
+
+.product-similar-products {
+  box-sizing: border-box;
+  margin-bottom: 15px;
+  margin-top: 20px;
+  max-width: 100%;
+  overflow: visible; /* Changed from hidden to allow nav buttons to show */
+  padding-top: 15px;
+  position: relative;
+
+  /* border-top: 1px dashed #e5e5e5; */
+  width: 100%;
+  
+  /* When inside a product item, use different border styling */
+
+  .product-item & {
+    /* border-top: 1px dashed #ffcca3; */
+    align-self: flex-start;
+    flex-shrink: 0;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  
+  /* Visual cues for similar products */
+
+  h5 {
+
+    &::before {
+      background-color: #ff6b00;
+    }
+    
+    &::after {
+      content: "↺";
+    }
+  }
+}
+
+/* Product item and wrapper structure */
+
+.product-item {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.product-wrapper {
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+/* Carousel container */
+
+.similar-products-carousel {
+  box-sizing: border-box;
+  margin-bottom: 0;
+  max-width: 100%;
+  overflow: visible; /* Changed to allow buttons to be visible */
+  padding: 0 30px; /* Increased padding to make room for buttons */
+  position: relative;
+  width: 100%;
+  
+  /* Make sure carousel container has proper width */
+
+  .product-item & {
+    display: block;
+    max-width: 100%;
+    width: 100%;
+  }
+  
+  /* Navigation arrows */
+
+  .suggestions-nav {
+    align-items: center;
+    background: rgb(255, 255, 255, 0.9);
+    border: 1px solid $border-color-dark;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    height: 24px; /* Increased size for better visibility */
+    justify-content: center;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px; /* Increased size for better visibility */
+    z-index: 10; /* Increased z-index to ensure visibility */
+    
+    &.prev {
+      left: 3px;
+    }
+    
+    &.next {
+      right: 3px;
+    }
+    
+    .dashicons {
+      align-items: center;
+      display: flex;
+      font-size: 20px;
+      justify-content: center;
+    }
+  }
+  
+  /* Suggestions container */
+
+  .suggestions-container {
+    box-sizing: border-box;
+    display: flex;
+    gap: 5px;
+    margin: 0 auto;
+    max-width: 100%;
+  }
+  
+  /* Suggestion items */
+
+  .suggestion-item {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    padding: 8px;
+    width: 170px;
+  }
+  
+  .suggestion-image {
+    height: 80px;
+  }
+  
+  .suggestion-name {
+    font-size: 12px;
+    line-height: 1.2;
+    max-height: 2.4em;
+    overflow: hidden;
+  }
+  
+  .suggestion-price {
+    font-size: 12px;
+  }
+  
+  .add-suggestion-to-room {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}
+
+/* Unit price styling */
+
+.suggestion-price .unit-price {
+  color: $text-light;
+  font-size: 0.8em;
+  margin-left: 2px;
+}
+
+/* Replace button */
+
+button.replace-product-in-room {
+  background-color: #33373d;
+  border: none;
+  border-radius: $border-radius;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px;
+  text-transform: uppercase;
+  transition: $transition-base;
+  width: 100%;
+  
+  &:hover {
+    background-color: $primary-color;
+  }
+  
+  &.loading {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}

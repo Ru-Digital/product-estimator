@@ -49,51 +49,10 @@ if (empty($upgrades['products'])) {
             <?php
             // Get products from upgrade categories
 
-            // Display upgrades based on display mode
-            $display_mode = isset($upgrades['display_mode']) ? $upgrades['display_mode'] : 'dropdown';
+            // Display upgrades using tiles display mode
             $upgrade_products = $upgrades['products'];
-
-            switch ($display_mode) :
-                case 'dropdown': ?>
-                    <div class="product-upgrade-select" data-upgrade-id="<?php echo esc_attr($upgrade_product_id); ?>">
-                        <select name="upgrade_<?php echo esc_attr($upgrade_product_id); ?>" class="upgrade-select">
-                            <option value=""><?php esc_html_e('No upgrade', 'product-estimator'); ?></option>
-                            <?php foreach ($upgrade_products as $upgrade_product) : ?>
-                                <option value="<?php echo esc_attr($upgrade_product['id']); ?>" data-price="<?php echo esc_attr($upgrade_product['price']); ?>">
-                                    <?php echo esc_html($upgrade_product['name']); ?>
-                                    <?php if ($upgrade_product['price']) : ?>
-                                        (<?php echo wc_price($upgrade_product['price']); ?>)
-                                    <?php endif; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <?php break;
-
-                case 'radio': ?>
-                    <div class="product-upgrade-radio" data-upgrade-id="<?php echo esc_attr($upgrade_product_id); ?>">
-                        <div class="radio-group">
-                            <label class="radio-label">
-                                <input type="radio" name="upgrade_<?php echo esc_attr($upgrade_product_id); ?>" value="" checked>
-                                <?php esc_html_e('No upgrade', 'product-estimator'); ?>
-                            </label>
-
-                            <?php foreach ($upgrade_products as $upgrade_product) : ?>
-                                <label class="radio-label">
-                                    <input type="radio" name="upgrade_<?php echo esc_attr($upgrade_product_id); ?>"
-                                           value="<?php echo esc_attr($upgrade_product['id']); ?>"
-                                           data-price="<?php echo esc_attr($upgrade_product['price']); ?>">
-                                    <?php echo esc_html($upgrade_product['name']); ?>
-                                    <?php if ($upgrade_product['price']) : ?>
-                                        <span class="upgrade-price"><?php echo wc_price($upgrade_product['price']); ?></span>
-                                    <?php endif; ?>
-                                </label>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <?php break;
-
-                case 'tiles': ?>
+            ?>
+                    <div class="product-upgrade-tiles" data-upgrade-id="<?php echo esc_attr($upgrade_product_id); ?>">
                     <div class="product-upgrade-tiles" data-upgrade-id="<?php echo esc_attr($upgrade_product_id); ?>">
                         <div class="tiles-wrapper">
                             <?php foreach ($upgrade_products as $upgrade_product) : ?>
@@ -156,25 +115,7 @@ if (empty($upgrades['products'])) {
 
                         <input type="hidden" name="upgrade_<?php echo esc_attr($upgrade_product_id); ?>" value="">
                     </div>
-                    <?php break;
-
-                default:
-                    // Default to dropdown if display mode is invalid
-                    ?>
-                    <div class="product-upgrade-select" data-upgrade-id="<?php echo esc_attr($upgrade_product_id); ?>">
-                        <select name="upgrade_<?php echo esc_attr($upgrade_product_id); ?>" class="upgrade-select">
-                            <option value=""><?php esc_html_e('No upgrade', 'product-estimator'); ?></option>
-                            <?php foreach ($upgrade_products as $upgrade_product) : ?>
-                                <option value="<?php echo esc_attr($upgrade_product['id']); ?>" data-price="<?php echo esc_attr($upgrade_product['price']); ?>">
-                                    <?php echo esc_html($upgrade_product['name']); ?>
-                                    <?php if ($upgrade_product['price']) : ?>
-                                        (<?php echo wc_price($upgrade_product['price']); ?>)
-                                    <?php endif; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                <?php endswitch; ?>
+                    <?php ?>
 
         </div>
 </div>

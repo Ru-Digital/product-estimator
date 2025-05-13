@@ -11,7 +11,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements SettingsModuleInterface {
+final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements SettingsModuleInterface {
 
     protected $option_name = 'product_estimator_labels';
     private $defined_label_types = [];
@@ -20,6 +20,8 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
         $this->tab_id    = 'labels';
         $this->tab_title = __( 'Labels', 'product-estimator' );
         $this->section_id = 'labels_settings_section';
+        $this->section_title = __( 'Manage Labels', 'product-estimator' );
+
 
         $this->defined_label_types = [
             'labels-general' => [
@@ -39,6 +41,11 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
                 'description' => __( 'Miscellaneous labels.', 'product-estimator' ),
             ],
         ];
+    }
+
+    public function render_section_description()
+    {
+        echo "This section allows administrators to configure and manage custom labels used throughout the website. Whether updating button text, renaming headings, or adjusting field titles, this central interface provides an easy way to ensure consistent, on-brand terminology across all pages without touching the code.";
     }
 
     protected function get_vertical_tabs() {
@@ -175,34 +182,90 @@ class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase implements
         <?php
     }
 
-    public function enqueue_scripts() {
-        $commonData = $this->get_common_script_data();
-        $module_specific_data = [
-            'defaultSubTabId'   => 'labels-general',
-            'option_name'       => $this->option_name,
-            'mainTabId'         => $this->tab_id,
-            'ajaxActionPrefix'  => 'save_labels',
-            'defined_label_types' => array_keys($this->defined_label_types),
-            'i18n' => [
-                'saveSuccess' => __('Label settings saved successfully.', 'product-estimator'),
-                'saveError'   => __('Error saving label settings.', 'product-estimator'),
-            ],
-        ];
-        $actual_data_for_js_object = array_replace_recursive($commonData, $module_specific_data);
-        $this->add_script_data('labelsSettings', $actual_data_for_js_object);
+    /**
+     * Returns the unique JavaScript context name for this module's settings.
+     *
+     * @since    X.X.X
+     * @access   protected
+     * @return   string The JavaScript context name.
+     */
+    protected function get_js_context_name() {
+        return 'labelsSettings'; // This should match the JS object name (e.g., window.labelsSettings)
     }
 
+    /**
+     * Returns an array of script data specific to this module.
+     * This data will be merged with common data from the parent class.
+     *
+     * @since    X.X.X
+     * @access   protected
+     * @return   array Associative array of module-specific script data.
+     */
+    protected function get_module_specific_script_data() {
+        // Get the module specific configuration
+        $data = [
+            'option_name'         => $this->option_name,
+            'defaultSubTabId'     => 'labels-general',
+            'ajaxActionPrefix'    => 'save_' . $this->tab_id,
+        ];
+
+        // Module-specific i18n strings that should override the default ones
+        $data['i18n'] = [
+            'saveSuccess' => __('Label settings saved successfully.', 'product-estimator'),
+            'saveError'   => __('Error saving label settings.', 'product-estimator'),
+        ];
+
+        return $data;
+    }
+
+    /**
+     * Enqueue module-specific scripts and styles.
+     *
+     * @since 1.2.0 (Refactored to use provide_script_data_for_localization)
+     */
+    public function enqueue_scripts() {
+        // This single call will handle getting common data (from SettingsModuleWithVerticalTabsBase),
+        // module-specific data (from get_module_specific_script_data above),
+        // merging them, and calling add_script_data with the correct context name (from get_js_context_name).
+        $this->provide_script_data_for_localization();
+
+        // If LabelsSettingsModule has its own JS file (e.g., LabelsSettingsModule.js)
+        // enqueue it here.
+        // Example:
+        // wp_enqueue_script(
+        //     $this->plugin_name . '-labels-settings-module',
+        //     PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/js/modules/labels-settings-module.js', // Ensure path is correct
+        //     [$this->plugin_name . '-admin', 'jquery'], // Dependencies
+        //     $this->version,
+        //     true // Load in footer
+        // );
+    }
+
+
     public function enqueue_styles() {
-        wp_enqueue_style(
-            $this->plugin_name . '-label-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/label-settings.css',
-            [ $this->plugin_name . '-settings', $this->plugin_name . '-vertical-tabs-layout' ],
-            $this->version
-        );
+        parent::enqueue_styles();
     }
 
     public function get_defined_label_types() {
         return $this->defined_label_types;
+    }
+
+    /**
+     * Validate settings for this module
+     *
+     * @param array $input The input array to validate
+     * @param array $fields Optional array of field definitions
+     * @return array The validated input
+     */
+    public function validate_settings($input, $fields = array()) {
+        $validated = array();
+        
+        foreach ($input as $key => $value) {
+            // All text fields - sanitize with sanitize_text_field
+            $validated[$key] = sanitize_text_field($value);
+        }
+        
+        return $validated;
     }
 }
 

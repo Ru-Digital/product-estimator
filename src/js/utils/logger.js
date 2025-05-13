@@ -1,3 +1,10 @@
+let pluginLogGroupHasStarted = false;
+
+/**
+ * Closes the main plugin log group if it was started.
+ * Used to properly group related log messages in the console.
+ * Only has an effect when debug mode is enabled.
+ */
 export function closeMainPluginLogGroup() {
   if (window.productEstimatorVars?.debug) {
     console.log('%cAttempting to close main plugin group. Flag is: ' + pluginLogGroupHasStarted, 'color: red');
@@ -11,8 +18,12 @@ export function closeMainPluginLogGroup() {
   }
 }
 
-let pluginLogGroupHasStarted = false;
-
+/**
+ * Ensures that the main plugin log group is started if not already.
+ * Creates a console group for all plugin logs to be organized under.
+ * @param {boolean} startCollapsed - Whether to start the group as collapsed (true) or expanded (false)
+ * @private
+ */
 function ensureMainPluginLogGroupIsStarted(startCollapsed = false) {
   // (Keep the version with diagnostic logs from above for testing)
   if (!pluginLogGroupHasStarted && window.productEstimatorVars?.debug) {
@@ -23,12 +34,19 @@ function ensureMainPluginLogGroupIsStarted(startCollapsed = false) {
     }
     pluginLogGroupHasStarted = true;
   } else if (window.productEstimatorVars?.debug) {
+    // Debug is on, but plugin log group is already started - no action needed
   }
 }
 
 // --- MODIFIED STANDALONE LOG FUNCTIONS ---
 // These will now also log within the main plugin group.
 
+/**
+ * Logs a message to the console with the component name as prefix.
+ * Only logs when debug mode is enabled.
+ * @param {string} component - The name of the component for log prefixing
+ * @param {...any} args - Arguments to pass to console.log
+ */
 export function log(component, ...args) {
   if (window.productEstimatorVars?.debug) {
     ensureMainPluginLogGroupIsStarted();
@@ -36,6 +54,12 @@ export function log(component, ...args) {
   }
 }
 
+/**
+ * Logs a warning message to the console with the component name as prefix.
+ * Only logs when debug mode is enabled.
+ * @param {string} component - The name of the component for log prefixing
+ * @param {...any} args - Arguments to pass to console.warn
+ */
 export function warn(component, ...args) {
   if (window.productEstimatorVars?.debug) {
     ensureMainPluginLogGroupIsStarted();
@@ -43,6 +67,12 @@ export function warn(component, ...args) {
   }
 }
 
+/**
+ * Logs an error message to the console with the component name as prefix.
+ * Only logs when debug mode is enabled. Always expands the main group for better visibility.
+ * @param {string} component - The name of the component for log prefixing
+ * @param {...any} args - Arguments to pass to console.error
+ */
 export function error(component, ...args) {
   if (window.productEstimatorVars?.debug) {
     ensureMainPluginLogGroupIsStarted(false); // Attempt to expand main group on error

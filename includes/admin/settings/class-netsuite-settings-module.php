@@ -10,7 +10,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
+final class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Set the tab and section details.
@@ -26,42 +26,13 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
     }
 
     /**
-     * Check if this module handles a specific setting
-     *
-     * @since    1.1.0
-     * @access   public
-     * @param    string $key Setting key
-     * @return   bool Whether this module handles the setting
-     */
-    public function has_setting($key) {
-        $module_settings = [
-            'netsuite_enabled',
-            'netsuite_client_id',
-            'netsuite_client_secret',
-            'netsuite_api_url',
-            'netsuite_token_url',
-            'netsuite_request_limit',
-            'netsuite_cache_time'
-        ];
-
-        return in_array($key, $module_settings);
-    }
-
-    /**
      * Register the module-specific settings fields.
      *
      * @since    1.1.0
      * @access   protected
      */
     public function register_fields() {
-        $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
-
-        add_settings_section(
-            $this->section_id,
-            null, // Section title
-            [$this, 'render_section_description'],
-            $page_slug_for_wp_api
-        );
+        $page_slug_for_wp_api = $this->get_plugin_name() . '_' . $this->get_tab_id();
 
         $fields = array(
             'netsuite_enabled' => array(
@@ -181,96 +152,6 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
         return $validated;
     }
 
-    /**
-     * Process form data specific to NetSuite settings
-     *
-     * @since    1.1.0
-     * @access   protected
-     * @param    array    $form_data    The form data to process
-     * @return   true|\WP_Error    True on success, WP_Error on failure
-     */
-    protected function process_form_data($form_data) {
-        if (!isset($form_data['product_estimator_settings'])) {
-            return new \WP_Error('missing_data', __('No settings data received', 'product-estimator'));
-        }
-
-        $settings = $form_data['product_estimator_settings'];
-
-        // Fix for checkbox fields - ensure they're properly set to 0 when unchecked
-        $checkbox_fields = ['netsuite_enabled'];
-
-        foreach ($checkbox_fields as $field) {
-            if (!isset($settings[$field])) {
-                $settings[$field] = 0;
-            }
-        }
-
-        // If NetSuite integration is enabled, validate the required fields
-        if (isset($settings['netsuite_enabled']) && $settings['netsuite_enabled']) {
-            // Check client ID
-            if (empty($settings['netsuite_client_id'])) {
-                return new \WP_Error(
-                    'missing_client_id',
-                    __('Client ID is required when NetSuite integration is enabled', 'product-estimator')
-                );
-            }
-
-            // Check client secret - only validate if it's not empty (to allow keeping existing value)
-            if (isset($settings['netsuite_client_secret']) && empty($settings['netsuite_client_secret'])) {
-                // Get existing secret to see if we already have one
-                $existing_settings = get_option('product_estimator_settings', array());
-                if (empty($existing_settings['netsuite_client_secret'])) {
-                    return new \WP_Error(
-                        'missing_client_secret',
-                        __('Client Secret is required when NetSuite integration is enabled', 'product-estimator')
-                    );
-                }
-            }
-
-            // Validate API URL
-            if (empty($settings['netsuite_api_url']) || !filter_var($settings['netsuite_api_url'], FILTER_VALIDATE_URL)) {
-                return new \WP_Error(
-                    'invalid_api_url',
-                    __('A valid API Endpoint URL is required', 'product-estimator')
-                );
-            }
-
-            // Validate token URL
-            if (empty($settings['netsuite_token_url']) || !filter_var($settings['netsuite_token_url'], FILTER_VALIDATE_URL)) {
-                return new \WP_Error(
-                    'invalid_token_url',
-                    __('A valid OAuth Token URL is required', 'product-estimator')
-                );
-            }
-
-            // Validate request limit
-            if (isset($settings['netsuite_request_limit'])) {
-                $limit = intval($settings['netsuite_request_limit']);
-                if ($limit < 1 || $limit > 100) {
-                    return new \WP_Error(
-                        'invalid_request_limit',
-                        __('API Request Limit must be between 1 and 100', 'product-estimator')
-                    );
-                }
-            }
-
-            // Validate cache time
-            if (isset($settings['netsuite_cache_time'])) {
-                $cache_time = intval($settings['netsuite_cache_time']);
-                if ($cache_time < 0) {
-                    return new \WP_Error(
-                        'invalid_cache_time',
-                        __('Cache Duration must be at least 0', 'product-estimator')
-                    );
-                }
-            }
-        }
-
-        // Update the settings array in the form data
-        $form_data['product_estimator_settings'] = $settings;
-
-        return true;
-    }
 
     /**
      * Additional actions after saving NetSuite settings
@@ -335,27 +216,33 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
         }
     }
 
-    /**
-     * Enqueue module-specific scripts.
-     *
-     * @since    1.1.0
-     * @access   public
-     */
-    public function enqueue_scripts() {
-        $actual_data_for_js_object = [
-            'nonce' => wp_create_nonce('product_estimator_netsuite_nonce'),
-            'tab_id' => $this->tab_id,
-            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
-            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
-            'option_name'   => $this->option_name,
-            'i18n' => [
-                'testing' => __('Testing connection...', 'product-estimator'),
-                'success' => __('Connection successful!', 'product-estimator'),
-                'error'   => __('Connection failed:', 'product-estimator'),
-            ]
-        ];
-        $this->add_script_data('netsuiteSettings', $actual_data_for_js_object);
+    public function enqueue_scripts() { // This might be renamed or refactored if AdminScriptHandler changes
+        $this->provide_script_data_for_localization();
     }
+
+    protected function get_js_context_name() {
+        return 'netsuiteSettings';
+    }
+
+    protected function get_module_specific_script_data() {
+        $specific_data = [
+            'option_name' => $this->option_name, // Ensure $this->option_name is correct for Netsuite
+            'i18n' => [
+                'saveSuccess' => __('NetSuite settings saved successfully.', 'product-estimator'),
+                // ... other i18n
+            ],
+            'actions' => [
+                'test_netsuite_connection' => 'pe_test_netsuite_connection',
+            ],
+            'selectors' => [
+                'testConnectionButton' => '#test-netsuite-connection',
+                'connectionResultSpan' => '#connection-result',
+            ],
+            'test_connection_nonce' => wp_create_nonce('product_estimator_netsuite_test_nonce'),
+        ];
+        return $specific_data;
+    }
+
 
     /**
      * Enqueue module-specific styles.
@@ -364,12 +251,7 @@ class NetsuiteSettingsModule extends SettingsModuleBase implements SettingsModul
      * @access   public
      */
     public function enqueue_styles() {
-        wp_enqueue_style(
-            $this->plugin_name . '-netsuite-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/netsuite-settings.css',
-            array($this->plugin_name . '-settings'),
-            $this->version
-        );
+        parent::enqueue_styles();
     }
 
     /**

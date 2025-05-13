@@ -3,8 +3,7 @@
  *
  * Manages HTML templates for the Product Estimator plugin.
  */
-import { format } from '@utils';
-import { createLogger } from '@utils';
+import { format, createLogger } from '@utils';
 const logger = createLogger('TemplateEngine');
 
 class TemplateEngine {
@@ -135,7 +134,7 @@ class TemplateEngine {
    * Create an element from a template and populate it with data
    * This method returns a DocumentFragment
    * @param {string} templateId - Template ID
-   * @param {Object} data - Data to populate the template with
+   * @param {object} data - Data to populate the template with
    * @returns {DocumentFragment} The populated template content
    */
   create(templateId, data = {}) {
@@ -233,7 +232,7 @@ class TemplateEngine {
   /**
    * Populate an element with data
    * @param {Element|DocumentFragment} element - Element to populate
-   * @param {Object} data - Data to populate with
+   * @param {object} data - Data to populate with
    */
   populateElement(element, data) {
     // Process simple data attributes first
@@ -581,7 +580,7 @@ class TemplateEngine {
   /**
    * Create and insert an element into the DOM
    * @param {string} templateId - Template ID
-   * @param {Object} data - Data to populate with
+   * @param {object} data - Data to populate with
    * @param {Element|string} container - Container element or selector
    * @param {string} position - Insert position ('append', 'prepend', 'before', 'after', 'replace')
    * @returns {Element|DocumentFragment|null} The inserted element(s) or null if container not found
@@ -614,17 +613,19 @@ class TemplateEngine {
           // When inserting a fragment before/after, insert the fragment itself
           container.parentNode.insertBefore(element, container.nextSibling); // element is a DocumentFragment
           break;
-        case 'replace':
+        case 'replace': {
           // To replace, we need the content of the fragment, not the fragment itself
           // This might need adjustment depending on expected behavior.
           // Standard replaceChild takes a node. Replacing with a fragment's content means looping.
           logger.warn(`[insert] "replace" position used for template "${templateId}". Replacing container with fragment's children.`); // Added context
-          const fragmentChildren = Array.from(element.childNodes); // Get children before fragment is consumed
+          // Get fragment's children before it's consumed (for debugging/reference purposes)
+          // const fragmentChildren = Array.from(element.childNodes);
           container.parentNode.replaceChild(element, container); // This inserts the fragment, effectively replacing the container with its children
           // Note: The original container is replaced by the fragment. If you need a reference to the new element,
           // this becomes complex as a fragment can have multiple top-level children.
           // Returning the fragment itself might be the most reliable if the caller expects multiple nodes.
           break;
+        }
         case 'append':
         default:
           container.appendChild(element); // element is a DocumentFragment
@@ -669,10 +670,10 @@ class TemplateEngine {
     const existingMessages = document.querySelectorAll('.modal-message');
     existingMessages.forEach(msg => msg.remove());
 
-    // Create message element - use correct template ID based on type
-    const templateId = type === 'error' ? 'error-message-template' : 'success-message-template';
+    // Message type determines which template would be used (if we used template-based approach)
+    // For now, we're using direct DOM creation approach below
 
-    // Find both templates in the modal-messages-template
+    // Find messages template container
     const messageTemplate = this.getTemplate('modal-messages-template');
     if (!messageTemplate) {
       // Fallback - create a basic message div

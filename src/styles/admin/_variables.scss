@@ -1,0 +1,58 @@
+/**
+ * Shared variables for admin styles
+ */
+
+// Colors
+$primary-color: #2271b1;
+$primary-hover-color: #135e96;
+$secondary-color: #ffa20c;
+$secondary-hover-color: #d88500; // Renamed for consistency 
+$error-color: #d63638;
+$success-color: #4CAF50;
+$warning-color: #ffb900;
+$info-color: #2271b1;
+
+// Text colors
+$text-color: #2c3338;
+$secondary-text-color: #50575e;
+$light-text-color: #666;
+$description-color: #646970;
+$code-text-color: #3c434a;
+
+// Background colors
+$background-color: #fff;
+$alt-background-color: #f9f9f9;
+$hover-background: #f0f6fc;
+$header-background: #f6f7f7;
+$nav-background: #f6f7f7;
+$light-background: #f0f0f1;
+$highlight-background: #f0f6fc;
+$tooltip-background: #555;
+$tooltip-text-color: #fff;
+
+// Border colors
+$border-color: #ccd0d4;
+$light-border-color: #eee;
+$row-border-color: #f0f0f1;
+$separator-color: #dcdcde;
+$light-separator-color: #e0e0e0;
+$input-border-color: #8c8f94;
+
+// Shadows
+$shadow-color: rgb(0, 0, 0, 0.04);
+
+// Dimensions
+$max-input-width: 450px;
+$container-max-width: 1200px;
+$nav-width: 200px;
+$sidebar-width: 280px;
+
+// Other
+$button-background: #f6f7f7;
+$file-icon-color: #c00;
+
+// Breakpoints
+$breakpoint-sm: 480px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+$breakpoint-xl: 1200px;

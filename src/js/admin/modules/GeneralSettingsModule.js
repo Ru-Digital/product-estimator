@@ -2,297 +2,218 @@
  * General Settings Module JavaScript
  *
  * Handles functionality specific to the general settings tab.
- *
- * FIXED VERSION: Adds proper method bindings and context preservation
  */
-
 import { setupTinyMCEHTMLPreservation } from '@utils/tinymce-preserver';
 import { createLogger } from '@utils';
-const logger = createLogger('GeneralSettings');
 
-class GeneralSettingsModule {
+import ProductEstimatorSettings from '../common/ProductEstimatorSettings'; // Adjust path as needed
+
+const logger = createLogger('GeneralSettingsModule');
+
+class GeneralSettingsModule extends ProductEstimatorSettings {
   /**
    * Initialize the module
    */
   constructor() {
-    $ = jQuery; // Make jQuery available as this.$
-
-    // before this script runs or at least before init() is called.
-    const localizedSettings = window.generalSettings || {};
-
-    this.settings = {
-      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
-      nonce: localizedSettings.nonce || '', // Fallback
-      i18n: localizedSettings.i18n || {},   // Fallback
-      tab_id: localizedSettings.tab_id || 'genaral', // Fallback
-    };
-
-    // Defer initialization to document.ready to ensure DOM is loaded
-    $(document).ready(() => {
-      // Re-check localizedSettings in case they are defined by another script in document.ready
-      const updatedLocalizedSettingsOnReady = window.generalSettings || {};
-      if (updatedLocalizedSettingsOnReady.nonce) {
-        this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
-      }
-
-      this.validateMarkup = this.validateMarkup.bind(this);
-      this.validateExpiryDays = this.validateExpiryDays.bind(this);
-      this.showFieldError = this.showFieldError.bind(this);
-      this.clearFieldError = this.clearFieldError.bind(this);
-      this.handleTabChanged = this.handleTabChanged.bind(this);
-      this.saveEditorContent = this.saveEditorContent.bind(this);
-      this.validateAllFields = this.validateAllFields.bind(this);
-
-      this.init();
+    super({
+      isModule: true,
+      settingsObjectName: 'generalSettings', // Matches window.generalSettings
+      defaultTabId: 'general', // Corrected from 'genaral' if that was a typo
     });
+    // this.$ and this.settings are initialized by super()
+
+    // Bind methods that will be used as event handlers or callbacks
+    // This is done in constructor as they are instance-specific and need `this`
+    this.validateMarkup = this.validateMarkup.bind(this);
+    this.validateExpiryDays = this.validateExpiryDays.bind(this);
+    this.handleFileUpload = this.handleFileUpload.bind(this);
+    this.handleFileRemove = this.handleFileRemove.bind(this);
+    this.handleTabChanged = this.handleTabChanged.bind(this); // Ensure this is bound if used as event handler directly
+    // No need to bind showFieldError, clearFieldError as they are called as this.showFieldError()
   }
 
   /**
-   * Initialize the module
+   * Module-specific initialization.
    */
-  init() {
+  moduleInit() {
     this.mediaFrame = null;
     this.bindEvents();
     this.setupValidation();
-    this.setupWpEditors();
+    this.setupWpEditors(); // Must be called after tab is potentially visible or DOM ready for editors
 
-    logger.log('Initialized');
+    // Validate all fields on load if needed, or on tab activation
+    // this.validateAllFields(); // Consider if this is needed on init or tab change
   }
 
   /**
    * Bind event handlers
    */
   bindEvents() {
-    const $ = jQuery;
+    this.$(document).on('product_estimator_tab_changed', this.handleTabChanged);
+    this.$('.select-file-button').on('click', this.handleFileUpload);
+    this.$('.remove-file-button').on('click', this.handleFileRemove);
 
-    // Listen for tab changes
-    $(document).on('product_estimator_tab_changed', this.handleTabChanged);
-    $('.select-file-button').on('click', this.handleFileUpload.bind(this));
-    $('.remove-file-button').on('click', this.handleFileRemove.bind(this));
+    // Form submission for this specific module's form can be handled here if necessary,
+    // or rely on the main ProductEstimatorSettings handler if the form structure matches.
+    // If this module has its own form with a specific ID/class, handle it here:
+    // this.$('#general-settings-form').on('submit', this.handleFormSubmit.bind(this));
   }
 
-
   /**
-   * Improved setupWpEditors function with specific fixes for <br> tags
-   * This preserves HTML, especially <br> tags, when switching between modes
+   * Setup TinyMCE editors.
    */
   setupWpEditors() {
-    // Call the utility with the same parameters that work in your original function
     setupTinyMCEHTMLPreservation(
       ['pdf_footer_text', 'pdf_footer_contact_details_content'],
-      '#general'
+      '#general' // Assuming '#general' is the ID of the tab content
     );
   }
 
-
-
-  /**
-   * Handle file upload button click
-   * @param {Event} e Click event
-   */
   handleFileUpload(e) {
     e.preventDefault();
-    const $ = jQuery;
+    const button = this.$(e.currentTarget);
+    const targetInputSelector = button.data('target-input'); // Use the data-target-input attribute
+    const targetPreviewSelector = button.data('target-preview'); // Use the data-target-preview attribute
 
-    const button = $(e.currentTarget);
-    const fieldId = button.data('field-id');
-    const acceptType = button.data('accept') || '';
-
-    // If the media frame already exists, reopen it
     if (this.mediaFrame) {
       this.mediaFrame.open();
       return;
     }
 
-    // Create a new media frame
     this.mediaFrame = wp.media({
       title: 'Select or Upload PDF Template',
-      button: {
-        text: 'Use this file'
-      },
+      button: { text: 'Use this file' },
       multiple: false,
-      library: {
-        type: acceptType ? [acceptType.split('/')[0]] : null // 'application/pdf' -> 'application'
-      }
+      library: { type: 'application/pdf' } // Only allow PDF files
     });
 
-    // When a file is selected, run a callback
     this.mediaFrame.on('select', () => {
       const attachment = this.mediaFrame.state().get('selection').first().toJSON();
-      console.log('Selected attachment:', attachment);
 
-
-      // Set the attachment ID in the hidden input
       if (attachment && attachment.id) {
-        console.log(`Setting # ${fieldId} to value: ${attachment.id}`);
-        $(`#${fieldId}`).val(attachment.id).trigger('change'); // fieldId should be 'pdf_template'
-
-        // Verify the value was set
-        console.log(`Value of #${fieldId} after setting:`, $(`#${fieldId}`).val());
+        // Use the target input selector from the data attribute
+        if (targetInputSelector) {
+          this.$(targetInputSelector).val(attachment.id).trigger('change');
+        } else {
+          logger.warn('No target input selector found for file upload');
+        }
       } else {
-        console.error('Attachment or attachment.id is missing!', attachment);
+        logger.warn('Invalid attachment selected from media library');
       }
-      // Update the file preview
-      const $previewWrapper = button.siblings('.file-preview-wrapper');
-      $previewWrapper.html(`<p class="file-preview"><a href="${attachment.url}" target="_blank">${attachment.filename}</a></p>`);
 
+      // Use the target preview selector from the data attribute
+      const $previewWrapper = targetPreviewSelector ?
+        this.$(targetPreviewSelector) :
+        button.siblings('.file-preview-wrapper');
+
+      // Create a simpler preview that matches the design in the second image
+      const fileSize = this._formatFileSize(attachment.filesizeInBytes || 0);
+      $previewWrapper.html(`
+        <div class="file-preview">
+          <span class="file-icon dashicons dashicons-pdf"></span>
+          <div class="file-details">
+            <span class="file-name">
+              <a href="${attachment.url}" target="_blank">
+                ${attachment.filename}
+              </a>
+               ${fileSize ? `(${fileSize} PDF Document)` : ''}
+            </span>
+          </div>
+        </div>
+      `);
+
+      // Add the file info text below the file preview if not already present
+      if (!this.$('.upload-instructions').length) {
+        $previewWrapper.after(`<span class="upload-instructions">Upload a PDF template file (optional) *<br>Accepted format: application/pdf</span>`);
+      }
       // Show the remove button
       button.siblings('.remove-file-button').removeClass('hidden');
-    });
 
-    // Open the modal
+      // Update the button text to "Replace File"
+      button.text('Replace File');
+    });
     this.mediaFrame.open();
   }
 
-  /**
-   * Handle file remove button click
-   * @param {Event} e Click event
-   */
   handleFileRemove(e) {
     e.preventDefault();
-    const $ = jQuery;
+    const button = this.$(e.currentTarget);
+    const targetInputSelector = button.data('target-input');
+    const targetPreviewSelector = button.data('target-preview');
+    const uploadButton = button.siblings('.select-file-button');
 
-    const button = $(e.currentTarget);
-    const fieldId = button.data('field-id');
+    if (targetInputSelector) {
+      this.$(targetInputSelector).val('').trigger('change');
+    }
 
-    // Clear the attachment ID
-    $(`#${fieldId}`).val('').trigger('change');
-
-    // Clear the preview
-    button.siblings('.file-preview-wrapper').empty();
+    if (targetPreviewSelector) {
+      this.$(targetPreviewSelector).empty();
+    } else {
+      button.siblings('.file-preview-wrapper').empty();
+    }
 
     // Hide the remove button
     button.addClass('hidden');
+
+    // Update the text on the upload button from "Replace File" to "Upload File"
+    if (uploadButton.length) {
+      uploadButton.text('Upload File');
+    }
+
+    // Remove the upload instructions if they were added
+    this.$('.upload-instructions').remove();
   }
 
-  /**
-   * Set up field validation
-   */
   setupValidation() {
-    const $ = jQuery;
-
-    // Validate markup percentage
-    $('#default_markup').on('change input', this.validateMarkup);
-
-    // Validate expiry days
-    $('#estimate_expiry_days').on('change input', this.validateExpiryDays);
+    this.$('#default_markup').on('change input', this.validateMarkup);
+    this.$('#estimate_expiry_days').on('change input', this.validateExpiryDays);
   }
 
-  /**
-   * Validate markup percentage
-   * @param {Event} e Input event
-   */
   validateMarkup(e) {
-    const $ = jQuery;
-    const $input = $(e.currentTarget);
-    const value = parseInt($input.val());
-    const min = parseInt($input.attr('min') || 0);
-    const max = parseInt($input.attr('max') || 100);
+    const $input = this.$(e.currentTarget);
+    const value = parseInt($input.val(), 10);
+    const min = parseInt($input.attr('min') || 0, 10);
+    const max = parseInt($input.attr('max') || 100, 10);
+
+    // Use generalSettings.i18n if available, otherwise use this.settings.i18n
+    const i18n = (window.generalSettings && window.generalSettings.i18n) || this.settings.i18n || {};
+
 
     if (isNaN(value) || value < min || value > max) {
-      // Use the showFieldError method with proper binding
-      this.showFieldError($input, generalSettingsData.i18n.validationErrorMarkup || `Value must be between ${min} and ${max}`);
+      this.showFieldError($input, i18n.validationErrorMarkup || `Value must be between ${min} and ${max}.`);
       return false;
-    } else {
-      // Use the clearFieldError method with proper binding
-      this.clearFieldError($input);
-      return true;
     }
+    this.clearFieldError($input);
+    return true;
   }
 
-  /**
-   * Validate expiry days
-   * @param {Event} e Input event
-   */
   validateExpiryDays(e) {
-    const $ = jQuery;
-    const $input = $(e.currentTarget);
-    const value = parseInt($input.val());
-    const min = parseInt($input.attr('min') || 1);
-    const max = parseInt($input.attr('max') || 365);
+    const $input = this.$(e.currentTarget);
+    const value = parseInt($input.val(), 10);
+    const min = parseInt($input.attr('min') || 1, 10);
+    const max = parseInt($input.attr('max') || 365, 10);
+
+    const i18n = (window.generalSettings && window.generalSettings.i18n) || this.settings.i18n || {};
 
     if (isNaN(value) || value < min || value > max) {
-      // Use the imported utility method
-      this.showFieldError($input, generalSettingsData.i18n.validationErrorExpiry || `Value must be between ${min} and ${max}`);
+      this.showFieldError($input, i18n.validationErrorExpiry || `Value must be between ${min} and ${max}.`);
       return false;
-    } else {
-      // Use the imported utility method
-      this.clearFieldError($input);
-      return true;
     }
+    this.clearFieldError($input);
+    return true;
   }
 
-  /**
-   * Show field error message
-   * @param {jQuery} $field The field element
-   * @param {string} message Error message
-   */
-  showFieldError($field, message) {
-    // First try to use the global utility in ProductEstimatorSettings
-    if (typeof ProductEstimatorSettings !== 'undefined' &&
-      typeof ProductEstimatorSettings.showFieldError === 'function') {
-      ProductEstimatorSettings.showFieldError($field, message);
-    } else if (typeof validation !== 'undefined' && typeof validation.showFieldError === 'function') {
-      // Otherwise use the imported utility function directly
-      validation.showFieldError($field, message);
-    } else {
-      // Fallback implementation
-      $field.addClass('error');
-
-      // Clear any existing error first
-      this.clearFieldError($field);
-
-      // Create error element
-      const $error = jQuery(`<span class="field-error">${message}</span>`);
-
-      // Add it after the field
-      $field.after($error);
-    }
-  }
-
-  /**
-   * Clear field error message
-   * @param {jQuery} $field The field element
-   */
-  clearFieldError($field) {
-    // First try to use the global utility in ProductEstimatorSettings
-    if (typeof ProductEstimatorSettings !== 'undefined' &&
-      typeof ProductEstimatorSettings.clearFieldError === 'function') {
-      ProductEstimatorSettings.clearFieldError($field);
-    } else if (typeof validation !== 'undefined' && typeof validation.clearFieldError === 'function') {
-      // Otherwise use the imported utility function directly
-      validation.clearFieldError($field);
-    } else {
-      // Fallback implementation
-      $field.removeClass('error');
-      $field.next('.field-error').remove();
-    }
-  }
-
-  /**
-   * Handle tab changed event
-   * @param {Event} e Tab changed event
-   * @param {string} tabId The newly active tab ID
-   */
   handleTabChanged(e, tabId) {
-    // If our tab becomes active, refresh any dynamic content
-    if (tabId === 'general') {
-      // Make sure editors are refreshed when switching to this tab
-      this.setupWpEditors();
-      logger.log('Tab changed to General Settings, refreshing editors');
+    if (tabId === this.settings.tab_id) { // Use this.settings.tab_id from base class
+      this.setupWpEditors(); // Refresh editors when tab becomes active
     }
+    this.clearSubTabFromUrl(); // Common URL clearing
   }
 
-  /**
-   * Ensure TinyMCE content is saved to the textarea
-   * This should be called before form submission
-   */
   saveEditorContent() {
     if (typeof tinyMCE !== 'undefined') {
-      // Save content from all active editors
       const editors = ['pdf_footer_text', 'pdf_footer_contact_details_content'];
-
-      editors.forEach(function(editorId) {
+      editors.forEach((editorId) => {
         const editor = tinyMCE.get(editorId);
         if (editor) {
           editor.save();
@@ -301,67 +222,41 @@ class GeneralSettingsModule {
     }
   }
 
-  /**
-   * Validate all fields in the form
-   * @returns {boolean} Whether all fields are valid
-   */
   validateAllFields() {
     let isValid = true;
+    this.saveEditorContent(); // Save editor content before validation
 
-    // Save editor content before validation
-    this.saveEditorContent();
-
-    // Validate markup
-    if (!this.validateMarkup({
-      currentTarget: jQuery('#default_markup')
-    })) {
-      isValid = false;
-    }
-
-    // Validate expiry days
-    if (!this.validateExpiryDays({
-      currentTarget: jQuery('#estimate_expiry_days')
-    })) {
-      isValid = false;
-    }
+    // Trigger change event to run validation
+    if (!this.validateMarkup({ currentTarget: this.$('#default_markup')[0] })) isValid = false;
+    if (!this.validateExpiryDays({ currentTarget: this.$('#estimate_expiry_days')[0] })) isValid = false;
 
     return isValid;
   }
 
   /**
-   * Display notice message
-   * @param {string} message The message to show
-   * @param {string} type Notice type ('success' or 'error')
+   * Format file size in bytes to a human-readable format
+   * @param {number} bytes - Size in bytes
+   * @returns {string} Formatted size (e.g., "256 KB")
    */
-  showNotice(message, type = 'success') {
-    // Use the global utility if available
-    if (typeof ProductEstimatorSettings !== 'undefined' &&
-      typeof ProductEstimatorSettings.showNotice === 'function') {
-      ProductEstimatorSettings.showNotice(message, type);
-    } else if (typeof validation !== 'undefined' &&
-      typeof validation.showNotice === 'function') {
-      // Use the imported utility function
-      validation.showNotice(message, type);
-    } else {
-      // Basic fallback implementation
-      const $ = jQuery;
-      const $notice = $(`<div class="notice notice-${type} is-dismissible"><p>${message}</p></div>`);
+  _formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
 
-      // Find a good place to show the notice
-      $('.wrap h1').after($notice);
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-      // Auto-dismiss after 5 seconds
-      setTimeout(() => {
-        $notice.fadeOut(500, () => $notice.remove());
-      }, 5000);
-    }
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
+
+  // showFieldError, clearFieldError, showNotice are inherited from ProductEstimatorSettings
+  // No need to redefine them here.
 }
 
-// Initialize when document is ready
 jQuery(document).ready(function() {
-  // Make module available globally
-  window.GeneralSettingsModule = new GeneralSettingsModule();
+  // Ensure module is only instantiated if its corresponding UI is present.
+  if (jQuery('#general').length) { // Assuming 'general' is the ID of the tab content
+    window.GeneralSettingsModuleInstance = new GeneralSettingsModule();
+  }
 });
 
 export default GeneralSettingsModule;

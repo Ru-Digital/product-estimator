@@ -13,7 +13,7 @@ use RuDigital\ProductEstimator\Includes\Admin\Settings\SettingsModuleBase;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class FeatureSwitchesSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
+final class FeatureSwitchesSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     protected $option_name = 'product_estimator_feature_switches';
 
@@ -56,14 +56,6 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      */
     public function register_fields() {
         $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
-
-
-        add_settings_section(
-            $this->section_id,
-            null, // Section title can be omitted if fields are self-explanatory or tab title is enough
-            [$this, 'render_section_description'],
-            $page_slug_for_wp_api
-        );
 
         $fields = array(
             'suggested_products_enabled' => array(
@@ -132,10 +124,7 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      * @access   public
      */
     public function render_section_description() {
-        echo '<p>' . esc_html__('Configure Feature Switches for the Product Estimator', 'product-estimator') . '</p>';
-
-        // Add test connection button if credentials are configured
-        $settings = get_option($this->option_name);
+        echo 'This admin section enables toggling key website functionalities on or off with ease. Use feature switches to control the rollout of new components, disable experimental features, or tailor the user experience without deploying new code. Ideal for staged releases and quick adjustments.';
     }
 
     /**
@@ -144,19 +133,31 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      * @since    1.1.0
      * @access   public
      */
-    public function enqueue_scripts() {
-        $actual_data_for_js_object = [
-            $this->plugin_name . '-admin',
-            'featureSwitchesSettings',
-            'nonce' => wp_create_nonce('product_estimator_feature_switches_nonce'),
-            'tab_id' => $this->tab_id,
-            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
-            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
-            'option_name'   => $this->option_name,
-            'i18n' => []
+    // Add this to your class-general-settings-module.php file in the enqueue_scripts method
+
+
+    /**
+     * Enqueue module-specific styles.
+     *
+     * @since    1.1.0
+     * @access   public
+     */
+    public function enqueue_scripts() { // This might be renamed or refactored if AdminScriptHandler changes
+        $this->provide_script_data_for_localization();
+    }
+
+    protected function get_js_context_name() {
+        return 'featureSwitchesSettings';
+    }
+
+    protected function get_module_specific_script_data() {
+        return [
+            'option_name' => $this->option_name,
+            'i18n' => [
+                // 'specific_general_setting_message' => __('Hello from General Settings', 'product-estimator'),
+            ],
+            // No need to specify 'option_name', 'actions', 'selectors' unless overriding base.
         ];
-        // Use $this->add_script_data for consistency
-        $this->add_script_data('featureSwitchesSettings', $actual_data_for_js_object);
     }
 
     /**
@@ -166,12 +167,7 @@ class FeatureSwitchesSettingsModule extends SettingsModuleBase implements Settin
      * @access   public
      */
     public function enqueue_styles() {
-        wp_enqueue_style(
-            $this->plugin_name . '-feature-switch-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/feature-switches.css',
-            array($this->plugin_name . '-settings'),
-            $this->version
-        );
+        parent::enqueue_styles();
     }
 
 

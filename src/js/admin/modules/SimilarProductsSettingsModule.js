@@ -3,385 +3,368 @@
  *
  * Handles functionality for the similar products settings tab in the admin area.
  */
-import { createLogger } from '@utils';
-const logger = createLogger('SimilarProductsSettings');
-class SimilarProductsSettingsModule {
+import { ajax, createLogger } from '@utils'; // Import utilities needed for this module
+
+import AdminTableManager from '../common/AdminTableManager'; // Adjust path as needed
+
+class SimilarProductsSettingsModule extends AdminTableManager {
   /**
    * Constructor for SimilarProductsSettingsModule
    */
   constructor() {
-    $ = jQuery; // Make jQuery available as $
-
-    // Attempt to get settings from localized 'similarProducts' object
-    // It's crucial that 'window.similarProducts' is defined by PHP (wp_localize_script)
-    // before this script runs or at least before init() is called.
-    const localizedSettings = window.similarProductsSettings || {};
-
-    this.settings = {
-      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
-      nonce: localizedSettings.nonce || '', // Fallback
-      i18n: localizedSettings.i18n || {},   // Fallback
-      tab_id: localizedSettings.tab_id || 'similar_products', // Fallback
+    const config = {
+      mainTabId: 'similar_products',
+      localizedDataName: 'similarProductsSettings'
+      // AdminTableManager passes this to VerticalTabbedModule,
+      // which passes relevant parts to ProductEstimatorSettings.
     };
 
-    // Defer initialization to document.ready to ensure DOM is loaded
-    // and other scripts (like ProductEstimatorSettings potentially defining similarProducts) might have run.
-    $(document).ready(() => {
-      // Re-check localizedSettings in case they are defined by another script in document.ready
-      const updatedLocalizedSettingsOnReady = window.similarProductsSettings || {};
-      if (updatedLocalizedSettingsOnReady.nonce) {
-        this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
-      }
+    super(config); // Calls AdminTableManager constructor
 
-      this.init();
+    this.$(document).on(`admin_table_manager_ready_${this.config.mainTabId}`, () => { // POTENTIAL ERROR HERE
+      this._cacheSimilarProductsDOM();
+      this._bindSpecificEvents();
+      this._initializeSelect2();
     });
   }
 
   /**
-   * Initialize similar products functionality
+   * Cache DOM elements specific to Similar Products, beyond what AdminTableManager caches.
+   * This is called after AdminTableManager's cacheDOM.
+   * @private
    */
-  init() {
-    // Only run on similar products settings page
-    if (!$('.product-estimator-similar-products-settings').length) {
-      return;
+  _cacheSimilarProductsDOM() {
+    // this.dom is initialized by AdminTableManager. Add Similar Products specific elements.
+    if (this.settings && this.settings.selectors) { // this.settings is from ProductEstimatorSettings base
+      const selectors = this.settings.selectors;
+      this.dom.sourceCategoriesSelect = this.$container.find(selectors.sourceCategoriesSelect);
+      this.dom.attributesContainer = this.$container.find(selectors.attributesContainer);
+      this.dom.attributesList = this.$container.find(selectors.attributesList);
+      this.dom.attributesLoading = this.$container.find(selectors.attributesLoading);
+      this.dom.selectedAttributesInput = this.$container.find(selectors.selectedAttributesInput);
+    } else {
+      createLogger('SimilarProductsModule').warn('SimilarProductsSettingsModule: settings or selectors not available for DOM caching');
     }
 
-    logger.log('Initializing Similar Products Settings Module (Class-based)');
-
-    if (!this.settings.nonce && window.similarProducts && window.similarProductsSettings.nonce) {
-      logger.warn('Nonce was initially empty but found later. This might indicate a race condition.');
-      this.settings.nonce = window.similarProductsSettings.nonce;
-    } else if (!this.settings.nonce) {
-      logger.error('Nonce is not available from window.similarProductsSettings. AJAX requests may fail.');
-    }
-
-
-    this.bindEvents();
-    this.initializeExistingRules();
   }
 
   /**
    * Bind core event handlers
    */
-  bindEvents() {
-    $('.add-new-rule').on('click', this.addNewRule.bind(this));
-    $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
-  }
-
-  /**
-   * Handle tab changed event
-   * @param {Event} e Tab changed event
-   * @param {string} tabId The newly active tab ID
-   */
-  handleTabChanged(e, tabId) {
-    if (tabId === this.settings.tab_id) {
-      logger.log('Tab changed to Similar Products, re-initializing rules.');
-      this.initializeExistingRules(); // Re-initialize rules when tab becomes active
-    }
-  }
-
-  /**
-   * Add a new rule to the interface
-   */
-  addNewRule() {
-    const $template = $('.rule-template').children().first().clone();
-    const tempId = 'new_' + Math.random().toString(36).substr(2, 9);
-
-    $template.attr('data-rule-id', tempId);
-    $template.find('[name^="TEMPLATE_ID"]').each((i, el) => {
-      const newName = $(el).attr('name').replace('TEMPLATE_ID', tempId);
-      $(el).attr('name', newName);
-    });
-
-    $('.similar-products-rules').append($template);
-    $('.no-rules-message').hide();
-    this.initializeRule($template);
-    $template.addClass('open');
-  }
-
-  /**
-   * Initialize all existing rules
-   */
-  initializeExistingRules() {
-    $('.similar-products-rule').each((index, element) => {
-      this.initializeRule($(element));
-    });
-  }
-
-  /**
-   * Initialize a single rule
-   * @param {jQuery} $rule The rule element
-   */
-  initializeRule($rule) {
-    const ruleId = $rule.data('rule-id');
-
-    $rule.find('.rule-header').off('click').on('click', (e) => { // Ensure event handlers are not duplicated
-      if (!$(e.target).is('.delete-rule, .save-rule') && !$(e.target).parent().is('.delete-rule, .save-rule')) {
-        $rule.toggleClass('open');
-      }
-    });
-
-    const $categorySelect = $rule.find('.source-categories-select');
-    if ($.fn.select2) {
-      $categorySelect.select2({
-        width: '100%',
-        placeholder: 'Select categories',
-        allowClear: true,
-        closeOnSelect: false
-      });
+  _bindSpecificEvents() {
+    if (!this.dom.form || !this.dom.form.length) {
+      return;
     }
 
-    $categorySelect.off('change').on('change', (e) => {
-      const categoryIds = $(e.target).val();
-      if (categoryIds && categoryIds.length > 0) {
-        this.loadCategoryAttributes(categoryIds, $rule);
-      } else {
-        $rule.find('.attributes-list').empty().html(`<p>${this.settings.select_category}</p>`);
-      }
-    });
-
-    $rule.find('.delete-rule').off('click').on('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (confirm(this.settings.confirm_delete)) {
-        this.deleteRule(ruleId, $rule);
-      }
-    });
-
-    $rule.find('.save-rule').off('click').on('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.saveRule(ruleId, $rule);
-    });
-
-    const selectedCategories = $categorySelect.val();
-    if (selectedCategories && selectedCategories.length > 0) {
-      this.loadCategoryAttributes(selectedCategories, $rule);
-    } else {
-      // Ensure attributes list is cleared or shows select_category message if no categories selected on init
-      $rule.find('.attributes-list').empty().html(`<p>${this.settings.select_category}</p>`);
-    }
+    this.dom.sourceCategoriesSelect?.on('change.SimilarProducts', this._handleSourceCategoriesChange.bind(this));
   }
 
   /**
-   * Load attributes for multiple categories
-   * @param {Array} categoryIds Array of category IDs
-   * @param {jQuery} $rule The rule element
+   * Initialize Select2 components.
+   * This is called after the `admin_table_manager_ready` event.
+   * Using the base class Select2 initialization methods.
+   * @private
    */
-  loadCategoryAttributes(categoryIds, $rule) {
-    const $attributesList = $rule.find('.attributes-list');
-    $attributesList.html(`<p>${this.settings.loading_attributes}</p>`).addClass('loading');
-
-    $.ajax({
-      url: this.settings.ajaxUrl,
-      type: 'POST',
-      dataType: 'json',
-      data: {
-        action: 'get_category_attributes',
-        nonce: this.settings.nonce,
-        category_ids: categoryIds
-      },
-      success: (response) => {
-        if (response.success) {
-          this.renderAttributes(response.data.attributes, $rule);
-        } else {
-          $attributesList.html(`<p class="error">${response.data.message || this.settings.error_loading}</p>`).removeClass('loading');
-          logger.error('Error loading attributes:', response);
+  _initializeSelect2() {
+    // Use the base class initializeSelect2Dropdowns method with our specific configuration
+    this.initializeSelect2Dropdowns({
+      elements: [
+        {
+          element: this.dom.sourceCategoriesSelect,
+          placeholderKey: 'selectCategoryError',
+          fallbackText: 'Select source categories',
+          name: 'source categories',
+          config: {
+            clearInitial: true
+          }
         }
-      },
-      error: (xhr, status, error) => {
-        $attributesList.html(`<p class="error">${this.settings.error_loading}</p>`).removeClass('loading');
-        logger.error('AJAX error loading attributes:', status, error);
-      }
+      ],
+      // Settings and i18n are automatically provided by the base method
+      moduleName: 'Similar Products'
     });
   }
 
   /**
-   * Render attributes in the rule
-   * @param {Array} attributes Array of attribute objects
-   * @param {jQuery} $rule The rule element
+   * Overridden from VerticalTabbedModule. Called when the "Product Additions" main tab is activated.
    */
-  renderAttributes(attributes, $rule) {
-    const $container = $rule.find('.attributes-list');
-    $container.empty().removeClass('loading');
+  onMainTabActivated() {
+    super.onMainTabActivated(); // Call parent method
+    // Specific actions for Product Additions when its tab is shown.
+    // For example, if Select2 or other components need re-initialization or refresh when tab becomes visible.
+    // The `admin_table_manager_ready` event handles initial setup. This is for subsequent activations.
+    // If Select2 was initialized while hidden, it might need a refresh.
+    if (this.dom.sourceCategoriesSelect && this.dom.sourceCategoriesSelect.hasClass("select2-hidden-accessible")) {
+      // this.dom.sourceCategorySelect.select2('destroy').select2({...}); // Full re-init
+      // Or just trigger a resize/redraw if that helps.
+    }
+    // The inherited VerticalTabbedModule.handleMainTabChanged calls setupVerticalTabs,
+    // which correctly handles the sub_tab in the URL. No manual sub_tab clearing needed here.
+  }
+
+
+  _handleSourceCategoriesChange() {
+    const categoryIds = this.dom.sourceCategoriesSelect?.val();
+
+    if (categoryIds && categoryIds.length > 0) {
+      this._fetchAttributesForCategories(categoryIds);
+    } else {
+      this._updateAttributeSelectionField([], []);
+    }
+  }
+
+  _updateAttributeSelectionField(attributes, selectedAttributes = []) {
+    // Clear previous content
+    this.dom.attributesList.empty();
 
     if (!attributes || attributes.length === 0) {
-      $container.html(`<p>${this.settings.no_attributes}</p>`);
+      // Show loading message if no attributes passed
+      this.dom.attributesLoading.show();
+      this.dom.attributesList.hide();
       return;
     }
 
-    const ruleId = $rule.data('rule-id');
-    // Get previously selected attributes IF they exist (e.g. loading an existing rule)
-    // This data could be on $rule itself or inside a hidden input.
-    // For now, assuming new attributes are always unchecked unless present in `attributes` data itself if backend pre-selects.
-    // If you have a hidden input storing selected attributes, you'd read it here.
-    // For example: const selectedAttributesFromHiddenField = $rule.find('.selected-attributes-hidden-input').val();
-    // const selectedAttrsArray = selectedAttributesFromHiddenField ? selectedAttributesFromHiddenField.split(',') : [];
+    // Hide loading, show attributes list
+    this.dom.attributesLoading.hide();
+    this.dom.attributesList.show();
 
-    let html = '';
-    attributes.forEach(attribute => {
-      // const isChecked = selectedAttrsArray.includes(attribute.name); // If using a hidden field to store selections
-      const isChecked = attribute.is_selected || false; // Assuming backend might send 'is_selected'
-      html += `<div class="attribute-item">
-                 <label>
-                   <input type="checkbox" name="${ruleId}[attributes][]" value="${attribute.name}"${isChecked ? ' checked' : ''}>
-                   <span>${attribute.label}</span>
-                 </label>
-               </div>`;
+    // Convert selectedAttributes to array if needed
+    if (typeof selectedAttributes === 'string') {
+      selectedAttributes = selectedAttributes.split(',').filter(Boolean);
+    }
+
+    // Create checkbox for each attribute
+    const attributesHtml = attributes.map(attr => {
+      const isChecked = selectedAttributes.includes(attr.name) ? 'checked' : '';
+      return `
+        <div class="attribute-item">
+          <label>
+            <input type="checkbox"
+                   name="attribute_checkbox[]"
+                   value="${attr.name}"
+                   data-label="${attr.label}"
+                   ${isChecked}>
+            ${attr.label}
+          </label>
+        </div>`;
+    }).join('');
+
+    // Add to the DOM and bind events
+    this.dom.attributesList.html(attributesHtml);
+
+    // Bind change event to update the hidden input
+    this.dom.attributesList.find('input[type="checkbox"]').on('change', this._handleAttributeCheckboxChange.bind(this));
+
+    // Update hidden input with currently selected attributes
+    this._updateSelectedAttributesInput();
+  }
+
+  _fetchAttributesForCategories(categoryIds, selectedAttributes = null) {
+
+    if (!this.settings.actions || !this.settings.actions.get_attributes) {
+      return;
+    }
+
+    // Show loading indicator
+    this.dom.attributesLoading.text(this.settings.i18n.loadingAttributes || 'Loading attributes...');
+    this.dom.attributesLoading.show();
+    this.dom.attributesList.hide();
+
+    // Get currently selected attributes - either from parameter or from the input field
+    const currentlySelectedAttributes = selectedAttributes ||
+                                       this.dom.selectedAttributesInput.val().split(',').filter(Boolean);
+
+
+    ajax.ajaxRequest({
+      url: this.settings.ajaxUrl,
+      data: {
+        action: this.settings.actions.get_attributes,
+        nonce: this.settings.nonce,
+        category_ids: categoryIds,
+      }
+    })
+    .then(response => {
+      let attributesArray = null;
+
+      // Standardize response checking
+      if (response && response.success && response.data && Array.isArray(response.data.attributes)) {
+        attributesArray = response.data.attributes;
+      } else if (response && Array.isArray(response.attributes)) { // Fallback for older direct array
+        attributesArray = response.attributes;
+      }
+
+      if (attributesArray) {
+        if (attributesArray.length > 0) {
+          this._updateAttributeSelectionField(attributesArray, currentlySelectedAttributes);
+        } else {
+          this.dom.attributesLoading.text(this.settings.i18n.noAttributes || 'No product attributes found for these categories.');
+          this.dom.attributesList.hide();
+        }
+      } else {
+        this.dom.attributesLoading.text(this.settings.i18n.errorLoading || 'Error loading attributes. Please try again.');
+        this.dom.attributesList.hide();
+      }
+    })
+    .catch(() => {
+      this.dom.attributesLoading.text(this.settings.i18n.errorLoading || 'Error loading attributes. Please try again.');
+      this.dom.attributesList.hide();
     });
-    $container.html(html);
+  }
+
+
+  /**
+   * Handle attribute checkbox change events
+   * @private
+   */
+  _handleAttributeCheckboxChange() {
+    this._updateSelectedAttributesInput();
   }
 
   /**
-   * Save a rule
-   * @param {string} ruleId The rule ID
-   * @param {jQuery} $rule The rule element
+   * Update the hidden input with selected attribute values
+   * @private
    */
-  saveRule(ruleId, $rule) {
-    const $saveButton = $rule.find('.save-rule');
-    const originalText = $saveButton.text();
-
-    const sourceCategories = $rule.find('.source-categories-select').val();
-    if (!sourceCategories || sourceCategories.length === 0) {
-      this.showMessage($rule, this.settings.select_category_error, 'error');
-      return;
-    }
-
+  _updateSelectedAttributesInput() {
     const selectedAttributes = [];
-    $rule.find('.attributes-list input[type="checkbox"]:checked').each((i, el) => {
-      selectedAttributes.push($(el).val());
+
+    this.dom.attributesList.find('input[type="checkbox"]:checked').each((i, checkbox) => {
+      selectedAttributes.push(this.$(checkbox).val());
     });
 
-    if (selectedAttributes.length === 0) {
-      this.showMessage($rule, this.settings.select_attributes_error, 'error');
-      return;
-    }
-
-    $saveButton.text(this.settings.saving).prop('disabled', true);
-
-    $.ajax({
-      url: this.settings.ajaxUrl,
-      type: 'POST',
-      dataType: 'json',
-      data: {
-        action: 'save_similar_products_rule',
-        nonce: this.settings.nonce,
-        rule_id: ruleId,
-        source_categories: sourceCategories,
-        attributes: selectedAttributes
-      },
-      success: (response) => {
-        if (response.success) {
-          this.showMessage($rule, this.settings.rule_saved, 'success');
-          let currentRuleId = ruleId;
-
-          if (ruleId.startsWith('new_') && response.data.rule_id) {
-            const newRuleId = response.data.rule_id;
-            $rule.attr('data-rule-id', newRuleId);
-            $rule.find(`[name^="${ruleId}"]`).each((i, el) => {
-              const newName = $(el).attr('name').replace(ruleId, newRuleId);
-              $(el).attr('name', newName);
-            });
-            currentRuleId = newRuleId; // update for title generation
-          }
-
-          const categoryNames = [];
-          sourceCategories.forEach(catId => {
-            const catName = $rule.find(`.source-categories-select option[value="${catId}"]`).text();
-            if (catName) categoryNames.push(catName);
-          });
-
-          $rule.find('.rule-title').text(categoryNames.length > 0 ? categoryNames.join(', ') : 'Rule'); // Updated title
-          logger.log('Rule saved successfully', response.data);
-        } else {
-          this.showMessage($rule, response.data.message || this.settings.error_saving, 'error');
-          logger.error('Error saving rule:', response);
-        }
-      },
-      error: (xhr, status, error) => {
-        this.showMessage($rule, this.settings.error_saving, 'error');
-        logger.error('AJAX error saving rule:', status, error);
-      },
-      complete: () => {
-        $saveButton.text(originalText).prop('disabled', false);
-      }
-    });
+    this.dom.selectedAttributesInput.val(selectedAttributes.join(','));
   }
 
   /**
-   * Delete a rule
-   * @param {string} ruleId The rule ID
-   * @param {jQuery} $rule The rule element
+   * Override AdminTableManager.resetForm to include Similar Products specific fields.
    */
-  deleteRule(ruleId, $rule) {
-    if (ruleId.startsWith('new_')) {
-      $rule.remove();
-      if ($('.similar-products-rule').length === 0) {
-        $('.no-rules-message').show();
-      }
-      return;
-    }
+  resetForm() {
+    super.resetForm(); // Call base class method first
 
-    $.ajax({
-      url: this.settings.ajaxUrl,
-      type: 'POST',
-      dataType: 'json',
-      data: {
-        action: 'delete_similar_products_rule',
-        nonce: this.settings.nonce,
-        rule_id: ruleId
-      },
-      success: (response) => {
-        if (response.success) {
-          $rule.remove();
-          if ($('.similar-products-rule').length === 0) {
-            $('.no-rules-message').show();
-          }
-          logger.log('Rule deleted successfully');
-        } else {
-          this.showMessage($rule, response.data.message || this.settings.error_deleting, 'error');
-          logger.error('Error deleting rule:', response);
-        }
-      },
-      error: (xhr, status, error) => {
-        this.showMessage($rule, this.settings.error_deleting, 'error');
-        logger.error('AJAX error deleting rule:', status, error);
-      }
-    });
+    // Reset Similar Products specific fields
+    this.dom.sourceCategoriesSelect?.val(null).trigger('change.select2'); // Clear Select2
+    this.dom.attributesList.empty();
+    this.dom.attributesLoading.text(this.settings.i18n.selectCategory || 'Select categories to load available attributes...');
+    this.dom.attributesLoading.show();
+    this.dom.selectedAttributesInput.val('');
+
   }
 
   /**
-   * Show a message in the rule
-   * @param {jQuery} $rule The rule element
-   * @param {string} message The message text
-   * @param {string} type The message type ('success' or 'error')
+   * Override AdminTableManager.populateFormWithData for Similar Products specific fields.
+   * @param {object} itemData - The data for the similar product item to populate the form with
+   * @override
    */
-  showMessage($rule, message, type) {
-    const $messageElement = $('<div>', {
-      'class': `rule-message ${type}`,
-      'text': message
-    });
+  populateFormWithData(itemData) {
+    super.populateFormWithData(itemData); // Sets item ID, calls base logic
 
-    $rule.find('.rule-message').remove();
-    $rule.find('.rule-header').after($messageElement);
+    const sourceCategories = itemData.source_categories || []; // Expecting array for multi-select
+    const attributes = Array.isArray(itemData.attributes) ? itemData.attributes :
+                      (itemData.attributes ? itemData.attributes.split(',') : []);
 
+    // Set the hidden input value for selected attributes first
+    this.dom.selectedAttributesInput.val(attributes.join(','));
+
+    // Use setTimeout to allow dependent field visibility changes to complete
     setTimeout(() => {
-      $messageElement.fadeOut(300, function() { this.remove(); });
-    }, 3000);
+      // Set source categories and trigger change to load attributes
+      this.dom.sourceCategoriesSelect?.val(sourceCategories).trigger('change.select2');
+
+      // If we have both categories and attributes selected, manually fetch the attributes
+      // This ensures attributes are loaded and selected when editing an existing item
+      if (sourceCategories.length > 0 && attributes.length > 0) {
+        this._fetchAttributesForCategories(sourceCategories, attributes);
+      }
+
+      this.formModified = false; // Reset modified flag after populating
+    }, 150); // Small delay
+  }
+
+  /**
+   * Override AdminTableManager.validateForm for Similar Products specific validation.
+   * @returns {boolean} True if the form passes validation, false otherwise
+   * @override
+   */
+  validateForm() {
+    let isValid = super.validateForm(); // Perform base validation first
+
+    // Get values
+    const sourceCategories = this.dom.sourceCategoriesSelect?.val(); // Returns array for multi-select
+    const selectedAttributes = this.dom.selectedAttributesInput.val();
+
+    // i18n messages from this.settings.i18n
+    const i18n = this.settings.i18n || {};
+
+    // Clear previous specific errors (showFieldError/clearFieldError are inherited)
+    this.clearFieldError(this.dom.sourceCategoriesSelect?.next('.select2-container')); // Target Select2 container for error
+    this.clearFieldError(this.dom.attributesList); // Clear error on attributes list
+
+    if (!sourceCategories || sourceCategories.length === 0) {
+      this.showFieldError(this.dom.sourceCategoriesSelect?.next('.select2-container'), i18n.selectCategoryError || 'Please select at least one source category.');
+      isValid = false;
+    }
+
+    if (!selectedAttributes) {
+      this.showFieldError(this.dom.attributesList, i18n.selectAttributesError || 'Please select at least one attribute.');
+      isValid = false;
+    }
+
+    return isValid;
+  }
+
+  /**
+   * Custom column population method for 'source_categories' column
+   * This method follows the naming convention for column handlers in AdminTableManager
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
+   */
+  populateColumn_source_categories($cell, itemData) {
+    $cell.text(itemData.source_categories_display || 'N/A');
+  }
+
+  /**
+   * Custom column population method for 'attributes' column
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
+   */
+  populateColumn_attributes($cell, itemData) {
+    $cell.text(itemData.attributes_display || 'None selected');
   }
 }
 
-// Initialize the module when the DOM is ready.
-// It will activate fully when its tab is displayed due to the tab change listener.
-jQuery(document).ready(function() {
-  // Check if the main container for this module's settings tab exists
-  if (jQuery('#similar_products').length || jQuery('.product-estimator-similar-products-settings').length) {
-    const similarProductsModule = new SimilarProductsSettingsModule();
-    // Optional: Make it available globally for debugging or if other scripts need to call its methods
-    window.SimilarProductsSettingsModuleInstance = similarProductsModule;
-  } else {
-    // logger.log('Similar Products settings tab/container not found, module not initialized.');
-  }
-});
+// Initialize the module when the DOM is ready and its main tab container exists.
+  jQuery(document).ready(function ($) {
+    const mainTabId = 'similar_products'; // Specific to this module
+    const localizedDataObjectName = 'similarProductsSettings'; // Global settings object name
 
-export default SimilarProductsSettingsModule;
+    if ($(`#${mainTabId}`).length) {
+
+      // Check if the global localized data for this module is available
+      if (window[localizedDataObjectName]) {
+        // Instantiate the module once
+        if (!window.SimilarProductsSettingsModuleInstance) {
+          try {
+            window.SimilarProductsSettingsModuleInstance = new SimilarProductsSettingsModule();
+            createLogger('SimilarProductsInit').log('SimilarProductsSettingsModuleInstance instance initiated.');
+          } catch (error) {
+            createLogger('SimilarProductsInit').error('Error instantiating SimilarProductsSettingsModuleInstance:', error);
+            // Use the global notice system if ProductEstimatorSettings is available
+            if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
+              window.ProductEstimatorSettingsInstance.showNotice('Failed to initialize Similar Products settings. Check console for errors.', 'error');
+            }
+          }
+        }
+      } else {
+        createLogger('SimilarProductsInit').error(`Localized data object "${localizedDataObjectName}" not found for tab: ${mainTabId}. Module cannot be initialized.`);
+        if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
+          window.ProductEstimatorSettingsInstance.showNotice(`Configuration data for Similar Products ("${localizedDataObjectName}") is missing. Module disabled.`, 'error');
+        }
+      }
+      // The module's inherited `handleMainTabChanged` (from VerticalTabbedModule)
+      // will manage activation/deactivation logic, including calling `onMainTabActivated`.
+      // No separate `product_estimator_tab_changed` listener is needed here for re-initialization
+      // or for clearing `sub_tab` from URL, as `VerticalTabbedModule.showVerticalTab` handles URL state.
+    } else {
+      createLogger('SimilarProductsInit').warn(`Main container #${mainTabId} not found. SimilarProductsSettingsModule will not be initialized.`);
+    }
+  });
+
+  export default SimilarProductsSettingsModule;

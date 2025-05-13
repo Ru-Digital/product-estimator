@@ -6,14 +6,14 @@
  * particularly for estimates and rooms.
  */
 
-const STORAGE_KEY = 'productEstimatorEstimateData';
-
 import { createLogger } from '@utils';
-const logger = createLogger('CustomerStorage');
+
+const STORAGE_KEY = 'productEstimatorEstimateData';
+const logger = createLogger('EstimateStorage');
 
 /**
  * Load session data from localStorage
- * @returns {Object} Estimate data object with estimates, etc.
+ * @returns {object} Estimate data object with estimates, etc.
  */
 export function loadEstimateData() {
   try {
@@ -34,7 +34,7 @@ export function loadEstimateData() {
 
 /**
  * Save session data to localStorage
- * @param {Object} data - Estimate data to save
+ * @param {object} data - Estimate data to save
  */
 export function saveEstimateData(data) {
   try {
@@ -70,7 +70,7 @@ export function clearEstimateData() {
 /**
  * Get specific estimate data from localStorage
  * @param {string} estimateId - The estimate ID to retrieve
- * @returns {Object|null} The estimate data or null if not found
+ * @returns {object | null} The estimate data or null if not found
  */
 export function getEstimate(estimateId) {
   const storedData = loadEstimateData();
@@ -82,7 +82,7 @@ export function getEstimate(estimateId) {
 /**
  * Save a specific estimate to localStorage
  * @param {string} estimateId - The estimate ID
- * @param {Object} estimateData - The estimate data to save
+ * @param {object} estimateData - The estimate data to save
  */
 export function saveEstimate(estimateId, estimateData) {
   const storedData = loadEstimateData();
@@ -97,7 +97,7 @@ export function saveEstimate(estimateId, estimateData) {
 
 /**
  * Add a new estimate to localStorage
- * @param {Object} estimateData - Estimate data to add
+ * @param {object} estimateData - Estimate data to add
  * @returns {string} The new estimate ID
  */
 export function addEstimate(estimateData) {
@@ -140,7 +140,7 @@ export function removeEstimate(estimateId) {
 /**
  * Add a room to an estimate in localStorage
  * @param {string} estimateId - Estimate ID
- * @param {Object} roomData - Room data to add
+ * @param {object} roomData - Room data to add
  * @returns {string} The new room ID
  */
 export function addRoom(estimateId, roomData) {
@@ -172,11 +172,11 @@ export function addRoom(estimateId, roomData) {
  * Get suggestions for a room from localStorage
  * @param {string} estimateId - Estimate ID
  * @param {string} roomId - Room ID
- * @returns {Array|null} Array of suggestion products or null if not found
+ * @returns {Array|null|Promise<null>} Array of suggestion products, null if not found, or a Promise resolving to null if feature is disabled
  */
 export function getSuggestionsForRoom(estimateId, roomId) {
   if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
-    logger.log(`[getSuggestionsforRoom] Suggestions feature is disabled. Returning null for room ${roomId}.`);
+    logger.log(`[getSuggestionsForRoom] Suggestions feature is disabled. Returning null for room ${roomId}.`);
     return Promise.resolve(null); // Or Promise.resolve([])
   }
   const storedData = loadEstimateData();
@@ -193,14 +193,14 @@ export function getSuggestionsForRoom(estimateId, roomId) {
 
 /**
  * Add suggestions to a room in localStorage
- * @param {array} suggestedProducts - Suggested Products Array to set
+ * @param {Array} suggestedProducts - Suggested Products Array to set
  * @param {string} estimateId - Estimate ID
  * @param {string} roomId - Room ID
- * @returns {Array|null} Array of suggestion products added to room or null
+ * @returns {Array|null|Promise<null>} Array of suggestion products added to room, null if not found, or a Promise resolving to null if feature is disabled
  */
 export function addSuggestionsToRoom(suggestedProducts, estimateId, roomId) {
   if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
-    logger.log(`[addSuggestiontoRoom] Suggestions feature is disabled. Returning null for room ${roomId}.`);
+    logger.log(`[addSuggestionsToRoom] Suggestions feature is disabled. Returning null for room ${roomId}.`);
     return Promise.resolve(null); // Or Promise.resolve([])
   }
   const storedData = loadEstimateData(); //
@@ -248,6 +248,13 @@ export function removeRoom(estimateId, roomId) {
   return true;
 }
 
+/**
+ * Add a product to a room in localStorage
+ * @param {string} estimateId - Estimate ID
+ * @param {string} roomId - Room ID
+ * @param {object} productData - Product data to add
+ * @returns {boolean} Success or failure
+ */
 export function addProductToRoom(estimateId, roomId, productData) {
   const storedData = loadEstimateData();
 
@@ -314,20 +321,20 @@ export function removeProductFromRoom(estimateId, roomId, productIndex, productI
   const actualProductIndexToRemove = productsInRoom.findIndex(product => String(product.id) === String(productId));
 
   if (actualProductIndexToRemove === -1) {
-    logger.warn(`[removeProductFromRoom] Product with ID '<span class="math-inline">\{productId\}' not found in room '</span>{roomId}' for estimate '${estimateId}'. Cannot remove.`);
+    logger.warn(`[removeProductFromRoom] Product with ID '${productId}' not found in room '${roomId}' for estimate '${estimateId}'. Cannot remove.`);
     return false; // Product not found by ID
   }
 
   // Remove the product at the found index
   productsInRoom.splice(actualProductIndexToRemove, 1);
   saveEstimateData(storedData);
-  logger.log(`[removeProductFromRoom] Product with ID '<span class="math-inline">\{productId\}' successfully removed from localStorage for room '</span>{roomId}', estimate '${estimateId}'.`);
+  logger.log(`[removeProductFromRoom] Product with ID '${productId}' successfully removed from localStorage for room '${roomId}', estimate '${estimateId}'.`);
   return true; // Successfully removed by ID
 }
 
 /**
  * Update customer details in localStorage
- * @param {Object} customerDetails - Customer details to save
+ * @param {object} customerDetails - Customer details to save
  */
 export function updateCustomerDetails(customerDetails) {
   const storedData = loadEstimateData();
@@ -339,7 +346,7 @@ export function updateCustomerDetails(customerDetails) {
 
 /**
  * Get all estimates from localStorage
- * @returns {Object} All estimates
+ * @returns {object} All estimates
  */
 export function getEstimates() {
   const storedData = loadEstimateData();
@@ -352,8 +359,7 @@ export function getEstimates() {
  * @param {string} roomId - Room ID
  * @param {string} oldProductId - ID of product to replace
  * @param {string} newProductId - ID of new product
- * @param {string} newProductId - ID of new product
- * @param {Object} newProductData - New product data
+ * @param {object} newProductData - New product data
  * @param {string} replaceType - Type of replacement ('main' or 'additional_products')
  * @param {string|null} parentProductId - ID of the parent product (if replacing additional product)
  * @returns {boolean} Success or failure
@@ -479,6 +485,9 @@ export function replaceProductInRoom(estimateId, roomId, oldProductId, newProduc
     // If the main product was not found
     return false;
   }
+  
+  // Default return if no branch is executed
+  return false;
 }
 
 

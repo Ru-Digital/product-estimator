@@ -1,0 +1,41 @@
+/**
+ * Main admin styles entry point
+ *
+ * This file imports all shared utilities and components for the admin interface.
+ * We're using modern SASS with @use instead of the older @import syntax.
+ */
+
+/* Base utilities - these don't output CSS on their own */
+
+@use 'variables' as *;
+
+@use 'mixins' as *;
+
+/* Core components */
+
+@use 'ProductEstimatorAdmin';
+
+@use 'AdminTables';
+
+@use 'AdminVerticalTabs';
+
+@use 'ProductEstimatorSettings';
+
+@use 'CustomerEstimatesAdmin';
+
+/* Module-specific styles - only import non-empty files */
+
+@use 'modules/GeneralSettings';
+
+/* These modules don't currently have custom styles, so we've commented them out
+   to reduce unnecessary imports. Uncomment them if you add styles to these files.
+
+@use 'modules/FeatureSwitches';
+@use 'modules/LabelSettings';
+@use 'modules/NetsuiteSettings';
+@use 'modules/NotificationSettings';
+@use 'modules/PricingRules';
+@use 'modules/ProductAdditionsSettings';
+@use 'modules/ProductUpgradesSettings';
+@use 'modules/SimilarProductsSettings';
+*/

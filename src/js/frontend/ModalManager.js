@@ -4,12 +4,15 @@
  * Handles all modal operations for the Product Estimator plugin.
  * This is the single source of truth for modal operations.
  */
-import ConfirmationDialog from './ConfirmationDialog';
+import { format, createLogger } from '@utils';
+
+// ConfirmationDialog is used in this file via window.productEstimator.dialog
+// so we don't need to import it directly
 import { SuggestionsCarousel } from './SuggestionsCarousel';
 import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails} from "./CustomerStorage";
-import { loadEstimateData, saveEstimate, saveEstimateData, clearEstimateData, addEstimate, removeEstimate } from "./EstimateStorage";
+import { loadEstimateData, saveEstimateData, clearEstimateData } from "./EstimateStorage";
 import TemplateEngine from './TemplateEngine';
-import { format, createLogger } from '@utils';
+import DataService from './DataService';
 const logger = createLogger('ModalManager');
 
 
@@ -17,7 +20,7 @@ const logger = createLogger('ModalManager');
 class ModalManager {
   /**
    * Initialize the ModalManager
-   * @param {Object} config - Configuration options
+   * @param {object} config - Configuration options
    * @param {DataService} dataService - The data service instance
    */
   constructor(config = {}, dataService) {
@@ -527,7 +530,7 @@ class ModalManager {
   /**
    * Force element visibility using multiple techniques
    * @param {HTMLElement} element - Element to make visible
-   * @return {HTMLElement} The element for chaining
+   * @returns {HTMLElement} The element for chaining
    */
   forceElementVisibility(element) {
     if (!element) {
@@ -803,7 +806,7 @@ class ModalManager {
                               }
 
                               // --- START: Correctly Find the Inserted Element ---
-                              const productItemElement = productListContainer.lastElementChild;
+                              let productItemElement = productListContainer.lastElementChild;
 
                               // Verify it's the element we expect (optional but good practice)
                               if (!productItemElement || !productItemElement.matches || !productItemElement.matches('.product-item')) {
@@ -1399,7 +1402,7 @@ class ModalManager {
    * Update room price totals after a product is removed
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
-   * @param {Object} totals - New price totals from the server
+   * @param {object} totals - New price totals from the server
    */
   updateRoomTotals(estimateId, roomId, totals) {
     if (!totals) return;
@@ -1428,7 +1431,7 @@ class ModalManager {
   /**
    * Update estimate price totals after a product is removed
    * @param {string} estimateId - Estimate ID
-   * @param {Object} totals - New price totals from the server
+   * @param {object} totals - New price totals from the server
    */
   updateEstimateTotals(estimateId, totals) {
     if (!totals) return;
@@ -1460,11 +1463,11 @@ class ModalManager {
    * Calls updateRoomSuggestions after successful add and list reload.
    * Removes the suggestion item from the DOM after successful local add.
    * Includes logging to help debug the add process.
-   *
    * @param {string|number} productId - Product ID
    * @param {string|number} estimateId - Estimate ID
    * @param {string|number} roomId - Room ID
    * @param {HTMLElement} buttonElement - The button element that triggered the action
+   * @returns {Promise|undefined} Returns a Promise if feature is enabled, or undefined
    */
   handleAddSuggestedProduct(productId, estimateId, roomId, buttonElement) {
     if (!window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
@@ -1699,7 +1702,6 @@ class ModalManager {
    * Asynchronously fetches and updates the suggested products for a specific room.
    * Hides the suggestions section if no suggestions are returned.
    * Includes logging to help debug the suggestion fetching and rendering process.
-   *
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    * @param {HTMLElement} roomElement - The DOM element for the room
@@ -2119,8 +2121,8 @@ class ModalManager {
    * @param {string} type - Item type ('product', 'room', or 'estimate')
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID (for room or product deletion)
-   * @param {string|null} elementId - Element ID (for product deletion, can be null)
    * @param {string} productIndex - Product index (for product deletion only)
+   * @param {string|null} elementId - Element ID (for product deletion, can be null)
    */
   confirmDelete(type, estimateId, roomId, productIndex, elementId = null) {
     // Get text from localized strings if available
@@ -2649,6 +2651,7 @@ class ModalManager {
 
   /**
    * Update handleEstimateSelection to bind room selection form events
+   * @param {HTMLFormElement} form - The estimate selection form element
    */
   handleEstimateSelection(form) {
     // Get the selected estimate ID from the dropdown
@@ -2789,6 +2792,8 @@ class ModalManager {
 
   /**
    * Add this method to the ModalManager class to update the customer details display
+   * @param {object} details - Customer details object containing name, email, phone, etc.
+   * @returns {void}
    */
   updateCustomerDetailsDisplay(details) {
     // Find any customer details confirmation areas in the modal
@@ -2962,7 +2967,6 @@ class ModalManager {
   handleNewEstimateSubmission(form) {
     const formData = new FormData(form);
     const productId = this.currentProductId;
-    const estimateName = formData.get('estimate_name') || 'Unnamed Estimate';
 
     this.showLoading();
 
@@ -3215,11 +3219,12 @@ class ModalManager {
 
   /**
    * Initialize estimate accordions with support for auto-expanding specific estimates
-   * @param {string|null} expandRoomId - Optional room ID to auto-expand
-   * @param {string|null} expandEstimateId - Optional estimate ID to auto-expand
+   * @param {string|null} expandRoomId - Optional room ID to auto-expand (used by caller)
+   * @param {string|null} expandEstimateId - Optional estimate ID to auto-expand (used by caller)
+   * Note: Parameters are passed to initializeAccordions which handles actual expansion
    */
   initializeEstimateAccordions(expandRoomId = null, expandEstimateId = null) {
-    logger.log('Initializing estimate accordions');
+    logger.log(`Initializing estimate accordions with expandRoomId=${expandRoomId}, expandEstimateId=${expandEstimateId}`);
 
     // Find all estimate headers within the modal
     const estimateHeaders = this.modal.querySelectorAll('.estimate-header');
@@ -3268,6 +3273,19 @@ class ModalManager {
         }
       });
     });
+
+    // Auto-expand specific estimate if requested
+    if (expandEstimateId) {
+      const targetEstimateSection = this.modal.querySelector(`.estimate-section[data-estimate-id="${expandEstimateId}"]`);
+      if (targetEstimateSection) {
+        logger.log(`Auto-expanding estimate section ${expandEstimateId}`);
+        targetEstimateSection.classList.remove('collapsed');
+        const content = targetEstimateSection.querySelector('.estimate-content');
+        if (content) {
+          content.style.display = 'block';
+        }
+      }
+    }
 
     logger.log('Estimate accordions initialization complete');
   }
@@ -3747,7 +3765,6 @@ class ModalManager {
   /**
    * Update all replacement chains on buttons after page refresh
    * This ensures consistent ID references for multiple replacements
-   *
    * @param {HTMLElement} roomElement - The room element containing buttons
    */
   updateAllReplacementChains(roomElement) {
@@ -3761,8 +3778,8 @@ class ModalManager {
     upgradeButtons.forEach(button => {
       const productId = button.dataset.productId;
       const roomId = button.dataset.roomId;
-      const replaceProductId = button.dataset.replaceProductId;
-
+      // The replaceProductId is available on the button if needed in the future
+      
       const chainKey = `${roomId}_${productId}`; // Corrected line
       const replacementChain = window._productReplacementChains[chainKey];
 
@@ -3783,7 +3800,6 @@ class ModalManager {
   /**
    * Update additional product upgrade buttons after replacement
    * This updates the data-replace-product-id attribute to the new product ID
-   *
    * @param {HTMLElement} roomElement - The room accordion element
    * @param {string} newProductId - The new product ID
    * @param {string} oldProductId - The old product ID that was replaced
@@ -3894,7 +3910,6 @@ class ModalManager {
    * Comprehensively fixed handleReplaceProduct method
    * This method handles replacing products with enhanced front-end handling
    * MODIFIED to show different confirmation text for similar products vs. upgrades.
-   *
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    * @param {string} oldProductId - ID of product to replace
@@ -4040,7 +4055,6 @@ class ModalManager {
    * Completely revised executeProductReplacement method for upgrading products
    * with more robust upgrade button handling.
    * This now handles the promise resolving after local storage update.
-   *
    * @param {string} estimateId - Estimate ID
    * @param {string} roomId - Room ID
    * @param {string} oldProductId - ID of product to replace

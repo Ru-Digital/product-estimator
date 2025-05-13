@@ -5,18 +5,19 @@
  * Coordinates between modules and manages global state.
  */
 
+import { createLogger, closeMainPluginLogGroup } from '@utils'; // Make sure closeMainPluginLogGroup is imported
+
 import DataService from './DataService';
 import ModalManager from './ModalManager';
 import VariationHandler from './VariationHandler';
 import CustomerDetailsManager from './CustomerDetailsManager';
 
-import { createLogger, closeMainPluginLogGroup } from '@utils'; // Make sure closeMainPluginLogGroup is imported
 const logger = createLogger('EstimatorCore');
 
 class EstimatorCore {
   /**
    * Initialize the EstimatorCore
-   * @param {Object} config - Configuration options
+   * @param {object} config - Configuration options
    */
   constructor(config = {}) {
 
@@ -134,7 +135,10 @@ class EstimatorCore {
 
 
   /**
-   * Bind global events
+   * Binds global event handlers for the estimator
+   * Sets up click handlers for estimator buttons and menu items
+   * Creates a single event handler and stores a reference to avoid memory leaks
+   * @returns {void}
    */
   bindGlobalEvents() {
     try {
@@ -197,7 +201,10 @@ class EstimatorCore {
   }
 
   /**
-   * Close the modal if open
+   * Closes the estimator modal if it's currently open
+   * Delegates to the modalManager instance
+   * Does nothing if modalManager is not initialized
+   * @returns {void}
    */
   closeModal() {
     if (this.modalManager) {
@@ -242,6 +249,12 @@ class EstimatorCore {
     return this;
   }
 
+  /**
+   * Cleans up resources and deactivates the estimator core
+   * Closes any open log groups to maintain clean console output
+   * Should be called when the plugin is being removed from the page
+   * @returns {void}
+   */
   destroy() {
     if (!this.isActive) return;
       logger.log('Plugin destroying...');

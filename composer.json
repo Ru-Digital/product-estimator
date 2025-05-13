@@ -69,6 +69,7 @@
             "includes/admin/settings/interface-settings-module.php",
             "includes/admin/settings/class-feature-switches-settings-module.php",
             "includes/admin/settings/class-settings-module-base.php",
+            "includes/admin/settings/class-settings-module-with-tables-base.php",
             "includes/admin/settings/class-settings-module-with-vertical-tabs-base.php",
             "includes/admin/settings/class-general-settings-module.php",
             "includes/admin/settings/class-pricing-rules-settings-module.php",
@@ -77,7 +78,16 @@
             "includes/admin/settings/class-similar-products-settings-module.php",
             "includes/admin/settings/class-notification-settings-module.php",
             "includes/admin/settings/class-product-upgrades-settings-module.php",
-            "includes/admin/settings/class-labels-settings-module.php"
+            "includes/admin/settings/class-labels-settings-module.php",
+            "includes/ajax/class-ajax-handler-base.php",
+            "includes/ajax/class-ajax-handler-loader.php",
+            "includes/ajax/class-customer-ajax-handler.php",
+            "includes/ajax/class-estimate-ajax-handler.php",
+            "includes/ajax/class-form-ajax-handler.php",
+            "includes/ajax/class-product-ajax-handler.php",
+            "includes/ajax/class-room-ajax-handler.php",
+            "includes/ajax/class-suggestion-ajax-handler.php",
+            "includes/ajax/class-upgrade-ajax-handler.php"
         ],
         "files": []
     },

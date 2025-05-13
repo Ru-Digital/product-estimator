@@ -1,0 +1,9 @@
+node_modules/
+vendor/
+public/
+admin/css/
+dist/
+*.min.js
+
+# Ignore logger file which uses console by design
+src/js/utils/logger.js

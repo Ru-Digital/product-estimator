@@ -1,603 +1,260 @@
+// File: admin/js/modules/ProductUpgradesSettingsModule.js
+
 /**
  * Product Upgrades Settings JavaScript
  *
  * Handles functionality specific to the product upgrades settings tab.
+ * Extends AdminTableManager for common table and form management.
  */
-import { ajax, dom, validation} from '@utils';
 import { createLogger } from '@utils';
-const logger = createLogger('ProductUpgradesSettings');
-class ProductUpgradesSettingsModule {
+
+import AdminTableManager from '../common/AdminTableManager';
+
+class ProductUpgradesSettingsModule extends AdminTableManager {
   /**
-   * Initialize the module
+   * Constructor for ProductUpgradesSettingsModule.
    */
   constructor() {
-    $ = jQuery; // Make jQuery available as this.$
-
-    // Access localized data with a fallback mechanism
-    const localizedSettings = window.productUpgradesSettings || {};
-
-    // Create a safe reference to the settings object
-    this.settings = {
-      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
-      nonce: localizedSettings.nonce || '', // Fallback
-      i18n: localizedSettings.i18n || {},   // Fallback
-      tab_id: localizedSettings.tab_id || 'product_upgrades', // Fallback
+    const config = {
+      mainTabId: 'product_upgrades',
+      localizedDataName: 'productUpgradesSettings'
+      // AdminTableManager passes this to VerticalTabbedModule,
+      // which passes relevant parts to ProductEstimatorSettings.
     };
+    super(config); // Calls AdminTableManager constructor
 
-    // Add a variable to track if the form has been modified
-    this.formModified = false;
+    // this.logger is initialized by AdminTableManager
+    // this.settings is populated by ProductEstimatorSettings via the super chain
+    // this.config from AdminTableManager holds the original config passed here
 
-    // Initialize when document is ready
-    $(document).ready(() => {
-      // Re-check localizedSettings in case they are defined by another script in document.ready
-      const updatedLocalizedSettingsOnReady = window.productUpgradesSettings || {};
-      if (updatedLocalizedSettingsOnReady.nonce) {
-        this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
-      }
-
-      this.init();
-    });  }
-
-  /**
-   * Initialize the module
-   */
-  init() {
-    logger.log('Initializing Product Upgrades Settings Module');
-    // Reset form modified state on initialization
-    this.formModified = false;
-    this.bindEvents();
-    this.setupFormHandling();
-  }
-
-  /**
-   * Bind event handlers
-   */
-  bindEvents() {
-    const $ = jQuery;
-
-    // Listen for tab changes
-    $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
-
-    // Tab-specific handlers
-    this.initUpgradeHandlers();
-
-    // Track form changes
-    $('#product-upgrade-form').on('change input', 'input, select, textarea', () => {
-      this.formModified = true;
-
-      // Update the global form change tracker if available
-      if (typeof ProductEstimatorSettings !== 'undefined' &&
-        typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
-        ProductEstimatorSettings.formChangeTrackers[this.settings.tab_id] = true;
-
-        // If this is the current tab, update the main formChanged flag
-        if (ProductEstimatorSettings.currentTab === this.settings.tab_id) {
-          ProductEstimatorSettings.formChanged = true;
-        }
-      }
-    });
-  }
-
-  /**
-   * Set up event handlers for the upgrade configuration management UI
-   */
-  initUpgradeHandlers() {
-    const $ = jQuery;
-    const $container = $('.product-estimator-upgrades');
-    const $form = $('#product-upgrade-form');
-    const $formContainer = $('.product-upgrades-form');
-    const $addButton = $('.add-new-upgrade');
-
-    // Initialize Select2 for multiple selection
-    $('#base_categories').select2({
-      placeholder: 'Select base categories',
-      width: '100%',
-      dropdownCssClass: 'product-estimator-dropdown'
+    // Defer DOM-dependent specific initializations until the base AdminTableManager signals it's ready
+    this.$(document).on(`admin_table_manager_ready_${this.config.mainTabId}`, () => {
+      this._cacheProductUpgradesDOM();
+      this._bindSpecificEvents();
+      this._initializeSelect2();
     });
 
-    $('#upgrade_categories').select2({
-      placeholder: 'Select upgrade categories',
-      width: '100%',
-      dropdownCssClass: 'product-estimator-dropdown'
-    });
-
-    // Show form when "Add New Upgrade Configuration" button is clicked
-    $addButton.on('click', function() {
-      logger.log('Add New Upgrade Configuration button clicked');
-      this.resetForm();
-      $('.form-title').text(this.settings.i18n.addNew || 'Add New Upgrade Configuration');
-      $('.save-upgrade').text(this.settings.i18n.saveChanges || 'Save Changes');
-      $formContainer.slideDown();
-    }.bind(this));
-
-    // Hide form when "Cancel" button is clicked
-    $('.cancel-form').on('click', function() {
-      $formContainer.slideUp();
-      this.resetForm();
-    }.bind(this));
-
-    // Handle form submission
-    $form.on('submit', this.handleFormSubmission.bind(this));
-
-    // Handle edit/delete upgrades via event delegation
-    $('.product-upgrades-list').on('click', '.edit-upgrade', this.handleEditUpgrade.bind(this));
-    $('.product-upgrades-list').on('click', '.delete-upgrade', this.handleDeleteUpgrade.bind(this));
   }
 
   /**
-   * Set up form handling
+   * Cache DOM elements specific to Product Upgrades, beyond what AdminTableManager caches.
+   * This is called after AdminTableManager's cacheDOM.
+   * @private
    */
-  setupFormHandling() {
-    // Additional form setup if needed
-  }
-
-  /**
-   * Handle tab changed event
-   * @param {Event} e Tab changed event
-   * @param {string} tabId The newly active tab ID
-   */
-  handleTabChanged(e, tabId) {
-    // If our tab becomes active, refresh initialization
-    if (tabId === this.settings.tab_id) {
-      this.formModified = false; // Reset form modified state
-      this.init();
-
-      // Update the global form change tracker if available
-      if (typeof ProductEstimatorSettings !== 'undefined' &&
-        typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
-        ProductEstimatorSettings.formChangeTrackers[this.settings.tab_id] = false;
-
-        // If this is the current tab, update the main formChanged flag
-        if (ProductEstimatorSettings.currentTab === this.settings.tab_id) {
-          ProductEstimatorSettings.formChanged = false;
-        }
-      }
+  _cacheProductUpgradesDOM() {
+    // this.dom is initialized by AdminTableManager. Add Product Upgrades specific elements.
+    if (this.settings && this.settings.selectors) {
+      const puSelectors = this.settings.selectors;
+      this.dom.baseCategories = this.$container.find(puSelectors.baseCategories);
+      this.dom.upgradeCategories = this.$container.find(puSelectors.upgradeCategories);
+      this.dom.upgradeTitle = this.$container.find(puSelectors.upgradeTitle);
+      this.dom.upgradeDescription = this.$container.find(puSelectors.upgradeDescription);
+    } else {
+      this.logger.warn('ProductUpgradesSettingsModule: settings or selectors not available for DOM caching');
     }
   }
 
   /**
-   * Reset the form to its initial state
+   * Bind events specific to Product Upgrades.
+   * This is called after the `admin_table_manager_ready` event.
+   * @private
+   */
+  _bindSpecificEvents() {
+    // Ensure this.dom elements are available
+    if (!this.dom.form || !this.dom.form.length) {
+      return;
+    }
+
+    // Any product upgrades specific events can be bound here
+
+  }
+
+  /**
+   * Initialize Select2 components.
+   * This is called after the `admin_table_manager_ready` event.
+   * @private
+   */
+  _initializeSelect2() {
+    this.initializeSelect2Dropdowns({
+      elements: [
+        {
+          element: this.dom.baseCategories,
+          placeholderKey: 'selectBaseCategories',
+          fallbackText: 'Select base categories',
+          name: 'base categories',
+          config: {
+            clearInitial: true,
+            width: '100%'
+          }
+        },
+        {
+          element: this.dom.upgradeCategories,
+          placeholderKey: 'selectUpgradeCategories',
+          fallbackText: 'Select upgrade categories',
+          name: 'upgrade categories',
+          config: {
+            clearInitial: true,
+            width: '100%'
+          }
+        }
+      ],
+      moduleName: 'Product Upgrades'
+    });
+  }
+
+
+  /**
+   * Overridden from VerticalTabbedModule. Called when the "Product Upgrades" main tab is activated.
+   */
+  onMainTabActivated() {
+    super.onMainTabActivated(); // Call parent method
+
+    // Refresh Select2 components if they're already initialized
+    if (this.dom.baseCategories && this.dom.baseCategories.hasClass("select2-hidden-accessible")) {
+      this.refreshSelect2(this.dom.baseCategories);
+    }
+    if (this.dom.upgradeCategories && this.dom.upgradeCategories.hasClass("select2-hidden-accessible")) {
+      this.refreshSelect2(this.dom.upgradeCategories);
+    }
+  }
+
+  /**
+   * Override AdminTableManager.resetForm to include Product Upgrades specific fields.
    */
   resetForm() {
-    const $ = jQuery;
-    const $form = $('#product-upgrade-form');
-    $form[0].reset();
-    $('#upgrade_id').val('');
+    super.resetForm(); // Call base class method first
 
-    // Reset Select2 fields
-    $('#base_categories').val(null).trigger('change');
-    $('#upgrade_categories').val(null).trigger('change');
-    $('#display_mode').val('dropdown').trigger('change');
-    $('#upgrade_title').val('');
-    $('#upgrade_description').val('');
+    // Reset Product Upgrades specific fields
+    this.dom.baseCategories?.val(null).trigger('change.select2');
+    this.dom.upgradeCategories?.val(null).trigger('change.select2');
+    this.dom.upgradeTitle?.val('');
+    this.dom.upgradeDescription?.val('');
 
-    // Reset form modified state
-    this.formModified = false;
-
-    // Update the global form change tracker if available
-    if (typeof ProductEstimatorSettings !== 'undefined' &&
-      typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
-      ProductEstimatorSettings.formChangeTrackers[this.settings.tab_id] = false;
-
-      // If this is the current tab, update the main formChanged flag
-      if (ProductEstimatorSettings.currentTab === this.settings.tab_id) {
-        ProductEstimatorSettings.formChanged = false;
-      }
-    }
   }
 
   /**
-   * Toggle form state (enable/disable inputs)
-   * @param {boolean} enabled Whether to enable the form inputs
+   * Override AdminTableManager.populateFormWithData for Product Upgrades specific fields.
+   * @param {object} itemData - The data for the product upgrade item to populate the form with
+   * @override
    */
-  toggleFormState(enabled) {
-    const $ = jQuery;
-    const $form = $('#product-upgrade-form');
-    const $submitBtn = $form.find('.save-upgrade');
-    const $cancelBtn = $form.find('.cancel-form');
+  populateFormWithData(itemData) {
+    super.populateFormWithData(itemData); // Sets item ID, calls base logic
 
-    $form.find('input, select, textarea').prop('disabled', !enabled);
-    $submitBtn.prop('disabled', !enabled);
-    $cancelBtn.prop('disabled', !enabled);
+    const baseCategories = itemData.base_categories || [];
+    const upgradeCategories = itemData.upgrade_categories || [];
 
-    if (!enabled) {
-      $submitBtn.text('Saving...');
-    } else {
-      $submitBtn.text($('#upgrade_id').val() ? 'Update Configuration' : 'Save Configuration');
-    }
+    // Look for field values in multiple possible locations
+    const title = itemData.upgrade_title || itemData.title || '';
+    const description = itemData.upgrade_description || itemData.description || '';
 
-    // Special handling for Select2
-    if (enabled) {
-      $('#base_categories').prop('disabled', false).trigger('change');
-      $('#upgrade_categories').prop('disabled', false).trigger('change');
-    } else {
-      $('#base_categories').prop('disabled', true).trigger('change');
-      $('#upgrade_categories').prop('disabled', true).trigger('change');
-    }
+
+    // Use setTimeout to allow dependent field visibility changes to complete
+    setTimeout(() => {
+      this.dom.baseCategories?.val(baseCategories).trigger('change.select2');
+      this.dom.upgradeCategories?.val(upgradeCategories).trigger('change.select2');
+      this.dom.upgradeTitle?.val(title);
+      this.dom.upgradeDescription?.val(description);
+
+      this.formModified = false; // Reset modified flag after populating
+    }, 150);
   }
 
   /**
-   * Handle form submission
-   * @param {Event} e Form submit event
+   * Override AdminTableManager.validateForm for Product Upgrades specific validation.
+   * @returns {boolean} True if the form passes validation, false otherwise
+   * @override
    */
-  handleFormSubmission(e) {
-    e.preventDefault();
-    const $ = jQuery;
+  validateForm() {
+    let isValid = super.validateForm(); // Perform base validation first
 
-    const baseCategories = $('#base_categories').val();
-    const upgradeCategories = $('#upgrade_categories').val();
-    const displayMode = $('#display_mode').val();
-    const upgradeTitle = $('#upgrade_title').val();
-    const upgradeDescription = $('#upgrade_description').val();
+    // Get values
+    const baseCategories = this.dom.baseCategories?.val();
+    const upgradeCategories = this.dom.upgradeCategories?.val();
 
-    // Validate form
+    // i18n messages from this.settings.i18n
+    const i18n = this.settings.i18n || {};
+
+    // Clear previous specific errors
+    this.clearFieldError(this.dom.baseCategories?.next('.select2-container'));
+    this.clearFieldError(this.dom.upgradeCategories?.next('.select2-container'));
+
     if (!baseCategories || baseCategories.length === 0) {
-      alert(this.settings.i18n.selectBaseCategories || 'Please select at least one base category');
-      return;
+      this.showFieldError(this.dom.baseCategories?.next('.select2-container'), i18n.selectBaseCategories || 'Please select at least one base category.');
+      isValid = false;
     }
 
     if (!upgradeCategories || upgradeCategories.length === 0) {
-      alert(this.settings.i18n.selectUpgradeCategories || 'Please select at least one upgrade category');
-      return;
+      this.showFieldError(this.dom.upgradeCategories?.next('.select2-container'), i18n.selectUpgradeCategories || 'Please select at least one upgrade category.');
+      isValid = false;
     }
 
-    // Disable form while submitting
-    this.toggleFormState(false);
-
-    const formData = {
-      action: 'save_product_upgrade',
-      nonce: this.settings.nonce,
-      upgrade_id: $('#upgrade_id').val(),
-      base_categories: baseCategories,
-      upgrade_categories: upgradeCategories,
-      display_mode: displayMode,
-      upgrade_title: upgradeTitle,
-      upgrade_description: upgradeDescription
-    };
-
-    logger.log('Sending form data:', formData);
-
-    // Send AJAX request using ajax utility
-    ajax.ajaxRequest({
-      url: this.settings.ajaxUrl,
-      data: formData
-    })
-      .then(response => {
-        logger.log('Response received:', response);
-
-        // Show success message
-        this.showMessage('success', response.message);
-
-        // If editing an existing upgrade, replace the row
-        if (formData.upgrade_id) {
-          logger.log('Updating existing upgrade:', formData.upgrade_id);
-          const $existingRow = $('.product-upgrades-list').find(`tr[data-id="${formData.upgrade_id}"]`);
-          if ($existingRow.length) {
-            $existingRow.replaceWith(this.createUpgradeRow(response.upgrade));
-          } else {
-            // If the row doesn't exist (unlikely), append it
-            this.appendUpgradeRow(response.upgrade);
-          }
-        } else {
-          // For new upgrades, append the row
-          this.appendUpgradeRow(response.upgrade);
-        }
-
-        // Hide the form and reset it
-        $('.product-upgrades-form').slideUp();
-        this.resetForm();
-
-        // If this is the first upgrade, remove the "no items" message and create the table
-        const $noItems = $('.product-upgrades-list').find('.no-items');
-        if ($noItems.length) {
-          $noItems.remove();
-
-          // Create the table if it doesn't exist
-          if (!$('.product-upgrades-list').find('table').length) {
-            const tableHtml = `
-              <table class="wp-list-table widefat fixed striped product-upgrades-table">
-                <thead>
-                  <tr>
-                    <th scope="col">${'Base Categories'}</th>
-                    <th scope="col">${'Upgrade Categories'}</th>
-                    <th scope="col">${'Display Mode'}</th>
-                    <th scope="col">${'Actions'}</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            `;
-            $('.product-upgrades-list').find('h3').after(tableHtml);
-          }
-        }
-
-        // Reset form modified state
-        this.formModified = false;
-
-        // Update the global form change tracker if available
-        if (typeof ProductEstimatorSettings !== 'undefined' &&
-          typeof ProductEstimatorSettings.formChangeTrackers !== 'undefined') {
-          ProductEstimatorSettings.formChangeTrackers[this.settings.tab_id] = false;
-
-          // If this is the current tab, update the main formChanged flag
-          if (ProductEstimatorSettings.currentTab === this.settings.tab_id) {
-            ProductEstimatorSettings.formChanged = false;
-          }
-        }
-      })
-      .catch(error => {
-        // Show error message
-        this.showMessage('error', error.message || 'Error saving upgrade configuration. Please try again.');
-        logger.error('Error saving upgrade configuration:', error);
-      })
-      .finally(() => {
-        // Re-enable form
-        this.toggleFormState(true);
-      });
+    return isValid;
   }
 
   /**
-   * Handle edit upgrade button click
-   * @param {Event} e Click event
+   * Custom column population method for 'base_categories' column
+   * This method follows the naming convention for column handlers in AdminTableManager
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
-  handleEditUpgrade(e) {
-    const $ = jQuery;
-    const $btn = $(e.currentTarget);
-    const upgradeId = $btn.data('id');
-    const baseCategories = String($btn.data('base') || '').split(',').filter(Boolean);
-    const upgradeCategories = String($btn.data('upgrade') || '').split(',').filter(Boolean);
-    const displayMode = $btn.data('mode');
-    const upgradeTitle = $btn.data('title');
-    const upgradeDescription = $btn.data('description');
+  populateColumn_base_categories($cell, itemData) {
 
-    logger.log('Edit upgrade:', upgradeId, baseCategories, upgradeCategories, displayMode, upgradeTitle, upgradeDescription);
+    // Look in all possible data fields to find the display value
+    const displayValue = itemData.base_categories_display ||
+                        itemData.base_category_names ||
+                        (Array.isArray(itemData.base_categories) ? itemData.base_categories.join(',') : '') ||
+                        'N/A';
 
-    // Reset form
-    this.resetForm();
-
-    // Populate form with existing data
-    $('#upgrade_id').val(upgradeId);
-    $('#display_mode').val(displayMode || 'dropdown').trigger('change');
-    $('#upgrade_title').val(upgradeTitle || '');
-    $('#upgrade_description').val(upgradeDescription || '');
-
-    // Need to make sure Select2 has initialized
-    setTimeout(function() {
-      $('#base_categories').val(baseCategories).trigger('change');
-      $('#upgrade_categories').val(upgradeCategories).trigger('change');
-    }, 100);
-
-    // Update form title and button text
-    $('.form-title').text('Edit Upgrade Configuration');
-    $('.save-upgrade').text('Update Configuration');
-
-    // Show form
-    $('.product-upgrades-form').slideDown();
-
-    // Scroll to form
-    $('html, body').animate({
-      scrollTop: $('.product-upgrades-form').offset().top - 50
-    }, 300);
+    $cell.text(displayValue);
   }
 
   /**
-   * Handle delete upgrade button click
-   * @param {Event} e Click event
+   * Custom column population method for 'upgrade_categories' column
+   * @param {jQuery} $cell - The table cell element to populate
+   * @param {object} itemData - The data for the current row
    */
-  handleDeleteUpgrade(e) {
-    const $ = jQuery;
-    const $btn = $(e.currentTarget);
-    const upgradeId = $btn.data('id');
+  populateColumn_upgrade_categories($cell, itemData) {
 
-    logger.log('Delete upgrade:', upgradeId);
+    // Look in all possible data fields to find the display value
+    const displayValue = itemData.upgrade_categories_display ||
+                        itemData.upgrade_category_names ||
+                        (Array.isArray(itemData.upgrade_categories) ? itemData.upgrade_categories.join(',') : '') ||
+                        'N/A';
 
-    if (!confirm(this.settings.i18n.confirmDelete || 'Are you sure you want to delete this upgrade configuration?')) {
-      return;
-    }
-
-    // Disable button while processing
-    $btn.prop('disabled', true).text('Deleting...');
-
-    const data = {
-      action: 'delete_product_upgrade',
-      nonce: this.settings.nonce,
-      upgrade_id: upgradeId
-    };
-
-    // Use ajax utility for the request
-    ajax.ajaxRequest({
-      url: this.settings.ajaxUrl,
-      data: data
-    })
-      .then(response => {
-        logger.log('Delete response:', response);
-
-        // Remove row from table
-        const $row = $btn.closest('tr');
-        $row.fadeOut(300, function() {
-          $row.remove();
-
-          // If no more rows, show "no items" message
-          if (!$('.product-upgrades-list').find('tbody tr').length) {
-            $('.product-upgrades-list').find('table').remove();
-            $('.product-upgrades-list').append('<div class="no-items">No upgrade configurations have been created yet.</div>');
-          }
-        });
-
-        // Show success message
-        this.showMessage('success', response.message);
-      })
-      .catch(error => {
-        // Show error message
-        this.showMessage('error', error.message || 'Error deleting upgrade configuration. Please try again.');
-        $btn.prop('disabled', false).text('Delete');
-        logger.error('Error deleting upgrade configuration:', error);
-      });
+    $cell.text(displayValue);
   }
 
-  /**
-   * Create a table row for an upgrade
-   * @param {Object} upgrade The upgrade data
-   * @return {jQuery} The created row
-   */
-  createUpgradeRow(upgrade) {
-    const $ = jQuery;
-
-    if (!upgrade || !upgrade.id) {
-      logger.log('Invalid upgrade data', upgrade);
-      return $('<tr><td colspan="4">Error: Invalid upgrade data</td></tr>');
-    }
-
-    const $row = $('<tr></tr>').attr('data-id', upgrade.id);
-
-    // Base Categories
-    const baseCategoryNames = upgrade.base_category_names || '';
-    $row.append($('<td></td>').text(baseCategoryNames));
-
-    // Upgrade Categories
-    const upgradeCategoryNames = upgrade.upgrade_category_names || '';
-    $row.append($('<td></td>').text(upgradeCategoryNames));
-
-    // Display Mode
-    const displayModes = {
-      'dropdown': 'Dropdown',
-      'radio': 'Radio Buttons',
-      'tiles': 'Image Tiles'
-    };
-    const displayMode = displayModes[upgrade.display_mode] || 'Dropdown';
-    $row.append($('<td></td>').text(displayMode));
-
-    // Actions
-    const $actionsCell = $('<td></td>').addClass('actions');
-
-    // Use dom.createElement utility to create buttons
-    const editBtn = dom.createElement('button', {
-      className: 'button button-small edit-upgrade',
-      type: 'button',
-      dataset: {
-        id: upgrade.id,
-        base: Array.isArray(upgrade.base_categories) ? upgrade.base_categories.join(',') : '',
-        upgrade: Array.isArray(upgrade.upgrade_categories) ? upgrade.upgrade_categories.join(',') : '',
-        mode: upgrade.display_mode || 'dropdown',
-        title: upgrade.title || '',
-        description: upgrade.description || ''
-      }
-    }, 'Edit');
-
-    const deleteBtn = dom.createElement('button', {
-      className: 'button button-small delete-upgrade',
-      type: 'button',
-      dataset: {
-        id: upgrade.id
-      }
-    }, 'Delete');
-
-    // Convert DOM elements to jQuery and append
-    $actionsCell.append($(editBtn), ' ', $(deleteBtn));
-    $row.append($actionsCell);
-
-    return $row;
-  }
-
-  /**
-   * Append an upgrade row to the table
-   * @param {Object} upgrade The upgrade data
-   */
-  appendUpgradeRow(upgrade) {
-    const $ = jQuery;
-
-    if (!upgrade || !upgrade.id) {
-      logger.log('Cannot append row: Invalid upgrade data', upgrade);
-      return;
-    }
-
-    const $table = $('.product-upgrades-table');
-    if (!$table.length) {
-      logger.log('Cannot append row: Table not found');
-      return;
-    }
-
-    const $tbody = $table.find('tbody');
-    if (!$tbody.length) {
-      logger.log('Cannot append row: Table body not found');
-      return;
-    }
-
-    const $row = this.createUpgradeRow(upgrade);
-    $tbody.append($row);
-  }
-
-  /**
-   * Show a notice message
-   * @param {string} type The notice type ('success' or 'error')
-   * @param {string} message The message to display
-   */
-  showMessage(type, message) {
-    const $ = jQuery;
-    const $container = $('.product-estimator-upgrades');
-
-    if (!$container.length) {
-      logger.log('Cannot show notice: Container not found');
-      return;
-    }
-
-    const $existingNotice = $container.find('.notice');
-
-    // Remove existing notices
-    if ($existingNotice.length) {
-      $existingNotice.remove();
-    }
-
-    // First try to use the global utility in ProductEstimatorSettings
-    if (typeof ProductEstimatorSettings !== 'undefined' &&
-      typeof ProductEstimatorSettings.showNotice === 'function') {
-      ProductEstimatorSettings.showNotice(message, type);
-      return;
-    }
-
-    // Fallback to using validation utility
-    if (typeof validation.showNotice === 'function') {
-      validation.showNotice(message, type);
-      return;
-    }
-
-    // Fallback implementation if utilities aren't available
-    // Create new notice using dom utility
-    const notice = dom.createElement('div', {
-      className: `notice notice-${type === 'success' ? 'success' : 'error'}`
-    });
-    const paragraph = dom.createElement('p', {}, message);
-    notice.appendChild(paragraph);
-
-    // Insert notice at the top of the container
-    $container.prepend($(notice));
-
-    // Auto-remove after 5 seconds
-    setTimeout(function() {
-      $(notice).fadeOut(500, function() {
-        $(this).remove();
-      });
-    }, 5000);
-  }
 }
 
-// Initialize when document is ready
-jQuery(document).ready(function() {
-  // Only initialize if we're on the correct tab
-  const currentTab = jQuery('#product_upgrades');
-  if (currentTab.length && currentTab.is(':visible')) {
-    const module = new ProductUpgradesSettingsModule();
-    window.ProductUpgradesSettingsModule = module;
-  } else {
-    // Listen for tab change events to initialize when our tab becomes visible
-    jQuery(document).on('product_estimator_tab_changed', function(e, tabId) {
-      if (tabId === 'product_upgrades') {
-        setTimeout(function() {
-          const module = new ProductUpgradesSettingsModule();
-          window.ProductUpgradesSettingsModule = module;
-        }, 100);
+// Initialize the module when the DOM is ready and its main tab container exists.
+jQuery(document).ready(function ($) {
+  const mainTabId = 'product_upgrades'; // Specific to this module
+  const localizedDataObjectName = 'productUpgradesSettings'; // Global settings object name
+
+  if ($(`#${mainTabId}`).length) {
+    // Check if the global localized data for this module is available
+    if (window[localizedDataObjectName]) {
+      // Instantiate the module once
+      if (!window.ProductUpgradesSettingsModuleInstance) {
+        try {
+          window.ProductUpgradesSettingsModuleInstance = new ProductUpgradesSettingsModule();
+          createLogger('ProductUpgradesInit').log('ProductUpgradesSettingsModule instance initiated.');
+        } catch (error) {
+          createLogger('ProductUpgradesInit').error('Error instantiating ProductUpgradesSettingsModule:', error);
+          // Use the global notice system if ProductEstimatorSettings is available
+          if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
+            window.ProductEstimatorSettingsInstance.showNotice('Failed to initialize Product Upgrades settings. Check console for errors.', 'error');
+          }
+        }
       }
-    });
+    } else {
+      createLogger('ProductUpgradesInit').error(`Localized data object "${localizedDataObjectName}" not found for tab: ${mainTabId}. Module cannot be initialized.`);
+      if (window.ProductEstimatorSettingsInstance && typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
+        window.ProductEstimatorSettingsInstance.showNotice(`Configuration data for Product Upgrades ("${localizedDataObjectName}") is missing. Module disabled.`, 'error');
+      }
+    }
+  } else {
+    createLogger('ProductUpgradesInit').warn(`Main container #${mainTabId} not found. ProductUpgradesSettingsModule will not be initialized.`);
   }
 });
 

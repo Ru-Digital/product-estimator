@@ -175,7 +175,6 @@ class SuggestionsCarousel {
     this.setContainerSize();
 
     // Recalculate values on resize
-    const oldVisibleItems = this.visibleItems;
     this.visibleItems = this.calculateVisibleItems();
     this.maxPosition = Math.max(0, this.items.length - this.visibleItems);
 
@@ -193,6 +192,7 @@ class SuggestionsCarousel {
   /**
    * Get available width for carousel items considering all parent containers
    * This method makes sure we respect the product-item width
+   * @returns {number} Available width in pixels
    */
   getAvailableWidth() {
     // Start with the basic container width
@@ -295,6 +295,7 @@ class SuggestionsCarousel {
 /**
  * Initialize carousels immediately after DOM content is loaded
  * and ensure navigation buttons work correctly
+ * @returns {Array<SuggestionsCarousel>} Array of initialized carousel instances
  */
 function initSuggestionsCarousels() {
   // logger.log('Initializing all suggestion carousels');
@@ -340,6 +341,7 @@ function initCarouselOnAccordionOpen() {
 
 /**
  * Handler for accordion clicks that initializes carousels when content becomes visible
+ * @param {Event} e - Click event object
  */
 function handleAccordionClick(e) {
   // Wait for accordion animation to complete

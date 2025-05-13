@@ -3,8 +3,7 @@
  *
  * Handles functionality for the customer estimates admin page
  */
-import { ajax, dom, format, validation } from '@utils';
-import { createLogger } from '@utils';
+import { ajax, format, validation, createLogger } from '@utils';
 const logger = createLogger('CustomerEstimatesAdmin');
 
 class CustomerEstimatesAdmin {
@@ -29,7 +28,6 @@ class CustomerEstimatesAdmin {
   init() {
     this.bindEvents();
     this.initializeActions();
-    logger.log('Initialized');
   }
 
   /**
@@ -90,7 +88,7 @@ class CustomerEstimatesAdmin {
   /**
    * Handle bulk action
    * @param {Event} e Click event
-   * @returns {boolean} Whether to continue with the action
+   * @returns {boolean|undefined} Returns false to prevent form submission or undefined
    */
   handleBulkAction(e) {
     const $ = jQuery;
@@ -138,6 +136,7 @@ class CustomerEstimatesAdmin {
     })
       .then(data => {
         // Use validation utility to show success message
+        logger.log('Email sent successfully:', data);
         validation.showNotice(this.settings.i18n.emailSuccess, 'success');
       })
       .catch(error => {
@@ -270,8 +269,8 @@ class CustomerEstimatesAdmin {
     const printWindow = window.open('', '_blank');
 
     // Show loading state
-    printWindow.document.write('<html><head><title>Printing Estimate...</title></head>');
-    printWindow.document.write('<body><p>Loading estimate for printing...</p></body></html>');
+    $(printWindow.document.body).html('<p>Loading estimate for printing...</p>');
+    printWindow.document.title = 'Printing Estimate...';
 
     // Load estimate content via AJAX using ajax utility
     ajax.ajaxRequest({

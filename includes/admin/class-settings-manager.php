@@ -114,13 +114,14 @@ class SettingsManager {
         $module_classes = [
             'GeneralSettingsModule',
             'NetsuiteSettingsModule',
-            'NotificationSettingsModule',
             'ProductAdditionsSettingsModule',
             'PricingRulesSettingsModule',
             'SimilarProductsSettingsModule',
             'ProductUpgradesSettingsModule',
+            'NotificationSettingsModule',
             'LabelsSettingsModule',
             'FeatureSwitchesSettingsModule',
+
         ];
 
         // Load and initialize each module

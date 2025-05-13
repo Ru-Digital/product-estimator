@@ -3,374 +3,180 @@
  *
  * Handles functionality specific to the NetSuite integration settings tab.
  */
-import { showFieldError, clearFieldError } from '@utils/validation';
-import { ajaxRequest } from '@utils/ajax';
-import { createElement } from '@utils/dom';
-import { createLogger } from '@utils';
-const logger = createLogger('NetSuiteSettings');
+import { ajaxRequest } from '@utils/ajax'; // Specific import from original
+import { createElement } from '@utils/dom'; // Specific import from original
 
-class NetsuiteSettingsModule {
+import ProductEstimatorSettings from '../common/ProductEstimatorSettings'; // Adjust path as needed
+
+class NetsuiteSettingsModule extends ProductEstimatorSettings {
   /**
    * Initialize the module
    */
   constructor() {
-    $ = jQuery; // Make jQuery available as this.$
-
-    // before this script runs or at least before init() is called.
-    const localizedSettings = window.netsuiteSettings || {};
-
-    this.settings = {
-      ajaxUrl: localizedSettings.ajaxUrl || (typeof ajaxurl !== 'undefined' ? ajaxurl : '/wp-admin/admin-ajax.php'),
-      nonce: localizedSettings.nonce || '', // Fallback
-      i18n: localizedSettings.i18n || {},   // Fallback
-      tab_id: localizedSettings.tab_id || 'netsuite', // Fallback
-    };
-
-    // Defer initialization to document.ready to ensure DOM is loaded
-    $(document).ready(() => {
-      // Re-check localizedSettings in case they are defined by another script in document.ready
-      const updatedLocalizedSettingsOnReady = window.netsuiteSettings || {};
-      if (updatedLocalizedSettingsOnReady.nonce) {
-        this.settings.nonce = updatedLocalizedSettingsOnReady.nonce;
-      }
-
-      this.init();
+    super({
+      isModule: true,
+      settingsObjectName: 'netsuiteSettings',
+      defaultTabId: 'netsuite',
     });
+
+    // Bind methods
+    this.testNetsuiteConnection = this.testNetsuiteConnection.bind(this);
+    this.toggleNetsuiteFields = this.toggleNetsuiteFields.bind(this);
+    this.validateUrl = this.validateUrl.bind(this);
+    this.validateRequestLimit = this.validateRequestLimit.bind(this);
+    this.validateCacheTime = this.validateCacheTime.bind(this);
+    this.handleTabChanged = this.handleTabChanged.bind(this);
   }
 
   /**
-   * Initialize the module
+   * Module-specific initialization.
    */
-  init() {
-    // Log initialization if debug mode is enabled
-    logger.log('Initializing NetSuite settings module');
-
+  moduleInit() {
     this.bindEvents();
-    this.setupDependentFields();
+    this.setupDependentFields(); // Call after DOM is ready and elements are available
   }
 
   /**
    * Bind event handlers
    */
   bindEvents() {
-    const $ = jQuery;
-
-    // Test connection button
-    $('#test-netsuite-connection').on('click', this.testNetsuiteConnection.bind(this));
-
-    // Handle enable/disable toggle
-    $('#netsuite_enabled').on('change', this.toggleNetsuiteFields.bind(this));
-
-    // URL validation
-    $('#netsuite_api_url, #netsuite_token_url').on('change', this.validateUrl.bind(this));
-
-    // Number range validation
-    $('#netsuite_request_limit').on('change', this.validateRequestLimit.bind(this));
-    $('#netsuite_cache_time').on('change', this.validateCacheTime.bind(this));
-
-    // Listen for tab changes
-    $(document).on('product_estimator_tab_changed', this.handleTabChanged.bind(this));
-
-    // Add handler for form submission - THIS IS THE FIX
-    $('.product-estimator-form').on('submit', this.handleFormSubmit.bind(this));
-
-    // logger.log('Events bound successfully');
+    this.$(document).on('product_estimator_tab_changed', this.handleTabChanged);
+    this.$('#test-netsuite-connection').on('click', this.testNetsuiteConnection);
+    this.$('#netsuite_enabled').on('change', this.toggleNetsuiteFields);
+    this.$('#netsuite_api_url, #netsuite_token_url').on('blur', this.validateUrl); // Use blur for validation after input
+    this.$('#netsuite_request_limit').on('blur', this.validateRequestLimit);
+    this.$('#netsuite_cache_time').on('blur', this.validateCacheTime);
   }
 
-  /**
-   * Handle form submission - THIS IS THE NEW METHOD
-   * @param {Event} e Submit event
-   */
-  handleFormSubmit(e) {
-    // Only handle if this is our tab's form
-    const $ = jQuery;
-    const $form = $(e.currentTarget);
-
-    // Make sure we're on the netsuite tab
-    if ($form.closest('#netsuite').length === 0) {
-      return; // Let the default handler process it
-    }
-
-    e.preventDefault();
-
-    // Get the serialized form data
-    let formData = $form.serialize();
-
-    // Fix for checkbox fields - add unchecked checkboxes to the data
-    const checkboxFields = $form.find('input[type="checkbox"]');
-    checkboxFields.each(function() {
-      const checkboxName = $(this).attr('name');
-      if (!$(this).is(':checked') && !formData.includes(checkboxName)) {
-        formData += '&' + checkboxName + '=0';
-      }
-    });
-
-    // Show loading state
-    const $submitBtn = $form.find(':submit');
-    $submitBtn.prop('disabled', true);
-    $submitBtn.data('original-text', $submitBtn.val());
-    $submitBtn.val('Saving...');
-
-    // Send the AJAX request
-    ajaxRequest({
-      url: netsuiteSettings.ajax_url,
-      type: 'POST',
-      data: {
-        action: 'save_netsuite_settings',
-        nonce: netsuiteSettings.nonce,
-        form_data: formData
-      }
-    })
-      .then(response => {
-        // Show success message
-        if (typeof ProductEstimatorSettings !== 'undefined' &&
-          typeof ProductEstimatorSettings.showNotice === 'function') {
-          ProductEstimatorSettings.showNotice(response.message || 'Settings saved successfully', 'success');
-        } else {
-          showNotice(response.message || 'Settings saved successfully', 'success');
-        }
-
-        // Reset form change state
-        if (typeof ProductEstimatorSettings !== 'undefined') {
-          ProductEstimatorSettings.formChanged = false;
-
-          if (ProductEstimatorSettings.formChangeTrackers) {
-            ProductEstimatorSettings.formChangeTrackers['netsuite'] = false;
-          }
-        }
-      })
-      .catch(error => {
-        // Show error message
-        if (typeof ProductEstimatorSettings !== 'undefined' &&
-          typeof ProductEstimatorSettings.showNotice === 'function') {
-          ProductEstimatorSettings.showNotice(error.message || 'Error saving settings', 'error');
-        } else {
-          showNotice(error.message || 'Error saving settings', 'error');
-        }
-      })
-      .finally(() => {
-        // Reset button
-        $submitBtn.prop('disabled', false);
-        $submitBtn.val($submitBtn.data('original-text'));
-      });
-  }
-
-  /**
-   * Set up dependent fields based on initial state
-   */
   setupDependentFields() {
-    // Initial toggle of fields based on enabled state
-    this.toggleNetsuiteFields();
-
-    logger.log('Dependent fields setup complete');
+    this.toggleNetsuiteFields(); // Initial toggle based on current state
   }
 
-  /**
-   * Toggle NetSuite fields based on enabled checkbox
-   */
   toggleNetsuiteFields() {
-    const $ = jQuery;
-    const enabled = $('#netsuite_enabled').is(':checked');
-    const $fields = $('#netsuite_client_id, #netsuite_client_secret, #netsuite_api_url, #netsuite_token_url, #netsuite_request_limit, #netsuite_cache_time')
+    const enabled = this.$('#netsuite_enabled').is(':checked');
+    const $fields = this.$('#netsuite_client_id, #netsuite_client_secret, #netsuite_api_url, #netsuite_token_url, #netsuite_request_limit, #netsuite_cache_time')
       .closest('tr');
+    const $testButtonContainer = this.$('#test-netsuite-connection').closest('p'); // Or other container
 
     if (enabled) {
       $fields.fadeIn(200);
-      $('#test-netsuite-connection').closest('p').fadeIn(200);
+      $testButtonContainer.fadeIn(200);
     } else {
       $fields.fadeOut(200);
-      $('#test-netsuite-connection').closest('p').fadeOut(200);
+      $testButtonContainer.fadeOut(200);
     }
   }
 
-  /**
-   * Test NetSuite API connection using the ajax utility
-   */
   testNetsuiteConnection() {
-    const $ = jQuery;
-    const $button = $('#test-netsuite-connection');
-    const $result = $('#connection-result');
+    const $button = this.$('#test-netsuite-connection');
+    const $result = this.$('#connection-result'); // Assuming this element exists
 
-    // Prevent multiple clicks
-    if ($button.prop('disabled')) {
-      return;
-    }
+    if ($button.prop('disabled')) return;
 
-    // Show testing state
+    const i18n = this.settings.i18n || (window.netsuiteSettings && window.netsuiteSettings.i18n) || {};
     $button.prop('disabled', true);
-    $result.html(`<span style="color:#666;">${netsuiteSettings.i18n.testing || 'Testing connection...'}</span>`);
+    $result.html(`<span style="color:#666;">${i18n.testing || 'Testing connection...'}</span>`);
 
-    logger.log('Testing NetSuite connection');
-
-    // Use the new ajaxRequest utility
-    ajaxRequest({
-      url: netsuiteSettings.ajax_url,
+    ajaxRequest({ // Using imported ajaxRequest directly as in original
+      url: this.settings.ajaxUrl, // Use ajaxUrl from this.settings
       type: 'POST',
       data: {
-        action: 'test_netsuite_connection',
-        nonce: netsuiteSettings.nonce
+        action: 'test_netsuite_connection', // Ensure this action is correct
+        nonce: this.settings.nonce // Use nonce from this.settings
       }
     })
       .then(response => {
-        // Success case - using the response.data directly since ajaxRequest handles the success/error parsing
-        $result.html(`<span style="color:green;">${response.message}</span>`);
-        logger.log('Connection test successful');
+        // Assuming response is { success: true/false, data: { message: "..." } } or { message: "..." }
+        const message = (response.data && response.data.message) ? response.data.message : response.message;
+        $result.html(`<span style="color:green;">${message || 'Connection successful.'}</span>`);
       })
       .catch(error => {
-        // Error case
-        $result.html(`<span style="color:red;">${netsuiteSettings.i18n.error || 'Error:'} ${error.message}</span>`);
-        logger.log('Connection test failed:', error);
+        const errorMessage = (error && error.message) ? error.message : (i18n.error || 'Error');
+        $result.html(`<span style="color:red;">${errorMessage}</span>`);
       })
       .finally(() => {
         $button.prop('disabled', false);
       });
   }
 
-  /**
-   * Handle tab changed event
-   * @param {Event} e Tab changed event
-   * @param {string} tabId The newly active tab ID
-   */
   handleTabChanged(e, tabId) {
-    // If our tab becomes active, refresh dependent fields
-    if (tabId === netsuiteSettings.tab_id) {
-      this.toggleNetsuiteFields();
-      logger.log('Tab changed to NetSuite settings, refreshing fields');
+    if (tabId === this.settings.tab_id) {
+      this.toggleNetsuiteFields(); // Refresh field visibility when tab becomes active
     }
+    this.clearSubTabFromUrl();
   }
 
-  /**
-   * Validate URL format
-   * @param {Event} e Change event
-   */
   validateUrl(e) {
-    const $ = jQuery;
-    const $field = $(e.currentTarget);
+    const $field = this.$(e.currentTarget);
     const value = $field.val().trim();
+    const i18n = this.settings.i18n || (window.netsuiteSettings && window.netsuiteSettings.i18n) || {};
 
     if (value && !this.isValidUrl(value)) {
-      this.showFieldError($field, netsuiteSettings.i18n.invalidUrl || 'Please enter a valid URL');
+      this.showFieldError($field, i18n.invalidUrl || 'Please enter a valid URL.');
       return false;
     }
-
     this.clearFieldError($field);
     return true;
   }
 
-  /**
-   * Validate request limit
-   * @param {Event} e Change event
-   */
-  validateRequestLimit(e) {
-    const $ = jQuery;
-    const $field = $(e.currentTarget);
-    const value = parseInt($field.val(), 10);
-
-    if (isNaN(value) || value < 1 || value > 100) {
-      this.showFieldError($field, 'Request limit must be between 1 and 100');
-      return false;
-    }
-
-    this.clearFieldError($field);
-    return true;
-  }
-
-  /**
-   * Validate cache time
-   * @param {Event} e Change event
-   */
-  validateCacheTime(e) {
-    const $ = jQuery;
-    const $field = $(e.currentTarget);
-    const value = parseInt($field.val(), 10);
-
-    if (isNaN(value) || value < 0) {
-      this.showFieldError($field, 'Cache time must be at least 0');
-      return false;
-    }
-
-    this.clearFieldError($field);
-    return true;
-  }
-
-  /**
-   * Check if a string is a valid URL
-   * @param {string} url URL to validate
-   * @returns {boolean} Whether URL is valid
-   */
   isValidUrl(url) {
     try {
       new URL(url);
       return true;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
 
-  /**
-   * Show field error message using the validation utility
-   * @param {jQuery} $field The field element
-   * @param {string} message Error message
-   */
-  showFieldError($field, message) {
-    if (typeof ProductEstimatorSettings !== 'undefined' &&
-      typeof ProductEstimatorSettings.showFieldError === 'function') {
-      ProductEstimatorSettings.showFieldError($field, message);
-    } else {
-      // Use the imported utility function
-      showFieldError($field, message);
+  validateRequestLimit(e) {
+    const $field = this.$(e.currentTarget);
+    const value = parseInt($field.val(), 10);
+    const i18n = this.settings.i18n || (window.netsuiteSettings && window.netsuiteSettings.i18n) || {};
+
+
+    if (isNaN(value) || value < 1 || value > 100) { // Example range
+      this.showFieldError($field, i18n.requestLimitError || 'Request limit must be between 1 and 100.');
+      return false;
     }
+    this.clearFieldError($field);
+    return true;
   }
 
-  /**
-   * Clear field error message using the validation utility
-   * @param {jQuery} $field The field element
-   */
-  clearFieldError($field) {
-    if (typeof ProductEstimatorSettings !== 'undefined' &&
-      typeof ProductEstimatorSettings.clearFieldError === 'function') {
-      ProductEstimatorSettings.clearFieldError($field);
-    } else {
-      // Use the imported utility function
-      clearFieldError($field);
+  validateCacheTime(e) {
+    const $field = this.$(e.currentTarget);
+    const value = parseInt($field.val(), 10);
+    const i18n = this.settings.i18n || (window.netsuiteSettings && window.netsuiteSettings.i18n) || {};
+
+    if (isNaN(value) || value < 0) { // Example: must be non-negative
+      this.showFieldError($field, i18n.cacheTimeError || 'Cache time must be at least 0.');
+      return false;
     }
+    this.clearFieldError($field);
+    return true;
   }
 
-  /**
-   * Add a dynamic info section to the settings page
-   * An example of using the DOM utility
-   * @param {string} message The message to display
-   */
-  addInfoSection(message) {
-    const $ = jQuery;
-    const $settingsTable = $('#netsuite-settings-table');
+  // showFieldError and clearFieldError are inherited.
 
+  addInfoSection(message) { // Example of using imported createElement
+    const $settingsTable = this.$('#netsuite-settings-table'); // Ensure this ID exists
     if (!$settingsTable.length || !message) return;
 
-    // Remove any existing info section
-    $('.netsuite-info-section').remove();
+    this.$('.netsuite-info-section').remove(); // Remove existing
 
-    // Use createElement utility to create the info section
-    const infoSection = createElement('div', {
+    const infoSection = createElement('div', { // createElement from @utils/dom
       className: 'netsuite-info-section notice notice-info',
-      style: {
-        padding: '10px',
-        marginBottom: '15px'
-      }
-    }, message);
+      style: { padding: '10px', marginBottom: '15px' },
+      innerHTML: message // Assuming message can be HTML
+    });
 
-    // Insert before the settings table
     $settingsTable.before(infoSection);
+  }
+}
 
-    logger.log('Added info section to settings page');
-  }}
-
-// Initialize the module
 jQuery(document).ready(function() {
-  const module = new NetsuiteSettingsModule();
-
-  // Export the module globally for backward compatibility
-  window.NetsuiteSettingsModule = module;
+  if (jQuery('#netsuite').length) { // Assuming 'netsuite' is the ID of the tab content
+    window.NetsuiteSettingsModuleInstance = new NetsuiteSettingsModule();
+  }
 });
 
 export default NetsuiteSettingsModule;

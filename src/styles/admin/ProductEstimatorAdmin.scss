@@ -1,0 +1,416 @@
+/**
+ * Admin styles for the Product Estimator plugin
+ */
+
+// Variables
+$primary-color: #2271b1;
+$error-color: #d63638;
+$border-color: #ccc;
+$background-color: #fff;
+$alt-background-color: #f9f9f9;
+$text-color: #666;
+$link-color: #0073aa;
+
+/* General Admin Styles */
+
+.product-estimator-admin-wrapper {
+  margin: 20px 0;
+  max-width: 1200px;
+
+  .meta-box-sortables {
+    min-height: 0;
+  }
+
+  .postbox-container {
+    float: none;
+    width: 100%;
+  }
+}
+
+/* Tab Navigation */
+
+.nav-tab-wrapper {
+  border-bottom: 1px solid $border-color;
+  margin-bottom: 20px;
+}
+
+.nav-tab {
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+
+  &:focus {
+    box-shadow: none;
+    outline: thin solid $primary-color;
+  }
+}
+
+/* Tab Content */
+
+.tab-content {
+  background: $background-color;
+  border: 1px solid $border-color;
+  border-top: none;
+  padding: 20px;
+}
+
+/* Form Styling */
+
+.product-estimator-form {
+  max-width: 800px;
+
+  input {
+
+    &[type="text"],
+    &[type="email"],
+    &[type="number"],
+    & + select {
+      min-width: 250px;
+    }
+
+    &.small-text {
+      min-width: 80px;
+    }
+
+    &.error {
+      border-color: $error-color;
+    }
+  }
+}
+
+.form-table {
+
+  th {
+    padding: 20px 10px 20px 0;
+    width: 200px;
+  }
+
+  td {
+    padding: 20px 10px;
+  }
+}
+
+/* Field Errors */
+
+.field-error {
+  color: $error-color;
+  display: block;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* Loading State */
+
+.loading {
+  color: $text-color;
+  padding: 40px;
+  text-align: center;
+
+  &::after {
+    animation: spin 1s linear infinite;
+    border: 2px solid $primary-color;
+    border-radius: 50%;
+    border-top-color: transparent;
+    content: '';
+    display: inline-block;
+    height: 20px;
+    margin-left: 10px;
+    width: 20px;
+  }
+}
+
+@keyframes spin {
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Notice Styling */
+
+.notice {
+  margin: 20px 0;
+}
+
+/* Responsive Adjustments */
+
+@media screen and (max-width: 782px) {
+
+  .form-table td {
+    padding: 10px;
+  }
+
+  .product-estimator-form {
+
+    input[type="text"],
+    input[type="email"],
+    input[type="number"],
+    select {
+      min-width: 100%;
+    }
+  }
+
+  .report-filters form {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .report-filters {
+
+    select,
+    input[type="date"] {
+      margin-right: 0;
+      width: 100%;
+    }
+  }
+}
+
+/* Dark Mode Support - Commented out for now
+@media (prefers-color-scheme: dark) {
+  .tab-content {
+    background: #fff;
+    border-color: #2c3338;
+  }
+
+  #report-placeholder {
+    background: #2c3338;
+    border-color: #2c3338;
+  }
+
+  .report-summary,
+  .report-filters {
+    background: #2c3338;
+  }
+
+  .nav-tab {
+    background: #2c3338;
+    border-color: #50575e;
+    color: #fff;
+  }
+
+  .nav-tab-active {
+    background: #2271b1;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  select {
+    background: #2c3338;
+    color: #fff;
+    border-color: #50575e;
+  }
+}
+*/
+
+/* Print Styles */
+
+@media print {
+  /* Set minimum lines for paragraph breaks */
+
+  p, li, tr {
+    orphans: 3; /* Minimum lines at bottom of page before break */
+    widows: 3;  /* Minimum lines at top of page after break */
+  }
+  
+  /* Avoid breaks inside these elements */
+
+  h1, h2, h3, h4, 
+  .postbox,
+  tr, 
+  thead {
+    page-break-inside: avoid;
+  }
+  
+  /* Force page breaks before these elements */
+
+  h1, h2, h3 {
+    page-break-after: avoid;
+    page-break-before: auto;
+  }
+  
+  /* Ensure tables have header rows on each page */
+
+  thead {
+    display: table-header-group;
+  }
+  
+  /* Avoid breaks in the middle of images */
+
+  img {
+    page-break-inside: avoid;
+  }
+
+  .nav-tab-wrapper,
+  .report-filters,
+  .submit {
+    display: none;
+  }
+
+  .product-estimator-admin-wrapper {
+    margin: 0;
+  }
+
+  .tab-content {
+    border: none;
+    padding: 0;
+  }
+}
+
+/**
+ * Dashboard Admin CSS
+ *
+ * Additional styles for the main dashboard page
+ */
+
+/* Dashboard Widgets */
+
+.dashboard-widgets-wrap {
+  overflow: hidden;
+
+  .postbox {
+    min-width: 0;
+
+    table {
+      margin: 0;
+      width: 100%;
+
+      th,
+      td {
+        padding: 8px 10px;
+      }
+
+      thead th {
+        border-bottom: 1px solid #ddd;
+        font-weight: 600;
+      }
+
+      tbody tr:nth-child(even) {
+        background: $alt-background-color;
+      }
+
+      a {
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
+    ul {
+      margin: 10px 0;
+      padding: 0 15px;
+
+      li {
+        list-style: none;
+        margin-bottom: 10px;
+        padding-left: 20px;
+        position: relative;
+
+        &::before {
+          color: $link-color;
+          content: "\f345";
+          font-family: dashicons, sans-serif;
+          left: 0;
+          position: absolute;
+          top: 1px;
+        }
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+
+    .inside p {
+      color: $text-color;
+      font-style: italic;
+      margin: 10px 15px;
+    }
+  }
+
+  .main {
+    padding: 0;
+
+    ul {
+      margin: 0;
+      padding: 10px 15px;
+
+      li {
+        font-size: 14px;
+        margin-bottom: 8px;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+  }
+
+  .hndle .page-title-action {
+    font-size: 13px;
+    font-weight: normal;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+}
+
+/* Dashboard Overview Styling */
+
+@media only screen and (min-width: 800px) {
+
+  .product-estimator-admin-wrapper .postbox-container {
+    float: left;
+    width: 49%;
+
+    &:nth-child(odd) {
+      margin-right: 2%;
+    }
+  }
+}
+
+@media only screen and (min-width: 1500px) {
+
+  .product-estimator-admin-wrapper .postbox-container {
+    width: 32%;
+
+    &:nth-child(3n) {
+      margin-right: 0;
+    }
+
+    &:nth-child(3n+1),
+    &:nth-child(3n+2) {
+      margin-right: 2%;
+    }
+  }
+}
+
+/* Stats Overview */
+
+.stats-overview {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -5px;
+
+  .stat-item {
+    background: $alt-background-color;
+    border-radius: 4px;
+    flex: 1 1 200px;
+    margin: 5px;
+    padding: 15px;
+    text-align: center;
+
+    .stat-number {
+      color: $primary-color;
+      display: block;
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .stat-label {
+      color: $text-color;
+      font-size: 13px;
+    }
+  }
+}

@@ -10,7 +10,7 @@ namespace RuDigital\ProductEstimator\Includes\Admin\Settings;
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/admin/settings
  */
-class GeneralSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
+final class GeneralSettingsModule extends SettingsModuleBase implements SettingsModuleInterface {
 
     /**
      * Array of settings keys managed by this module
@@ -20,7 +20,6 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @var      array    $module_settings    Settings keys managed by this module
      */
     private $module_settings = [
-        'default_markup',
         'estimate_expiry_days',
         // Add any other settings managed by this module
     ];
@@ -35,7 +34,7 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
         $this->tab_id = 'general';
         $this->tab_title = __('General Settings', 'product-estimator');
         $this->section_id = 'estimator_settings';
-        $this->section_title = __('Estimator Settings', 'product-estimator');
+        $this->section_title = __('General Settings', 'product-estimator');
     }
 
     /**
@@ -85,10 +84,6 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      */
     protected function get_number_fields() {
         return [
-            'default_markup' => [
-                'min' => 0,
-                'max' => 100
-            ],
             'estimate_expiry_days' => [
                 'min' => 1,
                 'max' => 365
@@ -111,20 +106,7 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
     public function register_fields() {
         $page_slug_for_wp_api = $this->plugin_name . '_' . $this->tab_id;
 
-        // Estimator Settings Section
-        add_settings_section(
-            $this->section_id, // Use the one defined in set_tab_details
-            $this->section_title,
-            [$this, 'render_section_description'],
-            $page_slug_for_wp_api
-        );
-
         $estimator_fields = [
-            'default_markup' => [
-                'title' => __('Default Markup (%)', 'product-estimator'),
-                'type' => 'number', 'description' => __('Default markup percentage for price ranges', 'product-estimator'),
-                'default' => 10, 'min' => 0, 'max' => 100,
-            ],
             'estimate_expiry_days' => [
                 'title' => __('Estimate Validity (Days)', 'product-estimator'),
                 'type' => 'number', 'description' => __('Number of days an estimate remains valid', 'product-estimator'),
@@ -395,7 +377,7 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @access   public
      */
     public function render_section_description() {
-        echo '<p>' . esc_html__('Configure general estimator settings and defaults.', 'product-estimator') . '</p>';
+        echo 'Configure general estimator settings and defaults.';
     }
 
 
@@ -407,20 +389,6 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      */
     // Add this to your class-general-settings-module.php file in the enqueue_scripts method
 
-    public function enqueue_scripts() {
-        $actual_data_for_js_object = [
-            $this->plugin_name . '-admin',
-            'generalSettings',
-            'nonce' => wp_create_nonce('product_estimator_settings_nonce'),
-            'tab_id' => $this->tab_id,
-            'ajaxUrl'      => admin_url('admin-ajax.php'), // If not relying on a global one
-            'ajax_action'   => 'save_' . $this->tab_id . '_settings', // e.g. save_feature_switches_settings
-            'option_name'   => $this->option_name,
-            'i18n' => []
-        ];
-
-        $this->add_script_data('generalSettings', $actual_data_for_js_object);
-    }
 
     /**
      * Enqueue module-specific styles.
@@ -428,13 +396,21 @@ class GeneralSettingsModule extends SettingsModuleBase implements SettingsModule
      * @since    1.1.0
      * @access   public
      */
-    public function enqueue_styles() {
-        wp_enqueue_style(
-            $this->plugin_name . '-general-settings',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/modules/general-settings.css',
-            array($this->plugin_name . '-settings'),
-            $this->version
-        );
+    public function enqueue_scripts() { // This might be renamed or refactored if AdminScriptHandler changes
+        $this->provide_script_data_for_localization();
+    }
+
+    protected function get_js_context_name() {
+        return 'generalSettings';
+    }
+
+    protected function get_module_specific_script_data() {
+        return [
+            'i18n' => [
+                // 'specific_general_setting_message' => __('Hello from General Settings', 'product-estimator'),
+            ],
+            // No need to specify 'option_name', 'actions', 'selectors' unless overriding base.
+        ];
     }
 
 

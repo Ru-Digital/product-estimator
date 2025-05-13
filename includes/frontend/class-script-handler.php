@@ -56,79 +56,17 @@ class ScriptHandler {
         // Always register and enqueue styles on all pages
         wp_enqueue_style('dashicons');
 
+        // Register and enqueue our bundled frontend styles instead of individual files
         wp_register_style(
-            $this->plugin_name . '-public',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-public.css',
+            $this->plugin_name . '-styles-bundled',
+            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-frontend-bundled.css',
             array(),
             $this->version,
             'all'
         );
-
-        wp_register_style(
-            $this->plugin_name . '-modal',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-modal.css',
-            array(),
-            $this->version,
-            'all'
-        );
-
-        wp_register_style(
-            $this->plugin_name . '-dialog',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-dialog.css',
-            array(),
-            $this->version,
-            'all'
-        );
-
-        wp_register_style(
-            $this->plugin_name . '-carousel',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-carousel.css',
-            array(),
-            $this->version,
-            'all'
-        );
-
-        wp_register_style(
-            $this->plugin_name . '-similar-products',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-similar-products.css',
-            array(),
-            $this->version,
-            'all'
-        );
-
-        wp_register_style(
-            $this->plugin_name . '-customer-details',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-customer-details.css',
-            array(),
-            $this->version,
-            'all'
-        );
-
-        wp_register_style(
-            $this->plugin_name . '-details-toggle',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-details-toggle.css',
-            array(),
-            $this->version,
-            'all'
-        );
-
-        wp_register_style(
-            $this->plugin_name . '-product-upgrades',
-            PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-upgrades.css',
-            array(),
-            $this->version,
-            'all'
-        );
-
-        // Always load styles on all pages
-        wp_enqueue_style($this->plugin_name . '-public');
-        wp_enqueue_style($this->plugin_name . '-modal');
-        wp_enqueue_style($this->plugin_name . '-dialog');
-        wp_enqueue_style($this->plugin_name . '-carousel');
-        wp_enqueue_style($this->plugin_name . '-similar-products');
-        wp_enqueue_style($this->plugin_name . '-customer-details');
-        wp_enqueue_style($this->plugin_name . '-details-toggle');
-        wp_enqueue_style($this->plugin_name . '-product-upgrades');
+        
+        // Enqueue the bundled styles
+        wp_enqueue_style($this->plugin_name . '-styles-bundled');
     }
 
     /**

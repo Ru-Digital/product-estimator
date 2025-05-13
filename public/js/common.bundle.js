@@ -298,6 +298,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/typeof */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
 /* harmony import */ var _babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/helpers/slicedToArray */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
 /* harmony import */ var _babel_runtime_helpers_defineProperty__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babel/runtime/helpers/defineProperty */ "./node_modules/@babel/runtime/helpers/esm/defineProperty.js");
+/* harmony import */ var _logger__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./logger */ "./src/js/utils/logger.js");
 
 
 
@@ -311,6 +312,10 @@ function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t =
  *
  * Functions for handling AJAX requests and related operations.
  */
+
+ // Tries to import createLogger directly
+
+var logger = (0,_logger__WEBPACK_IMPORTED_MODULE_3__.createLogger)('UtilsAjax'); // <<< ERROR HAPPENS HERE: createLogger is not a function
 
 /**
  * Handle AJAX request with error handling and consistent response format
@@ -344,7 +349,7 @@ function ajaxRequest(options) {
         }
       },
       error: function error(xhr, status, _error) {
-        console.error('AJAX error:', status, _error);
+        logger.error('AJAX error:', status, _error);
         reject(new Error(_error));
       }
     }));
@@ -488,6 +493,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var _babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/typeof */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
 /* harmony import */ var _babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/helpers/slicedToArray */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
+/* harmony import */ var _logger__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./logger */ "./src/js/utils/logger.js");
 
 
 /**
@@ -496,6 +502,9 @@ __webpack_require__.r(__webpack_exports__);
  * Enhanced DOM manipulation utilities that combine the existing functionality
  * with additional helpers.
  */
+
+
+var logger = (0,_logger__WEBPACK_IMPORTED_MODULE_2__.createLogger)('UtilsDom');
 
 /**
  * Create an element with attributes and children
@@ -605,7 +614,7 @@ function toggleVisibility(element, show) {
  */
 function forceElementVisibility(element) {
   if (!element) {
-    console.error('Cannot show null element');
+    logger.error('Cannot show null element');
     return null;
   }
 
@@ -731,6 +740,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   debounce: () => (/* binding */ debounce),
 /* harmony export */   formatDate: () => (/* binding */ formatDate),
 /* harmony export */   formatPrice: () => (/* binding */ formatPrice),
+/* harmony export */   formatPriceRange: () => (/* binding */ formatPriceRange),
 /* harmony export */   objectToQueryString: () => (/* binding */ objectToQueryString),
 /* harmony export */   sanitizeHTML: () => (/* binding */ sanitizeHTML),
 /* harmony export */   throttle: () => (/* binding */ throttle),
@@ -771,6 +781,35 @@ function formatPrice(amount) {
     return "".concat(currencySymbol, "0.00");
   }
   return currencySymbol + numAmount.toFixed(decimals);
+}
+
+/**
+ * Format a price range with currency symbol.
+ * If min and max prices are the same, it shows a single price.
+ * @param {number|string|null|undefined} minPrice - Minimum price
+ * @param {number|string|null|undefined} maxPrice - Maximum price
+ * @param {string} currencySymbol - Currency symbol
+ * @param {number} decimals - Number of decimal places
+ * @returns {string} Formatted price range string
+ */
+function formatPriceRange(minPrice, maxPrice) {
+  var currencySymbol = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '$';
+  var decimals = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 2;
+  var numMinPrice = minPrice === undefined || minPrice === null ? 0 : typeof minPrice === 'string' ? parseFloat(minPrice.replace(/[^0-9.-]+/g, "")) : minPrice;
+  var numMaxPrice = maxPrice === undefined || maxPrice === null ? 0 : typeof maxPrice === 'string' ? parseFloat(maxPrice.replace(/[^0-9.-]+/g, "")) : maxPrice;
+  if (isNaN(numMinPrice) && isNaN(numMaxPrice)) {
+    return "".concat(formatPrice(0, currencySymbol, decimals)); // Or some other default like "N/A"
+  }
+  if (isNaN(numMinPrice)) {
+    return formatPrice(numMaxPrice, currencySymbol, decimals);
+  }
+  if (isNaN(numMaxPrice)) {
+    return formatPrice(numMinPrice, currencySymbol, decimals);
+  }
+  if (numMinPrice === numMaxPrice) {
+    return formatPrice(numMinPrice, currencySymbol, decimals);
+  }
+  return "".concat(formatPrice(numMinPrice, currencySymbol, decimals), " - ").concat(formatPrice(numMaxPrice, currencySymbol, decimals));
 }
 
 /**
@@ -911,21 +950,25 @@ function objectToQueryString(obj) {
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
 /* harmony export */   addEventListenerOnce: () => (/* binding */ addEventListenerOnce),
-/* harmony export */   ajax: () => (/* reexport module object */ _ajax__WEBPACK_IMPORTED_MODULE_0__),
+/* harmony export */   ajax: () => (/* reexport module object */ _ajax__WEBPACK_IMPORTED_MODULE_1__),
 /* harmony export */   ajaxRequest: () => (/* binding */ ajaxRequest),
 /* harmony export */   clearFieldError: () => (/* binding */ clearFieldError),
+/* harmony export */   closeMainPluginLogGroup: () => (/* binding */ closeMainPluginLogGroup),
 /* harmony export */   closest: () => (/* binding */ closest),
 /* harmony export */   createElement: () => (/* binding */ createElement),
 /* harmony export */   createElementFromHTML: () => (/* binding */ createElementFromHTML),
+/* harmony export */   createLogger: () => (/* binding */ createLogger),
 /* harmony export */   debounce: () => (/* binding */ debounce),
-/* harmony export */   dom: () => (/* reexport module object */ _dom__WEBPACK_IMPORTED_MODULE_1__),
+/* harmony export */   dom: () => (/* reexport module object */ _dom__WEBPACK_IMPORTED_MODULE_2__),
+/* harmony export */   error: () => (/* binding */ error),
 /* harmony export */   findParentBySelector: () => (/* binding */ findParentBySelector),
 /* harmony export */   forceElementVisibility: () => (/* binding */ forceElementVisibility),
-/* harmony export */   format: () => (/* reexport module object */ _format__WEBPACK_IMPORTED_MODULE_2__),
+/* harmony export */   format: () => (/* reexport module object */ _format__WEBPACK_IMPORTED_MODULE_3__),
 /* harmony export */   formatPrice: () => (/* binding */ formatPrice),
 /* harmony export */   get: () => (/* binding */ get),
 /* harmony export */   insertAfter: () => (/* binding */ insertAfter),
 /* harmony export */   log: () => (/* binding */ log),
+/* harmony export */   loggerModule: () => (/* reexport module object */ _logger__WEBPACK_IMPORTED_MODULE_5__),
 /* harmony export */   removeElement: () => (/* binding */ removeElement),
 /* harmony export */   sanitizeHTML: () => (/* binding */ sanitizeHTML),
 /* harmony export */   showFieldError: () => (/* binding */ showFieldError),
@@ -934,12 +977,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   validateEmail: () => (/* binding */ validateEmail),
 /* harmony export */   validateNumber: () => (/* binding */ validateNumber),
 /* harmony export */   validateRequired: () => (/* binding */ validateRequired),
-/* harmony export */   validation: () => (/* reexport module object */ _validation__WEBPACK_IMPORTED_MODULE_3__)
+/* harmony export */   validation: () => (/* reexport module object */ _validation__WEBPACK_IMPORTED_MODULE_4__),
+/* harmony export */   warn: () => (/* binding */ warn)
 /* harmony export */ });
-/* harmony import */ var _ajax__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./ajax */ "./src/js/utils/ajax.js");
-/* harmony import */ var _dom__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./dom */ "./src/js/utils/dom.js");
-/* harmony import */ var _format__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./format */ "./src/js/utils/format.js");
-/* harmony import */ var _validation__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./validation */ "./src/js/utils/validation.js");
+/* harmony import */ var _babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/typeof */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
+/* harmony import */ var _ajax__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./ajax */ "./src/js/utils/ajax.js");
+/* harmony import */ var _dom__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./dom */ "./src/js/utils/dom.js");
+/* harmony import */ var _format__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./format */ "./src/js/utils/format.js");
+/* harmony import */ var _validation__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./validation */ "./src/js/utils/validation.js");
+/* harmony import */ var _logger__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./logger */ "./src/js/utils/logger.js");
+
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
@@ -956,47 +1003,42 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
 
 
 
+
 // Export individual modules for direct imports
 
+var log = _logger__WEBPACK_IMPORTED_MODULE_5__.log,
+  warn = _logger__WEBPACK_IMPORTED_MODULE_5__.warn,
+  error = _logger__WEBPACK_IMPORTED_MODULE_5__.error,
+  createLogger = _logger__WEBPACK_IMPORTED_MODULE_5__.createLogger,
+  closeMainPluginLogGroup = _logger__WEBPACK_IMPORTED_MODULE_5__.closeMainPluginLogGroup;
 
 // Export all utilities as named exports for backward compatibility
-var ajaxRequest = _ajax__WEBPACK_IMPORTED_MODULE_0__.ajaxRequest,
-  debounce = _ajax__WEBPACK_IMPORTED_MODULE_0__.debounce;
 
-var createElement = _dom__WEBPACK_IMPORTED_MODULE_1__.createElement,
-  createElementFromHTML = _dom__WEBPACK_IMPORTED_MODULE_1__.createElementFromHTML,
-  closest = _dom__WEBPACK_IMPORTED_MODULE_1__.closest,
-  toggleVisibility = _dom__WEBPACK_IMPORTED_MODULE_1__.toggleVisibility,
-  forceElementVisibility = _dom__WEBPACK_IMPORTED_MODULE_1__.forceElementVisibility,
-  findParentBySelector = _dom__WEBPACK_IMPORTED_MODULE_1__.findParentBySelector,
-  insertAfter = _dom__WEBPACK_IMPORTED_MODULE_1__.insertAfter,
-  removeElement = _dom__WEBPACK_IMPORTED_MODULE_1__.removeElement,
-  addEventListenerOnce = _dom__WEBPACK_IMPORTED_MODULE_1__.addEventListenerOnce;
+var ajaxRequest = _ajax__WEBPACK_IMPORTED_MODULE_1__.ajaxRequest,
+  debounce = _ajax__WEBPACK_IMPORTED_MODULE_1__.debounce;
 
-var formatPrice = _format__WEBPACK_IMPORTED_MODULE_2__.formatPrice,
-  sanitizeHTML = _format__WEBPACK_IMPORTED_MODULE_2__.sanitizeHTML;
+var createElement = _dom__WEBPACK_IMPORTED_MODULE_2__.createElement,
+  createElementFromHTML = _dom__WEBPACK_IMPORTED_MODULE_2__.createElementFromHTML,
+  closest = _dom__WEBPACK_IMPORTED_MODULE_2__.closest,
+  toggleVisibility = _dom__WEBPACK_IMPORTED_MODULE_2__.toggleVisibility,
+  forceElementVisibility = _dom__WEBPACK_IMPORTED_MODULE_2__.forceElementVisibility,
+  findParentBySelector = _dom__WEBPACK_IMPORTED_MODULE_2__.findParentBySelector,
+  insertAfter = _dom__WEBPACK_IMPORTED_MODULE_2__.insertAfter,
+  removeElement = _dom__WEBPACK_IMPORTED_MODULE_2__.removeElement,
+  addEventListenerOnce = _dom__WEBPACK_IMPORTED_MODULE_2__.addEventListenerOnce;
 
-var validateEmail = _validation__WEBPACK_IMPORTED_MODULE_3__.validateEmail,
-  validateNumber = _validation__WEBPACK_IMPORTED_MODULE_3__.validateNumber,
-  validateRequired = _validation__WEBPACK_IMPORTED_MODULE_3__.validateRequired,
-  showFieldError = _validation__WEBPACK_IMPORTED_MODULE_3__.showFieldError,
-  clearFieldError = _validation__WEBPACK_IMPORTED_MODULE_3__.clearFieldError,
-  showNotice = _validation__WEBPACK_IMPORTED_MODULE_3__.showNotice;
+var formatPrice = _format__WEBPACK_IMPORTED_MODULE_3__.formatPrice,
+  sanitizeHTML = _format__WEBPACK_IMPORTED_MODULE_3__.sanitizeHTML;
 
-// Export a helper function for logging with conditional debug flag
-
-function log(component) {
-  var _window$productEstima;
-  if ((_window$productEstima = window.productEstimatorVars) !== null && _window$productEstima !== void 0 && _window$productEstima.debug) {
-    var _console;
-    for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      args[_key - 1] = arguments[_key];
-    }
-    (_console = console).log.apply(_console, ["[".concat(component, "]")].concat(args));
-  }
-}
+var validateEmail = _validation__WEBPACK_IMPORTED_MODULE_4__.validateEmail,
+  validateNumber = _validation__WEBPACK_IMPORTED_MODULE_4__.validateNumber,
+  validateRequired = _validation__WEBPACK_IMPORTED_MODULE_4__.validateRequired,
+  showFieldError = _validation__WEBPACK_IMPORTED_MODULE_4__.showFieldError,
+  clearFieldError = _validation__WEBPACK_IMPORTED_MODULE_4__.clearFieldError,
+  showNotice = _validation__WEBPACK_IMPORTED_MODULE_4__.showNotice;
 
 // Export a convenience function to safely access nested properties
+
 function get(obj, path) {
   var defaultValue = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
   var keys = path.split('.');
@@ -1006,7 +1048,8 @@ function get(obj, path) {
   try {
     for (_iterator.s(); !(_step = _iterator.n()).done;) {
       var key = _step.value;
-      if (result === undefined || result === null) {
+      if (result === undefined || result === null || (0,_babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_0__["default"])(result) !== 'object') {
+        // Added type check for robustnest
         return defaultValue;
       }
       result = result[key];
@@ -1017,6 +1060,169 @@ function get(obj, path) {
     _iterator.f();
   }
   return result === undefined ? defaultValue : result;
+}
+
+/***/ }),
+
+/***/ "./src/js/utils/logger.js":
+/*!********************************!*\
+  !*** ./src/js/utils/logger.js ***!
+  \********************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   closeMainPluginLogGroup: () => (/* binding */ closeMainPluginLogGroup),
+/* harmony export */   createLogger: () => (/* binding */ createLogger),
+/* harmony export */   error: () => (/* binding */ error),
+/* harmony export */   log: () => (/* binding */ log),
+/* harmony export */   warn: () => (/* binding */ warn)
+/* harmony export */ });
+function closeMainPluginLogGroup() {
+  var _window$productEstima;
+  if ((_window$productEstima = window.productEstimatorVars) !== null && _window$productEstima !== void 0 && _window$productEstima.debug) {
+    console.log('%cAttempting to close main plugin group. Flag is: ' + pluginLogGroupHasStarted, 'color: red');
+    if (pluginLogGroupHasStarted) {
+      console.groupEnd();
+      pluginLogGroupHasStarted = false;
+      console.log('%cMain plugin group closed. Flag set to: ' + pluginLogGroupHasStarted, 'color: purple');
+    } else {
+      console.warn('%cClose called, but logger flag indicates no main group was started or it was already closed.', 'color: orange');
+    }
+  }
+}
+var pluginLogGroupHasStarted = false;
+function ensureMainPluginLogGroupIsStarted() {
+  var _window$productEstima2, _window$productEstima3;
+  var startCollapsed = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+  // (Keep the version with diagnostic logs from above for testing)
+  if (!pluginLogGroupHasStarted && (_window$productEstima2 = window.productEstimatorVars) !== null && _window$productEstima2 !== void 0 && _window$productEstima2.debug) {
+    if (startCollapsed) {
+      console.groupCollapsed("[ProductEstimator] Logs");
+    } else {
+      console.group("[ProductEstimator] Logs");
+    }
+    pluginLogGroupHasStarted = true;
+  } else if ((_window$productEstima3 = window.productEstimatorVars) !== null && _window$productEstima3 !== void 0 && _window$productEstima3.debug) {}
+}
+
+// --- MODIFIED STANDALONE LOG FUNCTIONS ---
+// These will now also log within the main plugin group.
+
+function log(component) {
+  var _window$productEstima4;
+  if ((_window$productEstima4 = window.productEstimatorVars) !== null && _window$productEstima4 !== void 0 && _window$productEstima4.debug) {
+    var _console;
+    ensureMainPluginLogGroupIsStarted();
+    for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      args[_key - 1] = arguments[_key];
+    }
+    (_console = console).log.apply(_console, ["[".concat(component, "]")].concat(args));
+  }
+}
+function warn(component) {
+  var _window$productEstima5;
+  if ((_window$productEstima5 = window.productEstimatorVars) !== null && _window$productEstima5 !== void 0 && _window$productEstima5.debug) {
+    var _console2;
+    ensureMainPluginLogGroupIsStarted();
+    for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+      args[_key2 - 1] = arguments[_key2];
+    }
+    (_console2 = console).warn.apply(_console2, ["[".concat(component, "]")].concat(args));
+  }
+}
+function error(component) {
+  var _window$productEstima6;
+  if ((_window$productEstima6 = window.productEstimatorVars) !== null && _window$productEstima6 !== void 0 && _window$productEstima6.debug) {
+    var _console3;
+    ensureMainPluginLogGroupIsStarted(false); // Attempt to expand main group on error
+    for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+      args[_key3 - 1] = arguments[_key3];
+    }
+    (_console3 = console).error.apply(_console3, ["[".concat(component, "]")].concat(args));
+  }
+}
+
+// --- MODIFIED createLogger FUNCTION ---
+/**
+ * Logger Factory Function
+ * Creates a logger instance pre-configured with a component name,
+ * and manages logging within the main plugin console group.
+ * @param {string} componentName - The name of the component for log prefixing.
+ * @returns {object} An object with log, warn, error, group, and groupEnd methods.
+ */
+function createLogger(componentName) {
+  var componentLabel = "[".concat(componentName, "]");
+
+  // Option 1: Ensure group is started when logger is created.
+  // if (window.productEstimatorVars?.debug) { // This initial call is fine
+  //   ensureMainPluginLogGroupIsStarted();
+  // }
+
+  return {
+    log: function log() {
+      var _window$productEstima7;
+      if ((_window$productEstima7 = window.productEstimatorVars) !== null && _window$productEstima7 !== void 0 && _window$productEstima7.debug) {
+        var _console4;
+        ensureMainPluginLogGroupIsStarted(); // This ensures it for any log call
+        for (var _len4 = arguments.length, args = new Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+          args[_key4] = arguments[_key4];
+        }
+        (_console4 = console).log.apply(_console4, [componentLabel].concat(args));
+        if (window.debug && window.debug.trace) {
+          console.trace();
+        }
+      }
+    },
+    warn: function warn() {
+      var _window$productEstima8;
+      if ((_window$productEstima8 = window.productEstimatorVars) !== null && _window$productEstima8 !== void 0 && _window$productEstima8.debug) {
+        var _console5;
+        ensureMainPluginLogGroupIsStarted();
+        for (var _len5 = arguments.length, args = new Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+          args[_key5] = arguments[_key5];
+        }
+        (_console5 = console).warn.apply(_console5, [componentLabel].concat(args));
+        if (window.debug && window.debug.trace) {
+          console.trace();
+        }
+      }
+    },
+    error: function error() {
+      var _window$productEstima9;
+      if ((_window$productEstima9 = window.productEstimatorVars) !== null && _window$productEstima9 !== void 0 && _window$productEstima9.debug) {
+        var _console6;
+        ensureMainPluginLogGroupIsStarted(false);
+        for (var _len6 = arguments.length, args = new Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
+          args[_key6] = arguments[_key6];
+        }
+        (_console6 = console).error.apply(_console6, [componentLabel].concat(args));
+        if (window.debug && window.debug.trace) {
+          console.trace();
+        }
+      }
+    },
+    group: function group() {
+      var _window$productEstima0;
+      var groupName = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'Details';
+      var collapsed = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+      if ((_window$productEstima0 = window.productEstimatorVars) !== null && _window$productEstima0 !== void 0 && _window$productEstima0.debug) {
+        ensureMainPluginLogGroupIsStarted();
+        var fullGroupLabel = "".concat(componentLabel, " ").concat(groupName);
+        if (collapsed) {
+          console.groupCollapsed(fullGroupLabel);
+        } else {
+          console.group(fullGroupLabel);
+        }
+      }
+    },
+    groupEnd: function groupEnd() {
+      var _window$productEstima1;
+      if ((_window$productEstima1 = window.productEstimatorVars) !== null && _window$productEstima1 !== void 0 && _window$productEstima1.debug && pluginLogGroupHasStarted) {
+        console.groupEnd();
+      }
+    }
+  };
 }
 
 /***/ }),

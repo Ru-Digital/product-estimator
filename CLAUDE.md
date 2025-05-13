@@ -87,7 +87,7 @@ ProductEstimator (includes/class-product-estimator.php)
 
 Includes
 ├── Activator (class-activator.php) - Plugin activation tasks
-├── AjaxHandler (class-ajax-handler.php) - AJAX requests handling
+├── AjaxHandler (class-ajax-handler.php) - Main AJAX handler (delegates to specialized handlers)
 ├── CustomerDetails (class-customer-details.php) - Customer data handling
 ├── Deactivator (class-deactivator.php) - Plugin deactivation tasks
 ├── EstimateHandler (class-estimate-handler.php) - Estimate operations
@@ -96,6 +96,16 @@ Includes
 ├── Loader (class-loader.php) - WordPress hooks manager
 ├── PDFRouteHandler (class-pdf-route-handler.php) - PDF generation
 ├── SessionHandler (class-session-handler.php) - User session management
+├── Ajax/ - Directory containing specialized AJAX handlers
+│   ├── AjaxHandlerBase (class-ajax-handler-base.php) - Base class for all AJAX handlers
+│   ├── AjaxHandlerLoader (class-ajax-handler-loader.php) - Loads and initializes AJAX handlers
+│   ├── CustomerAjaxHandler (class-customer-ajax-handler.php) - Customer-related AJAX handlers
+│   ├── EstimateAjaxHandler (class-estimate-ajax-handler.php) - Estimate-related AJAX handlers
+│   ├── FormAjaxHandler (class-form-ajax-handler.php) - Form-related AJAX handlers
+│   ├── ProductAjaxHandler (class-product-ajax-handler.php) - Product-related AJAX handlers
+│   ├── RoomAjaxHandler (class-room-ajax-handler.php) - Room-related AJAX handlers
+│   ├── SuggestionAjaxHandler (class-suggestion-ajax-handler.php) - Suggestion-related AJAX handlers
+│   └── UpgradeAjaxHandler (class-upgrade-ajax-handler.php) - Upgrade-related AJAX handlers
 
 Admin (includes/admin/)
 ├── AdminScriptHandler (class-admin-script-handler.php) - Admin JS/CSS
@@ -234,6 +244,41 @@ Frontend Styles (src/styles/frontend/)
 5. Ensure JSDoc blocks are properly aligned
 6. Use path aliases for cleaner imports
 7. Always run `npm run lint:fix` before submitting code changes
+
+## AJAX Handler Architecture
+
+The plugin uses a modular AJAX handler architecture to organize AJAX endpoints by functionality:
+
+1. **Main AjaxHandler Class** (`includes/class-ajax-handler.php`)
+   - Serves as a backwards-compatibility layer
+   - Delegates to the specialized handlers via AjaxHandlerLoader
+
+2. **AjaxHandlerLoader** (`includes/ajax/class-ajax-handler-loader.php`)
+   - Loads and initializes all AJAX handlers
+   - Conditionally loads feature-dependent handlers
+   - Provides access to all handler instances
+
+3. **AjaxHandlerBase** (`includes/ajax/class-ajax-handler-base.php`)
+   - Abstract base class for all AJAX handlers
+   - Provides common functionality (nonce verification, response methods)
+   - Implements the `register_ajax_endpoint()` helper method
+
+4. **Specialized AJAX Handlers**
+   - Each handler deals with a specific domain (estimates, rooms, products, etc.)
+   - All handlers extend AjaxHandlerBase
+   - Handlers register their AJAX endpoints in the `register_hooks()` method
+   - Feature-dependent handlers only load when the feature is enabled
+
+5. **Handler Types and Responsibilities**
+   - EstimateAjaxHandler: Estimate creation, retrieval, storage, and PDF generation
+   - RoomAjaxHandler: Room creation, product management within rooms
+   - ProductAjaxHandler: Product search, variations, and data retrieval
+   - FormAjaxHandler: Form templates and HTML generation
+   - CustomerAjaxHandler: Customer details management and notifications
+   - SuggestionAjaxHandler: Product suggestions and similar products
+   - UpgradeAjaxHandler: Product upgrade options
+
+When adding new AJAX functionality, create a method in the appropriate handler class or create a new specialized handler if the functionality fits a new domain.
 
 ## Important Configuration Files
 

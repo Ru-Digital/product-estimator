@@ -1,12 +1,14 @@
 /**
  * DataService.js
  *
- * Centralized service for all AJAX operations in the Product Estimator plugin.
+ * Centralized service for all data operations in the Product Estimator plugin.
  * Provides a clean API for data operations and handles errors consistently.
+ * Uses AjaxService for HTTP requests and EstimateStorage for local storage operations.
  */
 
 import { createLogger } from '@utils';
 
+import AjaxService from './AjaxService';
 import {
   addEstimate, // Imports from EstimateStorage
   loadEstimateData, // Imports from EstimateStorage
@@ -21,7 +23,7 @@ import {
   // getEstimate, addProductToRoom - Removed unused imports
 } from './EstimateStorage'; // Import necessary functions from storage
 
-const logger = createLogger('EstimateStorage');
+const logger = createLogger('DataService');
 
 class DataService {
   /**
@@ -42,6 +44,13 @@ class DataService {
       nonce: window.productEstimatorVars?.nonce || '',
       i18n: window.productEstimatorVars?.i18n || {}
     }, config);
+
+    // Initialize AjaxService
+    this.ajaxService = new AjaxService({
+      debug: this.config.debug,
+      ajaxUrl: this.config.ajaxUrl,
+      nonce: this.config.nonce
+    });
 
     // Cache for frequently accessed data
     this.cache = {
@@ -66,71 +75,11 @@ class DataService {
    * @param {string} action - WordPress AJAX action name
    * @param {object} data - Request data
    * @returns {Promise} - Promise resolving to response data
+   * @deprecated Use specific action methods instead
    */
   request(action, data = {}) {
-    logger.log(`Making request to '${action}'`, data);
-
-    return new Promise((resolve, reject) => {
-      const formData = new FormData();
-
-      // Add required fields
-      formData.append('action', action);
-      formData.append('nonce', this.config.nonce);
-
-      // Add all other data
-      Object.entries(data).forEach(([key, value]) => {
-        // Skip null or undefined values
-        if (value === null || value === undefined) {
-          return;
-        }
-
-        // Ensure all values are converted to strings for consistent server-side handling
-        formData.append(key, String(value));
-      });
-
-      // Debug the request data
-      if (this.config.debug) {
-        logger.log('Request details:', {
-          url: this.config.ajaxUrl,
-          action: action,
-          nonce: this.config.nonce,
-          data: Object.fromEntries(formData)
-        });
-      }
-
-      fetch(this.config.ajaxUrl, {
-        method: 'POST',
-        credentials: 'same-origin',
-        body: formData
-      })
-        .then(response => {
-          if (!response.ok) {
-            // Log more details about the failed response
-            logger.error(`Network response error (${response.status}): ${response.statusText}`);
-            throw new Error(`Network response was not ok: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(response => {
-          if (response.success) {
-            logger.log(`Request '${action}' succeeded:`, response.data);
-            resolve(response.data);
-          } else {
-            const error = new Error(response.data?.message || 'Unknown error');
-            error.data = response.data;
-            logger.log(`Request '${action}' failed:`, error);
-            reject(error);
-          }
-        })
-        .catch(error => {
-          logger.log(`Request '${action}' error:`, error);
-          // Create a more informative error that won't cause null.prepend errors
-          const enhancedError = new Error(`AJAX request failed: ${error.message}`);
-          enhancedError.originalError = error;
-          enhancedError.action = action;
-          reject(enhancedError);
-        });
-    });
+    logger.log(`[DEPRECATED] Using generic request method for '${action}'. Consider using dedicated action methods.`, data);
+    return this.ajaxService._request(action, data);
   }
 
   /**
@@ -141,9 +90,10 @@ class DataService {
     // Return a promise for API consistency
     return new Promise((resolve) => {
       // Load estimate data from localStorage
+      // This allows ModalManager to provide its own implementation by setting this.loadEstimateData
       const estimateData = this.loadEstimateData ?
         this.loadEstimateData() :
-        loadEstimateData(); // Use whatever function is available
+        loadEstimateData();
 
       // Check if there are any estimates
       const hasEstimates = estimateData &&
@@ -169,28 +119,18 @@ class DataService {
    */
   getProductUpgrades(productId, estimateId, roomId, roomArea, upgradeType, bypassCache = false) {
     logger.log(`[DataService.getProductUpgrades] DEBUG: Called with productId: ${productId}, estimateId: ${estimateId}, roomId: ${roomId}, roomArea: ${roomArea}, upgradeType: ${upgradeType}, bypassCache: ${bypassCache}`);
-    const cacheKey = `upgrades_${productId}_${estimateId}_${roomId}_${upgradeType}`;
-
-    // Initialize this.cache.productUpgrades if it's undefined
-    this.cache.productUpgrades = this.cache.productUpgrades || {};
-
-    if (!bypassCache && this.cache.productUpgrades[cacheKey]) {
-      logger.log(`[DataService.getProductUpgrades] DEBUG: Returning cached upgrades for product ${productId}.`);
-      return Promise.resolve(this.cache.productUpgrades[cacheKey]);
-    }
-
-    logger.log(`[DataService.getProductUpgrades] DEBUG: Fetching product upgrades from server for product ${productId}. Calling this.request('get_product_upgrades', ...).`);
-    return this.request('get_product_upgrades', {
+    
+    // Delegate to AjaxService which now handles its own caching
+    return this.ajaxService.getProductUpgrades({
       product_id: productId,
       estimate_id: estimateId,
       room_id: roomId,
       room_area: roomArea,
       upgrade_type: upgradeType,
-    })
+    }, bypassCache)
       .then(data => {
-        logger.log(`[DataService.getProductUpgrades] DEBUG: Response from this.request for 'get_product_upgrades':`, data);
+        logger.log(`[DataService.getProductUpgrades] DEBUG: Response from ajaxService.getProductUpgrades:`, data);
         if (data && Array.isArray(data.upgrades)) {
-          this.cache.productUpgrades[cacheKey] = data.upgrades;
           return data.upgrades;
         } else {
           logger.warn('[getProductUpgrades] DEBUG: get_product_upgrades did not return expected data structure.', data);
@@ -199,8 +139,6 @@ class DataService {
       })
       .catch(error => {
         logger.error('[getProductUpgrades] DEBUG: Error fetching product upgrades:', error);
-        // this.cache.productUpgrades is already initialized
-        delete this.cache.productUpgrades[cacheKey];
         throw error;
       });
   }
@@ -353,7 +291,9 @@ class DataService {
     // The backend ('get_product_data_for_storage') is expected to return:
     // - product_data: { ... (main product details), similar_products: [...] }
     // - room_suggested_products: [...] (suggestions for the room *with* the new product, if applicable)
-    const fetchProductAndSuggestionsPromise = this.request('get_product_data_for_storage', {
+    // 
+    // This is a CRITICAL request that must succeed - we cannot proceed with fallbacks.
+    const fetchProductAndSuggestionsPromise = this.ajaxService.getProductDataForStorage({
       product_id: String(productId),
       room_width: roomWidth,
       room_length: roomLength,
@@ -365,10 +305,40 @@ class DataService {
       .then(productDataResponse => {
         logger.log('DataService: Fetched comprehensive product data response:', productDataResponse);
 
-        if (!productDataResponse || !productDataResponse.product_data) {
-          logger.warn('Failed to get comprehensive product data from server for local storage.');
-          // If fetching comprehensive data fails, the local storage add cannot proceed as intended.
-          return { success: false, error: new Error('Failed to fetch complete product data for local storage.') };
+        // Critical validation: If getProductDataForStorage failed or returned no response
+        if (!productDataResponse) {
+          const errorMsg = 'Failed to get comprehensive product data from server - null/undefined response.';
+          logger.error(errorMsg);
+          console.error(errorMsg); // Critical: Log to console for user visibility
+          return { 
+            success: false, 
+            error: new Error(errorMsg),
+            critical: true // Mark as critical error that should block the UI
+          };
+        }
+        
+        // Critical validation: If getProductDataForStorage returned no product_data
+        if (!productDataResponse.product_data) {
+          const errorMsg = 'Failed to get comprehensive product data from server - missing product_data property.';
+          logger.error(errorMsg, productDataResponse);
+          console.error(errorMsg, productDataResponse); // Critical: Log to console for user visibility
+          return { 
+            success: false, 
+            error: new Error(errorMsg),
+            critical: true // Mark as critical error that should block the UI
+          };
+        }
+        
+        // Critical validation: If this is a fallback response from a failed request
+        if (productDataResponse.isFallback === true) {
+          const errorMsg = `Unable to get product data from server for product ID ${productId}. This is a required server request.`;
+          logger.error(errorMsg);
+          console.error(errorMsg); // Critical: Log to console for user visibility
+          return { 
+            success: false, 
+            error: new Error(errorMsg),
+            critical: true // Mark as critical error that should block the UI
+          };
         }
 
         const comprehensiveProductData = productDataResponse.product_data;
@@ -439,31 +409,70 @@ class DataService {
       });
 
     // STEP 3: Make the asynchronous server request for session update ONLY if local storage succeeded.
+    // This step is non-blocking - errors will be logged but won't affect the UI
     localStoragePromise
       .then(localResult => {
-        if (localResult.success) {
-          logger.log('DataService: Local storage update successful, sending asynchronous server request for adding product to session.');
-          const requestData = {
-            room_id: String(roomId),
-            product_id: String(productId),
-          };
-          if (estimateId !== null) {
-            requestData.estimate_id = String(estimateId);
+        // Check for critical errors from product data fetch
+        if (!localResult.success) {
+          if (localResult.critical) {
+            // This is a critical error - show a visible error message to the user
+            // Here we're using the console.error for visibility, but in a real app
+            // you might want to show a modal dialog or other UI element
+            const errorMsg = localResult.error?.message || 'Critical error: Unable to add product to room.';
+            console.error('CRITICAL ERROR:', errorMsg);
+            
+            // This should be replaced with your app's error display mechanism
+            if (typeof window.productEstimatorShowError === 'function') {
+              window.productEstimatorShowError(errorMsg);
+            } else if (typeof window.alert === 'function') {
+              window.alert(`Error: ${errorMsg}`);
+            }
+            
+            // Propagate the error so the UI can handle it
+            throw new Error(errorMsg);
           }
-          return this.request('add_product_to_room', requestData);
-        } else {
+          
+          // Non-critical error
           logger.warn('Local storage update failed, skipping asynchronous server request for adding product to session.');
-          return Promise.resolve({ server_request_skipped: true, local_error: localResult.error });
+          return Promise.resolve({ 
+            server_request_skipped: true, 
+            local_error: localResult.error 
+          });
         }
+        
+        // If successful, proceed with server sync
+        logger.log('DataService: Local storage update successful, sending asynchronous server request for adding product to session.');
+        const requestData = {
+          room_id: String(roomId),
+          product_id: String(productId),
+        };
+        if (estimateId !== null) {
+          requestData.estimate_id = String(estimateId);
+        }
+        
+        // Try to send to server, but don't let failures block the UI
+        return this.ajaxService.addProductToRoom(requestData)
+          .catch(error => {
+            // Log the error but swallow it to keep the promise chain going
+            logger.error('Error sending product to server, but continuing with local data:', error);
+            logger.warn('Product added to local storage only. Changes may not persist between sessions.');
+            return { server_request_skipped: true, error_message: error.message };
+          });
       })
       .then(serverData => {
         if (serverData && !serverData.server_request_skipped) {
           logger.log('DataService: Asynchronous server-side product add (to session) successful:', serverData);
           this.invalidateCache();
+        } else if (serverData && serverData.server_request_skipped) {
+          // Soft-fail: Just log but let the UI continue working with local data
+          logger.warn('Using local data only - server sync skipped or failed');
         }
       })
       .catch(serverError => {
-        logger.error('Asynchronous server-side product add (to session) failed:', serverError);
+        // This will now catch and propagate critical errors
+        logger.error('Error in product-to-room process:', serverError);
+        // Propagate error to caller
+        throw serverError;
       });
 
     return localStoragePromise;
@@ -519,7 +528,7 @@ class DataService {
     // Backend ('get_product_data_for_storage') returns:
     // - product_data: { ... (new product details), similar_products: [...] }
     // - room_suggested_products: [...] (new suggestions for the room *with* the replaced product)
-    const fetchProductDataPromise = this.request('get_product_data_for_storage', {
+    const fetchProductDataPromise = this.ajaxService.getProductDataForStorage({
       product_id: String(newProductId),
       room_width: roomWidth,
       room_length: roomLength,
@@ -623,7 +632,7 @@ class DataService {
           if (parentProductId !== null && parentProductId !== undefined) { // Check for null or undefined
             requestData.parent_product_id = String(parentProductId);
           }
-          return this.request('replace_product_in_room', requestData);
+          return this.ajaxService.replaceProductInRoom(requestData);
         }
         // If localResult was not success (e.g. promise was rejected and caught by caller), this part is skipped.
       })
@@ -649,44 +658,28 @@ class DataService {
    * @returns {Promise<Array>} Promise resolving to an array of similar product objects.
    */
   getSimilarProducts(productId, roomArea, bypassCache = false) { // Added roomArea parameter
-    const cacheKey = `similar_${productId}_area_${roomArea}`; // Include area in cache key
-
-    // Check cache first
-    if (!bypassCache && this.cache.similarProducts && this.cache.similarProducts[cacheKey]) {
-      logger.log(`Returning cached similar products for product ${productId} and area ${roomArea}`);
-      return Promise.resolve(this.cache.similarProducts[cacheKey]); // Returns cached data if not bypassing
-    }
-
-    logger.log(`Attempting to make 'get_similar_products' request for product ID: ${productId}, area: ${roomArea}. Cache bypass: ${bypassCache}`);
+    logger.log(`Attempting to get similar products for product ID: ${productId}, area: ${roomArea}. Cache bypass: ${bypassCache}`);
 
     // Prepare data to send to the backend
     const requestData = {
       product_id: productId,
-      room_area: roomArea, // Pass the room area to the backend
-      // You might add a limit here if the backend supports it
-      // limit: 10 // Example
+      room_area: roomArea // Pass the room area to the backend
     };
 
-    // Use the generic request method for the AJAX call
-    return this.request('get_similar_products', requestData) // This is the call that should trigger the network request
+    // Use the specific AjaxService method - it now handles its own caching
+    return this.ajaxService.getSimilarProducts(requestData, bypassCache)
       .then(data => {
         // Assuming the backend returns an object with a 'products' key containing the array
         if (data && Array.isArray(data.products)) {
-          // Ensure this.cache.similarProducts is initialized before accessing
-          this.cache.similarProducts = this.cache.similarProducts || {};
-          this.cache.similarProducts[cacheKey] = data.products; // Cache the results using the updated key
           return data.products;
         } else {
           logger.warn('get_similar_products did not return expected data structure (expected { products: [...] })', data);
-          // Return an empty array or throw an error if the response format is unexpected
+          // Return an empty array if the response format is unexpected
           return [];
         }
       })
       .catch(error => {
         logger.error('Error fetching similar products:', error);
-        // Clear cache for this specific product and area on error
-        this.cache.similarProducts = this.cache.similarProducts || {};
-        delete this.cache.similarProducts[cacheKey];
         throw error; // Re-throw the error to be handled by ModalManager
       });
   }
@@ -729,7 +722,7 @@ class DataService {
     logger.log(`Client-side estimate saved to localStorage with sequential ID: ${clientSideEstimateId}`);
 
     // Make the AJAX request to the server asynchronously
-    this.request('add_new_estimate', requestData)
+    this.ajaxService.addNewEstimate(requestData)
       .then(serverData => {
         logger.log('DataService: Server-side estimate creation successful:', serverData);
         // Invalidate caches since we modified data on the server
@@ -796,7 +789,7 @@ class DataService {
         if (productId) {
           requestDataOnLocalFailure.product_id = String(productId); // Ensure string
         }
-        this.request('add_new_room', requestDataOnLocalFailure)
+        this.ajaxService.addNewRoom(requestDataOnLocalFailure)
           .then(serverData => logger.log('DataService: Server add_new_room (after local estimate not found) response:', serverData))
           .catch(serverError => logger.error('Server add_new_room (after local estimate not found) failed:', serverError));
         reject(new Error(errorMsg));
@@ -831,7 +824,7 @@ class DataService {
       if (productId) {
         serverRequestData.product_id = String(productId);
       }
-      this.request('add_new_room', serverRequestData)
+      this.ajaxService.addNewRoom(serverRequestData)
         .then(serverData => {
           logger.log('DataService: Server-side room creation successful (potentially with product):', serverData);
           this.invalidateCache();
@@ -844,7 +837,7 @@ class DataService {
         logger.log(`DataService: Product ID ${productId} provided for new room ${clientSideRoomId}. Fetching product data and managing suggestions.`);
         // Fetch comprehensive data for the product to be added.
         // The backend should provide 'room_suggested_products' based on this single product in the new room.
-        this.request('get_product_data_for_storage', {
+        this.ajaxService.getProductDataForStorage({
           product_id: String(productId),
           room_width: roomWidth,
           room_length: roomLength,
@@ -1056,7 +1049,7 @@ class DataService {
 
         // Asynchronous server call to remove the product from the session
         logger.log('[removeProductFromRoom] Initiating asynchronous server call to remove_product_from_room.');
-        this.request('remove_product_from_room', {
+        this.ajaxService.removeProductFromRoom({
           estimate_id: estimateId,
           room_id: roomId,
           product_index: productIndex, // Backend might still use this
@@ -1074,7 +1067,7 @@ class DataService {
 
       if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
         logger.log('[removeProductFromRoom] Suggestions enabled. Fetching updated suggestions for room based on post-deletion state.');
-        this.request('fetch_suggestions_for_modified_room', {
+        this.ajaxService.fetchSuggestionsForModifiedRoom({
           estimate_id: estimateId,
           room_id: roomId,
           room_product_ids_for_suggestions: JSON.stringify(remainingProductIds) // Send IDs of products that will remain
@@ -1145,7 +1138,7 @@ class DataService {
     };
 
     // Make the AJAX request to the server asynchronously
-    this.request('remove_room', requestData)
+    this.ajaxService.removeRoom(requestData)
       .then(serverData => {
         logger.log('DataService: Server-side room removal successful:', serverData);
         // Invalidate caches since we modified data on the server
@@ -1185,7 +1178,7 @@ class DataService {
     }
 
     // Make the AJAX request to the server asynchronously
-    this.request('remove_estimate', {
+    this.ajaxService.removeEstimate({
       estimate_id: estimateId
     })
       .then(serverData => {
@@ -1240,7 +1233,7 @@ class DataService {
    * @returns {Promise<object>} Result with HTML content
    */
   getVariationEstimator(variationId) {
-    return this.request('get_variation_estimator', {
+    return this.ajaxService.getVariationEstimator({
       variation_id: variationId
     });
   }
@@ -1269,12 +1262,28 @@ class DataService {
 
   /**
    * Invalidate all caches
+   * @param {string|null} cacheType - Optional specific cache to invalidate
    */
-  invalidateCache() {
+  invalidateCache(cacheType = null) {
     logger.log('Invalidating caches');
-    this.cache.estimatesData = null;
-    this.cache.estimatesList = null;
-    this.cache.rooms = {};
+    
+    // Invalidate local in-memory cache
+    if (cacheType) {
+      if (Object.prototype.hasOwnProperty.call(this.cache, cacheType)) {
+        if (typeof this.cache[cacheType] === 'object') {
+          this.cache[cacheType] = {};
+        } else {
+          this.cache[cacheType] = null;
+        }
+      }
+    } else {
+      this.cache.estimatesData = null;
+      this.cache.estimatesList = null;
+      this.cache.rooms = {};
+    }
+    
+    // Delegate to AjaxService to invalidate its cache
+    this.ajaxService.invalidateCache(cacheType);
   }
 }
 

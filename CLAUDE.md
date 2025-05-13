@@ -227,8 +227,13 @@ Frontend Styles (src/styles/frontend/)
 1. Follow module pattern for component organization
 2. Document functions with JSDoc comments
 3. Use ES6+ features (transpiled with Babel)
-4. Maintain import ordering according to ESLint rules
-5. Use path aliases for cleaner imports
+4. Maintain import ordering according to ESLint rules:
+   - Import groups should be separated by exactly one empty line
+   - No empty lines within import groups 
+   - Order: builtin → external → internal → parent → sibling → index
+5. Ensure JSDoc blocks are properly aligned
+6. Use path aliases for cleaner imports
+7. Always run `npm run lint:fix` before submitting code changes
 
 ## Important Configuration Files
 

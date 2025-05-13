@@ -4,9 +4,9 @@
  * Functions for handling AJAX requests and related operations.
  */
 
-import { createLogger } from './logger'; // Tries to import createLogger directly
+import * as loggerModule from './logger'; // Import the entire module instead of direct imports
 
-const logger = createLogger('UtilsAjax'); // <<< ERROR HAPPENS HERE: createLogger is not a function
+const logger = loggerModule.createLogger('UtilsAjax'); // Use the createLogger from the module
 
 /**
  * Handle AJAX request with error handling and consistent response format

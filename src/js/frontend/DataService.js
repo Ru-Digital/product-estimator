@@ -760,13 +760,11 @@ class DataService {
    * The main promise resolves after local changes. Async calls update the server.
    * @param {FormData | object | string} formData - Form data for the new room
    * @param {string|number} estimateId - Estimate ID to add the room to
-   * @param {number|null} productId - Optional product ID (passed to server but not used for local product addition)
    * @returns {Promise<object>} A promise that resolves with the new room data.
    */
-  addNewRoom(formData, estimateId, productId = null) {
+  addNewRoom(formData, estimateId) {
     logger.log('DataService: Adding new room', {
       estimateId: estimateId,
-      productId: productId, // Only logged for reference, not used for local product addition
       formData: formData instanceof FormData ? Object.fromEntries(formData) : formData
     });
 
@@ -782,9 +780,6 @@ class DataService {
           form_data: this.formatFormData(formData),
           estimate_id: String(estimateId) // Ensure string
         };
-        if (productId) {
-          requestDataOnLocalFailure.product_id = String(productId); // Ensure string for server request
-        }
         this.ajaxService.addNewRoom(requestDataOnLocalFailure)
           .then(serverData => logger.log('DataService: Server add_new_room (after local estimate not found) response:', serverData))
           .catch(serverError => logger.error('Server add_new_room (after local estimate not found) failed:', serverError));
@@ -812,24 +807,21 @@ class DataService {
       logger.log(`Room ID ${newRoomData.id} (empty) added to localStorage for estimate ${estimateId}`);
 
       // Asynchronously send the request to the server to add the room
-      // Pass the productId to the server request for potential server-side processing
       let serverRequestData = {
         form_data: this.formatFormData(formData),
         estimate_id: String(estimateId)
       };
-      if (productId) {
-        serverRequestData.product_id = String(productId);
-      }
+      
       this.ajaxService.addNewRoom(serverRequestData)
-        .then(serverData => {
-          logger.log('DataService: Server-side room creation successful:', serverData);
+        .then(response => {
+          logger.log('DataService: Server-side room creation successful:', response);
           this.invalidateCache();
         })
         .catch(serverError => {
           logger.error('Server-side room creation failed:', serverError);
         });
 
-      // Resolve with the room data immediately - product addition will be handled separately
+      // Resolve with the room data immediately - product addition is a separate concern
       logger.log(`Room ${clientSideRoomId} created. Resolving with basic room data.`);
       resolve({
         room_id: clientSideRoomId,

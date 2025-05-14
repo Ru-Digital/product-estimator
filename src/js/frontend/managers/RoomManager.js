@@ -393,16 +393,22 @@ class RoomManager {
 
     // Load rooms from storage or API
     return this.dataService.getRoomsForEstimate(estimateId)
-      .then(rooms => {
+      .then(response => {
         // Clear existing content
         roomsContainer.innerHTML = '';
 
-        if (!rooms || rooms.length === 0) {
+        // Check if response has rooms array and if it's empty
+        // DataService.getRoomsForEstimate returns { has_rooms: boolean, rooms: Array }
+        const roomsArray = response && response.rooms ? response.rooms : [];
+        const hasRooms = response && response.has_rooms ? response.has_rooms : false;
+
+        if (!hasRooms || roomsArray.length === 0) {
           // No rooms, show empty state using template
+          logger.log(`No rooms found for estimate ${estimateId}, showing empty template`);
           TemplateEngine.insert('rooms-empty-template', {}, roomsContainer);
         } else {
           // Render each room
-          const roomPromises = rooms.map(room => {
+          const roomPromises = roomsArray.map(room => {
             // Check if this room should be expanded
             const shouldExpand = expandRoomId === room.id;
 
@@ -418,7 +424,7 @@ class RoomManager {
           loadingPlaceholder.style.display = 'none';
         }
 
-        return rooms;
+        return response;
       })
       .catch(error => {
         logger.error('Error loading rooms for estimate:', error);

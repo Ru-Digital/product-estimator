@@ -183,26 +183,15 @@ class RoomAjaxHandler extends AjaxHandlerBase {
                 error_log("ERROR: Room ID $room_id not found in estimate $estimate_id after save!");
             }
 
-            // If a product ID was provided, add it to the room
+            // NOTE: We're deliberately NOT adding the product here.
+            // The client will handle product addition after room creation through a separate AJAX request.
+            // This maintains separation of concerns and prevents duplicate product addition logic.
             $product_added = false;
             $product_data = null;
+            
+            // We still log the product_id if it was provided, for reference purposes
             if ($product_id > 0) {
-                // Use common method to prepare and add product to room - PASS THE EXACT DIMENSIONS
-                $result = $this->prepareAndAddProductToRoom(
-                    $product_id,
-                    $estimate_id,
-                    $room_id,
-                    $room_width,   // Pass the original width value
-                    $room_length   // Pass the original length value
-                );
-                $product_added = $result['success'];
-
-                if ($product_added) {
-                    $product_data = $result['product_data'];
-
-                    // Get the updated room data to check for products
-                    $updated_room = $session->getRoom($estimate_id, $room_id);
-                }
+                error_log("Product ID {$product_id} was provided with room creation, but will be added by client.");
             }
 
             // Final check of session data

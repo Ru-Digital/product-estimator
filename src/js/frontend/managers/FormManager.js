@@ -260,8 +260,11 @@ class FormManager {
         .then(newRoom => {
           logger.log('Room created successfully:', newRoom);
 
-          // If a product ID is provided, add it to the new room
-          if (formProductId) {
+          // Check if the server already added the product (the PHP handler might do this)
+          const serverAddedProduct = newRoom.product_added === true;
+          
+          // If a product ID is provided and server didn't already add it
+          if (formProductId && !serverAddedProduct) {
             // Delegate to the ProductManager to add product to the new room
             if (this.modalManager && this.modalManager.productManager) {
               this.modalManager.productManager.addProductToRoom(formEstimateId, newRoom.room_id, formProductId)
@@ -305,7 +308,14 @@ class FormManager {
               this.showSuccessMessage('Room created successfully.');
             }
           } else {
-            // No product ID, just show the estimates list with the new room expanded
+            // Product was already added by the server or no product ID was provided
+            // In either case, just proceed to show the room
+            
+            if (serverAddedProduct) {
+              logger.log('Product was already added by the server, skipping client-side addition');
+            }
+            
+            // Show the estimates list with the new room expanded
             if (this.modalManager && this.modalManager.estimateManager) {
               this.modalManager.estimateManager.showEstimatesList(newRoom.room_id, formEstimateId);
             } else {
@@ -315,7 +325,10 @@ class FormManager {
               }
 
               // Show success message
-              this.showSuccessMessage('Room created successfully.');
+              const message = serverAddedProduct ? 
+                'Room created and product added successfully!' : 
+                'Room created successfully.';
+              this.showSuccessMessage(message);
             }
           }
         })

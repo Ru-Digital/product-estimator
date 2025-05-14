@@ -16,8 +16,9 @@ class CustomerDetailsManager {
    * Initialize the CustomerDetailsManager
    * @param {object} config - Configuration options
    * @param {DataService} dataService - The data service instance
+   * @param {object} modalManager - Reference to the modal manager (optional)
    */
-  constructor(config = {}, dataService) {
+  constructor(config = {}, dataService, modalManager = null) {
     // Default configuration
     this.config = Object.assign({
       debug: false,
@@ -35,8 +36,9 @@ class CustomerDetailsManager {
     }, config);
 
 
-    // Store reference to data service
+    // Store reference to data service and modal manager
     this.dataService = dataService;
+    this.modalManager = modalManager;
 
     // State
     this.initialized = false;
@@ -396,8 +398,21 @@ class CustomerDetailsManager {
     e.preventDefault();
     e.stopPropagation();
 
-    // Use the confirmation dialog if available
-    if (window.productEstimator && window.productEstimator.dialog) {
+    // Check if modalManager.confirmationDialog is available
+    if (this.modalManager && this.modalManager.confirmationDialog) {
+      this.modalManager.confirmationDialog.show({
+        title: (this.config.i18n && this.config.i18n.delete_customer_details) || 'Delete Customer Details',
+        message: (this.config.i18n && this.config.i18n.confirm_delete_details) || 'Are you sure you want to delete your saved details?',
+        confirmText: (this.config.i18n && this.config.i18n.delete) || 'Delete',
+        action: 'delete',
+        cancelText: this.config.i18n.cancel || 'Cancel',
+        onConfirm: () => {
+          this.deleteCustomerDetails();
+        }
+      });
+    } 
+    // Fallback to window.productEstimator.dialog if available
+    else if (window.productEstimator && window.productEstimator.dialog) {
       window.productEstimator.dialog.show({
         title: (this.config.i18n && this.config.i18n.delete_customer_details) || 'Delete Customer Details',
         message: (this.config.i18n && this.config.i18n.confirm_delete_details) || 'Are you sure you want to delete your saved details?',

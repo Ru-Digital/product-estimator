@@ -714,216 +714,14 @@ class EstimateManager {
   handleEstimateRemoval(estimateId) {
     logger.log('Handling estimate removal for ID:', estimateId);
     
-    // Create a direct modal that doesn't depend on other components
-    const createDirectModal = (options) => {
-      const { title, message, confirmText, cancelText, onConfirm, onCancel } = options;
-      
-      // First remove any existing modal to avoid duplicates
-      const existingModal = document.getElementById('direct-modal-container');
-      if (existingModal) {
-        existingModal.remove();
-      }
-      
-      // Create container
-      const container = document.createElement('div');
-      container.id = 'direct-modal-container';
-      container.style.cssText = 
-        'position: fixed !important;' +
-        'top: 0 !important;' +
-        'left: 0 !important;' +
-        'right: 0 !important;' +
-        'bottom: 0 !important;' +
-        'display: flex !important;' +
-        'justify-content: center !important;' +
-        'align-items: center !important;' +
-        'background-color: rgba(0, 0, 0, 0.6) !important;' +
-        'z-index: 2147483647 !important;'; // Maximum z-index value
-      
-      // Create dialog box
-      const dialog = document.createElement('div');
-      dialog.style.cssText = 
-        'background-color: white !important;' +
-        'border-radius: 8px !important;' +
-        'box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;' + // Enhanced shadow
-        'border: 3px solid #00833f !important;' + // Prominent border to ensure visibility
-        'width: 450px !important;' +
-        'max-width: 90% !important;' +
-        'display: flex !important;' +
-        'flex-direction: column !important;' +
-        'overflow: hidden !important;';
-      
-      // Create header
-      const header = document.createElement('div');
-      header.style.cssText = 
-        'padding: 15px !important;' +
-        'background-color: #f3f3f3 !important;' +
-        'border-bottom: 1px solid #ddd !important;' +
-        'display: flex !important;' +
-        'justify-content: space-between !important;' +
-        'align-items: center !important;';
-      
-      const headerTitle = document.createElement('h3');
-      headerTitle.textContent = title || 'Confirm';
-      headerTitle.style.cssText = 
-        'margin: 0 !important;' +
-        'font-size: 18px !important;' +
-        'color: #00833f !important;' +
-        'font-weight: bold !important;'; // Make title more prominent
-      
-      header.appendChild(headerTitle);
-      
-      // Create body
-      const body = document.createElement('div');
-      body.style.cssText = 'padding: 20px !important;';
-      
-      const messageEl = document.createElement('p');
-      messageEl.textContent = message || 'Are you sure?';
-      messageEl.style.cssText = 
-        'margin: 0 !important;' +
-        'font-size: 16px !important;' + // Slightly larger font for better readability
-        'line-height: 1.5 !important;'; // Improved readability
-      
-      body.appendChild(messageEl);
-      
-      // Create footer
-      const footer = document.createElement('div');
-      footer.style.cssText = 
-        'padding: 15px !important;' +
-        'border-top: 1px solid #ddd !important;' +
-        'background-color: #f3f3f3 !important;' +
-        'display: flex !important;' +
-        'justify-content: flex-end !important;' +
-        'gap: 10px !important;';
-      
-      // Add buttons
-      if (cancelText !== false) {
-        const cancelBtn = document.createElement('button');
-        cancelBtn.textContent = cancelText || 'Cancel';
-        cancelBtn.style.cssText = 
-          'padding: 10px 18px !important;' + // Slightly larger buttons
-          'background-color: #f0f0f0 !important;' +
-          'border: 1px solid #ddd !important;' +
-          'border-radius: 4px !important;' +
-          'cursor: pointer !important;' +
-          'font-size: 14px !important;';
-        
-        // Add hover effect
-        cancelBtn.addEventListener('mouseover', () => {
-          cancelBtn.style.backgroundColor = '#e0e0e0 !important';
-        });
-        cancelBtn.addEventListener('mouseout', () => {
-          cancelBtn.style.backgroundColor = '#f0f0f0 !important';
-        });
-        
-        cancelBtn.addEventListener('click', () => {
-          container.remove();
-          if (typeof onCancel === 'function') {
-            onCancel();
-          }
-        });
-        
-        footer.appendChild(cancelBtn);
-      }
-      
-      const confirmBtn = document.createElement('button');
-      confirmBtn.textContent = confirmText || 'Confirm';
-      confirmBtn.style.cssText = 
-        'padding: 10px 18px !important;' + // Slightly larger buttons
-        'background-color: #00833f !important;' +
-        'color: white !important;' +
-        'border: none !important;' +
-        'border-radius: 4px !important;' +
-        'cursor: pointer !important;' +
-        'font-size: 14px !important;';
-      
-      // Add hover effect
-      confirmBtn.addEventListener('mouseover', () => {
-        confirmBtn.style.backgroundColor = '#006a32 !important';
-      });
-      confirmBtn.addEventListener('mouseout', () => {
-        confirmBtn.style.backgroundColor = '#00833f !important';
-      });
-      
-      confirmBtn.addEventListener('click', () => {
-        container.remove();
-        if (typeof onConfirm === 'function') {
-          onConfirm();
-        }
-      });
-      
-      footer.appendChild(confirmBtn);
-      
-      // Assemble dialog
-      dialog.appendChild(header);
-      dialog.appendChild(body);
-      dialog.appendChild(footer);
-      container.appendChild(dialog);
-      
-      // Add to body
-      document.body.appendChild(container);
-      
-      // Prevent scrolling on the body while modal is active
-      document.body.style.overflow = 'hidden';
-      
-      // Restore scrolling when modal is closed
-      const restoreScrolling = () => {
-        document.body.style.overflow = '';
-      };
-      
-      // Ensure scrolling is restored when modal is closed
-      const originalOnConfirm = onConfirm;
-      const originalOnCancel = onCancel;
-      
-      if (typeof originalOnConfirm === 'function') {
-        confirmBtn.addEventListener('click', restoreScrolling);
-      }
-      
-      // Create a variable to hold reference to cancel button if it exists
-      let cancelBtnRef = null;
-      
-      // If we have a cancel button, use it
-      if (cancelText !== false) {
-        // The button was created earlier, store the reference
-        cancelBtnRef = footer.querySelector('button:first-child');
-        
-        if (cancelBtnRef && typeof originalOnCancel === 'function') {
-          cancelBtnRef.addEventListener('click', restoreScrolling);
-        }
-      }
-      
-      // Add ESC key support
-      const handleEscKey = (e) => {
-        if (e.key === 'Escape' && cancelText !== false) {
-          container.remove();
-          restoreScrolling();
-          if (typeof onCancel === 'function') {
-            onCancel();
-          }
-        }
-      };
-      document.addEventListener('keydown', handleEscKey);
-      
-      // Clean up event listener when modal is closed
-      if (confirmBtn) {
-        confirmBtn.addEventListener('click', () => {
-          document.removeEventListener('keydown', handleEscKey);
-        });
-      }
-      
-      if (cancelBtnRef) {
-        cancelBtnRef.addEventListener('click', () => {
-          document.removeEventListener('keydown', handleEscKey);
-        });
-      }
-      
-      // Focus confirm button
-      setTimeout(() => confirmBtn.focus(), 50);
-      
-      return container;
-    };
+    // Check if ConfirmationDialog is available through ModalManager
+    if (!this.modalManager || !this.modalManager.confirmationDialog) {
+      logger.error('ConfirmationDialog not available');
+      return;
+    }
     
-    // Show the direct confirmation modal
-    createDirectModal({
+    // Show the confirmation dialog using the dedicated component
+    this.modalManager.confirmationDialog.show({
       title: 'Remove Estimate',
       message: 'Are you sure you want to remove this estimate? This action cannot be undone.',
       confirmText: 'Delete',
@@ -939,8 +737,8 @@ class EstimateManager {
             // Reload the estimates list first
             return this.loadEstimatesList().then(() => {
               logger.log('Showing success dialog');
-              // Then show a success message
-              createDirectModal({
+              // Show success message using ConfirmationDialog
+              this.modalManager.confirmationDialog.show({
                 title: 'Success',
                 message: 'The estimate has been removed successfully.',
                 confirmText: 'OK',
@@ -955,8 +753,8 @@ class EstimateManager {
           .catch(error => {
             logger.error('Error removing estimate:', error);
             
-            // Show error through our custom modal instead of modalManager
-            createDirectModal({
+            // Show error through ConfirmationDialog
+            this.modalManager.confirmationDialog.show({
               title: 'Error',
               message: 'There was a problem removing the estimate. Please try again.',
               confirmText: 'OK',

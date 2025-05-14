@@ -323,15 +323,104 @@ Frontend Styles (src/styles/frontend/)
    - Templates should be in `/src/templates/` directory
    - Use TemplateEngine to load and render templates
 
-3. Focus on proper initialization timing with the WordPress lifecycle
+3. **ALWAYS USE THE CONFIRMATIONDIALOG COMPONENT FOR DIALOGS**
+   - Never create custom dialog implementations
+   - Use `modalManager.confirmationDialog.show()` for all confirmation dialogs
+   - The `ConfirmationDialog` component (src/js/frontend/ConfirmationDialog.js) 
+     should be used for all confirmation, alert, and notification dialogs
+   - This ensures UI consistency and simplifies future updates to dialog styling
+
+4. Focus on proper initialization timing with the WordPress lifecycle
    - Use event listeners and callbacks rather than direct DOM creation
    - Ensure templates are loaded before accessing elements
 
-4. Template integrity is more important than quick fixes
+5. Template integrity is more important than quick fixes
    - If a template is missing an element, fix the template file
    - Don't use fallback DOM creation even if it seems easier
 11. Use the Manager pattern for separating concerns
 12. Create templates in HTML files rather than in PHP files or directly in JavaScript
+
+## Standardized Dialog Usage
+
+This project uses a standardized approach to dialogs through the `ConfirmationDialog` component. This ensures consistent UI and behavior for all confirmation interactions throughout the application.
+
+### Accessing the Dialog Component
+
+The `ConfirmationDialog` component is initialized in the `ModalManager` constructor and is accessible in two ways:
+
+1. **Through the ModalManager (preferred method)**:
+   ```javascript
+   this.modalManager.confirmationDialog.show({
+     // dialog options
+   });
+   ```
+
+2. **Through global window object (for backward compatibility only)**:
+   ```javascript
+   window.productEstimator.dialog.show({
+     // dialog options
+   });
+   ```
+
+### Using the Dialog Component
+
+Always use the standardized `show()` method with an options object:
+
+```javascript
+modalManager.confirmationDialog.show({
+  title: 'Action Confirmation',              // Dialog title
+  message: 'Are you sure you want to proceed?', // Dialog message
+  confirmText: 'Confirm',                    // Text for confirm button
+  cancelText: 'Cancel',                      // Text for cancel button (set to false to hide)
+  type: 'product',                           // Optional: Context type ('product', 'room', 'estimate')
+  action: 'delete',                          // Optional: Action being performed ('delete', 'add', etc.)
+  onConfirm: () => {                         // Callback function when confirmed
+    // Confirmation logic
+  },
+  onCancel: () => {                          // Callback function when cancelled
+    // Cancellation logic
+  }
+});
+```
+
+### Simplified API for Simple Confirmations
+
+For simple confirmation dialogs, you can use the convenience `confirm()` method:
+
+```javascript
+modalManager.confirmationDialog.confirm(
+  'Action Confirmation',                     // Dialog title
+  'Are you sure you want to proceed?',       // Dialog message
+  () => {                                    // Callback function when confirmed
+    // Confirmation logic
+  },
+  () => {                                    // Callback function when cancelled
+    // Cancellation logic
+  }
+);
+```
+
+### Best Practices
+
+1. Always use the `modalManager.confirmationDialog` instead of creating your own dialog implementation
+2. Provide clear, specific titles and messages that explain the action and its consequences
+3. Use the `type` and `action` properties to provide context for the dialog
+4. Include appropriate callbacks for both confirmation and cancellation paths
+5. Always include a fallback to native `confirm()` for cases where the dialog component isn't available
+6. Follow this structure for fallbacks:
+
+```javascript
+if (this.modalManager && this.modalManager.confirmationDialog) {
+  this.modalManager.confirmationDialog.show({
+    // dialog options
+  });
+} else {
+  // Fallback to native confirm
+  if (confirm('Are you sure you want to proceed?')) {
+    // Confirmation logic
+  }
+}
+```
 
 ## Legacy Code Reference
 

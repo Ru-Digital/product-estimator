@@ -271,21 +271,19 @@ class ModalManager {
       
       window.productEstimator.dialog = this.confirmationDialog;
       
-      // Force initialization if it wasn't already done
-      if (!this.confirmationDialog.initialized) {
-        this.confirmationDialog.init();
-      }
+      // Don't force initialization - we'll create elements on demand
+      // This ensures the dialog isn't created until it's actually needed
       
       logger.log('ConfirmationDialog instance created successfully and initialized');
     } catch (error) {
       logger.error('Error creating ConfirmationDialog:', error);
     }
     
-    // Verify dialog instance was created properly
-    if (this.confirmationDialog && this.confirmationDialog.dialog) {
-      logger.log('ConfirmationDialog instance ready for use, dialog element exists:', this.confirmationDialog.dialog);
+    // Verify dialog instance was created (elements will be created on demand)
+    if (this.confirmationDialog) {
+      logger.log('ConfirmationDialog instance ready for use, elements will be created when needed');
     } else {
-      logger.error('ConfirmationDialog failed to initialize properly or dialog element is missing');
+      logger.error('ConfirmationDialog instance was not created properly');
     }
     
     // Initialize each manager

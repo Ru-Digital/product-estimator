@@ -2,8 +2,7 @@
  * ConfirmationDialog.js
  *
  * Custom confirmation dialog component for Product Estimator plugin.
- * Replaces browser's built-in confirm() with a styled dialog.
- * Uses TemplateEngine to load template from HTML file.
+ * Uses TemplateEngine with HTML templates for proper styling and UI consistency.
  */
 
 import { createLogger } from '@utils';
@@ -25,8 +24,30 @@ class ConfirmationDialog {
       cancel: null
     };
 
-    // Initialize the dialog elements
-    this.init();
+    // Don't create dialog elements immediately
+    // Only mark as initialized
+    this.initialized = true;
+    logger.log('ConfirmationDialog constructor completed');
+  }
+
+  /**
+   * Convenience method for simple confirmation dialogs
+   * For backwards compatibility with window.productEstimator.dialog.confirm()
+   *
+   * @param {string} title - The dialog title
+   * @param {string} message - The confirmation message
+   * @param {Function} onConfirm - Callback for confirmation
+   * @param {Function} onCancel - Callback for cancellation
+   */
+  confirm(title, message, onConfirm, onCancel) {
+    this.show({
+      title: title,
+      message: message,
+      confirmText: 'Confirm',
+      cancelText: 'Cancel',
+      onConfirm: onConfirm,
+      onCancel: onCancel
+    });
   }
 
   /**
@@ -39,83 +60,69 @@ class ConfirmationDialog {
     // Create dialog elements
     this.createDialogElements();
 
-    // Bind events
-    this.bindEvents();
-
     this.initialized = true;
     logger.log('ConfirmationDialog initialized');
   }
 
   /**
-   * Create dialog DOM elements using TemplateEngine
+   * Create dialog DOM elements using the TemplateEngine
    */
   createDialogElements() {
-    logger.log('Creating dialog elements using TemplateEngine');
+    logger.log('=========== CREATING DIALOG ELEMENTS ===========');
     
-    // Create a container element to hold our template
+    // Check existing before creation
+    const existingBeforeCreation = document.getElementById('confirmation-dialog-container');
+    logger.log('Existing container before creation:', !!existingBeforeCreation);
+    
+    // Create a container element
     this.dialogContainer = document.createElement('div');
     this.dialogContainer.id = 'confirmation-dialog-container';
     
-    // Use TemplateEngine to load the template
-    const templateLoaded = TemplateEngine.insert('confirmation-dialog-template', {}, this.dialogContainer);
-    
-    if (!templateLoaded) {
-      logger.error('Failed to load confirmation-dialog-template');
-      
-      // Create a fallback dialog
-      this.dialogContainer.innerHTML = `
-        <div class="pe-dialog-backdrop">
-          <div class="pe-confirmation-dialog" role="dialog" aria-modal="true">
-            <div class="dialog-content">
-              <div class="pe-dialog-header">
-                <h3 class="pe-dialog-title">Confirm Action</h3>
-                <button type="button" class="pe-dialog-close" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-              <div class="pe-dialog-body">
-                <p class="pe-dialog-message">Are you sure you want to proceed?</p>
-              </div>
-              <div class="pe-dialog-footer">
-                <button type="button" class="pe-dialog-btn pe-dialog-cancel">Cancel</button>
-                <button type="button" class="pe-dialog-btn pe-dialog-confirm">Confirm</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
+    logger.log('Dialog container created with id:', this.dialogContainer.id);
 
+    // Create the dialog from template with empty content
+    // We'll update the content after rendering
+    logger.log('Creating dialog using TemplateEngine');
+    const dialogFragment = TemplateEngine.create('confirmation-dialog-template', {});
+    
+    // Append the fragment to the container
+    this.dialogContainer.appendChild(dialogFragment);
+    
     // Get references to the backdrop and dialog elements
     this.backdropElement = this.dialogContainer.querySelector('.pe-dialog-backdrop');
     this.dialog = this.dialogContainer.querySelector('.pe-confirmation-dialog');
+    
+    logger.log('Element references:', {
+      foundBackdrop: !!this.backdropElement,
+      foundDialog: !!this.dialog
+    });
 
-    // Add styles for visibility
-    if (this.backdropElement) {
-      this.backdropElement.style.position = 'fixed';
-      this.backdropElement.style.top = '0';
-      this.backdropElement.style.left = '0';
-      this.backdropElement.style.right = '0';
-      this.backdropElement.style.bottom = '0';
-      this.backdropElement.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
-      this.backdropElement.style.zIndex = '999999';
-      this.backdropElement.style.display = 'none';
-    }
-
-    if (this.dialog) {
-      this.dialog.style.position = 'fixed';
-      this.dialog.style.top = '50%';
-      this.dialog.style.left = '50%';
-      this.dialog.style.transform = 'translate(-50%, -50%)';
-      this.dialog.style.zIndex = '1000000';
-    }
-
-    // Remove any existing dialog elements
+    // Remove any existing dialog elements to avoid duplicates
     const existingContainer = document.getElementById('confirmation-dialog-container');
-    if (existingContainer) existingContainer.remove();
+    if (existingContainer) {
+      logger.log('Found existing container, removing it');
+      existingContainer.remove();
+    }
 
     // Append the container to the body
+    logger.log('Appending dialog container to document body');
     document.body.appendChild(this.dialogContainer);
+    
+    // Verify it's in the DOM
+    const containerInDOM = document.getElementById('confirmation-dialog-container');
+    logger.log('Container found in DOM after append:', !!containerInDOM);
+    
+    // Bind events now that elements are in the DOM
+    this.bindEvents();
+    
+    // Verify DOM structure
+    const finalBackdrop = this.dialogContainer.querySelector('.pe-dialog-backdrop');
+    const finalDialog = this.dialogContainer.querySelector('.pe-confirmation-dialog');
+    
+    logger.log('Final element check after binding:', {
+      backdropInDOM: !!finalBackdrop,
+      dialogInDOM: !!finalDialog
+    });
     
     logger.log('Dialog elements created and appended to body');
   }
@@ -158,6 +165,14 @@ class ConfirmationDialog {
           this.callbacks.cancel();
         }
       });
+
+      // Add hover effects
+      cancelBtn.addEventListener('mouseover', () => {
+        cancelBtn.style.backgroundColor = '#e0e0e0 !important';
+      });
+      cancelBtn.addEventListener('mouseout', () => {
+        cancelBtn.style.backgroundColor = '#f0f0f0 !important';
+      });
     }
 
     // Confirm button
@@ -170,14 +185,22 @@ class ConfirmationDialog {
           this.callbacks.confirm();
         }
       });
+
+      // Add hover effects
+      confirmBtn.addEventListener('mouseover', () => {
+        confirmBtn.style.backgroundColor = '#006a32 !important';
+      });
+      confirmBtn.addEventListener('mouseout', () => {
+        confirmBtn.style.backgroundColor = '#00833f !important';
+      });
     }
 
     // Backdrop click
     if (this.backdropElement) {
       this.backdropElement.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
         if (e.target === this.backdropElement) {
+          e.preventDefault();
+          e.stopPropagation();
           this.hide();
           if (typeof this.callbacks.cancel === 'function') {
             this.callbacks.cancel();
@@ -193,8 +216,8 @@ class ConfirmationDialog {
       });
     }
 
-    // Escape key
-    document.addEventListener('keydown', (e) => {
+    // Escape key handler
+    this.escKeyHandler = (e) => {
       if (e.key === 'Escape' && this.isVisible()) {
         e.preventDefault();
         e.stopPropagation();
@@ -203,20 +226,39 @@ class ConfirmationDialog {
           this.callbacks.cancel();
         }
       }
-    });
+    };
+
+    // Add ESC key listener
+    document.addEventListener('keydown', this.escKeyHandler);
 
     logger.log('Events bound to dialog elements');
   }
 
   /**
    * Show the dialog with the specified options
-   * @param {Object} options - Configuration options for the dialog
+   * @param {object} options - Configuration options for the dialog
    */
   show(options = {}) {
-    logger.log('Showing dialog with options:', options);
+    logger.log('=========== DIALOG SHOW CALLED ===========');
+    logger.log('Options:', JSON.stringify(options, null, 2));
     
-    // Add a fallback alert if our dialog fails
-    const fallbackAlert = () => {
+    // Always recreate the dialog to ensure it's fresh and properly configured
+    // Remove any existing dialog first
+    this.hide();
+    
+    // Create new dialog elements
+    logger.log('Creating fresh dialog elements');
+    this.createDialogElements();
+    
+    logger.log('Dialog elements after creation:', {
+      dialogContainer: !!this.dialogContainer,
+      dialog: !!this.dialog,
+      backdropElement: !!this.backdropElement
+    });
+    
+    // If creation failed, use fallback
+    if (!this.dialog || !this.backdropElement) {
+      logger.error('Failed to create dialog elements');
       const message = options.message || 'Are you sure?';
       if (confirm(message)) {
         if (typeof options.onConfirm === 'function') {
@@ -227,11 +269,6 @@ class ConfirmationDialog {
           options.onCancel();
         }
       }
-    };
-    
-    if (!this.dialog || !this.backdropElement) {
-      logger.error('Cannot show dialog: elements not found');
-      fallbackAlert();
       return;
     }
 
@@ -252,6 +289,7 @@ class ConfirmationDialog {
 
     // Merge options with defaults
     const settings = { ...defaults, ...options };
+    logger.log('Final settings:', JSON.stringify(settings, null, 2));
 
     // If cancelText is explicitly null/false, hide the cancel button
     if (options.cancelText === null || options.cancelText === false) {
@@ -268,17 +306,41 @@ class ConfirmationDialog {
     const confirmEl = this.dialog.querySelector('.pe-dialog-confirm');
     const cancelEl = this.dialog.querySelector('.pe-dialog-cancel');
 
-    if (titleEl) titleEl.textContent = settings.title;
-    if (messageEl) messageEl.textContent = settings.message;
-    if (confirmEl) confirmEl.textContent = settings.confirmText;
+    logger.log('Dialog elements for content update:', {
+      titleElement: !!titleEl,
+      messageElement: !!messageEl,
+      confirmElement: !!confirmEl,
+      cancelElement: !!cancelEl
+    });
+
+    // Important: Explicitly update text content with settings
+    logger.log('Setting title to:', settings.title);
+    logger.log('Setting message to:', settings.message);
+    
+    if (titleEl) {
+      titleEl.textContent = settings.title;
+      logger.log('After update, title element contains:', titleEl.textContent);
+    }
+    
+    if (messageEl) {
+      messageEl.textContent = settings.message;
+      logger.log('After update, message element contains:', messageEl.textContent);
+    }
+    
+    if (confirmEl) {
+      confirmEl.textContent = settings.confirmText;
+      logger.log('After update, confirm button text is:', confirmEl.textContent);
+    }
 
     // Handle cancel button visibility
     if (cancelEl) {
       if (settings.showCancel) {
         cancelEl.style.display = '';
         cancelEl.textContent = settings.cancelText;
+        logger.log('Cancel button is visible with text:', cancelEl.textContent);
       } else {
         cancelEl.style.display = 'none';
+        logger.log('Cancel button is hidden');
 
         // When cancel button is hidden, make confirm button full width
         if (confirmEl) {
@@ -287,144 +349,62 @@ class ConfirmationDialog {
       }
     }
 
-    // Set classes for type and action
-    if (this.dialog) {
-      // Remove previous type and action classes
-      this.dialog.classList.remove(
-        'pe-dialog-type-product', 
-        'pe-dialog-type-room', 
-        'pe-dialog-type-estimate', 
-        'pe-dialog-notification'
-      );
+    // Prevent scrolling on the body while modal is active
+    document.body.style.overflow = 'hidden';
 
-      // Remove all action classes
-      [...this.dialog.classList].forEach(className => {
-        if (/^pe-dialog-action-/.test(className)) {
-          this.dialog.classList.remove(className);
-        }
-      });
-
-      // Add type class if specified
-      if (settings.type) {
-        this.dialog.classList.add(`pe-dialog-type-${settings.type}`);
-      }
-
-      // Add action class if specified
-      if (settings.action) {
-        this.dialog.classList.add(`pe-dialog-action-${settings.action}`);
-      }
-
-      // Add notification class for success notifications
-      if (!settings.showCancel && settings.type === 'estimate') {
-        this.dialog.classList.add('pe-dialog-notification');
-      }
-    }
-
-    // Make elements visible with !important flags
+    // Make dialog visible with explicit inline styles initially, 
+    // then add visible class so CSS transitions can work
     if (this.backdropElement) {
-      this.backdropElement.setAttribute('style', 
-        'position: fixed !important; ' +
-        'top: 0 !important; ' +
-        'left: 0 !important; ' +
-        'right: 0 !important; ' +
-        'bottom: 0 !important; ' +
-        'background-color: rgba(0, 0, 0, 0.6) !important; ' +
-        'display: block !important; ' +
-        'opacity: 1 !important; ' +
-        'visibility: visible !important; ' +
-        'z-index: 9999999 !important;'
-      );
-    }
-    
-    if (this.dialog) {
-      this.dialog.setAttribute('style', 
-        'position: fixed !important; ' +
-        'top: 50% !important; ' +
-        'left: 50% !important; ' +
-        'transform: translate(-50%, -50%) !important; ' +
-        'display: block !important; ' +
-        'opacity: 1 !important; ' +
-        'visibility: visible !important; ' +
-        'background-color: #fff !important; ' +
-        'border-radius: 8px !important; ' +
-        'box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important; ' +
-        'width: 450px !important; ' +
-        'max-width: 90% !important; ' +
-        'z-index: 10000000 !important;'
-      );
-      this.dialog.classList.add('active');
+      logger.log('Making backdrop visible with explicit style then visible class');
       
-      // Add border to make it obvious
-      this.dialog.style.border = '3px solid #00833f !important';
-    }
-    
-    // Additional styling for dialog content elements to make them visible
-    const dialogHeader = this.dialog.querySelector('.pe-dialog-header');
-    if (dialogHeader) {
-      dialogHeader.setAttribute('style', 
-        'display: flex !important; ' +
-        'justify-content: space-between !important; ' +
-        'align-items: center !important; ' +
-        'padding: 15px !important; ' +
-        'background-color: #f3f3f3 !important; ' +
-        'border-bottom: 1px solid #ddd !important;'
-      );
-    }
-    
-    const dialogBody = this.dialog.querySelector('.pe-dialog-body');
-    if (dialogBody) {
-      dialogBody.setAttribute('style', 
-        'padding: 20px !important;'
-      );
-    }
-    
-    const dialogFooter = this.dialog.querySelector('.pe-dialog-footer');
-    if (dialogFooter) {
-      dialogFooter.setAttribute('style', 
-        'display: flex !important; ' +
-        'justify-content: flex-end !important; ' +
-        'gap: 10px !important; ' +
-        'padding: 15px !important; ' +
-        'background-color: #f3f3f3 !important; ' +
-        'border-top: 1px solid #ddd !important;'
-      );
-    }
-    
-    const confirmBtn = this.dialog.querySelector('.pe-dialog-confirm');
-    if (confirmBtn) {
-      confirmBtn.setAttribute('style', 
-        'padding: 8px 16px !important; ' +
-        'background-color: #00833f !important; ' +
-        'color: white !important; ' +
-        'border: none !important; ' +
-        'border-radius: 4px !important; ' +
-        'cursor: pointer !important;'
-      );
-    }
-    
-    const cancelBtn = this.dialog.querySelector('.pe-dialog-cancel');
-    if (cancelBtn && settings.showCancel) {
-      cancelBtn.setAttribute('style', 
-        'padding: 8px 16px !important; ' +
-        'background-color: #f3f3f3 !important; ' +
-        'border: 1px solid #ddd !important; ' +
-        'border-radius: 4px !important; ' +
-        'cursor: pointer !important;'
-      );
-      cancelBtn.style.display = 'block !important';
-    } else if (cancelBtn) {
-      cancelBtn.style.display = 'none !important';
+      // Ensure the backdrop is definitely visible with inline style
+      this.backdropElement.style.display = 'flex';
+      this.backdropElement.style.alignItems = 'center';
+      this.backdropElement.style.justifyContent = 'center';
+      
+      // Then add the visible class for transitions
+      this.backdropElement.classList.add('visible');
+      logger.log('Backdrop classes after update:', this.backdropElement.className);
     }
 
-    // Focus the appropriate button
+    if (this.dialog) {
+      logger.log('Making dialog visible with explicit style then visible class');
+      
+      // Ensure the dialog is definitely visible with inline style
+      this.dialog.style.display = 'block';
+      
+      // Then add the visible class for transitions
+      this.dialog.classList.add('visible');
+      logger.log('Dialog classes after update:', this.dialog.className);
+      
+      // Ensure dialog is positioned correctly
+      this.dialog.style.position = 'fixed';
+      this.dialog.style.top = '50%';
+      this.dialog.style.left = '50%';
+      this.dialog.style.transform = 'translate(-50%, -50%)';
+      this.dialog.style.zIndex = '9999';
+    }
+
+    // Focus the appropriate button after a short delay
     setTimeout(() => {
+      logger.log('Focusing button and confirming visibility');
       const buttonToFocus = settings.showCancel && cancelEl ?
         cancelEl : confirmEl;
 
-      if (buttonToFocus) buttonToFocus.focus();
+      if (buttonToFocus) {
+        buttonToFocus.focus();
+        
+        // Final check for visibility
+        if (this.backdropElement) {
+          logger.log('Final backdrop computed style:', window.getComputedStyle(this.backdropElement).display);
+        }
+        if (this.dialog) {
+          logger.log('Final dialog computed style:', window.getComputedStyle(this.dialog).display);
+        }
+      }
     }, 100);
 
-    logger.log('Dialog shown successfully');
+    logger.log('Dialog show sequence completed');
   }
 
   /**
@@ -433,24 +413,41 @@ class ConfirmationDialog {
   hide() {
     logger.log('Hiding dialog');
     
+    // Restore body scrolling
+    document.body.style.overflow = '';
+    
+    // Check if dialog elements exist
+    if (!this.dialogContainer) {
+      logger.log('No dialog container to hide');
+      return;
+    }
+    
+    // Hide dialog with explicit display none first to ensure it's hidden
     if (this.backdropElement) {
-      this.backdropElement.setAttribute('style', 
-        'display: none !important; ' +
-        'opacity: 0 !important; ' +
-        'visibility: hidden !important;'
-      );
+      logger.log('Setting backdrop display to none');
+      this.backdropElement.style.display = 'none';
+      this.backdropElement.classList.remove('visible');
     }
     
     if (this.dialog) {
-      this.dialog.classList.remove('active');
-      this.dialog.setAttribute('style', 
-        'display: none !important; ' +
-        'opacity: 0 !important; ' +
-        'visibility: hidden !important;'
-      );
+      logger.log('Setting dialog display to none');
+      this.dialog.style.display = 'none';
+      this.dialog.classList.remove('visible');
     }
     
-    logger.log('Dialog hidden');
+    // Remove the dialog container from DOM immediately
+    // Don't delay as we're recreating on each show() call
+    if (this.dialogContainer) {
+      logger.log('Removing dialog container from DOM');
+      this.dialogContainer.remove();
+      
+      // Reset references
+      this.dialogContainer = null;
+      this.backdropElement = null;
+      this.dialog = null;
+    }
+    
+    logger.log('Dialog hidden and removed from DOM');
   }
 
   /**
@@ -458,8 +455,9 @@ class ConfirmationDialog {
    * @returns {boolean} Whether dialog is visible
    */
   isVisible() {
-    return this.dialog && this.backdropElement && 
-           this.backdropElement.style.display === 'block';
+    return this.dialog &&
+           this.backdropElement &&
+           this.backdropElement.classList.contains('visible');
   }
 }
 

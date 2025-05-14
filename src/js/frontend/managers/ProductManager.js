@@ -426,109 +426,97 @@ class ProductManager {
   handleProductRemoval(estimateId, roomId, productIndex, productId) {
     logger.log('Handling product removal', { estimateId, roomId, productIndex, productId });
     
-    // Show a confirmation dialog
-    if (window.productEstimator && window.productEstimator.dialog) {
-      window.productEstimator.dialog.confirm(
-        'Remove Product',
-        'Are you sure you want to remove this product from the room?',
-        () => {
-          // User confirmed, remove the product
-          if (this.modalManager) {
-            this.modalManager.showLoading();
-          }
-          
-          this.dataService.removeProductFromRoom(estimateId, roomId, productIndex)
-            .then(result => {
-              logger.log('Product removed successfully:', result);
-              
-              // Find and remove the product element from the DOM
-              const productElement = document.querySelector(`.product-item[data-product-index="${productIndex}"][data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-              if (productElement) {
-                productElement.remove();
-              }
-              
-              // Update room totals
-              if (this.modalManager && this.modalManager.roomManager) {
-                this.modalManager.roomManager.updateRoomTotals(estimateId, roomId, {
-                  total: result.roomTotal
-                });
-              }
-              
-              // Hide loading
-              if (this.modalManager) {
-                this.modalManager.hideLoading();
-              }
-            })
-            .catch(error => {
-              logger.error('Error removing product:', error);
-              
-              if (this.modalManager) {
-                this.modalManager.hideLoading();
-                const confirmationDialog = this.modalManager.confirmationDialog;
-                if (confirmationDialog) {
-                  confirmationDialog.show({
-                    title: 'Error',
-                    message: 'Error removing product. Please try again.',
-                    type: 'product',
-                    action: 'error',
-                    showCancel: false,
-                    confirmText: 'OK'
-                  });
-                } else {
-                  this.modalManager.showError('Error removing product. Please try again.');
-                }
-              } else {
-                logger.error('Error removing product. Please try again.');
-              }
-            });
-        },
-        () => {
-          // User cancelled, do nothing
-          logger.log('Product removal cancelled by user');
-        }
-      );
-    } else {
-      // No dialog service available, use native confirm
+    // Check if ConfirmationDialog is available through ModalManager
+    if (!this.modalManager || !this.modalManager.confirmationDialog) {
+      logger.error('ConfirmationDialog not available');
+      
+      // Fallback to native confirm if ConfirmationDialog isn't available
       if (confirm('Are you sure you want to remove this product from the room?')) {
+        this.performProductRemoval(estimateId, roomId, productIndex);
+      }
+      return;
+    }
+    
+    // Show the confirmation dialog using the dedicated component
+    this.modalManager.confirmationDialog.show({
+      title: 'Remove Product',
+      message: 'Are you sure you want to remove this product from the room?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'product',
+      action: 'delete',
+      onConfirm: () => {
         // User confirmed, remove the product
-        if (this.modalManager) {
-          this.modalManager.showLoading();
+        this.performProductRemoval(estimateId, roomId, productIndex);
+      },
+      onCancel: () => {
+        // User cancelled, do nothing
+        logger.log('Product removal cancelled by user');
+      }
+    });
+  }
+  
+  /**
+   * Perform the actual product removal operation
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   * @param {number} productIndex - The product index in the room's products array
+   * @private
+   */
+  performProductRemoval(estimateId, roomId, productIndex) {
+    logger.log('Performing product removal', { estimateId, roomId, productIndex });
+    
+    if (this.modalManager) {
+      this.modalManager.showLoading();
+    }
+    
+    this.dataService.removeProductFromRoom(estimateId, roomId, productIndex)
+      .then(result => {
+        logger.log('Product removed successfully:', result);
+        
+        // Find and remove the product element from the DOM
+        const productElement = document.querySelector(`.product-item[data-product-index="${productIndex}"][data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+        if (productElement) {
+          productElement.remove();
         }
         
-        this.dataService.removeProductFromRoom(estimateId, roomId, productIndex)
-          .then(result => {
-            logger.log('Product removed successfully:', result);
-            
-            // Find and remove the product element from the DOM
-            const productElement = document.querySelector(`.product-item[data-product-index="${productIndex}"][data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-            if (productElement) {
-              productElement.remove();
-            }
-            
-            // Update room totals
-            if (this.modalManager && this.modalManager.roomManager) {
-              this.modalManager.roomManager.updateRoomTotals(estimateId, roomId, {
-                total: result.roomTotal
-              });
-            }
-            
-            // Hide loading
-            if (this.modalManager) {
-              this.modalManager.hideLoading();
-            }
-          })
-          .catch(error => {
-            logger.error('Error removing product:', error);
-            
-            if (this.modalManager) {
-              this.modalManager.showError('Error removing product. Please try again.');
-              this.modalManager.hideLoading();
-            } else {
-              alert('Error removing product. Please try again.');
-            }
+        // Update room totals
+        if (this.modalManager && this.modalManager.roomManager) {
+          this.modalManager.roomManager.updateRoomTotals(estimateId, roomId, {
+            total: result.roomTotal
           });
-      }
-    }
+        }
+        
+        // Hide loading
+        if (this.modalManager) {
+          this.modalManager.hideLoading();
+        }
+      })
+      .catch(error => {
+        logger.error('Error removing product:', error);
+        
+        // Hide loading
+        if (this.modalManager) {
+          this.modalManager.hideLoading();
+          
+          // Show error message using ConfirmationDialog
+          if (this.modalManager.confirmationDialog) {
+            this.modalManager.confirmationDialog.show({
+              title: 'Error',
+              message: 'Error removing product. Please try again.',
+              type: 'product',
+              action: 'error',
+              showCancel: false,
+              confirmText: 'OK'
+            });
+          } else {
+            // Fallback to modalManager.showError
+            this.modalManager.showError('Error removing product. Please try again.');
+          }
+        } else {
+          logger.error('Error removing product. Please try again.');
+        }
+      });
   }
   
   /**

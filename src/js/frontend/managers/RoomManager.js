@@ -891,97 +891,94 @@ class RoomManager {
   handleRoomRemoval(estimateId, roomId) {
     logger.log('Handling room removal', { estimateId, roomId });
     
-    // Show a confirmation dialog
-    if (window.productEstimator && window.productEstimator.dialog) {
-      window.productEstimator.dialog.confirm(
-        'Remove Room',
-        'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.',
-        () => {
-          // User confirmed, remove the room
-          this.modalManager.showLoading();
-          
-          this.dataService.removeRoom(estimateId, roomId)
-            .then(() => {
-              logger.log('Room removed successfully');
-              
-              // Find and remove the room element from the DOM
-              const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-              if (roomElement) {
-                roomElement.remove();
-              }
-              
-              // Update estimate totals
-              this.dataService.getEstimate(estimateId)
-                .then(estimate => {
-                  // Update the estimate total in the UI
-                  const estimateItem = document.querySelector(`.estimate-item[data-estimate-id="${estimateId}"]`);
-                  if (estimateItem) {
-                    const totalElement = estimateItem.querySelector('.estimate-total-value');
-                    if (totalElement) {
-                      totalElement.textContent = format.currency(estimate.total || 0);
-                    }
-                  }
-                })
-                .catch(error => {
-                  logger.error('Error updating estimate totals after room removal:', error);
-                })
-                .finally(() => {
-                  this.modalManager.hideLoading();
-                });
-            })
-            .catch(error => {
-              logger.error('Error removing room:', error);
-              this.modalManager.showError('Error removing room. Please try again.');
-              this.modalManager.hideLoading();
-            });
-        },
-        () => {
-          // User cancelled, do nothing
-          logger.log('Room removal cancelled by user');
-        }
-      );
-    } else {
-      // No dialog service available, use native confirm
+    // Check if ConfirmationDialog is available through ModalManager
+    if (!this.modalManager || !this.modalManager.confirmationDialog) {
+      logger.error('ConfirmationDialog not available');
+      
+      // Fallback to native confirm if ConfirmationDialog isn't available
       if (confirm('Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.')) {
+        this.performRoomRemoval(estimateId, roomId);
+      }
+      return;
+    }
+    
+    // Show the confirmation dialog using the dedicated component
+    this.modalManager.confirmationDialog.show({
+      title: 'Remove Room',
+      message: 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      onConfirm: () => {
         // User confirmed, remove the room
-        this.modalManager.showLoading();
+        this.performRoomRemoval(estimateId, roomId);
+      },
+      onCancel: () => {
+        // User cancelled, do nothing
+        logger.log('Room removal cancelled by user');
+      }
+    });
+  }
+  
+  /**
+   * Perform the actual room removal operation
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID to remove
+   * @private
+   */
+  performRoomRemoval(estimateId, roomId) {
+    logger.log('Performing room removal', { estimateId, roomId });
+    this.modalManager.showLoading();
+    
+    this.dataService.removeRoom(estimateId, roomId)
+      .then(() => {
+        logger.log('Room removed successfully');
         
-        this.dataService.removeRoom(estimateId, roomId)
-          .then(() => {
-            logger.log('Room removed successfully');
-            
-            // Find and remove the room element from the DOM
-            const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-            if (roomElement) {
-              roomElement.remove();
+        // Find and remove the room element from the DOM
+        const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+        if (roomElement) {
+          roomElement.remove();
+        }
+        
+        // Update estimate totals
+        this.dataService.getEstimate(estimateId)
+          .then(estimate => {
+            // Update the estimate total in the UI
+            const estimateItem = document.querySelector(`.estimate-item[data-estimate-id="${estimateId}"]`);
+            if (estimateItem) {
+              const totalElement = estimateItem.querySelector('.estimate-total-value');
+              if (totalElement) {
+                totalElement.textContent = format.currency(estimate.total || 0);
+              }
             }
-            
-            // Update estimate totals
-            this.dataService.getEstimate(estimateId)
-              .then(estimate => {
-                // Update the estimate total in the UI
-                const estimateItem = document.querySelector(`.estimate-item[data-estimate-id="${estimateId}"]`);
-                if (estimateItem) {
-                  const totalElement = estimateItem.querySelector('.estimate-total-value');
-                  if (totalElement) {
-                    totalElement.textContent = format.currency(estimate.total || 0);
-                  }
-                }
-              })
-              .catch(error => {
-                logger.error('Error updating estimate totals after room removal:', error);
-              })
-              .finally(() => {
-                this.modalManager.hideLoading();
-              });
           })
           .catch(error => {
-            logger.error('Error removing room:', error);
-            this.modalManager.showError('Error removing room. Please try again.');
+            logger.error('Error updating estimate totals after room removal:', error);
+          })
+          .finally(() => {
             this.modalManager.hideLoading();
           });
-      }
-    }
+      })
+      .catch(error => {
+        logger.error('Error removing room:', error);
+        
+        // Show error message using ConfirmationDialog
+        if (this.modalManager && this.modalManager.confirmationDialog) {
+          this.modalManager.confirmationDialog.show({
+            title: 'Error',
+            message: 'Error removing room. Please try again.',
+            confirmText: 'OK',
+            cancelText: false,
+            onConfirm: () => {
+              logger.log('Error dialog closed');
+            }
+          });
+        } else {
+          // Fallback to modalManager.showError
+          this.modalManager.showError('Error removing room. Please try again.');
+        }
+        
+        this.modalManager.hideLoading();
+      });
   }
   
   /**

@@ -13,6 +13,12 @@
   @include overlay-backdrop($bg-overlay, $z-index-dialog - 1);
   animation: fade-in 0.2s ease-out;
   display: none;
+  
+  &.visible {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 .pe-confirmation-dialog {
@@ -20,6 +26,10 @@
   @include modal-container(450px, $z-index-dialog);
   animation: modal-slide-in 0.3s ease-out;
   display: none;
+  
+  &.visible {
+    display: block;
+  }
 }
 
 .pe-dialog-header {

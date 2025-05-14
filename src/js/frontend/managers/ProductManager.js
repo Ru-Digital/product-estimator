@@ -208,7 +208,7 @@ class ProductManager {
     // Validate that we have a product ID
     if (!productId) {
       const errorMsg = 'Product ID is required to add a product to a room';
-      logger.error(errorMsg);
+      logger.log(errorMsg);
       return Promise.reject(new Error(errorMsg));
     }
 
@@ -222,11 +222,18 @@ class ProductManager {
       .then(result => {
         logger.log('Product added successfully:', result);
 
-        // Update room totals
-        if (this.modalManager && this.modalManager.roomManager) {
-          this.modalManager.roomManager.updateRoomTotals(estimateId, roomId, {
-            total: result.roomTotal
-          });
+        // Update totals only if we have valid data and the room is likely to be visible
+        // TODO: Improve room totals updating to handle timing issues better
+        if (this.modalManager && this.modalManager.roomManager && result && result.room_totals) {
+          try {
+            // Try to update totals but don't worry if it fails - view refresh will show correct values
+            this.modalManager.roomManager.updateRoomTotals(estimateId, roomId, {
+              total: result.room_totals.min_total || 0
+            });
+          } catch (e) {
+            // Just log and continue - this is expected in some cases
+            logger.log('Non-critical error updating room totals UI');
+          }
         }
 
         // Hide loading
@@ -237,7 +244,32 @@ class ProductManager {
         return result;
       })
       .catch(error => {
-        logger.error('Error adding product to room:', error);
+        // Handle duplicate product case (not an error, just a warning)
+        if (error && error.data && error.data.duplicate) {
+          // Hide loading indicator
+          if (this.modalManager) {
+            this.modalManager.hideLoading();
+          }
+          
+          // Show warning dialog instead of error
+          if (this.modalManager && this.modalManager.confirmationDialog) {
+            this.modalManager.confirmationDialog.show({
+              title: 'Product Already Exists',
+              message: error.message || 'This product already exists in the selected room.',
+              type: 'product',
+              action: 'warning',
+              showCancel: false,
+              confirmText: 'OK'
+            });
+          }
+          
+          // Return a rejected promise with the error object
+          // but don't log it as an error since it's expected behavior
+          return Promise.reject(error);
+        }
+        
+        // Handle other errors
+        logger.log('Error adding product to room:', error);
 
         // Hide loading
         if (this.modalManager) {
@@ -266,43 +298,66 @@ class ProductManager {
     }
 
     // Get formatted price
-    const formattedPrice = format.currency(product.price || 0);
+    const formattedPrice = format.currency(product.price || product.min_price_total || 0);
 
-    // Create template data
+    // Create comprehensive template data with proper mapped field names
     const templateData = {
-      productId: product.id,
-      productIndex: index,
-      roomId: roomId,
-      estimateId: estimateId,
-      productName: product.name || 'Product',
-      productPrice: formattedPrice,
-      productSku: product.sku || '',
-      productDescription: product.description || ''
+      // Data attributes for the product element
+      id: product.id,
+      product_id: product.id,
+      product_index: index,
+      room_id: roomId,
+      estimate_id: estimateId,
+      
+      // Visual fields for display
+      name: product.name || 'Product',
+      price_title: product.name || 'Product',
+      product_price: formattedPrice,
+      price_dimensions: product.dimensions || '',
+      image: product.image || 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
+      sku: product.sku || '',
+      description: product.description || '',
+      
+      // Include additional product data if available
+      additional_products: product.additional_products || [],
+      additional_notes: product.additional_notes || [],
     };
 
-    // Insert the template into a temporary container to get the element
-    const tempContainer = document.createElement('div');
-    TemplateEngine.insert('product-item-template', templateData, tempContainer);
+    logger.log('Product template data:', templateData);
 
-    // Get the product element from the temporary container
-    const productElement = tempContainer.firstElementChild;
+    // Insert the product template directly into the container
+    TemplateEngine.insert('product-item-template', templateData, container);
 
-    // Set additional data attributes
+    // Get the product element that was just added
+    const productElement = container.querySelector(`.product-item[data-product-id="${product.id}"]`);
+    
+    if (!productElement) {
+      logger.error('Product element not found after insertion');
+      return null;
+    }
+
+    // Double-check all required data attributes
     productElement.dataset.productId = product.id;
     productElement.dataset.productIndex = index;
     productElement.dataset.roomId = roomId;
     productElement.dataset.estimateId = estimateId;
 
-    // Set product name
+    // Ensure product name and price are properly set
     const productNameElement = productElement.querySelector('.price-title');
     if (productNameElement) {
-      productNameElement.textContent = templateData.productName;
+      productNameElement.textContent = product.name || 'Product';
     }
 
-    // Set product price
     const productPriceElement = productElement.querySelector('.product-price');
     if (productPriceElement) {
-      productPriceElement.textContent = templateData.productPrice;
+      productPriceElement.textContent = formattedPrice;
+    }
+
+    // Set product image if available
+    const productImage = productElement.querySelector('.product-thumbnail');
+    if (productImage && product.image) {
+      productImage.src = product.image;
+      productImage.alt = product.name || 'Product';
     }
 
     // Add variations if needed
@@ -352,9 +407,6 @@ class ProductManager {
       }
     }
 
-    // Add to container
-    container.appendChild(productElement);
-
     // Bind events
     this.bindProductEvents(productElement, product, index, roomId, estimateId);
 
@@ -380,6 +432,19 @@ class ProductManager {
     // Bind remove button - use the template's .remove-product class
     const removeButton = productElement.querySelector('.remove-product');
     if (removeButton) {
+      // Make sure data attributes are set properly
+      removeButton.dataset.estimateId = estimateId;
+      removeButton.dataset.roomId = roomId;
+      removeButton.dataset.productIndex = index;
+      removeButton.dataset.productId = product.id;
+      
+      logger.log('Remove button data attributes set:', { 
+        estimateId: removeButton.dataset.estimateId,
+        roomId: removeButton.dataset.roomId,
+        productIndex: removeButton.dataset.productIndex,
+        productId: removeButton.dataset.productId
+      });
+      
       if (removeButton._clickHandler) {
         removeButton.removeEventListener('click', removeButton._clickHandler);
       }
@@ -387,10 +452,33 @@ class ProductManager {
       removeButton._clickHandler = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        this.handleProductRemoval(estimateId, roomId, index, product.id);
+        
+        // Get the data attributes from the button element
+        const buttonEstimateId = e.currentTarget.dataset.estimateId;
+        const buttonRoomId = e.currentTarget.dataset.roomId;
+        const buttonProductIndex = e.currentTarget.dataset.productIndex;
+        const buttonProductId = e.currentTarget.dataset.productId;
+        
+        // Use the data from the button itself, falling back to the closure variables if needed
+        const targetEstimateId = buttonEstimateId || estimateId;
+        const targetRoomId = buttonRoomId || roomId;
+        const targetProductIndex = buttonProductIndex || index;
+        const targetProductId = buttonProductId || product.id;
+        
+        logger.log('Remove product clicked with data:', { 
+          estimateId: targetEstimateId, 
+          roomId: targetRoomId, 
+          productIndex: targetProductIndex,
+          productId: targetProductId
+        });
+        
+        // Call handleProductRemoval with the data attributes from the button
+        this.handleProductRemoval(targetEstimateId, targetRoomId, targetProductIndex, targetProductId);
       };
 
       removeButton.addEventListener('click', removeButton._clickHandler);
+    } else {
+      logger.log('Remove button not found in product element');
     }
 
     // Bind variation select
@@ -436,7 +524,8 @@ class ProductManager {
         this.modalManager.confirmationDialog = new ConfirmationDialog();
 
         // Now show the dialog with the newly created instance
-        this._showProductRemovalDialog(estimateId, roomId, productIndex);
+        // Pass all parameters including productId
+        this._showProductRemovalDialog(estimateId, roomId, productIndex, productId);
       }).catch(error => {
         logger.error('Error importing ConfirmationDialog:', error);
       });
@@ -444,7 +533,8 @@ class ProductManager {
     }
 
     // If we already have the confirmationDialog, use it directly
-    this._showProductRemovalDialog(estimateId, roomId, productIndex);
+    // Make sure to pass the productId parameter
+    this._showProductRemovalDialog(estimateId, roomId, productIndex, productId);
   }
 
   /**
@@ -452,9 +542,13 @@ class ProductManager {
    * @param {string} estimateId - The estimate ID
    * @param {string} roomId - The room ID
    * @param {number} productIndex - The product index in the room's products array
+   * @param {string|number} productId - The product ID to remove
    * @private
    */
-  _showProductRemovalDialog(estimateId, roomId, productIndex) {
+  _showProductRemovalDialog(estimateId, roomId, productIndex, productId) {
+    // Log the parameters to ensure they're all present
+    logger.log('Showing product removal dialog with params:', { estimateId, roomId, productIndex, productId });
+    
     // Show the confirmation dialog using the dedicated component
     this.modalManager.confirmationDialog.show({
       // TODO: Implement labels from localization system
@@ -466,7 +560,8 @@ class ProductManager {
       action: 'delete',
       onConfirm: () => {
         // User confirmed, remove the product
-        this.performProductRemoval(estimateId, roomId, productIndex);
+        // Pass all parameters including productId
+        this.performProductRemoval(estimateId, roomId, productIndex, productId);
       },
       onCancel: () => {
         // User cancelled, do nothing
@@ -480,23 +575,54 @@ class ProductManager {
    * @param {string} estimateId - The estimate ID
    * @param {string} roomId - The room ID
    * @param {number} productIndex - The product index in the room's products array
+   * @param {string|number} productId - The product ID to remove
    * @private
    */
-  performProductRemoval(estimateId, roomId, productIndex) {
-    logger.log('Performing product removal', { estimateId, roomId, productIndex });
+  performProductRemoval(estimateId, roomId, productIndex, productId) {
+    logger.log('Performing product removal', { estimateId, roomId, productIndex, productId });
+    
+    // Validate productId before proceeding
+    if (!productId || productId === 'undefined') {
+      const error = new Error(`Cannot remove product: Invalid product ID (${productId})`);
+      logger.error(error);
+      
+      if (this.modalManager) {
+        this.modalManager.hideLoading();
+        if (this.modalManager.confirmationDialog) {
+          this.modalManager.confirmationDialog.show({
+            title: 'Error',
+            message: 'Could not identify the product to remove.',
+            type: 'product',
+            action: 'error',
+            showCancel: false,
+            confirmText: 'OK'
+          });
+        }
+      }
+      return;
+    }
 
     if (this.modalManager) {
       this.modalManager.showLoading();
     }
 
-    this.dataService.removeProductFromRoom(estimateId, roomId, productIndex)
+    // Now we pass both productIndex and productId to the removeProductFromRoom method
+    // This allows the method to use productId as the primary identifier, with productIndex as fallback
+    this.dataService.removeProductFromRoom(estimateId, roomId, productIndex, productId)
       .then(result => {
         logger.log('Product removed successfully:', result);
 
-        // Find and remove the product element from the DOM
-        const productElement = document.querySelector(`.product-item[data-product-index="${productIndex}"][data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+        // Find and remove the product element from the DOM using all available attributes
+        // Using both productIndex and productId for more robust element selection
+        const productElement = document.querySelector(
+          `.product-item[data-product-id="${productId}"][data-room-id="${roomId}"][data-estimate-id="${estimateId}"], ` +
+          `.product-item[data-product-index="${productIndex}"][data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`
+        );
+        
         if (productElement) {
           productElement.remove();
+        } else {
+          logger.log('Product element not found in DOM after removal. It may have been removed already.');
         }
 
         // Update room totals

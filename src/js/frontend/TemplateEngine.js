@@ -230,11 +230,81 @@ class TemplateEngine {
   }
 
   /**
+   * Process a string with handlebars-style placeholders
+   * @param {string} str - The string containing {{placeholders}}
+   * @param {object} data - Data object with values to replace placeholders
+   * @returns {string} - The processed string with placeholders replaced
+   */
+  processHandlebars(str, data) {
+    if (!str || typeof str !== 'string') {
+      return str;
+    }
+    
+    return str.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+      return data[key] !== undefined ? data[key] : match;
+    });
+  }
+  
+  /**
+   * Process all handlebars placeholders in an element and its children
+   * @param {Element|DocumentFragment} element - The element to process
+   * @param {object} data - Data object with values to replace placeholders
+   * @private
+   */
+  _processElementHandlebars(element, data) {
+    // Process all elements in the fragment
+    const processNode = (node) => {
+      // Skip non-element nodes (text nodes, comments, etc.)
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return;
+      }
+      
+      // Process attributes
+      if (node.hasAttributes()) {
+        Array.from(node.attributes).forEach(attr => {
+          if (attr.value.includes('{{')) {
+            attr.value = this.processHandlebars(attr.value, data);
+          }
+        });
+      }
+      
+      // Process text content for elements without children
+      if (node.childNodes.length === 1 && node.firstChild.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent;
+        if (text.includes('{{')) {
+          node.textContent = this.processHandlebars(text, data);
+        }
+      }
+      
+      // Process child elements recursively
+      Array.from(node.childNodes).forEach(child => {
+        processNode(child);
+      });
+    };
+    
+    // Start processing from the root element
+    if (element.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+      // For document fragments, process all child nodes
+      Array.from(element.childNodes).forEach(child => {
+        processNode(child);
+      });
+    } else {
+      // For regular elements, process the element itself
+      processNode(element);
+    }
+    
+    logger.log('[_processElementHandlebars] Processed handlebars placeholders in element');
+  }
+  
+  /**
    * Populate an element with data
    * @param {Element|DocumentFragment} element - Element to populate
    * @param {object} data - Data to populate with
    */
   populateElement(element, data) {
+    // Process handlebars placeholders in element attributes and text
+    this._processElementHandlebars(element, data);
+    
     // Process simple data attributes first
     Object.entries(data).forEach(([key, value]) => {
       // Skip complex objects and arrays
@@ -328,23 +398,29 @@ class TemplateEngine {
       });
     }
 
-    // Enhance product ID handling
-    if (data.id) {
-      // For products, the ID is often stored in data.id
+    // Enhanced product ID handling
+    if (data.id || data.product_id) {
+      // Use either product_id or id (prefer product_id if both exist)
+      const idToUse = data.product_id || data.id;
+      
+      // Find elements with data-product-id attribute
       const elementsWithProductId = element.querySelectorAll('[data-product-id]');
       elementsWithProductId.forEach(el => {
-        el.setAttribute('data-product-id', data.id);
+        el.setAttribute('data-product-id', idToUse);
       });
 
-      // Also set on the main element if it's a product item
-      if (element.classList && element.classList.contains('product-item')) {
-        element.setAttribute('data-product-id', data.id);
+      // Also set on the main element if it's a product-related element
+      if (element.classList) {
+        const productRelatedClasses = ['product-item', 'similar-item', 'suggestion-item', 'include-item'];
+        const isProductElement = productRelatedClasses.some(className => element.classList.contains(className));
+        
+        if (isProductElement) {
+          element.setAttribute('data-product-id', idToUse);
+        }
       }
-    } else if (data.product_id) {
-      const elementsWithProductId = element.querySelectorAll('[data-product-id]');
-      elementsWithProductId.forEach(el => {
-        el.setAttribute('data-product-id', data.product_id);
-      });
+      
+      // Log successful product ID assignment for debugging
+      logger.log(`Set data-product-id=${idToUse} on product element(s) in template`);
     }
 
     if (data.product_index !== undefined) {

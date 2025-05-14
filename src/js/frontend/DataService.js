@@ -19,8 +19,8 @@ import {
   removeProductFromRoom as removeProductFromRoomStorage, // Imports from EstimateStorage
   replaceProductInRoom as replaceProductInRoomStorage, // Imports from EstimateStorage
   addSuggestionsToRoom as replaceSuggestionsInRoomStorage,
-  getSuggestionsForRoom as getSuggestionsForRoomFromStorage
-  // getEstimate, addProductToRoom - Removed unused imports
+  getSuggestionsForRoom as getSuggestionsForRoomFromStorage,
+  getEstimate // Import getEstimate function
 } from './EstimateStorage'; // Import necessary functions from storage
 
 const logger = createLogger('DataService');
@@ -119,7 +119,7 @@ class DataService {
    */
   getProductUpgrades(productId, estimateId, roomId, roomArea, upgradeType, bypassCache = false) {
     logger.log(`[DataService.getProductUpgrades] DEBUG: Called with productId: ${productId}, estimateId: ${estimateId}, roomId: ${roomId}, roomArea: ${roomArea}, upgradeType: ${upgradeType}, bypassCache: ${bypassCache}`);
-    
+
     // Delegate to AjaxService which now handles its own caching
     return this.ajaxService.getProductUpgrades({
       product_id: productId,
@@ -172,6 +172,27 @@ class DataService {
     return Promise.resolve(estimatesArray);
   }
 
+  /**
+   * Get a specific estimate by ID from localStorage
+   * @param {string|number} estimateId - The estimate ID
+   * @returns {Promise<object|null>} A promise that resolves with the estimate data or null if not found
+   */
+  getEstimate(estimateId) {
+    logger.log(`Getting estimate ${estimateId} from localStorage.`);
+    
+    // Use the imported getEstimate function from EstimateStorage
+    const estimate = getEstimate(estimateId);
+    
+    if (estimate) {
+      logger.log(`Found estimate ${estimateId} in localStorage.`);
+    } else {
+      logger.warn(`Estimate ${estimateId} not found in localStorage.`);
+    }
+    
+    // Return the estimate as a resolved promise to maintain API consistency
+    return Promise.resolve(estimate);
+  }
+  
   /**
    * Get rooms for a specific estimate by reading from localStorage.
    * Note: This function now relies on localStorage for its data source.
@@ -240,6 +261,37 @@ class DataService {
     return Promise.resolve(responseData);
   }
 
+  /**
+   * Get products for a specific room from an estimate
+   * @param {string|number} estimateId - Estimate ID
+   * @param {string|number} roomId - Room ID
+   * @returns {Promise<Array>} - A promise that resolves with an array of products
+   */
+  getProductsForRoom(estimateId, roomId) {
+    logger.log(`Getting products for room ${roomId} in estimate ${estimateId} from localStorage.`);
+
+    // Load all estimate data
+    const estimateData = loadEstimateData();
+
+    // Check if the estimate and room exist
+    if (!estimateData.estimates ||
+        !estimateData.estimates[estimateId] ||
+        !estimateData.estimates[estimateId].rooms ||
+        !estimateData.estimates[estimateId].rooms[roomId]) {
+      logger.warn(`Estimate ${estimateId} or room ${roomId} not found in localStorage.`);
+      return Promise.resolve([]);
+    }
+
+    // Get the products array from the room
+    const room = estimateData.estimates[estimateId].rooms[roomId];
+    const products = room.products || [];
+
+    logger.log(`Found ${products.length} products for room ${roomId} in estimate ${estimateId}.`);
+
+    // Return the products as a resolved promise
+    return Promise.resolve(products);
+  }
+
 
 // In DataService.js
 
@@ -296,7 +348,7 @@ class DataService {
     // The backend ('get_product_data_for_storage') is expected to return:
     // - product_data: { ... (main product details), similar_products: [...] }
     // - room_suggested_products: [...] (suggestions for the room *with* the new product, if applicable)
-    // 
+    //
     // This is a CRITICAL request that must succeed - we cannot proceed with fallbacks.
     const fetchProductAndSuggestionsPromise = this.ajaxService.getProductDataForStorage({
       product_id: String(productId),
@@ -314,30 +366,30 @@ class DataService {
         if (!productDataResponse) {
           const errorMsg = 'Failed to get comprehensive product data from server - null/undefined response.';
           logger.error(errorMsg); // Critical error - high priority
-          return { 
-            success: false, 
+          return {
+            success: false,
             error: new Error(errorMsg),
             critical: true // Mark as critical error that should block the UI
           };
         }
-        
+
         // Critical validation: If getProductDataForStorage returned no product_data
         if (!productDataResponse.product_data) {
           const errorMsg = 'Failed to get comprehensive product data from server - missing product_data property.';
           logger.error(errorMsg, productDataResponse); // Critical error - high priority
-          return { 
-            success: false, 
+          return {
+            success: false,
             error: new Error(errorMsg),
             critical: true // Mark as critical error that should block the UI
           };
         }
-        
+
         // Critical validation: If this is a fallback response from a failed request
         if (productDataResponse.isFallback === true) {
           const errorMsg = `Unable to get product data from server for product ID ${productId}. This is a required server request.`;
           logger.error(errorMsg); // Critical error - high priority
-          return { 
-            success: false, 
+          return {
+            success: false,
             error: new Error(errorMsg),
             critical: true // Mark as critical error that should block the UI
           };
@@ -422,26 +474,26 @@ class DataService {
             // you might want to show a modal dialog or other UI element
             const errorMsg = localResult.error?.message || 'Critical error: Unable to add product to room.';
             logger.error('CRITICAL ERROR:', errorMsg);
-            
+
             // This should be replaced with your app's error display mechanism
             if (typeof window.productEstimatorShowError === 'function') {
               window.productEstimatorShowError(errorMsg);
             } else if (typeof window.alert === 'function') {
               window.alert(`Error: ${errorMsg}`);
             }
-            
+
             // Propagate the error so the UI can handle it
             throw new Error(errorMsg);
           }
-          
+
           // Non-critical error
           logger.warn('Local storage update failed, skipping asynchronous server request for adding product to session.');
-          return Promise.resolve({ 
-            server_request_skipped: true, 
-            local_error: localResult.error 
+          return Promise.resolve({
+            server_request_skipped: true,
+            local_error: localResult.error
           });
         }
-        
+
         // If successful, proceed with server sync
         logger.log('DataService: Local storage update successful, sending asynchronous server request for adding product to session.');
         const requestData = {
@@ -451,7 +503,7 @@ class DataService {
         if (estimateId !== null) {
           requestData.estimate_id = String(estimateId);
         }
-        
+
         // Try to send to server, but don't let failures block the UI
         return this.ajaxService.addProductToRoom(requestData)
           .catch(error => {
@@ -803,7 +855,7 @@ class DataService {
       };
 
       // Add the basic room structure to local storage (without products)
-      addRoom(estimateId, newRoomData); 
+      addRoom(estimateId, newRoomData);
       logger.log(`Room ID ${newRoomData.id} (empty) added to localStorage for estimate ${estimateId}`);
 
       // Asynchronously send the request to the server to add the room
@@ -811,7 +863,7 @@ class DataService {
         form_data: this.formatFormData(formData),
         estimate_id: String(estimateId)
       };
-      
+
       this.ajaxService.addNewRoom(serverRequestData)
         .then(response => {
           logger.log('DataService: Server-side room creation successful:', response);
@@ -1145,7 +1197,7 @@ class DataService {
    */
   invalidateCache(cacheType = null) {
     logger.log('Invalidating caches');
-    
+
     // Invalidate local in-memory cache
     if (cacheType) {
       if (Object.prototype.hasOwnProperty.call(this.cache, cacheType)) {
@@ -1160,21 +1212,21 @@ class DataService {
       this.cache.estimatesList = null;
       this.cache.rooms = {};
     }
-    
+
     // Delegate to AjaxService to invalidate its cache
     this.ajaxService.invalidateCache(cacheType);
   }
-  
+
   /**
    * Force reload estimates from localStorage and update cache
    * @returns {object} Raw estimates data from localStorage
    */
   refreshEstimatesCache() {
     logger.log('Refreshing estimates cache directly from localStorage');
-    
+
     // Load directly from localStorage
     const storageData = loadEstimateData();
-    
+
     // Update the cache with the fresh data
     if (storageData && storageData.estimates) {
       // Convert the object of estimates to an array for the cache
@@ -1185,7 +1237,7 @@ class DataService {
       this.cache.estimatesData = [];
       logger.log('No estimates found in localStorage during refresh');
     }
-    
+
     // Return the raw data
     return storageData;
   }

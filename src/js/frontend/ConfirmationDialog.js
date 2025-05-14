@@ -59,14 +59,12 @@ class ConfirmationDialog {
   }
 
   /**
-   * Initialize and create dialog DOM elements
+   * Initialize the dialog component
+   * Note: createDialogElements is now called on demand in show()
    */
   init() {
     // Don't initialize more than once
     if (this.initialized) return;
-
-    // Create dialog elements
-    this.createDialogElements();
 
     this.initialized = true;
     logger.log('ConfirmationDialog initialized');
@@ -76,61 +74,30 @@ class ConfirmationDialog {
    * Create dialog DOM elements using the TemplateEngine
    */
   createDialogElements() {
-    logger.log('=========== CREATING DIALOG ELEMENTS ===========');
+    logger.log('Creating dialog elements');
 
-    // Check existing before creation
-    const existingBeforeCreation = document.getElementById('confirmation-dialog-container');
-    logger.log('Existing container before creation:', !!existingBeforeCreation);
+    // Remove any existing dialog elements to avoid duplicates
+    const existingContainer = document.getElementById('confirmation-dialog-container');
+    if (existingContainer) {
+      existingContainer.remove();
+    }
 
-    // Create a container element
+    // Create the dialog container using TemplateEngine
     this.dialogContainer = document.createElement('div');
     this.dialogContainer.id = 'confirmation-dialog-container';
-
-    logger.log('Dialog container created with id:', this.dialogContainer.id);
-
-    // Create the dialog from template with empty content
-    // We'll update the content after rendering
-    logger.log('Creating dialog using TemplateEngine');
-    const dialogFragment = TemplateEngine.create('confirmation-dialog-template', {});
-
-    // Append the fragment to the container
-    this.dialogContainer.appendChild(dialogFragment);
+    
+    // Insert the dialog template into the container
+    TemplateEngine.insert('confirmation-dialog-template', {}, this.dialogContainer);
 
     // Get references to the backdrop and dialog elements
     this.backdropElement = this.dialogContainer.querySelector('.pe-dialog-backdrop');
     this.dialog = this.dialogContainer.querySelector('.pe-confirmation-dialog');
 
-    logger.log('Element references:', {
-      foundBackdrop: !!this.backdropElement,
-      foundDialog: !!this.dialog
-    });
-
-    // Remove any existing dialog elements to avoid duplicates
-    const existingContainer = document.getElementById('confirmation-dialog-container');
-    if (existingContainer) {
-      logger.log('Found existing container, removing it');
-      existingContainer.remove();
-    }
-
     // Append the container to the body
-    logger.log('Appending dialog container to document body');
     document.body.appendChild(this.dialogContainer);
-
-    // Verify it's in the DOM
-    const containerInDOM = document.getElementById('confirmation-dialog-container');
-    logger.log('Container found in DOM after append:', !!containerInDOM);
 
     // Bind events now that elements are in the DOM
     this.bindEvents();
-
-    // Verify DOM structure
-    const finalBackdrop = this.dialogContainer.querySelector('.pe-dialog-backdrop');
-    const finalDialog = this.dialogContainer.querySelector('.pe-confirmation-dialog');
-
-    logger.log('Final element check after binding:', {
-      backdropInDOM: !!finalBackdrop,
-      dialogInDOM: !!finalDialog
-    });
 
     logger.log('Dialog elements created and appended to body');
   }
@@ -236,18 +203,10 @@ class ConfirmationDialog {
    */
   show(options = {}) {
     // Always recreate the dialog to ensure it's fresh and properly configured
-    // Remove any existing dialog first
     this.hide();
 
     // Create new dialog elements
-    logger.log('Creating fresh dialog elements');
     this.createDialogElements();
-
-    logger.log('Dialog elements after creation:', {
-      dialogContainer: !!this.dialogContainer,
-      dialog: !!this.dialog,
-      backdropElement: !!this.backdropElement
-    });
 
     // If creation failed, use fallback
     if (!this.dialog || !this.backdropElement) {
@@ -282,7 +241,6 @@ class ConfirmationDialog {
 
     // Merge options with defaults
     const settings = { ...defaults, ...options };
-    logger.log('Final settings:', JSON.stringify(settings, null, 2));
 
     // If cancelText is explicitly null/false, hide the cancel button
     if (options.cancelText === null || options.cancelText === false) {
@@ -299,30 +257,17 @@ class ConfirmationDialog {
     const confirmEl = this.dialog.querySelector('.pe-dialog-confirm');
     const cancelEl = this.dialog.querySelector('.pe-dialog-cancel');
 
-    logger.log('Dialog elements for content update:', {
-      titleElement: !!titleEl,
-      messageElement: !!messageEl,
-      confirmElement: !!confirmEl,
-      cancelElement: !!cancelEl
-    });
-
-    // Important: Explicitly update text content with settings
-    logger.log('Setting title to:', settings.title);
-    logger.log('Setting message to:', settings.message);
-
+    // Update text content with settings
     if (titleEl) {
       titleEl.textContent = settings.title;
-      logger.log('After update, title element contains:', titleEl.textContent);
     }
 
     if (messageEl) {
       messageEl.textContent = settings.message;
-      logger.log('After update, message element contains:', messageEl.textContent);
     }
 
     if (confirmEl) {
       confirmEl.textContent = settings.confirmText;
-      logger.log('After update, confirm button text is:', confirmEl.textContent);
     }
 
     // Handle cancel button visibility
@@ -330,7 +275,6 @@ class ConfirmationDialog {
       if (settings.showCancel) {
         cancelEl.classList.remove('hidden');
         cancelEl.textContent = settings.cancelText;
-        logger.log('Cancel button is visible with text:', cancelEl.textContent);
 
         // When cancel is visible, ensure confirm button isn't full width
         if (confirmEl) {
@@ -338,7 +282,6 @@ class ConfirmationDialog {
         }
       } else {
         cancelEl.classList.add('hidden');
-        logger.log('Cancel button is hidden');
 
         // When cancel button is hidden, make confirm button full width
         if (confirmEl) {
@@ -352,16 +295,10 @@ class ConfirmationDialog {
 
     // Make backdrop visible with CSS classes
     if (this.backdropElement) {
-      logger.log('Making backdrop visible with visible class');
-
-      // Add the visible class for transitions
       this.backdropElement.classList.add('visible');
-      logger.log('Backdrop classes after update:', this.backdropElement.className);
     }
 
     if (this.dialog) {
-      logger.log('Making dialog visible with visible class');
-
       // Add the visible class for transitions
       this.dialog.classList.add('visible');
 
@@ -384,62 +321,43 @@ class ConfirmationDialog {
       
       // Add the specific action class
       this.dialog.classList.add(`pe-dialog-action-${actionClass}`);
-
-      logger.log('Dialog classes after update:', this.dialog.className);
     }
 
     // Focus the appropriate button after a short delay
     setTimeout(() => {
-      logger.log('Focusing button and confirming visibility');
       const buttonToFocus = settings.showCancel && cancelEl ?
         cancelEl : confirmEl;
 
       if (buttonToFocus) {
         buttonToFocus.focus();
-
-        // Final check for visibility
-        if (this.backdropElement) {
-          logger.log('Final backdrop computed style:', window.getComputedStyle(this.backdropElement).display);
-        }
-        if (this.dialog) {
-          logger.log('Final dialog computed style:', window.getComputedStyle(this.dialog).display);
-        }
       }
     }, 100);
-
-    logger.log('Dialog show sequence completed');
   }
 
   /**
    * Hide the dialog
    */
   hide() {
-    logger.log('Hiding dialog');
-
     // Restore body scrolling
     document.body.style.overflow = '';
 
     // Check if dialog elements exist
     if (!this.dialogContainer) {
-      logger.log('No dialog container to hide');
       return;
     }
 
     // Hide dialog by removing visible class
     if (this.backdropElement) {
-      logger.log('Removing visible class from backdrop');
       this.backdropElement.classList.remove('visible');
     }
 
     if (this.dialog) {
-      logger.log('Removing visible class from dialog');
       this.dialog.classList.remove('visible');
     }
 
     // Remove the dialog container from DOM immediately
     // Don't delay as we're recreating on each show() call
     if (this.dialogContainer) {
-      logger.log('Removing dialog container from DOM');
       this.dialogContainer.remove();
 
       // Reset references
@@ -447,8 +365,6 @@ class ConfirmationDialog {
       this.backdropElement = null;
       this.dialog = null;
     }
-
-    logger.log('Dialog hidden and removed from DOM');
   }
 
   /**

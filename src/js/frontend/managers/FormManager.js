@@ -169,8 +169,8 @@ class FormManager {
     // Add the submit handler
     formElement.addEventListener('submit', formElement._submitHandler);
 
-    // Bind cancel button
-    const cancelButton = formElement.querySelector('.cancel-button');
+    // Bind cancel button (using the class in the template: cancel-btn)
+    const cancelButton = formElement.querySelector('.cancel-btn, .cancel-button');
     if (cancelButton) {
       if (cancelButton._clickHandler) {
         cancelButton.removeEventListener('click', cancelButton._clickHandler);
@@ -178,10 +178,15 @@ class FormManager {
 
       cancelButton._clickHandler = (e) => {
         e.preventDefault();
+        logger.log('Cancel button clicked in new estimate form');
         this.cancelForm('estimate');
       };
 
       cancelButton.addEventListener('click', cancelButton._clickHandler);
+      logger.log('Cancel button handler attached to new estimate form');
+    } else {
+      logger.log('Cancel button not found in new estimate form');
+      logger.log('Form element structure:', formElement.innerHTML);
     }
   }
 
@@ -348,8 +353,8 @@ class FormManager {
     // Add the submit handler
     formElement.addEventListener('submit', formElement._submitHandler);
 
-    // Bind cancel button
-    const cancelButton = formElement.querySelector('.cancel-button');
+    // Bind cancel button (using the class in the template: cancel-btn)
+    const cancelButton = formElement.querySelector('.cancel-btn, .cancel-button');
     if (cancelButton) {
       if (cancelButton._clickHandler) {
         cancelButton.removeEventListener('click', cancelButton._clickHandler);
@@ -357,10 +362,15 @@ class FormManager {
 
       cancelButton._clickHandler = (e) => {
         e.preventDefault();
+        logger.log('Cancel button clicked in new room form');
         this.cancelForm('room', estimateId, productId);
       };
 
       cancelButton.addEventListener('click', cancelButton._clickHandler);
+      logger.log('Cancel button handler attached to new room form');
+    } else {
+      logger.log('Cancel button not found in new room form');
+      logger.log('Form element structure:', formElement.innerHTML);
     }
 
     // Bind back button

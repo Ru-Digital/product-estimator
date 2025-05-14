@@ -157,6 +157,11 @@ The current `ModalManager.js` file (4,298 lines) has grown too large and contain
 - 🔄 Remove any direct DOM manipulation from business logic
   - ✅ Converted modal template to use TemplateEngine instead of direct DOM manipulation
 - ⬜ Update index.js to use the new architecture
+- ⬜ Enhance TemplateEngine to fully support handlebars-style templates across all components
+  - ✅ Added handlebars placeholder processing with regex pattern replacement
+  - ⬜ Add support for conditional expressions (if/else) in templates
+  - ⬜ Add support for loop constructs (each/foreach) in templates
+  - ⬜ Create standardized template documentation and best practices
 
 ## Implementation Notes
 
@@ -191,6 +196,8 @@ The current `ModalManager.js` file (4,298 lines) has grown too large and contain
 **2023-05-27**: Identified and fixed issue with EstimateManager using direct HTML insertion instead of the TemplateEngine for rendering UI components. Updated EstimateManager to use appropriate HTML templates ('estimate-item-template', 'estimates-empty-template') via TemplateEngine.insert() instead of generating HTML strings. Updated event handlers to match the template structure. Added Phase 5.5 to the plan to ensure all remaining managers consistently use templates instead of direct HTML insertion.
 
 **2023-06-01**: Completed Phase 5.5 by converting all manager classes to use TemplateEngine consistently. Converted RoomManager to use 'room-item-template' and 'room-error-template'. Updated ProductManager to use 'product-item-template' and created a new 'product-error-template'. Updated UIManager to use templates for toggle buttons by creating 'toggle-button-show-template' and 'toggle-button-hide-template'. Finally, converted FormManager to use 'form-error-template' for form error displays. All manager classes now consistently use TemplateEngine for UI rendering instead of direct HTML insertion, improving maintainability and consistency across the codebase.
+
+**2023-06-15**: Enhanced the TemplateEngine to support handlebars-style placeholders ({{variable}}) in templates. Added the processHandlebars method and created a recursive _processElementHandlebars function to handle placeholders in both attribute values and text content across elements. This fixed issues with templates like select-option-template where placeholders weren't being replaced with actual values. The enhancement now enables more declarative, handlebars-style syntax in all HTML templates, improving readability and making the templating system more intuitive for developers. This is the first step in a planned expansion of template capabilities to include conditional expressions and loop constructs.
 
 ### Class Communication Pattern
 

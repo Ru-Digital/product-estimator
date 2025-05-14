@@ -395,23 +395,44 @@ class EstimateManager {
     
     // Use event delegation for handling clicks within the estimates list
     if (estimatesList._clickHandler) {
+      logger.log('Removing existing click handler from estimates list');
       estimatesList.removeEventListener('click', estimatesList._clickHandler);
     }
     
+    logger.log('Adding click handler to estimates list');
     estimatesList._clickHandler = (e) => {
+      // Process click events on the estimates list
+      
       // Handle "Create New Estimate" button
       if (e.target.closest('#create-estimate-btn')) {
         e.preventDefault();
+        console.log('Create New Estimate button clicked');
         this.showNewEstimateForm();
         return;
       }
       
       // Handle estimate removal
-      if (e.target.closest('.remove-estimate')) {
+      const removeEstimateBtn = e.target.closest('.remove-estimate');
+      if (removeEstimateBtn) {
         e.preventDefault();
-        const estimateElement = e.target.closest('.estimate-section');
-        if (estimateElement && estimateElement.dataset.estimateId) {
-          this.handleEstimateRemoval(estimateElement.dataset.estimateId);
+        e.stopPropagation(); // Critical: Prevent event from bubbling to the header
+        
+        // Get estimate ID from the button directly
+        const estimateId = removeEstimateBtn.getAttribute('data-estimate-id');
+        
+        if (estimateId) {
+          logger.log('Handling estimate removal from button click, ID:', estimateId);
+          this.handleEstimateRemoval(estimateId);
+        } else {
+          // Fallback if somehow the button doesn't have an ID
+          const estimateElement = removeEstimateBtn.closest('.estimate-section');
+          if (estimateElement && estimateElement.dataset.estimateId) {
+            const sectionEstimateId = estimateElement.dataset.estimateId;
+            logger.log('Handling estimate removal from section, ID:', sectionEstimateId);
+            this.handleEstimateRemoval(sectionEstimateId);
+          } else {
+            logger.error('Could not find estimate ID for removal');
+          }
         }
         return;
       }
@@ -465,6 +486,13 @@ class EstimateManager {
       
       // Handle accordion toggle for estimate details
       if (e.target.closest('.estimate-header')) {
+        // First check if we clicked on any buttons or links inside the header
+        // We don't want to expand/collapse when clicking buttons
+        if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.remove-estimate')) {
+          return; // Do nothing, let the button's own handler work
+        }
+        
+        logger.log('Toggling estimate accordion');
         const header = e.target.closest('.estimate-header');
         const estimateElement = header.closest('.estimate-section');
         const content = estimateElement.querySelector('.estimate-content');
@@ -497,6 +525,7 @@ class EstimateManager {
       }
     };
     
+    logger.log('Attaching click event listener to estimates list');
     estimatesList.addEventListener('click', estimatesList._clickHandler);
   }
   
@@ -540,12 +569,39 @@ class EstimateManager {
             // Use TemplateEngine to create and insert the estimate item
             TemplateEngine.insert('estimate-item-template', estimateData, estimatesList);
             
-            // Find the inserted estimate element
-            const estimateElement = estimatesList.querySelector(`.estimate-section[data-estimate-id="${estimate.id}"]`);
+            // Now find the estimate section we just inserted and set ALL the data-estimate-id attributes
+            const estimateSections = estimatesList.querySelectorAll('.estimate-section');
+            // Get the most recently added one (the last one in the list)
+            const estimateElement = estimateSections[estimateSections.length - 1];
+            
             if (estimateElement) {
-              // Update the estimate-id attribute on buttons inside this estimate
-              const buttons = estimateElement.querySelectorAll('[data-estimate-id]');
-              buttons.forEach(button => {
+              // 1. Set data-estimate-id on the estimate section element
+              estimateElement.setAttribute('data-estimate-id', estimate.id);
+              
+              // 2. Set data-estimate-id on the remove button
+              const removeButton = estimateElement.querySelector('.remove-estimate');
+              if (removeButton) {
+                removeButton.setAttribute('data-estimate-id', estimate.id);
+                console.log('Set data-estimate-id on remove button:', removeButton);
+              } else {
+                console.warn('Remove button not found in estimate element');
+              }
+              
+              // 3. Set data-estimate-id on all other elements that need it
+              const elementsWithDataAttr = estimateElement.querySelectorAll('[data-estimate-id]');
+              elementsWithDataAttr.forEach(element => {
+                element.setAttribute('data-estimate-id', estimate.id);
+              });
+              
+              // 4. Also set on add-room button specifically
+              const addRoomButton = estimateElement.querySelector('.add-room');
+              if (addRoomButton) {
+                addRoomButton.setAttribute('data-estimate-id', estimate.id);
+              }
+              
+              // 5. And all other action buttons
+              const actionButtons = estimateElement.querySelectorAll('.estimate-actions a');
+              actionButtons.forEach(button => {
                 button.setAttribute('data-estimate-id', estimate.id);
               });
             }
@@ -650,12 +706,17 @@ class EstimateManager {
   handleEstimateRemoval(estimateId) {
     logger.log('Handling estimate removal for ID:', estimateId);
     
-    // Show a confirmation dialog
-    if (window.productEstimator && window.productEstimator.dialog) {
-      window.productEstimator.dialog.confirm(
-        'Remove Estimate',
-        'Are you sure you want to remove this estimate? This action cannot be undone.',
-        () => {
+    // Show a confirmation dialog using ConfirmationDialog
+    if (this.modalManager && this.modalManager.confirmationDialog) {
+      this.modalManager.confirmationDialog.show({
+        title: 'Remove Estimate',
+        message: 'Are you sure you want to remove this estimate? This action cannot be undone.',
+        type: 'estimate',
+        action: 'delete',
+        showCancel: true,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        onConfirm: () => {
           // User confirmed, remove the estimate
           this.modalManager.showLoading();
           
@@ -672,30 +733,28 @@ class EstimateManager {
               this.modalManager.hideLoading();
             });
         },
-        () => {
+        onCancel: () => {
           // User cancelled, do nothing
           logger.log('Estimate removal cancelled by user');
         }
-      );
+      });
     } else {
-      // No dialog service available, use native confirm
-      if (confirm('Are you sure you want to remove this estimate? This action cannot be undone.')) {
-        // User confirmed, remove the estimate
-        this.modalManager.showLoading();
-        
-        this.dataService.removeEstimate(estimateId)
-          .then(() => {
-            // Reload the estimates list to reflect the change
-            return this.loadEstimatesList();
-          })
-          .catch(error => {
-            logger.error('Error removing estimate:', error);
-            this.modalManager.showError('Error removing estimate. Please try again.');
-          })
-          .finally(() => {
-            this.modalManager.hideLoading();
-          });
-      }
+      logger.error('ConfirmationDialog not available for confirm operation');
+      // User confirmed, remove the estimate
+      this.modalManager.showLoading();
+      
+      this.dataService.removeEstimate(estimateId)
+        .then(() => {
+          // Reload the estimates list to reflect the change
+          return this.loadEstimatesList();
+        })
+        .catch(error => {
+          logger.error('Error removing estimate:', error);
+          this.modalManager.showError('Error removing estimate. Please try again.');
+        })
+        .finally(() => {
+          this.modalManager.hideLoading();
+        });
     }
   }
   

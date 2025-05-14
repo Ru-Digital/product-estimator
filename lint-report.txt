@@ -16,6 +16,9 @@
    14:10  warning  'loadCustomerDetails' is defined but never used        no-unused-vars
    14:31  warning  'saveCustomerDetails' is defined but never used        no-unused-vars
   145:13  warning  'contentContainer' is assigned a value but never used  no-unused-vars
+  409:9   warning  Unexpected console statement                           no-console
+  585:17  warning  Unexpected console statement                           no-console
+  587:17  warning  Unexpected console statement                           no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/FormManager.js
   11:10  warning  'format' is defined but never used               no-unused-vars
@@ -48,7 +51,7 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-✖ 29 problems (0 errors, 29 warnings)
+✖ 32 problems (0 errors, 32 warnings)
 
 
 > product-estimator@1.3.0 lint:scss

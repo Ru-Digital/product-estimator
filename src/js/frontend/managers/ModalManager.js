@@ -12,6 +12,7 @@ import { createLogger } from '@utils';
 import { loadEstimateData, saveEstimateData, clearEstimateData } from '../EstimateStorage';
 import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails } from '../CustomerStorage';
 import TemplateEngine from '../TemplateEngine';
+import ConfirmationDialog from '../ConfirmationDialog';
 
 // Import specialized managers
 import EstimateManager from './EstimateManager';
@@ -87,6 +88,7 @@ class ModalManager {
     this.productManager = null;
     this.formManager = null;
     this.uiManager = null;
+    this.confirmationDialog = null; // Will be assigned to the global instance or created new
     
     // Bind methods to preserve 'this' context
     this._modalClickHandler = this._modalClickHandler.bind(this);
@@ -255,6 +257,19 @@ class ModalManager {
     this.productManager = new ProductManager(this.config, this.dataService, this);
     this.formManager = new FormManager(this.config, this.dataService, this);
     this.uiManager = new UIManager(this.config, this.dataService, this);
+    
+    // Set up confirmation dialog - use the global instance if available, or create a new one
+    if (window.productEstimator && window.productEstimator.dialog) {
+      logger.log('Using global ConfirmationDialog instance');
+      this.confirmationDialog = window.productEstimator.dialog;
+    } else {
+      logger.log('Creating new ConfirmationDialog instance');
+      this.confirmationDialog = new ConfirmationDialog();
+      // Make it available globally as well
+      if (window.productEstimator) {
+        window.productEstimator.dialog = this.confirmationDialog;
+      }
+    }
     
     // Initialize each manager
     if (this.estimateManager) this.estimateManager.init();

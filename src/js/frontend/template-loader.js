@@ -12,6 +12,10 @@ import noteItemTemplate from '@templates/components/note-item.html';
 import includeItemTemplate from '@templates/components/include-item.html';
 import similarItemTemplate from '@templates/components/similar-item.html';
 import productUpgradeItemTemplate from '@templates/components/product-upgrade-item.html';
+import selectOptionTemplate from '@templates/components/select-option.html';
+import loadingPlaceholderTemplate from '@templates/components/loading-placeholder.html';
+import roomActionsFooterTemplate from '@templates/components/room-actions-footer.html';
+import roomsContainerTemplate from '@templates/components/rooms-container.html';
 import newEstimateFormTemplate from '@templates/forms/new-estimate-form.html';
 import newRoomFormTemplate from '@templates/forms/new-room-form.html';
 import roomSelectionFormTemplate from '@templates/forms/room-selection-form.html';
@@ -19,6 +23,9 @@ import estimateSelectionTemplate from '@templates/forms/estimate-selection.html'
 import estimatesEmptyTemplate from '@templates/ui/estimates-empty.html';
 import roomsEmptyTemplate from '@templates/ui/rooms-empty.html';
 import productsEmptyTemplate from '@templates/ui/products-empty.html';
+import roomErrorTemplate from '@templates/ui/room-error.html';
+import productErrorTemplate from '@templates/ui/product-error.html';
+import formErrorTemplate from '@templates/ui/form-error.html';
 import modalMessagesTemplate from '@templates/ui/modal-messages.html';
 import modalContainerTemplate from '@templates/ui/modal-container.html';
 import confirmationDialogTemplate from '@templates/ui/confirmation-dialog.html';
@@ -36,6 +43,10 @@ const templates = {
   'include-item-template': includeItemTemplate,
   'similar-product-item-template': similarItemTemplate,
   'product-upgrade-item-template': productUpgradeItemTemplate,
+  'select-option-template': selectOptionTemplate,
+  'loading-placeholder-template': loadingPlaceholderTemplate,
+  'room-actions-footer-template': roomActionsFooterTemplate,
+  'rooms-container-template': roomsContainerTemplate,
   'new-estimate-form-template': newEstimateFormTemplate,
   'new-room-form-template': newRoomFormTemplate,
   'room-selection-form-template': roomSelectionFormTemplate,
@@ -43,6 +54,9 @@ const templates = {
   'estimates-empty-template': estimatesEmptyTemplate,
   'rooms-empty-template': roomsEmptyTemplate,
   'products-empty-template': productsEmptyTemplate,
+  'room-error-template': roomErrorTemplate,
+  'product-error-template': productErrorTemplate,
+  'form-error-template': formErrorTemplate,
   'modal-messages-template': modalMessagesTemplate,
   'modal-container-template': modalContainerTemplate,
   'confirmation-dialog-template': confirmationDialogTemplate

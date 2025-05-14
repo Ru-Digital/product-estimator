@@ -11,9 +11,10 @@ import * as dom from './dom';
 import * as format from './format';
 import * as validation from './validation';
 import * as loggerModule from './logger';
+import * as dialogHelpers from './dialog-helpers';
 
 // Export individual modules for direct imports
-export { ajax, dom, format, validation, loggerModule};
+export { ajax, dom, format, validation, loggerModule, dialogHelpers };
 
 export const {
   log,
@@ -55,6 +56,13 @@ export const {
   clearFieldError,
   showNotice,
 } = validation;
+
+// Re-export dialog helper functions from the default export
+export const showSuccessDialog = dialogHelpers.default.showSuccessDialog;
+export const showErrorDialog = dialogHelpers.default.showErrorDialog;
+export const showWarningDialog = dialogHelpers.default.showWarningDialog;
+export const showDeleteConfirmDialog = dialogHelpers.default.showDeleteConfirmDialog;
+export const showConfirmDialog = dialogHelpers.default.showConfirmDialog;
 
 // Export a convenience function to safely access nested properties
 /**

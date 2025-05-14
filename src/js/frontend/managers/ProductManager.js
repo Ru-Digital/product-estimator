@@ -26,12 +26,12 @@ class ProductManager {
     this.config = config;
     this.dataService = dataService;
     this.modalManager = modalManager;
-    
+
     // State
     this.currentRoomId = null;
     this.currentEstimateId = null;
     this.currentProductId = null;
-    
+
     // Bind methods to preserve 'this' context
     this.loadProductsForRoom = this.loadProductsForRoom.bind(this);
     this.showProductSelection = this.showProductSelection.bind(this);
@@ -41,7 +41,7 @@ class ProductManager {
     this.handleVariationSelection = this.handleVariationSelection.bind(this);
     this.onModalClosed = this.onModalClosed.bind(this);
   }
-  
+
   /**
    * Initialize the product manager
    */
@@ -49,7 +49,7 @@ class ProductManager {
     this.bindEvents();
     logger.log('ProductManager initialized');
   }
-  
+
   /**
    * Bind event listeners related to products
    */
@@ -57,7 +57,7 @@ class ProductManager {
     // We'll implement this later when we move the product-specific bindings
     logger.log('ProductManager events bound');
   }
-  
+
   /**
    * Load products for a room
    * @param {string} estimateId - The estimate ID
@@ -67,17 +67,17 @@ class ProductManager {
    */
   loadProductsForRoom(estimateId, roomId, container) {
     logger.log('Loading products for room', { estimateId, roomId });
-    
+
     if (!container) {
       return Promise.reject(new Error('Container not provided for loading products'));
     }
-    
+
     // Show loading indicator
     const loadingPlaceholder = container.querySelector('.loading-placeholder');
     if (loadingPlaceholder) {
       loadingPlaceholder.style.display = 'block';
     }
-    
+
     // Load products from storage or API
     return this.dataService.getProductsForRoom(estimateId, roomId)
       .then(products => {
@@ -88,42 +88,38 @@ class ProductManager {
         } else {
           container.innerHTML = '';
         }
-        
+
         // Mark the container as loaded
         container.dataset.loaded = 'true';
-        
+
         if (!products || products.length === 0) {
           // No products, show empty state using template
           TemplateEngine.insert('products-empty-template', {}, container);
         } else {
-          // Create products container
-          const productsContainer = document.createElement('div');
-          productsContainer.className = 'room-products-list';
-          container.appendChild(productsContainer);
-          
-          // Render each product
+          // Use the existing container - no need to create a new div
+          // Render each product directly in the container
           products.forEach((product, index) => {
-            this.renderProduct(product, index, roomId, estimateId, productsContainer);
+            this.renderProduct(product, index, roomId, estimateId, container);
           });
         }
-        
+
         // Hide loading placeholder
         if (loadingPlaceholder) {
           loadingPlaceholder.style.display = 'none';
         }
-        
+
         return products;
       })
       .catch(error => {
         logger.error('Error loading products for room:', error);
-        
+
         // Show error message using template
         TemplateEngine.insert('product-error-template', {}, container);
-        
+
         throw error;
       });
   }
-  
+
   /**
    * Show product selection interface
    * @param {string} estimateId - The estimate ID
@@ -131,17 +127,17 @@ class ProductManager {
    */
   showProductSelection(estimateId, roomId) {
     logger.log('Showing product selection', { estimateId, roomId });
-    
+
     // Save the current room and estimate IDs
     this.currentRoomId = roomId;
     this.currentEstimateId = estimateId;
-    
+
     // This will be implemented in a future phase, as we need a product search UI
     // For now, we'll just show a simple product selection prompt
-    
+
     // Simple implementation for now - ask for a product ID
     const productId = prompt('Enter a product ID to add:');
-    
+
     if (productId) {
       // Add the product to the room
       this.addProductToRoom(estimateId, roomId, productId)
@@ -163,7 +159,7 @@ class ProductManager {
               logger.log('Product added successfully!');
             }
           }
-          
+
           // Reload the products for this room
           const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
           if (roomElement) {
@@ -177,7 +173,7 @@ class ProductManager {
         })
         .catch(error => {
           logger.error('Error adding product to room:', error);
-          
+
           // Show error using ConfirmationDialog instead of alert
           if (this.modalManager) {
             const confirmationDialog = this.modalManager.confirmationDialog;
@@ -198,7 +194,7 @@ class ProductManager {
         });
     }
   }
-  
+
   /**
    * Add a product to a room
    * @param {string} estimateId - The estimate ID
@@ -208,53 +204,50 @@ class ProductManager {
    */
   addProductToRoom(estimateId, roomId, productId) {
     logger.log('Adding product to room', { estimateId, roomId, productId });
-    
+
     // Validate that we have a product ID
     if (!productId) {
       const errorMsg = 'Product ID is required to add a product to a room';
       logger.error(errorMsg);
       return Promise.reject(new Error(errorMsg));
     }
-    
+
     // Show loading if we have a modal available
     if (this.modalManager) {
       this.modalManager.showLoading();
     }
-    
+
     // Convert the productId to string to ensure proper handling
-    const productIdString = String(productId);
-    
-    // Add the product to the room
-    return this.dataService.addProductToRoom(estimateId, roomId, productIdString)
+    return this.dataService.addProductToRoom(roomId, productId, estimateId)
       .then(result => {
         logger.log('Product added successfully:', result);
-        
+
         // Update room totals
         if (this.modalManager && this.modalManager.roomManager) {
           this.modalManager.roomManager.updateRoomTotals(estimateId, roomId, {
             total: result.roomTotal
           });
         }
-        
+
         // Hide loading
         if (this.modalManager) {
           this.modalManager.hideLoading();
         }
-        
+
         return result;
       })
       .catch(error => {
         logger.error('Error adding product to room:', error);
-        
+
         // Hide loading
         if (this.modalManager) {
           this.modalManager.hideLoading();
         }
-        
+
         throw error;
       });
   }
-  
+
   /**
    * Render a product in a room
    * @param {object} product - The product data
@@ -266,15 +259,15 @@ class ProductManager {
    */
   renderProduct(product, index, roomId, estimateId, container) {
     logger.log('Rendering product', { index, roomId, estimateId, product });
-    
+
     if (!container) {
       logger.error('Container not provided for rendering product');
       return null;
     }
-    
+
     // Get formatted price
     const formattedPrice = format.currency(product.price || 0);
-    
+
     // Create template data
     const templateData = {
       productId: product.id,
@@ -286,70 +279,70 @@ class ProductManager {
       productSku: product.sku || '',
       productDescription: product.description || ''
     };
-    
+
     // Insert the template into a temporary container to get the element
     const tempContainer = document.createElement('div');
     TemplateEngine.insert('product-item-template', templateData, tempContainer);
-    
+
     // Get the product element from the temporary container
     const productElement = tempContainer.firstElementChild;
-    
+
     // Set additional data attributes
     productElement.dataset.productId = product.id;
     productElement.dataset.productIndex = index;
     productElement.dataset.roomId = roomId;
     productElement.dataset.estimateId = estimateId;
-    
+
     // Set product name
     const productNameElement = productElement.querySelector('.price-title');
     if (productNameElement) {
       productNameElement.textContent = templateData.productName;
     }
-    
+
     // Set product price
     const productPriceElement = productElement.querySelector('.product-price');
     if (productPriceElement) {
       productPriceElement.textContent = templateData.productPrice;
     }
-    
+
     // Add variations if needed
     if (product.variations && product.variations.length > 0) {
       // Create variations container
       const variationsContainer = document.createElement('div');
       variationsContainer.className = 'product-variations';
-      
+
       // Create label
       const label = document.createElement('label');
       label.setAttribute('for', `variation-${roomId}-${product.id}-${index}`);
       label.textContent = 'Options:';
       variationsContainer.appendChild(label);
-      
+
       // Create select
       const select = document.createElement('select');
       select.id = `variation-${roomId}-${product.id}-${index}`;
       select.className = 'variation-select';
-      
+
       // Add default option
       const defaultOption = document.createElement('option');
       defaultOption.value = '';
       defaultOption.textContent = 'Select an option';
       select.appendChild(defaultOption);
-      
+
       // Add variation options
       product.variations.forEach(variation => {
         const option = document.createElement('option');
         option.value = variation.id;
         option.textContent = `${variation.name} (${format.currency(variation.price || 0)})`;
-        
+
         if (variation.id === product.selectedVariation) {
           option.selected = true;
         }
-        
+
         select.appendChild(option);
       });
-      
+
       variationsContainer.appendChild(select);
-      
+
       // Add variations container to product element (after product includes)
       const includesContainer = productElement.querySelector('.includes-container');
       if (includesContainer) {
@@ -358,16 +351,16 @@ class ProductManager {
         productElement.appendChild(variationsContainer);
       }
     }
-    
+
     // Add to container
     container.appendChild(productElement);
-    
+
     // Bind events
     this.bindProductEvents(productElement, product, index, roomId, estimateId);
-    
+
     return productElement;
   }
-  
+
   /**
    * Bind events to a product element
    * @param {HTMLElement} productElement - The product element
@@ -378,44 +371,44 @@ class ProductManager {
    */
   bindProductEvents(productElement, product, index, roomId, estimateId) {
     logger.log('Binding events to product element', { index, roomId, estimateId });
-    
+
     if (!productElement) {
       logger.error('Product element not available for binding events');
       return;
     }
-    
+
     // Bind remove button - use the template's .remove-product class
     const removeButton = productElement.querySelector('.remove-product');
     if (removeButton) {
       if (removeButton._clickHandler) {
         removeButton.removeEventListener('click', removeButton._clickHandler);
       }
-      
+
       removeButton._clickHandler = (e) => {
         e.preventDefault();
         e.stopPropagation();
         this.handleProductRemoval(estimateId, roomId, index, product.id);
       };
-      
+
       removeButton.addEventListener('click', removeButton._clickHandler);
     }
-    
+
     // Bind variation select
     const variationSelect = productElement.querySelector('.variation-select');
     if (variationSelect) {
       if (variationSelect._changeHandler) {
         variationSelect.removeEventListener('change', variationSelect._changeHandler);
       }
-      
+
       variationSelect._changeHandler = (e) => {
         const variationId = e.target.value;
         this.handleVariationSelection(variationId, productElement, estimateId, roomId, index, product.id);
       };
-      
+
       variationSelect.addEventListener('change', variationSelect._changeHandler);
     }
   }
-  
+
   /**
    * Handle product removal
    * @param {string} estimateId - The estimate ID
@@ -425,23 +418,23 @@ class ProductManager {
    */
   handleProductRemoval(estimateId, roomId, productIndex, productId) {
     logger.log('Handling product removal', { estimateId, roomId, productIndex, productId });
-    
+
     // First, ensure we have a reference to the ModalManager
     if (!this.modalManager) {
       logger.error('ModalManager not available for product removal');
       return;
     }
-    
+
     // If we don't have a confirmationDialog through ModalManager,
     // create one on demand to ensure we never use window.confirm()
     if (!this.modalManager.confirmationDialog) {
       logger.warn('ConfirmationDialog not available via ModalManager, creating one');
-      
+
       // Dynamically import ConfirmationDialog to ensure it's available
       import('../ConfirmationDialog').then(module => {
         const ConfirmationDialog = module.default;
         this.modalManager.confirmationDialog = new ConfirmationDialog();
-        
+
         // Now show the dialog with the newly created instance
         this._showProductRemovalDialog(estimateId, roomId, productIndex);
       }).catch(error => {
@@ -449,11 +442,11 @@ class ProductManager {
       });
       return;
     }
-    
+
     // If we already have the confirmationDialog, use it directly
     this._showProductRemovalDialog(estimateId, roomId, productIndex);
   }
-  
+
   /**
    * Show the product removal confirmation dialog
    * @param {string} estimateId - The estimate ID
@@ -481,7 +474,7 @@ class ProductManager {
       }
     });
   }
-  
+
   /**
    * Perform the actual product removal operation
    * @param {string} estimateId - The estimate ID
@@ -491,28 +484,28 @@ class ProductManager {
    */
   performProductRemoval(estimateId, roomId, productIndex) {
     logger.log('Performing product removal', { estimateId, roomId, productIndex });
-    
+
     if (this.modalManager) {
       this.modalManager.showLoading();
     }
-    
+
     this.dataService.removeProductFromRoom(estimateId, roomId, productIndex)
       .then(result => {
         logger.log('Product removed successfully:', result);
-        
+
         // Find and remove the product element from the DOM
         const productElement = document.querySelector(`.product-item[data-product-index="${productIndex}"][data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
         if (productElement) {
           productElement.remove();
         }
-        
+
         // Update room totals
         if (this.modalManager && this.modalManager.roomManager) {
           this.modalManager.roomManager.updateRoomTotals(estimateId, roomId, {
             total: result.roomTotal
           });
         }
-        
+
         // Hide loading
         if (this.modalManager) {
           this.modalManager.hideLoading();
@@ -520,11 +513,11 @@ class ProductManager {
       })
       .catch(error => {
         logger.error('Error removing product:', error);
-        
+
         // Hide loading
         if (this.modalManager) {
           this.modalManager.hideLoading();
-          
+
           // Show error message using ConfirmationDialog
           if (this.modalManager.confirmationDialog) {
             this.modalManager.confirmationDialog.show({
@@ -544,7 +537,7 @@ class ProductManager {
         }
       });
   }
-  
+
   /**
    * Handle variation selection for a product
    * @param {string} variationId - The selected variation ID
@@ -556,35 +549,35 @@ class ProductManager {
    */
   handleVariationSelection(variationId, productElement, estimateId, roomId, productIndex, productId) {
     logger.log('Handling variation selection', { variationId, estimateId, roomId, productIndex, productId });
-    
+
     if (!productElement) {
       logger.error('Product element not provided for variation selection');
       return;
     }
-    
+
     // Show loading if we have a modal available
     if (this.modalManager) {
       this.modalManager.showLoading();
     }
-    
+
     // Update the selected variation in the dataService
     this.dataService.updateProductVariation(estimateId, roomId, productIndex, variationId)
       .then(result => {
         logger.log('Variation updated successfully:', result);
-        
+
         // Update the price display
         const priceElement = productElement.querySelector('.product-price');
         if (priceElement && result.updatedProduct) {
           priceElement.textContent = format.currency(result.updatedProduct.price || 0);
         }
-        
+
         // Update room totals
         if (this.modalManager && this.modalManager.roomManager) {
           this.modalManager.roomManager.updateRoomTotals(estimateId, roomId, {
             total: result.roomTotal
           });
         }
-        
+
         // Hide loading
         if (this.modalManager) {
           this.modalManager.hideLoading();
@@ -592,7 +585,7 @@ class ProductManager {
       })
       .catch(error => {
         logger.error('Error updating variation:', error);
-        
+
         // Reset the select back to the original value
         const variationSelect = productElement.querySelector('.variation-select');
         if (variationSelect) {
@@ -610,7 +603,7 @@ class ProductManager {
               variationSelect.value = '';
             });
         }
-        
+
         // Show error
         if (this.modalManager) {
           this.modalManager.hideLoading();
@@ -632,7 +625,7 @@ class ProductManager {
         }
       });
   }
-  
+
   /**
    * Called when the modal is closed
    */

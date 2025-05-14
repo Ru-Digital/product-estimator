@@ -144,9 +144,26 @@ class AjaxService {
    * @returns {Promise<object>} - A promise resolving to product data and suggestions
    */
   getProductDataForStorage(data, bypassCache = false) {
+    // Validate product_id is present and valid
+    if (!data.product_id || data.product_id === 'null' || data.product_id === 'undefined' || data.product_id === '0') {
+      return Promise.reject(new Error('Product ID is required'));
+    }
+    
+    // Ensure product_id is a string
+    const productId = String(data.product_id);
+    if (productId.trim() === '') {
+      return Promise.reject(new Error('Product ID cannot be empty'));
+    }
+    
+    // Create a modified data object with validated product_id
+    const validatedData = {
+      ...data,
+      product_id: productId
+    };
+    
     // Create a cache key from the request data - use a simplified key based on product_id
     // We can't use the entire room_products array as part of the key as it's too complex
-    const cacheKey = `data_${data.product_id}_${data.room_width || 0}_${data.room_length || 0}`;
+    const cacheKey = `data_${productId}_${validatedData.room_width || 0}_${validatedData.room_length || 0}`;
 
     // Check if we have cached data
     if (!bypassCache && this.cache.productData[cacheKey]) {
@@ -155,7 +172,7 @@ class AjaxService {
     }
 
     // Make the request if no cache hit
-    return this._request('get_product_data_for_storage', data)
+    return this._request('get_product_data_for_storage', validatedData)
       .then(responseData => {
         // Cache the response
         if (responseData && responseData.product_data) {
@@ -246,9 +263,9 @@ class AjaxService {
   }
 
   /**
-   * Create a new room
+   * Create a new room (without adding products)
    * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
+   * @returns {Promise<object>} - Promise resolving to result data for the new room
    */
   addNewRoom(data) {
     return this._request('add_new_room', data)

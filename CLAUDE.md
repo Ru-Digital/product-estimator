@@ -329,6 +329,8 @@ Frontend Styles (src/styles/frontend/)
    - The `ConfirmationDialog` component (src/js/frontend/ConfirmationDialog.js) 
      should be used for all confirmation, alert, and notification dialogs
    - This ensures UI consistency and simplifies future updates to dialog styling
+   - The ConfirmationDialog component uses CSS classes for styling and visibility
+   - Avoid adding inline styles to dialog elements
 
 4. Focus on proper initialization timing with the WordPress lifecycle
    - Use event listeners and callbacks rather than direct DOM creation
@@ -337,6 +339,25 @@ Frontend Styles (src/styles/frontend/)
 5. Template integrity is more important than quick fixes
    - If a template is missing an element, fix the template file
    - Don't use fallback DOM creation even if it seems easier
+
+6. **ALWAYS REGISTER NEW TEMPLATES IN TEMPLATE-LOADER.JS**
+   - Every new template file MUST be registered in `src/js/frontend/template-loader.js`
+   - This requires two steps:
+     1. Import the template file at the top of template-loader.js
+        ```javascript
+        import myNewTemplate from '@templates/path/to/my-template.html';
+        ```
+     2. Add the template to the templates map with its ID
+        ```javascript
+        const templates = {
+          // existing templates...
+          'my-template-id': myNewTemplate
+        };
+        ```
+   - Failing to register a template will cause runtime errors when TemplateEngine attempts to use it
+   - Template IDs in the templates map MUST match the HTML template's ID attribute
+   - Error symptoms: "Template element not found for ID: X" indicates a missing template registration
+
 11. Use the Manager pattern for separating concerns
 12. Create templates in HTML files rather than in PHP files or directly in JavaScript
 
@@ -421,6 +442,112 @@ if (this.modalManager && this.modalManager.confirmationDialog) {
   }
 }
 ```
+
+## ConfirmationDialog Implementation
+
+The `ConfirmationDialog` component (in `src/js/frontend/ConfirmationDialog.js`) provides a standardized dialog system for the application. It follows these key design principles:
+
+### Architecture
+
+1. **Template-Based**: Uses the HTML template in `src/templates/ui/confirmation-dialog.html` loaded by the TemplateEngine
+2. **CSS-Driven Styling**: Relies on CSS classes for styling and visibility rather than inline styles
+3. **Lazy Initialization**: Creates dialog elements only when needed (on first show() call)
+4. **Proper Event Handling**: Manages its own event listeners with proper cleanup
+
+### Dialog Visibility Control
+
+The dialog uses CSS classes rather than inline styles for showing and hiding:
+
+```scss
+// In Dialog.scss
+.pe-dialog-backdrop {
+  display: none;
+  
+  &.visible {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+  }
+}
+
+.pe-confirmation-dialog {
+  display: none;
+  
+  &.visible {
+    display: block;
+  }
+}
+```
+
+Showing and hiding is managed by adding/removing the `.visible` class:
+
+```javascript
+// Show dialog
+backdropElement.classList.add('visible');
+dialog.classList.add('visible');
+
+// Hide dialog
+backdropElement.classList.remove('visible');
+dialog.classList.remove('visible');
+```
+
+### Usage
+
+The dialog component is accessible through the `ModalManager`:
+
+```javascript
+modalManager.confirmationDialog.show({
+  title: 'Action Confirmation',              // Dialog title
+  message: 'Are you sure you want to proceed?', // Dialog message
+  confirmText: 'Confirm',                    // Text for confirm button
+  cancelText: 'Cancel',                      // Text for cancel button (set to false to hide)
+  type: 'product',                           // Optional: Context type ('product', 'room', 'estimate')
+  action: 'delete',                          // Optional: Action being performed ('delete', 'add', etc.)
+  showCancel: true,                          // Optional: Whether to show cancel button
+  onConfirm: () => {                         // Callback function when confirmed
+    // Confirmation logic
+  },
+  onCancel: () => {                          // Callback function when cancelled
+    // Cancellation logic
+  }
+});
+```
+
+### Available CSS Modifier Classes
+
+The dialog supports the following CSS modifier classes:
+
+```scss
+// For delete confirmations
+.pe-dialog-action-delete {
+  .pe-dialog-title {
+    color: $error-color;
+  }
+  
+  .pe-dialog-confirm {
+    @include button-danger;
+  }
+}
+
+// For full-width confirm button (when cancel is hidden)
+.pe-dialog-confirm.full-width {
+  width: 100%;
+}
+
+// For hiding cancel button
+.pe-dialog-cancel.hidden {
+  display: none;
+}
+```
+
+### Best Practices
+
+1. Always use the `modalManager.confirmationDialog` instead of creating your own dialog implementation
+2. Provide clear, specific titles and messages that explain the action and its consequences
+3. Use the `type` and `action` properties to provide context for the dialog
+4. For delete confirmations, use `action: 'delete'` to apply the danger styling
+5. For single-button dialogs, set `cancelText: false` to hide the cancel button
+6. Prefer CSS classes over inline styles for any dialog customizations
 
 ## Legacy Code Reference
 

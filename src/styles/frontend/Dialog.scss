@@ -15,8 +15,8 @@
   display: none;
   
   &.visible {
-    display: flex;
     align-items: center;
+    display: flex;
     justify-content: center;
   }
 }
@@ -87,16 +87,37 @@
 }
 
 .pe-dialog-cancel {
-
   @include button-ghost($text-color);
+  
+  &.hidden {
+    display: none;
+  }
 }
 
 .pe-dialog-confirm {
-
   @include button-primary;
+  
+  &.full-width {
+    width: 100%;
+  }
 }
 
 /* Dialog types */
+
+/* Styles for default confirmations */
+
+.pe-dialog-action-default {
+
+  .pe-dialog-title {
+    color: $primary-color;
+  }
+  
+  .pe-dialog-confirm {
+    @include button-primary;
+  }
+}
+
+/* Styles for delete confirmations */
 
 .pe-dialog-action-delete {
 
@@ -105,8 +126,53 @@
   }
   
   .pe-dialog-confirm {
-
     @include button-danger;
+  }
+}
+
+/* Styles for error dialogs */
+
+.pe-dialog-action-error {
+
+  .pe-dialog-title {
+    color: $error-color;
+  }
+  
+  .pe-dialog-confirm {
+    @include button-danger;
+  }
+}
+
+/* Styles for warning dialogs */
+
+.pe-dialog-action-warning {
+
+  .pe-dialog-title {
+    color: $warning-color;
+  }
+  
+  .pe-dialog-confirm {
+    background-color: $warning-color;
+    border-color: color.adjust($warning-color, $lightness: -10%);
+    color: white;
+    
+    &:hover, &:focus {
+      background-color: color.adjust($warning-color, $lightness: -5%);
+      border-color: color.adjust($warning-color, $lightness: -15%);
+    }
+  }
+}
+
+/* Styles for success dialogs */
+
+.pe-dialog-action-success {
+
+  .pe-dialog-title {
+    color: $success-color;
+  }
+  
+  .pe-dialog-confirm {
+    @include button-primary;
   }
 }
 

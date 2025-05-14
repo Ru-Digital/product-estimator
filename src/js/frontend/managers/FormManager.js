@@ -550,6 +550,7 @@ class FormManager {
     // Use ConfirmationDialog via modalManager if available
     if (this.modalManager && this.modalManager.confirmationDialog) {
       this.modalManager.confirmationDialog.show({
+        // TODO: Implement labels from localization system
         title: 'Success',
         message: message,
         type: 'estimate',

@@ -1187,7 +1187,7 @@ class DataService {
       .catch(serverError => {
         logger.error(`DataService: Server-side estimate removal failed: ${estimateId}`, serverError);
         // Handle server error asynchronously, e.g., notify user.
-        // You might need to add the estimate back to local storage if the server removal failed.
+        // Even if server removal fails, we want to keep the estimate removed from localStorage.
       });
 
     // Return a promise that resolves immediately after the local removal attempt.

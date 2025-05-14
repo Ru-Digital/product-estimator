@@ -896,6 +896,7 @@ class RoomManager {
       logger.error('ConfirmationDialog not available');
       
       // Fallback to native confirm if ConfirmationDialog isn't available
+      // TODO: Implement labels from localization system
       if (confirm('Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.')) {
         this.performRoomRemoval(estimateId, roomId);
       }
@@ -904,6 +905,7 @@ class RoomManager {
     
     // Show the confirmation dialog using the dedicated component
     this.modalManager.confirmationDialog.show({
+      // TODO: Implement labels from localization system
       title: 'Remove Room',
       message: 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.',
       confirmText: 'Delete',

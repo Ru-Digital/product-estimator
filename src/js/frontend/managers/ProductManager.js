@@ -426,19 +426,45 @@ class ProductManager {
   handleProductRemoval(estimateId, roomId, productIndex, productId) {
     logger.log('Handling product removal', { estimateId, roomId, productIndex, productId });
     
-    // Check if ConfirmationDialog is available through ModalManager
-    if (!this.modalManager || !this.modalManager.confirmationDialog) {
-      logger.error('ConfirmationDialog not available');
-      
-      // Fallback to native confirm if ConfirmationDialog isn't available
-      if (confirm('Are you sure you want to remove this product from the room?')) {
-        this.performProductRemoval(estimateId, roomId, productIndex);
-      }
+    // First, ensure we have a reference to the ModalManager
+    if (!this.modalManager) {
+      logger.error('ModalManager not available for product removal');
       return;
     }
     
+    // If we don't have a confirmationDialog through ModalManager,
+    // create one on demand to ensure we never use window.confirm()
+    if (!this.modalManager.confirmationDialog) {
+      logger.warn('ConfirmationDialog not available via ModalManager, creating one');
+      
+      // Dynamically import ConfirmationDialog to ensure it's available
+      import('../ConfirmationDialog').then(module => {
+        const ConfirmationDialog = module.default;
+        this.modalManager.confirmationDialog = new ConfirmationDialog();
+        
+        // Now show the dialog with the newly created instance
+        this._showProductRemovalDialog(estimateId, roomId, productIndex);
+      }).catch(error => {
+        logger.error('Error importing ConfirmationDialog:', error);
+      });
+      return;
+    }
+    
+    // If we already have the confirmationDialog, use it directly
+    this._showProductRemovalDialog(estimateId, roomId, productIndex);
+  }
+  
+  /**
+   * Show the product removal confirmation dialog
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   * @param {number} productIndex - The product index in the room's products array
+   * @private
+   */
+  _showProductRemovalDialog(estimateId, roomId, productIndex) {
     // Show the confirmation dialog using the dedicated component
     this.modalManager.confirmationDialog.show({
+      // TODO: Implement labels from localization system
       title: 'Remove Product',
       message: 'Are you sure you want to remove this product from the room?',
       confirmText: 'Delete',

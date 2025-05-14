@@ -722,6 +722,7 @@ class EstimateManager {
     
     // Show the confirmation dialog using the dedicated component
     this.modalManager.confirmationDialog.show({
+      // TODO: Implement labels from localization system
       title: 'Remove Estimate',
       message: 'Are you sure you want to remove this estimate? This action cannot be undone.',
       confirmText: 'Delete',
@@ -733,21 +734,38 @@ class EstimateManager {
         
         this.dataService.removeEstimate(estimateId)
           .then(() => {
-            logger.log('Estimate removed successfully, reloading list');
-            // Reload the estimates list first
-            return this.loadEstimatesList().then(() => {
-              logger.log('Showing success dialog');
-              // Show success message using ConfirmationDialog
-              this.modalManager.confirmationDialog.show({
-                title: 'Success',
-                message: 'The estimate has been removed successfully.',
-                confirmText: 'OK',
-                cancelText: false, // No cancel button
-                onConfirm: () => {
-                  // Nothing to do after closing the dialog
-                  logger.log('Success dialog closed');
+            logger.log('Estimate removed successfully');
+            
+            // Find the estimate element in the DOM and remove it
+            const estimatesList = this.modalManager.estimatesList;
+            if (estimatesList) {
+              const estimateElement = estimatesList.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
+              if (estimateElement) {
+                logger.log('Removing estimate element from DOM');
+                estimateElement.remove();
+                
+                // Check if there are any estimates left
+                if (estimatesList.querySelectorAll('.estimate-section').length === 0) {
+                  // No estimates left, show empty state
+                  logger.log('No estimates left, showing empty state');
+                  estimatesList.innerHTML = '';
+                  TemplateEngine.insert('estimates-empty-template', {}, estimatesList);
                 }
-              });
+              }
+            }
+            
+            logger.log('Showing success dialog');
+            // Show success message using ConfirmationDialog
+            this.modalManager.confirmationDialog.show({
+              // TODO: Implement labels from localization system
+              title: 'Success',
+              message: 'The estimate has been removed successfully.',
+              confirmText: 'OK',
+              cancelText: false, // No cancel button
+              onConfirm: () => {
+                // Nothing to do after closing the dialog
+                logger.log('Success dialog closed');
+              }
             });
           })
           .catch(error => {
@@ -755,6 +773,7 @@ class EstimateManager {
             
             // Show error through ConfirmationDialog
             this.modalManager.confirmationDialog.show({
+              // TODO: Implement labels from localization system
               title: 'Error',
               message: 'There was a problem removing the estimate. Please try again.',
               confirmText: 'OK',

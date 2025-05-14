@@ -70,6 +70,31 @@ class EstimateManager {
   }
   
   /**
+   * Hide all modal sections to ensure only one section is visible at a time
+   */
+  hideAllSections() {
+    logger.log('Hiding all sections');
+    
+    // Get references to all section containers
+    const viewContainers = [
+      this.modalManager.estimatesList,
+      this.modalManager.estimateSelection,
+      this.modalManager.roomSelectionForm,
+      this.modalManager.newEstimateForm,
+      this.modalManager.newRoomForm
+    ];
+    
+    // Hide each container
+    viewContainers.forEach(container => {
+      if (container && this.modalManager.uiManager) {
+        this.modalManager.uiManager.hideElement(container);
+      } else if (container) {
+        container.style.display = 'none';
+      }
+    });
+  }
+  
+  /**
    * Handle the product flow in the modal
    * This is called from ModalManager.openModal when productId is provided
    * @param {string} productId - The product ID to add
@@ -119,6 +144,9 @@ class EstimateManager {
     // Get DOM references from modal manager
     const { contentContainer } = this.modalManager;
     const estimateSelectionWrapper = this.modalManager.estimateSelection;
+    
+    // Hide all other sections first
+    this.hideAllSections();
     
     if (!estimateSelectionWrapper) {
       logger.error('Estimate selection wrapper not found in modal');
@@ -280,8 +308,8 @@ class EstimateManager {
     // Add the submit handler
     formElement.addEventListener('submit', formElement._submitHandler);
     
-    // Add event handler for "Create New Estimate" button
-    const newEstimateButton = formElement.querySelector('.create-new-estimate-button');
+    // Add event handler for "Create New Estimate" button (with id="create-estimate-btn")
+    const newEstimateButton = formElement.querySelector('#create-estimate-btn');
     if (newEstimateButton) {
       if (newEstimateButton._clickHandler) {
         newEstimateButton.removeEventListener('click', newEstimateButton._clickHandler);
@@ -328,14 +356,18 @@ class EstimateManager {
       return;
     }
     
+    // Hide all other sections first
+    this.hideAllSections();
+    
     // Use ModalManager's utility to ensure the element is visible
     this.modalManager.forceElementVisibility(estimatesList);
     
-    // Bind event handlers to the estimates list container
-    this.bindEstimateListEventHandlers();
-    
-    // Load and render the estimates list content
+    // Load and render the estimates list content first, then bind event handlers
     this.loadEstimatesList()
+      .then(() => {
+        // Bind event handlers to the estimates list container AFTER the content is loaded and rendered
+        this.bindEstimateListEventHandlers();
+      })
       .catch(error => {
         logger.error('Error loading estimates list:', error);
         if (estimatesList) {
@@ -564,6 +596,9 @@ class EstimateManager {
       this.modalManager.hideLoading();
       return;
     }
+    
+    // Hide all other sections first
+    this.hideAllSections();
     
     // Use ModalManager's utility to ensure the element is visible
     this.modalManager.forceElementVisibility(newEstimateForm);

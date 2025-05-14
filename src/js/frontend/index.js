@@ -116,7 +116,7 @@ function initEstimator(debugMode) {
     window.productEstimator = window.productEstimator || {};
     window.productEstimator.initialized = true;
     window.productEstimator.core = EstimatorCore; // EstimatorCore instance is stored here
-    window.productEstimator.dialog = new ConfirmationDialog(); // <--- ADD 'new' HERE
+    window.productEstimator.dialog = new ConfirmationDialog(); // Initialize dialog
 
     // Initialize PrintEstimate and make it available globally
     // Get the dataService instance from the initialized EstimatorCore

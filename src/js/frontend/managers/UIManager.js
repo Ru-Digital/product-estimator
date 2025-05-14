@@ -12,6 +12,7 @@ import { format, createLogger } from '@utils';
 
 import { SuggestionsCarousel, initSuggestionsCarousels } from '../SuggestionsCarousel';
 import ProductDetailsToggle from '../ProductDetailsToggle';
+import TemplateEngine from '../TemplateEngine';
 
 const logger = createLogger('UIManager');
 
@@ -235,13 +236,16 @@ class UIManager {
         iconElement.classList.add('dashicons-arrow-down-alt2');
       }
       
-      // Update text if needed
+      // Update text using template
       const i18n = this.config.i18n || {};
-      if (i18n.showSuggestions && i18n.hideSuggestions) {
-        toggleButton.innerHTML = toggleButton.innerHTML.replace(
-          i18n.hideSuggestions,
-          i18n.showSuggestions
-        );
+      if (i18n.showSuggestions) {
+        // Clear the button contents
+        toggleButton.innerHTML = '';
+        
+        // Use template to set new content
+        TemplateEngine.insert('toggle-button-show-template', {
+          buttonText: i18n.showSuggestions || 'Show Suggestions'
+        }, toggleButton);
       }
       
       logger.log('Suggestions hidden');
@@ -258,13 +262,16 @@ class UIManager {
         iconElement.classList.add('dashicons-arrow-up-alt2');
       }
       
-      // Update text if needed
+      // Update text using template
       const i18n = this.config.i18n || {};
-      if (i18n.showSuggestions && i18n.hideSuggestions) {
-        toggleButton.innerHTML = toggleButton.innerHTML.replace(
-          i18n.showSuggestions,
-          i18n.hideSuggestions
-        );
+      if (i18n.hideSuggestions) {
+        // Clear the button contents
+        toggleButton.innerHTML = '';
+        
+        // Use template to set new content
+        TemplateEngine.insert('toggle-button-hide-template', {
+          buttonText: i18n.hideSuggestions || 'Hide Suggestions'
+        }, toggleButton);
       }
       
       // Initialize carousels if they exist

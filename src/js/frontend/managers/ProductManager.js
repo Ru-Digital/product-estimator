@@ -93,12 +93,8 @@ class ProductManager {
         container.dataset.loaded = 'true';
         
         if (!products || products.length === 0) {
-          // No products, show empty state
-          container.innerHTML = `
-            <div class="empty-state">
-              <p>No products in this room yet.</p>
-            </div>
-          `;
+          // No products, show empty state using template
+          TemplateEngine.insert('products-empty-template', {}, container);
         } else {
           // Create products container
           const productsContainer = document.createElement('div');
@@ -121,12 +117,8 @@ class ProductManager {
       .catch(error => {
         logger.error('Error loading products for room:', error);
         
-        // Show error message
-        container.innerHTML = `
-          <div class="error-state">
-            <p>Error loading products. Please try again.</p>
-          </div>
-        `;
+        // Show error message using template
+        TemplateEngine.insert('product-error-template', {}, container);
         
         throw error;
       });
@@ -154,8 +146,23 @@ class ProductManager {
       // Add the product to the room
       this.addProductToRoom(estimateId, roomId, productId)
         .then(() => {
-          // Show success message
-          alert('Product added successfully!');
+          // Show success message using ConfirmationDialog instead of alert
+          if (this.modalManager) {
+            const confirmationDialog = this.modalManager.confirmationDialog;
+            if (confirmationDialog) {
+              confirmationDialog.show({
+                title: 'Success',
+                message: 'Product added successfully!',
+                type: 'product',
+                action: 'add',
+                showCancel: false,
+                confirmText: 'OK'
+              });
+            } else {
+              logger.warn('ConfirmationDialog not available, using console log instead');
+              logger.log('Product added successfully!');
+            }
+          }
           
           // Reload the products for this room
           const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
@@ -170,7 +177,24 @@ class ProductManager {
         })
         .catch(error => {
           logger.error('Error adding product to room:', error);
-          alert('Error adding product. Please try again.');
+          
+          // Show error using ConfirmationDialog instead of alert
+          if (this.modalManager) {
+            const confirmationDialog = this.modalManager.confirmationDialog;
+            if (confirmationDialog) {
+              confirmationDialog.show({
+                title: 'Error',
+                message: 'Error adding product. Please try again.',
+                type: 'product',
+                action: 'error',
+                showCancel: false,
+                confirmText: 'OK'
+              });
+            } else {
+              logger.warn('ConfirmationDialog not available, using console log instead');
+              logger.error('Error adding product. Please try again.');
+            }
+          }
         });
     }
   }
@@ -185,13 +209,23 @@ class ProductManager {
   addProductToRoom(estimateId, roomId, productId) {
     logger.log('Adding product to room', { estimateId, roomId, productId });
     
+    // Validate that we have a product ID
+    if (!productId) {
+      const errorMsg = 'Product ID is required to add a product to a room';
+      logger.error(errorMsg);
+      return Promise.reject(new Error(errorMsg));
+    }
+    
     // Show loading if we have a modal available
     if (this.modalManager) {
       this.modalManager.showLoading();
     }
     
+    // Convert the productId to string to ensure proper handling
+    const productIdString = String(productId);
+    
     // Add the product to the room
-    return this.dataService.addProductToRoom(estimateId, roomId, productId)
+    return this.dataService.addProductToRoom(estimateId, roomId, productIdString)
       .then(result => {
         logger.log('Product added successfully:', result);
         
@@ -238,52 +272,92 @@ class ProductManager {
       return null;
     }
     
-    // Create product element
-    const productElement = document.createElement('div');
-    productElement.className = 'product-item';
+    // Get formatted price
+    const formattedPrice = format.currency(product.price || 0);
+    
+    // Create template data
+    const templateData = {
+      productId: product.id,
+      productIndex: index,
+      roomId: roomId,
+      estimateId: estimateId,
+      productName: product.name || 'Product',
+      productPrice: formattedPrice,
+      productSku: product.sku || '',
+      productDescription: product.description || ''
+    };
+    
+    // Insert the template into a temporary container to get the element
+    const tempContainer = document.createElement('div');
+    TemplateEngine.insert('product-item-template', templateData, tempContainer);
+    
+    // Get the product element from the temporary container
+    const productElement = tempContainer.firstElementChild;
+    
+    // Set additional data attributes
     productElement.dataset.productId = product.id;
     productElement.dataset.productIndex = index;
     productElement.dataset.roomId = roomId;
     productElement.dataset.estimateId = estimateId;
     
-    // Get formatted price
-    const formattedPrice = format.currency(product.price || 0);
+    // Set product name
+    const productNameElement = productElement.querySelector('.price-title');
+    if (productNameElement) {
+      productNameElement.textContent = templateData.productName;
+    }
     
-    // Build product HTML
-    productElement.innerHTML = `
-      <div class="product-header">
-        <div class="product-name-container">
-          <h5 class="product-name">${product.name || 'Product'}</h5>
-          <div class="product-meta">
-            ${product.sku ? `<span class="product-sku">SKU: ${product.sku}</span>` : ''}
-          </div>
-        </div>
-        <div class="product-price-container">
-          <span class="product-price">${formattedPrice}</span>
-        </div>
-        <div class="product-actions">
-          <button class="remove-product-button button button-small button-danger">Remove</button>
-        </div>
-      </div>
-      ${product.description ? `
-      <div class="product-description">
-        <p>${product.description}</p>
-      </div>
-      ` : ''}
-      ${product.variations && product.variations.length > 0 ? `
-      <div class="product-variations">
-        <label for="variation-${roomId}-${product.id}-${index}">Options:</label>
-        <select id="variation-${roomId}-${product.id}-${index}" class="variation-select">
-          <option value="">Select an option</option>
-          ${product.variations.map(variation => 
-            `<option value="${variation.id}" ${variation.id === product.selectedVariation ? 'selected' : ''}>
-              ${variation.name} (${format.currency(variation.price || 0)})
-            </option>`
-          ).join('')}
-        </select>
-      </div>
-      ` : ''}
-    `;
+    // Set product price
+    const productPriceElement = productElement.querySelector('.product-price');
+    if (productPriceElement) {
+      productPriceElement.textContent = templateData.productPrice;
+    }
+    
+    // Add variations if needed
+    if (product.variations && product.variations.length > 0) {
+      // Create variations container
+      const variationsContainer = document.createElement('div');
+      variationsContainer.className = 'product-variations';
+      
+      // Create label
+      const label = document.createElement('label');
+      label.setAttribute('for', `variation-${roomId}-${product.id}-${index}`);
+      label.textContent = 'Options:';
+      variationsContainer.appendChild(label);
+      
+      // Create select
+      const select = document.createElement('select');
+      select.id = `variation-${roomId}-${product.id}-${index}`;
+      select.className = 'variation-select';
+      
+      // Add default option
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = 'Select an option';
+      select.appendChild(defaultOption);
+      
+      // Add variation options
+      product.variations.forEach(variation => {
+        const option = document.createElement('option');
+        option.value = variation.id;
+        option.textContent = `${variation.name} (${format.currency(variation.price || 0)})`;
+        
+        if (variation.id === product.selectedVariation) {
+          option.selected = true;
+        }
+        
+        select.appendChild(option);
+      });
+      
+      variationsContainer.appendChild(select);
+      
+      // Add variations container to product element (after product includes)
+      const includesContainer = productElement.querySelector('.includes-container');
+      if (includesContainer) {
+        productElement.insertBefore(variationsContainer, includesContainer.nextSibling);
+      } else {
+        productElement.appendChild(variationsContainer);
+      }
+    }
     
     // Add to container
     container.appendChild(productElement);
@@ -310,8 +384,8 @@ class ProductManager {
       return;
     }
     
-    // Bind remove button
-    const removeButton = productElement.querySelector('.remove-product-button');
+    // Bind remove button - use the template's .remove-product class
+    const removeButton = productElement.querySelector('.remove-product');
     if (removeButton) {
       if (removeButton._clickHandler) {
         removeButton.removeEventListener('click', removeButton._clickHandler);
@@ -389,10 +463,22 @@ class ProductManager {
               logger.error('Error removing product:', error);
               
               if (this.modalManager) {
-                this.modalManager.showError('Error removing product. Please try again.');
                 this.modalManager.hideLoading();
+                const confirmationDialog = this.modalManager.confirmationDialog;
+                if (confirmationDialog) {
+                  confirmationDialog.show({
+                    title: 'Error',
+                    message: 'Error removing product. Please try again.',
+                    type: 'product',
+                    action: 'error',
+                    showCancel: false,
+                    confirmText: 'OK'
+                  });
+                } else {
+                  this.modalManager.showError('Error removing product. Please try again.');
+                }
               } else {
-                alert('Error removing product. Please try again.');
+                logger.error('Error removing product. Please try again.');
               }
             });
         },
@@ -513,10 +599,22 @@ class ProductManager {
         
         // Show error
         if (this.modalManager) {
-          this.modalManager.showError('Error updating variation. Please try again.');
           this.modalManager.hideLoading();
+          const confirmationDialog = this.modalManager.confirmationDialog;
+          if (confirmationDialog) {
+            confirmationDialog.show({
+              title: 'Error',
+              message: 'Error updating variation. Please try again.',
+              type: 'product',
+              action: 'error',
+              showCancel: false,
+              confirmText: 'OK'
+            });
+          } else {
+            this.modalManager.showError('Error updating variation. Please try again.');
+          }
         } else {
-          alert('Error updating variation. Please try again.');
+          logger.error('Error updating variation. Please try again.');
         }
       });
   }

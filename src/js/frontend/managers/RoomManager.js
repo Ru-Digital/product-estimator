@@ -89,6 +89,11 @@ class RoomManager {
       return;
     }
     
+    // Hide all other sections first to ensure only the room selection form is visible
+    if (this.modalManager.estimateManager && this.modalManager.estimateManager.hideAllSections) {
+      this.modalManager.estimateManager.hideAllSections();
+    }
+    
     // Use ModalManager's utility to ensure the element is visible
     this.modalManager.forceElementVisibility(roomSelectionForm);
     
@@ -255,18 +260,22 @@ class RoomManager {
               // Show success message
               this.modalManager.hideLoading();
               
-              // Show a confirmation dialog
-              if (window.productEstimator && window.productEstimator.dialog) {
-                window.productEstimator.dialog.alert(
-                  'Product Added',
-                  'The product has been added to the selected room.',
-                  () => {
+              // Show a confirmation dialog using ConfirmationDialog
+              if (this.modalManager && this.modalManager.confirmationDialog) {
+                this.modalManager.confirmationDialog.show({
+                  title: 'Product Added',
+                  message: 'The product has been added to the selected room.',
+                  type: 'product',
+                  action: 'success',
+                  showCancel: false,
+                  confirmText: 'OK',
+                  onConfirm: () => {
                     // Close the modal or show the estimates list
                     this.modalManager.closeModal();
                   }
-                );
+                });
               } else {
-                alert('The product has been added to the selected room.');
+                logger.log('Product has been added to the selected room.');
                 this.modalManager.closeModal();
               }
             })
@@ -388,12 +397,8 @@ class RoomManager {
         roomsContainer.innerHTML = '';
         
         if (!rooms || rooms.length === 0) {
-          // No rooms, show empty state
-          roomsContainer.innerHTML = `
-            <div class="empty-state">
-              <p>No rooms in this estimate yet. Add a room to get started.</p>
-            </div>
-          `;
+          // No rooms, show empty state using template
+          TemplateEngine.insert('rooms-empty-template', {}, roomsContainer);
         } else {
           // Render each room
           const roomPromises = rooms.map(room => {
@@ -417,12 +422,8 @@ class RoomManager {
       .catch(error => {
         logger.error('Error loading rooms for estimate:', error);
         
-        // Show error message
-        roomsContainer.innerHTML = `
-          <div class="error-state">
-            <p>Error loading rooms. Please try again.</p>
-          </div>
-        `;
+        // Show error message using template
+        TemplateEngine.insert('room-error-template', {}, roomsContainer);
         
         // Hide loading placeholder
         if (loadingPlaceholder) {
@@ -449,35 +450,57 @@ class RoomManager {
       return Promise.reject(new Error('Container not provided for rendering room'));
     }
     
-    // Create room element
-    const roomElement = document.createElement('div');
-    roomElement.className = 'room-item';
-    roomElement.dataset.roomId = roomId;
-    roomElement.dataset.estimateId = estimateId;
+    // Create room element using TemplateEngine
+    const templateData = {
+      roomId: roomId,
+      estimateId: estimateId,
+      roomName: room.name || `Room #${roomId}`,
+      roomTotal: format.currency(room.total || 0),
+      isExpanded: expand
+    };
     
-    // Render room header and basic structure
-    roomElement.innerHTML = `
-      <div class="room-header ${expand ? 'expanded' : ''}">
-        <h4>${room.name || `Room #${roomId}`}</h4>
-        <div class="room-actions">
-          <button class="edit-room-button button button-small">Edit</button>
-          <button class="remove-room-button button button-small button-danger">Remove</button>
-        </div>
-        <div class="accordion-indicator"></div>
-      </div>
-      <div class="room-content" style="display: ${expand ? 'block' : 'none'};">
-        <div class="room-products-container">
-          <div class="loading-placeholder">Loading products...</div>
-        </div>
-        <div class="room-total">
-          <span class="total-label">Total:</span>
-          <span class="total-value">${format.currency(room.total || 0)}</span>
-        </div>
-        <div class="room-actions-footer">
-          <button class="add-product-button button button-small button-primary">Add Product</button>
-        </div>
-      </div>
-    `;
+    // Insert the template into a temporary container to get the element
+    const tempContainer = document.createElement('div');
+    TemplateEngine.insert('room-item-template', templateData, tempContainer);
+    
+    // Get the room element from the temporary container
+    const roomElement = tempContainer.firstElementChild;
+    
+    // Set appropriate classes and data attributes
+    roomElement.classList.add('room-item');
+    
+    // Set expanded state if needed
+    const header = roomElement.querySelector('.accordion-header-wrapper');
+    if (header && expand) {
+      header.classList.add('expanded');
+    }
+    
+    // Set content display based on expand flag
+    const content = roomElement.querySelector('.accordion-content');
+    if (content) {
+      content.style.display = expand ? 'block' : 'none';
+    }
+    
+    // Set room name
+    const roomNameElement = roomElement.querySelector('.room-name');
+    if (roomNameElement) {
+      roomNameElement.textContent = templateData.roomName;
+    }
+    
+    // Set room price
+    const roomPriceElement = roomElement.querySelector('.room-price');
+    if (roomPriceElement) {
+      roomPriceElement.textContent = templateData.roomTotal;
+    }
+    
+    // Add loading placeholder to products container
+    const productsContainer = roomElement.querySelector('.product-list');
+    if (productsContainer) {
+      const loadingPlaceholder = document.createElement('div');
+      loadingPlaceholder.className = 'loading-placeholder';
+      loadingPlaceholder.textContent = 'Loading products...';
+      productsContainer.appendChild(loadingPlaceholder);
+    }
     
     // Add the room to the container
     container.appendChild(roomElement);
@@ -512,34 +535,35 @@ class RoomManager {
       return;
     }
     
-    // Bind header click for accordion toggle
-    const header = roomElement.querySelector('.room-header');
-    if (header) {
-      if (header._clickHandler) {
-        header.removeEventListener('click', header._clickHandler);
+    // Bind accordion header click for expanding/collapsing
+    const accordionHeader = roomElement.querySelector('.accordion-header');
+    if (accordionHeader) {
+      if (accordionHeader._clickHandler) {
+        accordionHeader.removeEventListener('click', accordionHeader._clickHandler);
       }
       
-      header._clickHandler = (e) => {
-        // Don't toggle if clicking on a button
-        if (e.target.closest('button')) {
+      accordionHeader._clickHandler = (e) => {
+        // Don't toggle if clicking on a button with specific functionality
+        if (e.target.closest('button:not(.accordion-header)')) {
           return;
         }
         
-        const content = roomElement.querySelector('.room-content');
-        if (!content) return;
+        const headerWrapper = accordionHeader.closest('.accordion-header-wrapper');
+        const content = roomElement.querySelector('.accordion-content');
+        if (!content || !headerWrapper) return;
         
         // Toggle expanded state
-        const isExpanded = header.classList.contains('expanded');
+        const isExpanded = headerWrapper.classList.contains('expanded');
         
         if (isExpanded) {
-          header.classList.remove('expanded');
+          headerWrapper.classList.remove('expanded');
           content.style.display = 'none';
         } else {
-          header.classList.add('expanded');
+          headerWrapper.classList.add('expanded');
           content.style.display = 'block';
           
           // Load products if not already loaded
-          const productsContainer = content.querySelector('.room-products-container');
+          const productsContainer = content.querySelector('.product-list');
           if (productsContainer && !productsContainer.dataset.loaded) {
             productsContainer.dataset.loaded = 'true';
             
@@ -551,11 +575,11 @@ class RoomManager {
         }
       };
       
-      header.addEventListener('click', header._clickHandler);
+      accordionHeader.addEventListener('click', accordionHeader._clickHandler);
     }
     
     // Bind remove button
-    const removeButton = roomElement.querySelector('.remove-room-button');
+    const removeButton = roomElement.querySelector('.remove-room');
     if (removeButton) {
       if (removeButton._clickHandler) {
         removeButton.removeEventListener('click', removeButton._clickHandler);
@@ -570,26 +594,26 @@ class RoomManager {
       removeButton.addEventListener('click', removeButton._clickHandler);
     }
     
-    // Bind edit button
-    const editButton = roomElement.querySelector('.edit-room-button');
-    if (editButton) {
-      if (editButton._clickHandler) {
-        editButton.removeEventListener('click', editButton._clickHandler);
-      }
-      
-      editButton._clickHandler = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    // Bind add product functionality - add a button if it doesn't exist in the template
+    let addProductButton = roomElement.querySelector('.add-product-button');
+    if (!addProductButton) {
+      // Create add product button if it doesn't exist in the template
+      const productList = roomElement.querySelector('.product-list');
+      if (productList && productList.parentElement) {
+        addProductButton = document.createElement('button');
+        addProductButton.className = 'add-product-button button button-small button-primary';
+        addProductButton.textContent = 'Add Product';
         
-        // This will be implemented in a later phase
-        logger.log('Edit room button clicked for room ID:', roomId);
-      };
-      
-      editButton.addEventListener('click', editButton._clickHandler);
+        // Create a container for the button if needed
+        const actionsFooter = document.createElement('div');
+        actionsFooter.className = 'room-actions-footer';
+        actionsFooter.appendChild(addProductButton);
+        
+        // Add it after the product list
+        productList.parentElement.appendChild(actionsFooter);
+      }
     }
     
-    // Bind add product button
-    const addProductButton = roomElement.querySelector('.add-product-button');
     if (addProductButton) {
       if (addProductButton._clickHandler) {
         addProductButton.removeEventListener('click', addProductButton._clickHandler);
@@ -631,6 +655,11 @@ class RoomManager {
       this.modalManager.showError('Modal structure incomplete. Please contact support.');
       this.modalManager.hideLoading();
       return;
+    }
+    
+    // Hide all other sections first to ensure only the new room form is visible
+    if (this.modalManager.estimateManager && this.modalManager.estimateManager.hideAllSections) {
+      this.modalManager.estimateManager.hideAllSections();
     }
     
     // Use ModalManager's utility to ensure the element is visible
@@ -707,6 +736,8 @@ class RoomManager {
       // Get the form data
       const formData = new FormData(formElement);
       const roomName = formData.get('room_name');
+      const roomWidth = formData.get('room_width');
+      const roomLength = formData.get('room_length');
       
       if (!roomName) {
         this.modalManager.showError('Please enter a room name.');
@@ -714,10 +745,18 @@ class RoomManager {
         return;
       }
       
+      if (!roomWidth || !roomLength) {
+        this.modalManager.showError('Please enter room dimensions.');
+        this.modalManager.hideLoading();
+        return;
+      }
+      
       // Create the room
-      this.dataService.createRoom(estimateId, {
-        name: roomName
-      })
+      this.dataService.addNewRoom({
+        room_name: roomName,
+        room_width: roomWidth,
+        room_length: roomLength
+      }, estimateId)
         .then(newRoom => {
           logger.log('Room created successfully:', newRoom);
           
@@ -730,18 +769,22 @@ class RoomManager {
                   // Show success message
                   this.modalManager.hideLoading();
                   
-                  // Show a confirmation dialog
-                  if (window.productEstimator && window.productEstimator.dialog) {
-                    window.productEstimator.dialog.alert(
-                      'Room Created',
-                      'The room has been created and the product has been added.',
-                      () => {
+                  // Show a confirmation dialog using ConfirmationDialog
+                  if (this.modalManager && this.modalManager.confirmationDialog) {
+                    this.modalManager.confirmationDialog.show({
+                      title: 'Room Created',
+                      message: 'The room has been created and the product has been added.',
+                      type: 'room',
+                      action: 'success',
+                      showCancel: false,
+                      confirmText: 'OK',
+                      onConfirm: () => {
                         // Close the modal or show the estimates list
                         this.modalManager.closeModal();
                       }
-                    );
+                    });
                   } else {
-                    alert('The room has been created and the product has been added.');
+                    logger.log('Room created and product added successfully.');
                     this.modalManager.closeModal();
                   }
                 });
@@ -749,17 +792,21 @@ class RoomManager {
               logger.error('ProductManager not available for addProductToRoom');
               this.modalManager.hideLoading();
               
-              // Still show success for room creation
-              if (window.productEstimator && window.productEstimator.dialog) {
-                window.productEstimator.dialog.alert(
-                  'Room Created',
-                  'The room has been created.',
-                  () => {
+              // Still show success for room creation using ConfirmationDialog
+              if (this.modalManager && this.modalManager.confirmationDialog) {
+                this.modalManager.confirmationDialog.show({
+                  title: 'Room Created',
+                  message: 'The room has been created.',
+                  type: 'room',
+                  action: 'success',
+                  showCancel: false,
+                  confirmText: 'OK',
+                  onConfirm: () => {
                     this.modalManager.closeModal();
                   }
-                );
+                });
               } else {
-                alert('The room has been created.');
+                logger.log('Room created successfully.');
                 this.modalManager.closeModal();
               }
             }
@@ -771,17 +818,21 @@ class RoomManager {
             if (this.modalManager.estimateManager) {
               this.modalManager.estimateManager.showEstimatesList(newRoom.id, estimateId);
             } else {
-              // Show success message and close
-              if (window.productEstimator && window.productEstimator.dialog) {
-                window.productEstimator.dialog.alert(
-                  'Room Created',
-                  'The room has been created.',
-                  () => {
+              // Show success message using ConfirmationDialog and close
+              if (this.modalManager && this.modalManager.confirmationDialog) {
+                this.modalManager.confirmationDialog.show({
+                  title: 'Room Created',
+                  message: 'The room has been created.',
+                  type: 'room',
+                  action: 'success',
+                  showCancel: false,
+                  confirmText: 'OK',
+                  onConfirm: () => {
                     this.modalManager.closeModal();
                   }
-                );
+                });
               } else {
-                alert('The room has been created.');
+                logger.log('Room created successfully.');
                 this.modalManager.closeModal();
               }
             }
@@ -949,8 +1000,8 @@ class RoomManager {
       return;
     }
     
-    // Update the total value
-    const totalElement = roomElement.querySelector('.total-value');
+    // Update the total value - use room-price from template structure
+    const totalElement = roomElement.querySelector('.room-price');
     if (totalElement) {
       totalElement.textContent = format.currency(totals.total || 0);
     }

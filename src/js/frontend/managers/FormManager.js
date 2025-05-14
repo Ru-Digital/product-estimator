@@ -99,17 +99,27 @@ class FormManager {
       const estimateName = formData.get('estimate_name');
       
       // Create the estimate
-      this.dataService.createEstimate({ 
-        name: estimateName
+      this.dataService.addNewEstimate({ 
+        estimate_name: estimateName
       })
         .then(newEstimate => {
           logger.log('Estimate created successfully:', newEstimate);
           
           // If a product ID is provided, we need to add it to a room
           if (productId) {
+            const estimateId = newEstimate.estimate_id;
+            
+            if (!estimateId) {
+              logger.error('No estimate ID returned from server. Cannot create room.');
+              this.modalManager.hideLoading();
+              this.showSuccessMessage('Estimate created successfully, but there was an error adding a room.');
+              return;
+            }
+            
             // Show room creation form for the new estimate
             if (this.modalManager && this.modalManager.roomManager) {
-              this.modalManager.roomManager.showNewRoomForm(newEstimate.id, productId);
+              logger.log('Transitioning to new room form with estimate ID:', estimateId);
+              this.modalManager.roomManager.showNewRoomForm(estimateId, productId);
             } else {
               logger.error('RoomManager not available for showNewRoomForm');
               // Hide loading and show success message
@@ -121,8 +131,18 @@ class FormManager {
             }
           } else {
             // No product ID, just show the estimates list
+            const estimateId = newEstimate.estimate_id;
+            
+            if (!estimateId) {
+              logger.error('No estimate ID returned from server. Cannot show estimate.');
+              this.modalManager.hideLoading();
+              this.showSuccessMessage('Estimate created successfully.');
+              return;
+            }
+            
             if (this.modalManager && this.modalManager.estimateManager) {
-              this.modalManager.estimateManager.showEstimatesList(null, newEstimate.id);
+              logger.log('Transitioning to estimates list with estimate ID:', estimateId);
+              this.modalManager.estimateManager.showEstimatesList(null, estimateId);
             } else {
               // Hide loading and show success message
               if (this.modalManager) {
@@ -216,11 +236,24 @@ class FormManager {
       // Get form data
       const formData = new FormData(formElement);
       const roomName = formData.get('room_name');
+      const roomWidth = formData.get('room_width');
+      const roomLength = formData.get('room_length');
+      
+      // Get the estimate ID from the form's dataset
+      const formEstimateId = formElement.dataset.estimateId;
+      
+      if (!formEstimateId) {
+        this.showError(formElement, 'No estimate ID found. Please try again.');
+        this.modalManager.hideLoading();
+        return;
+      }
       
       // Create the room
-      this.dataService.createRoom(estimateId, {
-        name: roomName
-      })
+      this.dataService.addNewRoom({
+        room_name: roomName,
+        room_width: roomWidth,
+        room_length: roomLength
+      }, formEstimateId)
         .then(newRoom => {
           logger.log('Room created successfully:', newRoom);
           
@@ -228,7 +261,7 @@ class FormManager {
           if (productId) {
             // Delegate to the ProductManager to add product to the new room
             if (this.modalManager && this.modalManager.productManager) {
-              this.modalManager.productManager.addProductToRoom(estimateId, newRoom.id, productId)
+              this.modalManager.productManager.addProductToRoom(formEstimateId, newRoom.id, productId)
                 .then(() => {
                   // Hide loading
                   if (this.modalManager) {
@@ -263,7 +296,7 @@ class FormManager {
           } else {
             // No product ID, just show the estimates list with the new room expanded
             if (this.modalManager && this.modalManager.estimateManager) {
-              this.modalManager.estimateManager.showEstimatesList(newRoom.id, estimateId);
+              this.modalManager.estimateManager.showEstimatesList(newRoom.id, formEstimateId);
             } else {
               // Hide loading
               if (this.modalManager) {
@@ -428,18 +461,30 @@ class FormManager {
       return;
     }
     
-    // Find or create error container
+    // Find or create error container using template
     let errorContainer = form.querySelector('.form-errors');
     if (!errorContainer) {
-      errorContainer = document.createElement('div');
-      errorContainer.className = 'form-errors error-message';
+      // Create a temporary container to hold the template
+      const tempContainer = document.createElement('div');
+      TemplateEngine.insert('form-error-template', {
+        errorMessage: message
+      }, tempContainer);
+      
+      // Insert the error container at the top of the form
+      errorContainer = tempContainer.firstElementChild;
       form.insertBefore(errorContainer, form.firstChild);
+    } else {
+      // Update the existing error container with the new message
+      const errorMessageElement = errorContainer.querySelector('p');
+      if (errorMessageElement) {
+        errorMessageElement.textContent = message;
+      } else {
+        // If no <p> element exists, add one
+        const p = document.createElement('p');
+        p.textContent = message;
+        errorContainer.appendChild(p);
+      }
     }
-    
-    // Add the error message
-    const errorMessage = document.createElement('p');
-    errorMessage.textContent = message;
-    errorContainer.appendChild(errorMessage);
     
     // Highlight the field if provided
     if (field) {
@@ -502,17 +547,25 @@ class FormManager {
   showSuccessMessage(message) {
     logger.log('Showing success message', { message });
     
-    // Use dialog if available
-    if (window.productEstimator && window.productEstimator.dialog) {
-      window.productEstimator.dialog.alert('Success', message, () => {
-        // Close the modal
-        if (this.modalManager) {
-          this.modalManager.closeModal();
+    // Use ConfirmationDialog via modalManager if available
+    if (this.modalManager && this.modalManager.confirmationDialog) {
+      this.modalManager.confirmationDialog.show({
+        title: 'Success',
+        message: message,
+        type: 'estimate',
+        action: 'success',
+        showCancel: false,
+        confirmText: 'OK',
+        onConfirm: () => {
+          // Close the modal
+          if (this.modalManager) {
+            this.modalManager.closeModal();
+          }
         }
       });
     } else {
-      // Use native alert
-      alert(message);
+      // Log success with console
+      logger.log(`Success: ${message}`);
       
       // Close the modal
       if (this.modalManager) {

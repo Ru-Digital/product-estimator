@@ -139,10 +139,10 @@ class RoomAjaxHandler extends AjaxHandlerBase {
             $room_width = (float)$form_data['room_width'];
             $room_length = (float)$form_data['room_length'];
             $room_name = sanitize_text_field($form_data['room_name']);
-            
+
             // Get client-provided UUID if available
             $room_uuid = isset($_POST['room_uuid']) ? sanitize_text_field($_POST['room_uuid']) : null;
-            
+
             if (empty($room_uuid)) {
                 error_log('Room UUID is required but not provided');
                 wp_send_json_error(['message' => __('Room UUID is required', 'product-estimator')]);
@@ -198,7 +198,7 @@ class RoomAjaxHandler extends AjaxHandlerBase {
             // This maintains separation of concerns and prevents duplicate product addition logic.
             $product_added = false;
             $product_data = null;
-            
+
             // We still log the product_id if it was provided, for reference purposes
             if ($product_id > 0) {
                 error_log("Product ID {$product_id} was provided with room creation, but will be added by client.");
@@ -1142,20 +1142,21 @@ class RoomAjaxHandler extends AjaxHandlerBase {
                     }
 
                     // Add to product's additional products list
-                    $product_data['additional_products'][] = $related_product_data;
+                    $product_data['additional_products'][$related_product_id] = $related_product_data;
                 }
 
                 // Handle auto-add notes
                 foreach ($auto_add_notes as $note_text) {
+                    $unique_id = 'note_' . uniqid();
                     // Create note data - FIX: Put notes in additional_notes array, NOT additional_products
                     $note_data = [
-                        'id' => 'note_' . uniqid(),
+                        'id' => $unique_id,
                         'type' => 'note',
                         'note_text' => $note_text,
                     ];
 
                     // Add to product's additional notes list
-                    $product_data['additional_notes'][] = $note_data;
+                    $product_data['additional_notes'][$unique_id] = $note_data;
                 }
             }
 

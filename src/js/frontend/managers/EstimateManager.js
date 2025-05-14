@@ -342,9 +342,11 @@ class EstimateManager {
   /**
    * Show the estimates list view
    * This is called from ModalManager.openModal when no productId is provided or forceListView is true
+   * @param {string|null} expandEstimateId - Optional estimate ID to expand after loading
+   * @param {string|null} expandRoomId - Optional room ID to expand after loading
    */
-  showEstimatesList() {
-    logger.log('Showing estimates list view');
+  showEstimatesList(expandEstimateId = null, expandRoomId = null) {
+    logger.log('Showing estimates list view', { expandEstimateId, expandRoomId });
 
     // Get the estimates list container from the modal manager
     const estimatesList = this.modalManager.estimatesList;
@@ -363,7 +365,7 @@ class EstimateManager {
     this.modalManager.forceElementVisibility(estimatesList);
 
     // Load and render the estimates list content first, then bind event handlers
-    this.loadEstimatesList()
+    this.loadEstimatesList(expandRoomId, expandEstimateId)
       .then(() => {
         // Bind event handlers to the estimates list container AFTER the content is loaded and rendered
         this.bindEstimateListEventHandlers();

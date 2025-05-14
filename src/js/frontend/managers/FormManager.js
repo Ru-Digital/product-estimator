@@ -383,15 +383,8 @@ class FormManager {
       backButton._clickHandler = (e) => {
         e.preventDefault();
 
-        // Go back to room selection
-        if (this.modalManager && this.modalManager.roomManager) {
-          this.modalManager.roomManager.showRoomSelectionForm(estimateId, productId);
-        } else {
-          // Just close the modal
-          if (this.modalManager) {
-            this.modalManager.closeModal();
-          }
-        }
+        // Use the same logic as cancel button for consistency
+        this.cancelForm('room', estimateId, productId);
       };
 
       backButton.addEventListener('click', backButton._clickHandler);
@@ -433,9 +426,14 @@ class FormManager {
         break;
 
       case 'room':
-        // Go back to room selection or close modal
-        if (estimateId && this.modalManager && this.modalManager.roomManager) {
-          this.modalManager.roomManager.showRoomSelectionForm(estimateId, productId);
+        // If we have a productId, go back to estimate selection
+        // Otherwise go to the estimates list
+        if (productId && this.modalManager && this.modalManager.estimateManager) {
+          // If we're adding a product, go back to estimate selection
+          this.modalManager.estimateManager.showEstimateSelection(productId);
+        } else if (estimateId && this.modalManager && this.modalManager.estimateManager) {
+          // If we're just creating a room, go back to the estimates list
+          this.modalManager.estimateManager.showEstimatesList();
         } else if (this.modalManager) {
           this.modalManager.closeModal();
         }

@@ -16,9 +16,9 @@
    14:10  warning  'loadCustomerDetails' is defined but never used        no-unused-vars
    14:31  warning  'saveCustomerDetails' is defined but never used        no-unused-vars
   145:13  warning  'contentContainer' is assigned a value but never used  no-unused-vars
-  409:9   warning  Unexpected console statement                           no-console
-  590:15  warning  Unexpected console statement                           no-console
+  411:9   warning  Unexpected console statement                           no-console
   592:15  warning  Unexpected console statement                           no-console
+  594:15  warning  Unexpected console statement                           no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/FormManager.js
   11:10  warning  'format' is defined but never used               no-unused-vars

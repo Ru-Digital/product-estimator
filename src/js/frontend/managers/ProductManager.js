@@ -621,6 +621,26 @@ class ProductManager {
         
         if (productElement) {
           productElement.remove();
+          
+          // Find the product list container for this room
+          const productsContainer = document.querySelector(
+            `.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"] .product-list, ` +
+            `.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"] .product-list`
+          );
+          
+          // Check if there are any products left in the container
+          if (productsContainer) {
+            const remainingProducts = productsContainer.querySelectorAll('.product-item');
+            
+            // If there are no remaining products, show the empty products template
+            if (remainingProducts.length === 0) {
+              logger.log('No products remaining in room, showing empty products template');
+              // Clear any existing content
+              productsContainer.innerHTML = '';
+              // Insert the empty products template
+              TemplateEngine.insert('products-empty-template', {}, productsContainer);
+            }
+          }
         } else {
           logger.log('Product element not found in DOM after removal. It may have been removed already.');
         }

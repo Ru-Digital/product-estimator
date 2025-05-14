@@ -139,8 +139,18 @@ class RoomAjaxHandler extends AjaxHandlerBase {
             $room_width = (float)$form_data['room_width'];
             $room_length = (float)$form_data['room_length'];
             $room_name = sanitize_text_field($form_data['room_name']);
+            
+            // Get client-provided UUID if available
+            $room_uuid = isset($_POST['room_uuid']) ? sanitize_text_field($_POST['room_uuid']) : null;
+            
+            if (empty($room_uuid)) {
+                error_log('Room UUID is required but not provided');
+                wp_send_json_error(['message' => __('Room UUID is required', 'product-estimator')]);
+                return;
+            }
 
             $room_data = [
+                'id' => $room_uuid, // Include the client-generated UUID
                 'name' => $room_name,
                 'width' => $room_width,
                 'length' => $room_length,
@@ -484,9 +494,9 @@ class RoomAjaxHandler extends AjaxHandlerBase {
             }
             // --- END MODIFIED ---
 
-            // Remove the product from the session using the *found index*
-            // (Assuming $this->session->removeProductFromRoom still requires the index)
-            $removed = $session->removeProductFromRoom($estimate_id, $room_id, $actual_product_index);
+            // Remove the product from the session by passing both the index and product ID
+            // This allows the SessionHandler to use the ID directly if possible
+            $removed = $session->removeProductFromRoom($estimate_id, $room_id, $actual_product_index, $product_id_to_remove);
 
             if (!$removed) {
                 // This might indicate an issue within the session removal logic itself
@@ -699,8 +709,8 @@ class RoomAjaxHandler extends AjaxHandlerBase {
                     return;
                 }
 
-                // Remove the old product using SessionHandler, passing the found index
-                $removed = $session->removeProductFromRoom($estimate_id, $room_id, $main_product_index);
+                // Remove the old product using SessionHandler, passing both the index and product ID
+                $removed = $session->removeProductFromRoom($estimate_id, $room_id, $main_product_index, $old_product_id);
 
                 if (!$removed) {
                     wp_send_json_error(['message' => __('Failed to remove old product from room via SessionHandler.', 'product-estimator')]);

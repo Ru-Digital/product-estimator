@@ -276,25 +276,26 @@ class RoomManager {
         if (this.modalManager.productManager) {
           this.modalManager.productManager.addProductToRoom(estimateId, roomId, productId)
             .then(() => {
+              // Hide loading
+              this.modalManager.hideLoading();
+              
               // First show the estimates list with the relevant room expanded
               if (this.modalManager.estimateManager) {
-                this.modalManager.estimateManager.showEstimatesList(roomId, estimateId);
+                this.modalManager.estimateManager.showEstimatesList(estimateId, roomId);
               }
               
-              // Then hide loading and show the confirmation dialog
-              this.modalManager.hideLoading();
-
-              // Show a confirmation dialog using ConfirmationDialog
+              // Then show a confirmation dialog using ConfirmationDialog
               if (this.modalManager && this.modalManager.confirmationDialog) {
-                this.modalManager.confirmationDialog.show({
-                  title: 'Product Added',
-                  message: 'The product has been added to the selected room.',
-                  type: 'product',
-                  action: 'success',
-                  showCancel: false,
-                  confirmText: 'OK'
-                  // No closeModal action needed as the estimates list is already displayed
-                });
+                setTimeout(() => {
+                  this.modalManager.confirmationDialog.show({
+                    title: 'Product Added',
+                    message: 'The product has been added to the selected room.',
+                    type: 'product',
+                    action: 'success',
+                    showCancel: false,
+                    confirmText: 'OK'
+                  });
+                }, 100); // Short delay to allow estimates list to render
               } else {
                 logger.log('Product has been added to the selected room.');
               }
@@ -321,7 +322,7 @@ class RoomManager {
 
         // Switch view to show the estimate with the selected room expanded
         if (this.modalManager.estimateManager) {
-          this.modalManager.estimateManager.showEstimatesList(roomId, estimateId);
+          this.modalManager.estimateManager.showEstimatesList(estimateId, roomId);
         } else {
           this.modalManager.closeModal();
         }
@@ -827,25 +828,26 @@ class RoomManager {
               logger.log("[DEBUG][ROOM]" . toJSON(newRoom));
               return this.modalManager.productManager.addProductToRoom(estimateId, newRoom.room_id, productId)
                 .then(() => {
+                  // Hide loading
+                  this.modalManager.hideLoading();
+                  
                   // First show the estimates list with the newly created room expanded
                   if (this.modalManager.estimateManager) {
-                    this.modalManager.estimateManager.showEstimatesList(newRoom.room_id, estimateId);
+                    this.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.room_id);
                   }
                   
-                  // Then hide loading and show the confirmation dialog
-                  this.modalManager.hideLoading();
-
-                  // Show a confirmation dialog using ConfirmationDialog
+                  // Then show a confirmation dialog using ConfirmationDialog (with slight delay to allow UI to render)
                   if (this.modalManager && this.modalManager.confirmationDialog) {
-                    this.modalManager.confirmationDialog.show({
-                      title: 'Room Created',
-                      message: 'The room has been created and the product has been added.',
-                      type: 'room',
-                      action: 'success',
-                      showCancel: false,
-                      confirmText: 'OK'
-                      // No closeModal action needed as the estimates list is already displayed
-                    });
+                    setTimeout(() => {
+                      this.modalManager.confirmationDialog.show({
+                        title: 'Room Created',
+                        message: 'The room has been created and the product has been added.',
+                        type: 'room',
+                        action: 'success',
+                        showCancel: false,
+                        confirmText: 'OK'
+                      });
+                    }, 100);
                   } else {
                     logger.log('Room created and product added successfully.');
                   }
@@ -855,7 +857,7 @@ class RoomManager {
                   if (error && error.data && error.data.duplicate) {
                     // Still show the estimates list with the newly created room
                     if (this.modalManager.estimateManager) {
-                      this.modalManager.estimateManager.showEstimatesList(newRoom.room_id, estimateId);
+                      this.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.room_id);
                     }
                     this.modalManager.hideLoading();
                     return; // Dialog for duplicate already shown, just return
@@ -872,20 +874,21 @@ class RoomManager {
 
               // First show the estimates list with the newly created room expanded
               if (this.modalManager.estimateManager) {
-                this.modalManager.estimateManager.showEstimatesList(newRoom.id, estimateId);
+                this.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.id);
               }
               
-              // Still show success for room creation using ConfirmationDialog
+              // Then show a confirmation dialog using ConfirmationDialog (with slight delay to allow UI to render)
               if (this.modalManager && this.modalManager.confirmationDialog) {
-                this.modalManager.confirmationDialog.show({
-                  title: 'Room Created',
-                  message: 'The room has been created.',
-                  type: 'room',
-                  action: 'success',
-                  showCancel: false,
-                  confirmText: 'OK'
-                  // No closeModal action needed as the estimates list is already displayed
-                });
+                setTimeout(() => {
+                  this.modalManager.confirmationDialog.show({
+                    title: 'Room Created',
+                    message: 'The room has been created.',
+                    type: 'room',
+                    action: 'success',
+                    showCancel: false,
+                    confirmText: 'OK'
+                  });
+                }, 100);
               } else {
                 logger.log('Room created successfully.');
               }
@@ -894,11 +897,27 @@ class RoomManager {
             // No product ID, just show success message
             this.modalManager.hideLoading();
 
-            // Switch view to show the estimate with the new room expanded
+            // First, switch view to show the estimate with the new room expanded
             if (this.modalManager.estimateManager) {
-              this.modalManager.estimateManager.showEstimatesList(newRoom.id, estimateId);
+              this.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.id);
+              
+              // Then show a confirmation dialog
+              if (this.modalManager && this.modalManager.confirmationDialog) {
+                setTimeout(() => {
+                  this.modalManager.confirmationDialog.show({
+                    title: 'Room Created',
+                    message: 'The room has been created.',
+                    type: 'room',
+                    action: 'success',
+                    showCancel: false,
+                    confirmText: 'OK'
+                  });
+                }, 100);
+              } else {
+                logger.log('Room created successfully.');
+              }
             } else {
-              // Show success message using ConfirmationDialog and close
+              // No estimate manager, show message and close
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 this.modalManager.confirmationDialog.show({
                   title: 'Room Created',
@@ -938,8 +957,23 @@ class RoomManager {
       cancelButton._clickHandler = (e) => {
         e.preventDefault();
 
-        // Go back to room selection
-        this.showRoomSelectionForm(estimateId, productId);
+        // Go back to estimate selection if we have a product ID,
+        // otherwise go to the estimates list view
+        if (productId) {
+          // If we're adding a product, go back to estimate selection
+          if (this.modalManager.estimateManager) {
+            this.modalManager.estimateManager.showEstimateSelection(productId);
+          } else {
+            this.modalManager.closeModal();
+          }
+        } else {
+          // If we're just creating a room, go back to the estimates list
+          if (this.modalManager.estimateManager) {
+            this.modalManager.estimateManager.showEstimatesList();
+          } else {
+            this.modalManager.closeModal();
+          }
+        }
       };
 
       cancelButton.addEventListener('click', cancelButton._clickHandler);
@@ -955,8 +989,22 @@ class RoomManager {
       backButton._clickHandler = (e) => {
         e.preventDefault();
 
-        // Go back to room selection
-        this.showRoomSelectionForm(estimateId, productId);
+        // Same behavior as cancel button
+        if (productId) {
+          // If we're adding a product, go back to estimate selection
+          if (this.modalManager.estimateManager) {
+            this.modalManager.estimateManager.showEstimateSelection(productId);
+          } else {
+            this.modalManager.closeModal();
+          }
+        } else {
+          // If we're just creating a room, go back to the estimates list
+          if (this.modalManager.estimateManager) {
+            this.modalManager.estimateManager.showEstimatesList();
+          } else {
+            this.modalManager.closeModal();
+          }
+        }
       };
 
       backButton.addEventListener('click', backButton._clickHandler);
@@ -1027,8 +1075,14 @@ class RoomManager {
         }
         
         if (roomElement) {
+          // Remove the room element
           roomElement.remove();
           logger.log('Room element removed from DOM');
+          
+          // Instead of checking DOM right away, check localStorage
+          // The element was just removed, so we'll rely on the getEstimate call below
+          // to handle showing the empty state if there are no more rooms
+          logger.log('Room element removed. Will check localStorage for remaining rooms.');
         } else {
           logger.warn(`Room element not found for removal with ID ${roomId}`);
           
@@ -1039,29 +1093,35 @@ class RoomManager {
           }
         }
 
-        // Update estimate totals
+        // Update estimate totals and check for empty state
         this.dataService.getEstimate(estimateId)
           .then(estimate => {
-            // Update the estimate total in the UI
+            // Check if any rooms remain in the estimate (using storage data)
+            const hasRoomsInStorage = estimate && estimate.rooms && Object.keys(estimate.rooms).length > 0;
+            
+            // Find the estimate item and rooms container
             const estimateItem = document.querySelector(`.estimate-item[data-estimate-id="${estimateId}"]`);
             if (estimateItem) {
+              // Update the estimate total
               const totalElement = estimateItem.querySelector('.estimate-total-value');
               if (totalElement) {
                 totalElement.textContent = format.currency(estimate.total || 0);
               }
               
-              // Check if we need to show the empty rooms template
+              // Find the rooms container
               const roomsContainer = estimateItem.querySelector('.estimate-rooms-container');
               if (roomsContainer) {
-                // Check if there are any room items (room-item or accordion-item classes)
-                const remainingRooms = roomsContainer.querySelectorAll('.room-item, .accordion-item');
+                // Check if there are any room elements in the DOM
+                const roomElementsInDOM = roomsContainer.querySelectorAll('.room-item, .accordion-item');
+                const hasRoomsInDOM = roomElementsInDOM.length > 0;
                 
-                // If there are no remaining rooms or estimate has no rooms, show empty state
-                if (remainingRooms.length === 0 || !estimate.rooms || Object.keys(estimate.rooms).length === 0) {
-                  logger.log('No rooms remaining in estimate, showing empty rooms template');
-                  // Clear any existing content
+                // If no rooms in storage OR no room elements in DOM, show empty template
+                if (!hasRoomsInStorage || !hasRoomsInDOM) {
+                  logger.log('No rooms remaining in estimate, showing empty rooms template', 
+                    { hasRoomsInStorage, roomCountInDOM: roomElementsInDOM.length });
+                  
+                  // Clear existing content and show empty template
                   roomsContainer.innerHTML = '';
-                  // Insert the empty rooms template
                   TemplateEngine.insert('rooms-empty-template', {}, roomsContainer);
                 }
               }

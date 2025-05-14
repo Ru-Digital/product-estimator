@@ -206,9 +206,9 @@ class CustomerDetails {
         $errors = new \WP_Error();
 
         // Postcode is required for this plugin's logic usually
-        if (empty($form_data['customer_postcode'])) {
-            $errors->add('missing_postcode', __('Your postcode is required', 'product-estimator'));
-        }
+//        if (empty($form_data['customer_postcode'])) {
+//            $errors->add('missing_postcode', __('Your postcode is required', 'product-estimator'));
+//        }
 
         // Validate email if provided and not empty
         // It's not strictly required by all plugin functions, but if given, it must be valid.

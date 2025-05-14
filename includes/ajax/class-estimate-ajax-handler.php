@@ -162,8 +162,17 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
                 $pricing_rules = get_option('product_estimator_pricing_rules');
                 $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
 
-                // Create new estimate data
+                // Get client-provided UUID if available
+                $client_uuid = isset($_POST['estimate_uuid']) ? sanitize_text_field($_POST['estimate_uuid']) : null;
+                
+                if (empty($client_uuid)) {
+                    wp_send_json_error(['message' => __('Estimate UUID is required', 'product-estimator')]);
+                    return;
+                }
+
+                // Create new estimate data with the client UUID
                 $estimate_data = [
+                    'id' => $client_uuid, // Include the UUID from the client
                     'name' => sanitize_text_field($form_data['estimate_name']),
                     'created_at' => current_time('mysql'),
                     'rooms' => [],
@@ -174,6 +183,11 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
                 $session = SessionHandler::getInstance();
 
                 $estimate_id = $session->addEstimate($estimate_data);
+                
+                if (!$estimate_id) {
+                    wp_send_json_error(['message' => __('Failed to create estimate', 'product-estimator')]);
+                    return;
+                }
 
                 wp_send_json_success([
                     'message' => __('Estimate created successfully (fallback mode)', 'product-estimator'),
@@ -208,8 +222,17 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
             $pricing_rules = get_option('product_estimator_pricing_rules');
             $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
 
-            // Create new estimate data
+            // Get client-provided UUID if available
+            $client_uuid = isset($_POST['estimate_uuid']) ? sanitize_text_field($_POST['estimate_uuid']) : null;
+            
+            if (empty($client_uuid)) {
+                wp_send_json_error(['message' => __('Estimate UUID is required', 'product-estimator')]);
+                return;
+            }
+            
+            // Create new estimate data with the client UUID as the ID
             $estimate_data = [
+                'id' => $client_uuid, // Include the UUID from the client
                 'name' => sanitize_text_field($form_data['estimate_name']),
                 'created_at' => current_time('mysql'),
                 'rooms' => [],
@@ -223,7 +246,7 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
 
             $estimate_id = $session->addEstimate($estimate_data);
 
-            if (!$estimate_id && $estimate_id !== '0') { // Check for both false and non-zero values
+            if (!$estimate_id) { // No need to check for '0' as we're using UUIDs now
                 wp_send_json_error(['message' => __('Failed to create estimate', 'product-estimator')]);
                 return;
             }

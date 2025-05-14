@@ -328,7 +328,28 @@ class AjaxService {
    * @returns {Promise<object>} - Promise resolving to result data
    */
   removeRoom(data) {
-    return this._request('remove_room', data)
+    // Debug the data before making the request
+    logger.log('removeRoom data before request:', data);
+    
+    // Ensure estimate_id and room_id are valid strings, not undefined or empty
+    if (!data.estimate_id || data.estimate_id === 'undefined' || data.estimate_id === '') {
+      logger.error('Invalid estimate_id in removeRoom request:', data.estimate_id);
+      return Promise.reject(new Error('Invalid estimate ID for room removal'));
+    }
+    
+    if (!data.room_id || data.room_id === 'undefined' || data.room_id === '') {
+      logger.error('Invalid room_id in removeRoom request:', data.room_id);
+      return Promise.reject(new Error('Invalid room ID for room removal'));
+    }
+    
+    // Force to string for consistency
+    const requestData = {
+      ...data,
+      estimate_id: String(data.estimate_id),
+      room_id: String(data.room_id)
+    };
+    
+    return this._request('remove_room', requestData)
       .then(response => {
         // Invalidate relevant caches since we've modified data
         this.invalidateCache('rooms');
@@ -343,7 +364,22 @@ class AjaxService {
    * @returns {Promise<object>} - Promise resolving to result data
    */
   removeEstimate(data) {
-    return this._request('remove_estimate', data)
+    // Debug the data before making the request
+    logger.log('removeEstimate data before request:', data);
+    
+    // Ensure estimate_id is a valid string, not undefined or empty
+    if (!data.estimate_id || data.estimate_id === 'undefined' || data.estimate_id === '') {
+      logger.error('Invalid estimate_id in removeEstimate request:', data.estimate_id);
+      return Promise.reject(new Error('Invalid estimate ID for estimate removal'));
+    }
+    
+    // Force to string for consistency
+    const requestData = {
+      ...data,
+      estimate_id: String(data.estimate_id)
+    };
+    
+    return this._request('remove_estimate', requestData)
       .then(response => {
         // Invalidate all caches since this is a major change
         this.invalidateCache();

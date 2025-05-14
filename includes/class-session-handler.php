@@ -113,7 +113,7 @@ class SessionHandler {
     /**
      * Add a new estimate
      *
-     * @param array $data Estimate data
+     * @param array $data Estimate data (must include 'id' field)
      * @return string|false New estimate ID or false on failure
      */
     public function addEstimate($data) {
@@ -125,24 +125,32 @@ class SessionHandler {
             $data['rooms'] = [];
         }
 
-        // Ensure estimates array exists (double-check, though ensureSessionStarted should handle the top level)
+        // Ensure estimates array exists
         if (!isset($this->session_data_ref['estimates']) || !is_array($this->session_data_ref['estimates'])) {
             $this->session_data_ref['estimates'] = [];
         }
 
-        $new_id = count($this->session_data_ref['estimates']) > 0
-            ? (string)(max(array_map('intval', array_keys($this->session_data_ref['estimates']))) + 1)
-            : '0';
+        // Require that the data includes an ID field
+        if (!isset($data['id']) || empty($data['id'])) {
+            error_log("SessionHandler: Failed to add estimate - 'id' field must be provided in estimate data");
+            return false;
+        }
 
-        $this->session_data_ref['estimates'][$new_id] = $data;
-        return $new_id;
+        $estimate_id = $data['id'];
+        $this->session_data_ref['estimates'][$estimate_id] = $data;
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("SessionHandler: Added estimate with ID: {$estimate_id}");
+        }
+        
+        return $estimate_id;
     }
 
     /**
      * Add a room to an estimate
      *
      * @param string|int $estimate_id Estimate ID
-     * @param array $room_data Room data
+     * @param array $room_data Room data (must include 'id' field)
      * @return string|false New room ID or false on failure
      */
     public function addRoom($estimate_id, $room_data) {
@@ -161,17 +169,25 @@ class SessionHandler {
             $this->session_data_ref['estimates'][$estimate_id_str]['rooms'] = [];
         }
 
-        $rooms = $this->session_data_ref['estimates'][$estimate_id_str]['rooms'];
-        $new_room_id = count($rooms) > 0
-            ? (string)(max(array_map('intval', array_keys($rooms))) + 1)
-            : '0';
+        // Require that the room data includes an ID field
+        if (!isset($room_data['id']) || empty($room_data['id'])) {
+            error_log("SessionHandler: Failed to add room - 'id' field must be provided in room data");
+            return false;
+        }
+
+        $room_id = $room_data['id'];
 
         if (!isset($room_data['products']) || !is_array($room_data['products'])) {
             $room_data['products'] = [];
         }
 
-        $this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$new_room_id] = $room_data;
-        return $new_room_id;
+        $this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id] = $room_data;
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("SessionHandler: Added room with ID: {$room_id} to estimate {$estimate_id_str}");
+        }
+        
+        return $room_id;
     }
 
     /**
@@ -179,7 +195,7 @@ class SessionHandler {
      *
      * @param string|int $estimate_id Estimate ID
      * @param string|int $room_id Room ID
-     * @param array $product_data Product data
+     * @param array $product_data Product data (must include 'id' field)
      * @return bool Success
      */
     public function addProductToRoom($estimate_id, $room_id, $product_data) {
@@ -200,12 +216,62 @@ class SessionHandler {
             return false;
         }
 
-        if (!isset($this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products']) || !is_array($this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products'])) {
+        // Require that the product data includes an ID field
+        if (!isset($product_data['id']) || empty($product_data['id'])) {
+            error_log("SessionHandler: Failed to add product - 'id' field must be provided in product data");
+            return false;
+        }
+        
+        $product_id = (string)$product_data['id'];
+
+        // Initialize products as an object if it doesn't exist or is not an array
+        if (!isset($this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products']) 
+            || !is_array($this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products'])) {
             $this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products'] = [];
         }
 
-        $this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products'][] = $product_data;
+        // Convert products array to object with product IDs as keys if it's still a sequential array
+        $room = &$this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str];
+        
+        // Check if we should convert products from indexed array to object with IDs as keys
+        if (isset($room['products']) && is_array($room['products']) && $this->isSequentialArray($room['products'])) {
+            $productsObject = [];
+            foreach ($room['products'] as $existingProduct) {
+                if (isset($existingProduct['id'])) {
+                    $productsObject[(string)$existingProduct['id']] = $existingProduct;
+                }
+            }
+            $room['products'] = $productsObject;
+        }
+
+        // Add the product using its ID as the key
+        $room['products'][$product_id] = $product_data;
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("SessionHandler: Added product with ID: {$product_id} to room {$room_id_str} in estimate {$estimate_id_str}");
+        }
+        
         return true;
+    }
+    
+    /**
+     * Check if an array is a sequential array (numeric keys starting from 0)
+     * 
+     * @param array $array The array to check
+     * @return bool True if the array is sequential, false otherwise
+     */
+    private function isSequentialArray($array) {
+        if (!is_array($array)) {
+            return false;
+        }
+        
+        // Empty arrays are considered sequential
+        if (empty($array)) {
+            return true;
+        }
+        
+        // Check if all keys are numeric and sequential
+        return array_keys($array) === range(0, count($array) - 1);
     }
 
     /**
@@ -273,10 +339,11 @@ class SessionHandler {
      *
      * @param string|int $estimate_id Estimate ID
      * @param string|int $room_id Room ID
-     * @param int $product_index Index of the product in the products array
+     * @param int $product_index Product index (for backward compatibility)
+     * @param string|null $product_id Product ID to remove (preferred method)
      * @return bool Success
      */
-    public function removeProductFromRoom($estimate_id, $room_id, $product_index) {
+    public function removeProductFromRoom($estimate_id, $room_id, $product_index, $product_id = null) {
         if (!$this->ensureSessionStarted()) {
             return false;
         }
@@ -284,13 +351,69 @@ class SessionHandler {
         $estimate_id_str = (string)$estimate_id;
         $room_id_str = (string)$room_id;
 
-        if (!isset($this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products'][$product_index])) {
-            error_log("Product Estimator: Product index {$product_index} not found in room {$room_id_str}, estimate {$estimate_id_str}.");
+        // Ensure we have access to the room
+        if (!isset($this->session_data_ref['estimates'][$estimate_id_str]) || 
+            !isset($this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str])) {
+            error_log("Product Estimator: Estimate {$estimate_id_str} or Room {$room_id_str} not found when removing product.");
             return false;
         }
 
-        array_splice($this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str]['products'], $product_index, 1);
-        return true;
+        $room = &$this->session_data_ref['estimates'][$estimate_id_str]['rooms'][$room_id_str];
+        
+        // If products array is not set or empty, there's nothing to remove
+        if (!isset($room['products']) || empty($room['products'])) {
+            error_log("Product Estimator: No products found in room {$room_id_str}, estimate {$estimate_id_str}.");
+            return false;
+        }
+        
+        // Check if we need to convert products from indexed array to object with IDs as keys
+        if (is_array($room['products']) && $this->isSequentialArray($room['products'])) {
+            $productsObject = [];
+            foreach ($room['products'] as $index => $existingProduct) {
+                if (isset($existingProduct['id'])) {
+                    $productsObject[(string)$existingProduct['id']] = $existingProduct;
+                }
+            }
+            $room['products'] = $productsObject;
+            
+            // If we were looking for a product by index, get its ID
+            if ($product_id === null && isset($room['products'][$product_index])) {
+                $product_id = $room['products'][$product_index]['id'];
+            }
+        }
+        
+        // If product_id is provided, use it (preferred method)
+        if ($product_id !== null) {
+            $product_id_str = (string)$product_id;
+            
+            if (isset($room['products'][$product_id_str])) {
+                unset($room['products'][$product_id_str]);
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("SessionHandler: Removed product with ID: {$product_id_str} from room {$room_id_str} in estimate {$estimate_id_str}");
+                }
+                return true;
+            } else {
+                error_log("Product Estimator: Product ID {$product_id_str} not found in room {$room_id_str}, estimate {$estimate_id_str}.");
+                return false;
+            }
+        }
+        // Backward compatibility: If no product_id but we have a numeric index and products is still an indexed array
+        else if (is_int($product_index) && is_array($room['products']) && $this->isSequentialArray($room['products'])) {
+            if (isset($room['products'][$product_index])) {
+                array_splice($room['products'], $product_index, 1);
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("SessionHandler: Removed product at index: {$product_index} from room {$room_id_str} in estimate {$estimate_id_str} (legacy method)");
+                }
+                return true;
+            } else {
+                error_log("Product Estimator: Product index {$product_index} not found in room {$room_id_str}, estimate {$estimate_id_str}.");
+                return false;
+            }
+        }
+        
+        // If we get here, we couldn't find a way to remove the product
+        error_log("Product Estimator: Unable to remove product - no valid ID or index provided. Room {$room_id_str}, Estimate {$estimate_id_str}.");
+        return false;
     }
 
     /**

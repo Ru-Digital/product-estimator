@@ -12,6 +12,90 @@ The modal system is being refactored to use proper HTML templates via the Templa
 
 This repository contains the Product Estimator plugin for WordPress/WooCommerce - a tool that allows customers to create product estimates. The plugin provides an interface for users to select products, add them to rooms in an estimate, and save/share the estimate.
 
+## ID Management Architecture
+
+The Product Estimator uses a UUID-based ID system for consistency across client storage, server sessions, and database persistence:
+
+### UUID Architecture
+
+- **UUID Generation**: Uses the `uuid` NPM package to generate RFC4122 version 4 UUIDs
+- **Consistent Identifiers**: Same UUID used throughout the entire lifecycle of an entity
+- **ID Format**: `entity_type_uuid` (e.g., `estimate_123e4567-e89b-12d3-a456-426614174000`)
+- **Benefits**: 
+  - No ID translation/mapping between client and server
+  - IDs can be generated client-side with guaranteed uniqueness
+  - Enhanced security (non-sequential, non-predictable)
+  - Support for offline functionality and later synchronization
+
+### ID Types and Usages
+
+- **Estimates**: Uses UUIDs prefixed with `estimate_` 
+  - Generated in EstimateStorage.js when creating new estimates
+  - Same ID persists from initial creation through database storage
+  
+- **Rooms**: Uses UUIDs prefixed with `room_`
+  - Generated in EstimateStorage.js when creating new rooms
+  - Consistent identifier across client-server communication
+
+- **Products**: Uses database integer IDs directly
+  - Product IDs come from WooCommerce/database and are preserved as-is
+  - No UUID transformation for products to maintain database referential integrity
+  - Product IDs are used as keys in object-based storage (see below)
+
+### Product Storage Architecture
+
+Products within rooms are stored using an object-based structure with product IDs as keys:
+
+- **Object-Based Storage**: `{ "6147": {...product data...}, "6148": {...product data...} }`
+- **Benefits**:
+  - O(1) lookup performance by product ID (vs. O(n) with array indices)
+  - Direct access to products without traversing arrays
+  - Avoids issues with array reindexing when removing products
+  - Simpler product removal logic using product IDs
+
+- **Legacy Array Format**: `[{id: 6147, ...}, {id: 6148, ...}]` 
+  - Supported for backward compatibility
+  - Convert to object structure on first modification
+  - Helper method `isSequentialArray()` to detect array format
+
+- **Implementation**:
+  - Both JavaScript and PHP implementations maintain object-based storage
+  - Conversion routines ensure consistent format during transition
+  - `SessionHandler.removeProductFromRoom()` supports both ID and index parameters
+
+### Client-Server ID Synchronization
+
+The client (JavaScript) is the source of truth for IDs:
+
+1. **UUID Generation**: UUIDs are always generated on the client-side in JavaScript.
+2. **Client to Server Flow**: 
+   - When creating an estimate/room in browser, a UUID is generated first
+   - This UUID is sent to the server via AJAX with `estimate_uuid` parameter
+   - Server requires this ID and uses it as the key in the PHP session data
+3. **Storage Consistency**:
+   - PHP `SessionHandler` class requires estimate data to include the `id` field
+   - Same ID is used as the array key and within the estimate data object
+   - This ensures consistent ID handling across client and server
+
+### Implementation Details
+
+- **ID Generation**: 
+  ```javascript
+  import { v4 as uuidv4 } from 'uuid';
+  
+  function generateUniqueId(prefix) {
+    const uuid = uuidv4();
+    return prefix ? `${prefix}_${uuid}` : uuid;
+  }
+  
+  // Example usage
+  const estimateId = generateUniqueId('estimate');
+  ```
+
+- **Storage Strategy**: IDs are generated once on creation and never change
+- **Database Storage**: Same UUIDs used as primary keys in database tables
+- **Client-Server Sync**: No translation mechanism needed; IDs are consistent
+
 ## Development Commands
 
 ### Build Commands

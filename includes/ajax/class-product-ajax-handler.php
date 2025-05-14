@@ -392,11 +392,11 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                             'min_price_total' => ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $related_pricing_data['min_price'] * $room_area : $related_pricing_data['min_price'],
                             'max_price_total' => ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $related_pricing_data['max_price'] * $room_area : $related_pricing_data['max_price'],
                         ];
-                        $product_data['additional_products'][] = $additional_product_entry;
+                        $product_data['additional_products'][$related_product_id] = $additional_product_entry;
                     }
                 }
                 foreach ($auto_add_notes_texts as $note_text) {
-                    $product_data['additional_notes'][] = ['id' => 'note_' . uniqid(), 'type' => 'note', 'note_text' => $note_text];
+                    $product_data['additional_notes']['note_' . uniqid()] = ['id' => 'note_' . uniqid(), 'type' => 'note', 'note_text' => $note_text];
                 }
 
                 // Generate room suggestions.

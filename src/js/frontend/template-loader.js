@@ -21,6 +21,7 @@ import roomsEmptyTemplate from '@templates/ui/rooms-empty.html';
 import productsEmptyTemplate from '@templates/ui/products-empty.html';
 import modalMessagesTemplate from '@templates/ui/modal-messages.html';
 import modalContainerTemplate from '@templates/ui/modal-container.html';
+import confirmationDialogTemplate from '@templates/ui/confirmation-dialog.html';
 
 import TemplateEngine from './TemplateEngine';
 const logger = createLogger('TemplateLoader');
@@ -43,7 +44,8 @@ const templates = {
   'rooms-empty-template': roomsEmptyTemplate,
   'products-empty-template': productsEmptyTemplate,
   'modal-messages-template': modalMessagesTemplate,
-  'modal-container-template': modalContainerTemplate
+  'modal-container-template': modalContainerTemplate,
+  'confirmation-dialog-template': confirmationDialogTemplate
 };
 
 /**

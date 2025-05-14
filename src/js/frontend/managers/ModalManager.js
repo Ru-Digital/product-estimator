@@ -258,17 +258,34 @@ class ModalManager {
     this.formManager = new FormManager(this.config, this.dataService, this);
     this.uiManager = new UIManager(this.config, this.dataService, this);
     
-    // Set up confirmation dialog - use the global instance if available, or create a new one
-    if (window.productEstimator && window.productEstimator.dialog) {
-      logger.log('Using global ConfirmationDialog instance');
-      this.confirmationDialog = window.productEstimator.dialog;
-    } else {
-      logger.log('Creating new ConfirmationDialog instance');
+    // Set up confirmation dialog - create a new instance explicitly
+    logger.log('Creating new ConfirmationDialog instance');
+    try {
+      // Force a new instance of the dialog
       this.confirmationDialog = new ConfirmationDialog();
-      // Make it available globally as well
-      if (window.productEstimator) {
-        window.productEstimator.dialog = this.confirmationDialog;
+      
+      // Make it available globally
+      if (!window.productEstimator) {
+        window.productEstimator = {};
       }
+      
+      window.productEstimator.dialog = this.confirmationDialog;
+      
+      // Force initialization if it wasn't already done
+      if (!this.confirmationDialog.initialized) {
+        this.confirmationDialog.init();
+      }
+      
+      logger.log('ConfirmationDialog instance created successfully and initialized');
+    } catch (error) {
+      logger.error('Error creating ConfirmationDialog:', error);
+    }
+    
+    // Verify dialog instance was created properly
+    if (this.confirmationDialog && this.confirmationDialog.dialog) {
+      logger.log('ConfirmationDialog instance ready for use, dialog element exists:', this.confirmationDialog.dialog);
+    } else {
+      logger.error('ConfirmationDialog failed to initialize properly or dialog element is missing');
     }
     
     // Initialize each manager

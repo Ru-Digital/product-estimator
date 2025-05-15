@@ -86,7 +86,9 @@ class FormManager {
 
       // Validate the form
       if (!this.validateForm(formElement)) {
-        return;
+        logger.log('Form validation failed - stopping form submission');
+        e.stopPropagation(); // Ensure event doesn't propagate
+        return false; // Explicit false return to stop submission
       }
 
       // Show loading
@@ -230,7 +232,9 @@ class FormManager {
 
       // Validate the form
       if (!this.validateForm(formElement)) {
-        return;
+        logger.log('Form validation failed - stopping form submission');
+        e.stopPropagation(); // Ensure event doesn't propagate
+        return false; // Explicit false return to stop submission
       }
 
       // Show loading
@@ -470,9 +474,32 @@ class FormManager {
     requiredFields.forEach(field => {
       if (!field.value.trim()) {
         this.showError(form, `${field.name} is required.`, field);
+        
+        // Explicitly ensure the value is empty to make sure our validation is triggered
+        field.value = '';  
+        
+        // Set validation custom property on the field
+        field.dataset.validationFailed = 'true';
+        
         isValid = false;
       }
     });
+
+    // If form is not valid, ensure no storage operations happen
+    if (!isValid) {
+      logger.log('Form validation failed - form has errors');
+      
+      // Set a flag on the form to indicate validation failure
+      form.dataset.validationFailed = 'true';
+      
+      // Prevent default browser form submission
+      if (form.hasAttribute('data-submitting')) {
+        form.removeAttribute('data-submitting');
+      }
+    } else {
+      // Form is valid - remove the failure flag
+      form.removeAttribute('data-validation-failed');
+    }
 
     // Additional validation logic based on form type could be added here
 

@@ -509,12 +509,19 @@ class TemplateEngine {
         // Clear any previous items first
         includesItems.innerHTML = '';
 
+        // Handle both array and object formats of additional_products
+        let productsArray = [];
+        
+        if (Array.isArray(data.additional_products)) {
+          // Format is already an array
+          productsArray = data.additional_products;
+        } else if (typeof data.additional_products === 'object') {
+          // Format is an object with keys, convert to array
+          productsArray = Object.values(data.additional_products);
+        }
+
         // Filter for valid additional products
-        const validProducts = Array.isArray(data.additional_products) ?
-          data.additional_products.filter(product => product && product.id) :
-          [];
-
-
+        const validProducts = productsArray.filter(product => product && product.id);
 
         if (validProducts.length > 0) {
           // Ensure includes container is visible
@@ -523,8 +530,6 @@ class TemplateEngine {
 
           // Render each additional product
           validProducts.forEach(product => {
-
-
             // Use template to create include item
             if (this.getTemplate('include-item-template')) {
               // Create data object for the include item
@@ -538,7 +543,6 @@ class TemplateEngine {
                 includeItemData.include_item_total_price =
                   format.formatPrice(product.min_price_total) + ' - ' + format.formatPrice(product.max_price_total);
                 product.total_price =  format.formatPrice(product.min_price_total) + ' - ' + format.formatPrice(product.max_price_total);
-
               }
 
               logger.log("include item product:: ", product);

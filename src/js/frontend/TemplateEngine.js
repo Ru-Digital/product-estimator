@@ -578,8 +578,8 @@ class TemplateEngine {
       }
     }
 
-    // Handle additional notes - THIS IS YOUR EXISTING CODE
-    if (data.additional_notes && Array.isArray(data.additional_notes)) {
+    // Handle additional notes
+    if (data.additional_notes) {
       const notesContainer = element.querySelector('.notes-container');
       const notesItems = element.querySelector('.product-notes-items');
 
@@ -587,8 +587,19 @@ class TemplateEngine {
         // Clear any previous notes first
         notesItems.innerHTML = '';
 
+        // Handle both array and object formats of additional_notes
+        let notesArray = [];
+        
+        if (Array.isArray(data.additional_notes)) {
+          // Format is already an array
+          notesArray = data.additional_notes;
+        } else if (typeof data.additional_notes === 'object') {
+          // Format is an object with keys, convert to array
+          notesArray = Object.values(data.additional_notes);
+        }
+
         // Filter out empty notes
-        const validNotes = data.additional_notes.filter(note => {
+        const validNotes = notesArray.filter(note => {
           // Check if the note has text content
           return note && (note.note_text || note.text) &&
             (note.note_text || note.text).trim() !== '';

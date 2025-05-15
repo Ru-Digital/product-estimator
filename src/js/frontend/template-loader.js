@@ -4,31 +4,55 @@
  * Imports all HTML templates and registers them with the template engine
  */
 import { createLogger } from '@utils';
-import productItemTemplate from '@templates/components/product-item.html';
-import roomItemTemplate from '@templates/components/room-item.html';
-import estimateItemTemplate from '@templates/components/estimate-item.html';
-import suggestionItemTemplate from '@templates/components/suggestion-item.html';
-import noteItemTemplate from '@templates/components/note-item.html';
-import includeItemTemplate from '@templates/components/include-item.html';
-import similarItemTemplate from '@templates/components/similar-item.html';
-import productUpgradeItemTemplate from '@templates/components/product-upgrade-item.html';
-import selectOptionTemplate from '@templates/components/select-option.html';
-import loadingPlaceholderTemplate from '@templates/components/loading-placeholder.html';
-import roomActionsFooterTemplate from '@templates/components/room-actions-footer.html';
-import roomsContainerTemplate from '@templates/components/rooms-container.html';
-import newEstimateFormTemplate from '@templates/forms/new-estimate-form.html';
-import newRoomFormTemplate from '@templates/forms/new-room-form.html';
-import roomSelectionFormTemplate from '@templates/forms/room-selection-form.html';
-import estimateSelectionTemplate from '@templates/forms/estimate-selection.html';
-import estimatesEmptyTemplate from '@templates/ui/estimates-empty.html';
-import roomsEmptyTemplate from '@templates/ui/rooms-empty.html';
-import productsEmptyTemplate from '@templates/ui/products-empty.html';
-import roomErrorTemplate from '@templates/ui/room-error.html';
-import productErrorTemplate from '@templates/ui/product-error.html';
-import formErrorTemplate from '@templates/ui/form-error.html';
-import modalMessagesTemplate from '@templates/ui/modal-messages.html';
-import modalContainerTemplate from '@templates/ui/modal-container.html';
-import confirmationDialogTemplate from '@templates/ui/confirmation-dialog.html';
+
+// Component Templates
+// Product Components
+import productItemTemplate from '@templates/components/product/product-item.html';
+import includeItemTemplate from '@templates/components/product/include-item.html';
+import noteItemTemplate from '@templates/components/product/note-item.html';
+import upgradeItemTemplate from '@templates/components/product/upgrade-item.html';
+import similarItemTemplate from '@templates/components/product/similar-item.html';
+import suggestionItemTemplate from '@templates/components/product/suggestion-item.html';
+
+// Room Components
+import roomItemTemplate from '@templates/components/room/room-item.html';
+import roomsContainerTemplate from '@templates/components/room/rooms-container.html';
+import roomActionsFooterTemplate from '@templates/components/room/actions-footer.html';
+
+// Estimate Components
+import estimateItemTemplate from '@templates/components/estimate/estimate-item.html';
+
+// Common Components
+import loadingPlaceholderTemplate from '@templates/components/common/loading.html';
+import selectOptionTemplate from '@templates/components/common/select-option.html';
+import toggleButtonHideTemplate from '@templates/components/common/toggle/hide.html';
+import toggleButtonShowTemplate from '@templates/components/common/toggle/show.html';
+
+// Form Templates
+import newEstimateFormTemplate from '@templates/forms/estimate/new-estimate.html';
+import estimateSelectionTemplate from '@templates/forms/estimate/estimate-selection.html';
+import newRoomFormTemplate from '@templates/forms/room/new-room.html';
+import roomSelectionFormTemplate from '@templates/forms/room/room-selection.html';
+
+// Layout Templates
+import modalContainerTemplate from '@templates/layout/modal-container.html';
+
+// UI Templates
+// Dialog Templates
+import confirmationDialogTemplate from '@templates/ui/dialogs/confirmation.html';
+
+// Empty State Templates
+import estimatesEmptyTemplate from '@templates/ui/empty-states/estimates-empty.html';
+import roomsEmptyTemplate from '@templates/ui/empty-states/rooms-empty.html';
+import productsEmptyTemplate from '@templates/ui/empty-states/products-empty.html';
+
+// Error Templates
+import roomErrorTemplate from '@templates/ui/errors/room-error.html';
+import productErrorTemplate from '@templates/ui/errors/product-error.html';
+import formErrorTemplate from '@templates/ui/errors/form-error.html';
+
+// Message Templates
+import modalMessagesTemplate from '@templates/ui/messages/modal-messages.html';
 
 import TemplateEngine from './TemplateEngine';
 const logger = createLogger('TemplateLoader');
@@ -42,7 +66,7 @@ const templates = {
   'note-item-template': noteItemTemplate,
   'include-item-template': includeItemTemplate,
   'similar-product-item-template': similarItemTemplate,
-  'product-upgrade-item-template': productUpgradeItemTemplate,
+  'product-upgrade-item-template': upgradeItemTemplate,
   'select-option-template': selectOptionTemplate,
   'loading-placeholder-template': loadingPlaceholderTemplate,
   'room-actions-footer-template': roomActionsFooterTemplate,
@@ -59,7 +83,9 @@ const templates = {
   'form-error-template': formErrorTemplate,
   'modal-messages-template': modalMessagesTemplate,
   'modal-container-template': modalContainerTemplate,
-  'confirmation-dialog-template': confirmationDialogTemplate
+  'confirmation-dialog-template': confirmationDialogTemplate,
+  'toggle-button-hide-template': toggleButtonHideTemplate,
+  'toggle-button-show-template': toggleButtonShowTemplate
 };
 
 /**

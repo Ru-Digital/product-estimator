@@ -7,6 +7,9 @@
 > eslint 'src/js/**/*.js'
 
 
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/TemplateEngine-enhanced.js
+  407:42  warning  Unnecessary escape character: \/  no-useless-escape
+
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/EstimateManager.js
    11:10  warning  'format' is defined but never used                     no-unused-vars
    13:10  warning  'loadEstimateData' is defined but never used           no-unused-vars
@@ -43,6 +46,18 @@
   14:8   warning  Using exported name 'ProductDetailsToggle' as identifier for default import  import/no-named-as-default
   79:3   warning  Missing JSDoc @returns declaration                                           jsdoc/require-returns
 
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/template-loader.js
+   6:1  warning  There should be no empty line within import group  import/order
+  15:1  warning  There should be no empty line within import group  import/order
+  20:1  warning  There should be no empty line within import group  import/order
+  23:1  warning  There should be no empty line within import group  import/order
+  29:1  warning  There should be no empty line within import group  import/order
+  35:1  warning  There should be no empty line within import group  import/order
+  38:1  warning  There should be no empty line within import group  import/order
+  42:1  warning  There should be no empty line within import group  import/order
+  47:1  warning  There should be no empty line within import group  import/order
+  52:1  warning  There should be no empty line within import group  import/order
+
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/format.js
   36:1  warning  Missing JSDoc @returns declaration                 jsdoc/require-returns
   38:1  warning  Missing JSDoc @param "amount" description          jsdoc/require-param-description
@@ -52,7 +67,7 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-✖ 33 problems (0 errors, 33 warnings)
+✖ 44 problems (0 errors, 44 warnings)
 
 
 > product-estimator@1.3.0 lint:scss

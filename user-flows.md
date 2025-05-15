@@ -282,7 +282,7 @@
 
 ---
 
-## 3 · Blueprint for Automated E2E Tests
+## 3 · Automated E2E Tests
 
 Use **Gherkin/Cucumber** with Playwright.
 

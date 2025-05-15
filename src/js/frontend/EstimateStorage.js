@@ -32,34 +32,34 @@ export function loadEstimateData() {
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (storedData) {
       const data = JSON.parse(storedData);
-      
+
       // Handle the case where estimates is an array (from PHP session)
       if (data.estimates && Array.isArray(data.estimates)) {
         logger.log("loadEstimateData - Converting estimates array to object");
-        
+
         // Convert array to an object with array indices as keys
         const estimatesObject = {};
-        
+
         data.estimates.forEach((estimate, index) => {
           // Use array index as key if no ID is present
           const key = estimate.id || String(index);
-          
+
           // If it doesn't have an ID field, add one
           if (!estimate.id) {
             estimate.id = key;
           }
-          
+
           estimatesObject[key] = estimate;
         });
-        
+
         // Replace the array with the new object
         data.estimates = estimatesObject;
-        
+
         // Save back to localStorage
         saveEstimateData(data);
         logger.log("loadEstimateData - Converted array to object structure");
       }
-      
+
       logger.log("loadEstimateData - Data loaded:", data);
       return data;
     } else {
@@ -80,13 +80,7 @@ export function saveEstimateData(data) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (localStorageError) {
-    logger.warn('localStorage not available, using sessionStorage:', localStorageError);
-    try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (sessionStorageError) {
-      logger.error('sessionStorage not available:', sessionStorageError);
-      // If neither is available, details won't persist, but we can continue
-    }
+    logger.error('sessionStorage not available:', localStorageError);
   }
 }
 
@@ -97,12 +91,7 @@ export function clearEstimateData() {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (localStorageError) {
-    logger.warn('localStorage not available:', localStorageError);
-  }
-  try {
-    sessionStorage.removeItem(STORAGE_KEY);
-  } catch (sessionStorageError) {
-    logger.warn('sessionStorage not available:', sessionStorageError);
+    logger.warn('sessionStorage not available:', localStorageError);
   }
 }
 
@@ -149,7 +138,7 @@ export function addEstimate(estimateData) {
 
   // Generate a unique ID using UUID v4 or use the provided ID
   let estimateId;
-  
+
   // If the estimate data already has an ID field, use it
   if (estimateData.id) {
     estimateId = estimateData.id;
@@ -205,7 +194,7 @@ export function addRoom(estimateId, roomData) {
 
   // Generate a unique ID using UUID v4 or use the provided ID
   let roomId;
-  
+
   // If the room data already has an ID field, use it
   if (roomData.id) {
     roomId = roomData.id;
@@ -336,23 +325,56 @@ export function addProductToRoom(estimateId, roomId, productData) {
     // Initialize as empty object if not already an object
     room.products = {};
   }
-  
+
   // Ensure room.product_suggestions array exists (important for DataService flow)
   if (!Array.isArray(room.product_suggestions)) {
     room.product_suggestions = [];
   }
 
+  // Make sure productData is an object, not a string
+  let productDataObj = productData;
+
+  // If productData is a string, try to parse it into an object
+  if (typeof productData === 'string') {
+    try {
+      productDataObj = JSON.parse(productData);
+      logger.log('Converted product data from string to object');
+    } catch (e) {
+      logger.error('Failed to parse product data string:', e);
+      return false;
+    }
+  }
+
   // Check if product with the same ID already exists in the room's products object
-  if (room.products[productData.id]) {
-    logger.warn(` Product with ID ${productData.id} already exists in room ${roomId}. Aborting add to room.products.`);
+  if (room.products[productDataObj.id]) {
+    logger.warn(` Product with ID ${productDataObj.id} already exists in room ${roomId}. Aborting add to room.products.`);
     return false; // Indicate failure because product already exists
   }
 
   // Add product to room.products using product ID as key
-  room.products[productData.id] = productData;
+  room.products[productDataObj.id] = productDataObj;
+
+  // Debug logs to check the similar_products
+  if (productDataObj.similar_products) {
+    console.log('EstimateStorage: Product has similar_products before save:', productDataObj.similar_products);
+  } else {
+    console.log('EstimateStorage: Product has NO similar_products before save');
+  }
+
   saveEstimateData(storedData);
 
-  logger.log(` Product ${productData.id} added to room ${roomId}. products:`, room.products);
+  // Verify after save
+  const storedDataAfterSave = loadEstimateData();
+  const roomAfterSave = storedDataAfterSave.estimates?.[estimateId]?.rooms?.[roomId];
+  const productAfterSave = roomAfterSave?.products?.[productDataObj.id];
+
+  if (productAfterSave && productAfterSave.similar_products) {
+    console.log('EstimateStorage: Product has similar_products AFTER save:', productAfterSave.similar_products);
+  } else {
+    console.log('EstimateStorage: Product has NO similar_products AFTER save');
+  }
+
+  logger.log(` Product ${productDataObj.id} added to room ${roomId}. products:`, room.products);
   return true; // Indicate success
 }
 
@@ -378,7 +400,7 @@ export function removeProductFromRoom(estimateId, roomId, productIndex, productI
   }
 
   const room = storedData.estimates[estimateId].rooms[roomId];
-  
+
   // Convert room.products from array to object if needed (for backward compatibility)
   if (Array.isArray(room.products)) {
     // Convert existing array to object with product ID as key
@@ -453,7 +475,7 @@ export function replaceProductInRoom(estimateId, roomId, oldProductId, newProduc
   }
 
   const room = storedData.estimates[estimateId].rooms[roomId];
-  
+
   // Check if the room has products
   if (!room.products || typeof room.products !== 'object') {
     logger.warn("Room products not found or not an object.");
@@ -467,31 +489,31 @@ export function replaceProductInRoom(estimateId, roomId, oldProductId, newProduc
   // Handle replacement based on type
   if (replaceType === 'additional_products' && parentProductId !== null) {
     const parentProductIdStr = String(parentProductId);
-    
+
     // Get the parent product directly
     const parentProduct = room.products[parentProductIdStr];
-    
+
     if (!parentProduct) {
       logger.warn(`Parent product with ID ${parentProductIdStr} not found.`);
       return false;
     }
-    
+
     // Check if the parent product has additional products
     if (!parentProduct.additional_products || !Array.isArray(parentProduct.additional_products)) {
       logger.warn(`Parent product with ID ${parentProductIdStr} has no additional products.`);
       return false;
     }
-    
+
     // Find the additional product to replace
     for (let j = 0; j < parentProduct.additional_products.length; j++) {
       const addProduct = parentProduct.additional_products[j];
-      
+
       // Check if this is the product to replace
       if (addProduct.id == oldProductIdStr ||
           (addProduct.replacement_chain && addProduct.replacement_chain.includes(oldProductIdStr))) {
-        
+
         logger.log(`Found product to replace: ${oldProductIdStr} under parent ${parentProductIdStr}`);
-        
+
         // Handle replacement chain
         if (!addProduct.replacement_chain) {
           addProduct.replacement_chain = [];
@@ -500,37 +522,37 @@ export function replaceProductInRoom(estimateId, roomId, oldProductId, newProduc
           addProduct.replacement_chain.push(addProduct.id);
         }
         newProductData.replacement_chain = addProduct.replacement_chain;
-        
+
         // Replace the product
         room.products[parentProductIdStr].additional_products[j] = newProductData;
-        
+
         // Save and return
         saveEstimateData(storedData);
         return true;
       }
     }
-    
+
     logger.warn(`Additional product with ID ${oldProductIdStr} not found under parent ${parentProductIdStr}.`);
     return false;
-    
+
   } else if (replaceType === 'main') {
     // Check if the product exists
     if (!room.products[oldProductIdStr]) {
       logger.warn(`Main product with ID ${oldProductIdStr} not found in room.`);
       return false;
     }
-    
+
     // Remove the old product
     delete room.products[oldProductIdStr];
-    
+
     // Add the new product
     room.products[newProductIdStr] = newProductData;
-    
+
     // Save and return
     saveEstimateData(storedData);
     return true;
   }
-  
+
   logger.warn(`Invalid replaceType: ${replaceType}`);
   return false;
 }

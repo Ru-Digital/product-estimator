@@ -179,20 +179,20 @@ class DataService {
    */
   getEstimate(estimateId) {
     logger.log(`Getting estimate ${estimateId} from localStorage.`);
-    
+
     // Use the imported getEstimate function from EstimateStorage
     const estimate = getEstimate(estimateId);
-    
+
     if (estimate) {
       logger.log(`Found estimate ${estimateId} in localStorage.`);
     } else {
       logger.warn(`Estimate ${estimateId} not found in localStorage.`);
     }
-    
+
     // Return the estimate as a resolved promise to maintain API consistency
     return Promise.resolve(estimate);
   }
-  
+
   /**
    * Get rooms for a specific estimate by reading from localStorage.
    * Note: This function now relies on localStorage for its data source.
@@ -284,7 +284,7 @@ class DataService {
 
     // Get the products from the room
     const room = estimateData.estimates[estimateId].rooms[roomId];
-    
+
     // Convert products object to array for backward compatibility with consumers of this API
     let productsArray = [];
     if (room.products) {
@@ -337,7 +337,7 @@ class DataService {
       if (room.products) {
         const productIdStr = String(productId);
         // Check if product exists in the room's products object
-        if ((typeof room.products === 'object' && room.products[productIdStr]) || 
+        if ((typeof room.products === 'object' && room.products[productIdStr]) ||
             (Array.isArray(room.products) && room.products.find(product => String(product.id) === productIdStr))) {
           logger.warn(`DataService: Product ID ${productId} already exists in room ${roomId} locally. Aborting.`);
           return Promise.reject({
@@ -422,9 +422,12 @@ class DataService {
         const comprehensiveProductData = productDataResponse.product_data;
         let roomSuggestedProductsToStore = []; // Initialize to empty
 
-        // Ensure similar_products is an array, even if it's missing or null from backend
-        if (!Array.isArray(comprehensiveProductData.similar_products)) {
-          comprehensiveProductData.similar_products = [];
+        // Add debug logs to see what's happening with similar_products
+
+        // Keep similar_products in their original format (now that we've fixed the parser error)
+        // This allows object formatted similar_products to be preserved
+        if (!comprehensiveProductData.similar_products) {
+          comprehensiveProductData.similar_products = {};
         }
 
         if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
@@ -447,6 +450,8 @@ class DataService {
 
 
         try {
+          // Add debug log before passing to storage
+
           // Add the main product (with its similar_products) to the room's product list in localStorage
           const productAddedSuccess = addProductToRoomStorage(estimateId, roomId, comprehensiveProductData);
           if (productAddedSuccess) {
@@ -496,16 +501,16 @@ class DataService {
             // This is a critical error - show a visible error message to the user
             const errorMsg = localResult.error?.message || 'Critical error: Unable to add product to room.';
             logger.error('CRITICAL ERROR:', errorMsg);
-            
+
             // Just log for critical errors - we already returned the error to the UI via localStoragePromise
             return;
           }
-          
+
           // Non-critical error - just log
           logger.warn('Local storage update failed, skipping asynchronous server request for adding product to session.');
           return;
         }
-        
+
         // If successful, proceed with server sync in the background - completely detached from UI flow
         logger.log('DataService: Local storage update successful, sending asynchronous server request for adding product to session.');
         const requestData = {
@@ -570,13 +575,13 @@ class DataService {
     let futureRoomProductIds = [];
     const oldProductStringId = String(oldProductId);
     const newProductStringId = String(newProductId);
-    
+
     if (room && room.products) {
       if (typeof room.products === 'object' && !Array.isArray(room.products)) {
         // Object-based products
         // Get all product IDs as strings
         futureRoomProductIds = Object.keys(room.products);
-        
+
         // Remove the old product ID and add the new one
         if (futureRoomProductIds.includes(oldProductStringId)) {
           futureRoomProductIds = futureRoomProductIds.filter(id => id !== oldProductStringId);
@@ -795,7 +800,7 @@ class DataService {
 
     // Update request data to include the client-side UUID
     requestData.estimate_uuid = clientSideEstimateId;
-    
+
     // Make the AJAX request to the server asynchronously
     this.ajaxService.addNewEstimate(requestData)
       .then(serverData => {
@@ -925,7 +930,7 @@ class DataService {
       const productIdStr = String(productId);
       let productExists = false;
       let remainingProductIds = [];
-      
+
       if (typeof room.products === 'object' && !Array.isArray(room.products)) {
         // Object-based products
         productExists = !!room.products[productIdStr];
@@ -938,7 +943,7 @@ class DataService {
         const remainingProductObjects = room.products.filter(product => String(product.id) !== productIdStr);
         remainingProductIds = remainingProductObjects.map(p => p.id);
       }
-      
+
       if (!productExists) {
         // Log warning but proceed, as removeProductFromRoomStorage will ultimately determine local removal success.
         logger.log(`[removeProductFromRoom] Warning: Product with ID ${productId} not found in room ${roomId} (localStorage) before attempting removal logic.`);

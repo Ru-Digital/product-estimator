@@ -452,6 +452,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             }
 
             $similar_products_list = $this->fetch_and_format_similar_products($product_id, $room_area);
+
             $product_data['similar_products'] = $similar_products_list;
 
             wp_send_json_success([

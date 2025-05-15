@@ -321,6 +321,7 @@ class ProductManager {
       // Include additional product data if available
       additional_products: product.additional_products || [],
       additional_notes: product.additional_notes || [],
+      similar_products: product.similar_products || [],
     };
 
     logger.log('Product template data:', templateData);

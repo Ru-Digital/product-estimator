@@ -80,8 +80,7 @@ abstract class AjaxHandlerBase {
      * @param int $limit Maximum number of similar products to return.
      * @return array Array of similar product data.
      */
-    protected function fetch_and_format_similar_products($product_id, $room_area, $limit = 5)
-    {
+    protected function fetch_and_format_similar_products($product_id, $room_area, $limit = 5) {
         if (!$product_id) {
             return [];
         }
@@ -168,10 +167,10 @@ abstract class AjaxHandlerBase {
                     $current_similar_id_to_use, // Use the potentially updated ID (e.g., variation ID)
                     $room_area
                 );
-
+                $product_id = intval($current_similar_id_to_use);
                 // Prepare data for the frontend
-                $similar_products_data[] = [
-                    'id' => intval($current_similar_id_to_use),
+                $similar_products_data[$product_id] = [
+                    'id' => $product_id,
                     'name' => $product_obj->get_name(),
                     'min_price' => $price_data['min_price'], // Use total prices
                     'max_price' => $price_data['max_price'], // Use total prices
@@ -186,11 +185,13 @@ abstract class AjaxHandlerBase {
                     break;
                 }
             }
+
+
+
             return $similar_products_data;
 
         } catch (\Exception $e) {
             error_log('Exception in fetch_and_format_similar_products: ' . $e->getMessage());
             return [];
         }
-    }
-}
+    }}

@@ -644,6 +644,76 @@ class TemplateEngine {
         }
       }
     }
+    
+    // Handle similar products
+    if (data.similar_products) {
+      const similarProductsContainer = element.querySelector('.similar-products-container');
+      const similarProductsList = element.querySelector('.similar-products-list');
+      
+      if (similarProductsContainer && similarProductsList) {
+        // Clear any previous similar products first
+        similarProductsList.innerHTML = '';
+        
+        // Handle both array and object formats of similar_products
+        let productsArray = [];
+        
+        if (Array.isArray(data.similar_products)) {
+          // Format is already an array
+          productsArray = data.similar_products;
+        } else if (typeof data.similar_products === 'object') {
+          // Format is an object with keys, convert to array
+          productsArray = Object.values(data.similar_products);
+        }
+        
+        // Filter for valid similar products
+        const validProducts = productsArray.filter(product => product && product.id);
+        
+        if (validProducts.length > 0) {
+          // Add product ID to container for reference
+          similarProductsContainer.dataset.productId = data.id || data.product_id || '';
+          
+          // Show toggle button if it exists
+          const toggleButton = element.querySelector('.similar-products-toggle');
+          if (toggleButton) {
+            toggleButton.style.display = 'block';
+          }
+          
+          // Render each similar product
+          validProducts.forEach(product => {
+            if (this.getTemplate('similar-product-item-template')) {
+              // Create template data for the similar product
+              const similarProductData = {
+                id: product.id,
+                product_id: product.id,
+                name: product.name || 'Similar Product',
+                image: product.image || '',
+                min_price_total: product.min_price_total,
+                max_price_total: product.max_price_total,
+                pricing_method: product.pricing_method || 'sqm',
+                // Data attributes for the replace button
+                estimate_id: data.estimate_id || '',
+                room_id: data.room_id || '',
+                replace_product_id: data.id || data.product_id || ''
+              };
+              
+              logger.log('Rendering similar product with data:', similarProductData);
+              
+              // Create the similar product element from template
+              const similarFragment = this.create('similar-product-item-template', similarProductData);
+              
+              // Append the fragment to the similar products container
+              similarProductsList.appendChild(similarFragment);
+            }
+          });
+        } else {
+          // Hide the container and toggle if no valid similar products
+          const toggleButton = element.querySelector('.similar-products-toggle');
+          if (toggleButton) {
+            toggleButton.style.display = 'none';
+          }
+        }
+      }
+    }
 
     // --- ADDED: Explicitly set data-replace-product-id on the replace button ---
     if (data.replace_product_id !== undefined) {

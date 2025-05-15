@@ -148,19 +148,19 @@ class AjaxService {
     if (!data.product_id || data.product_id === 'null' || data.product_id === 'undefined' || data.product_id === '0') {
       return Promise.reject(new Error('Product ID is required'));
     }
-    
+
     // Ensure product_id is a string
     const productId = String(data.product_id);
     if (productId.trim() === '') {
       return Promise.reject(new Error('Product ID cannot be empty'));
     }
-    
+
     // Create a modified data object with validated product_id
     const validatedData = {
       ...data,
       product_id: productId
     };
-    
+
     // Create a cache key from the request data - use a simplified key based on product_id
     // We can't use the entire room_products array as part of the key as it's too complex
     const cacheKey = `data_${productId}_${validatedData.room_width || 0}_${validatedData.room_length || 0}`;
@@ -330,25 +330,25 @@ class AjaxService {
   removeRoom(data) {
     // Debug the data before making the request
     logger.log('removeRoom data before request:', data);
-    
+
     // Ensure estimate_id and room_id are valid strings, not undefined or empty
     if (!data.estimate_id || data.estimate_id === 'undefined' || data.estimate_id === '') {
       logger.error('Invalid estimate_id in removeRoom request:', data.estimate_id);
       return Promise.reject(new Error('Invalid estimate ID for room removal'));
     }
-    
+
     if (!data.room_id || data.room_id === 'undefined' || data.room_id === '') {
       logger.error('Invalid room_id in removeRoom request:', data.room_id);
       return Promise.reject(new Error('Invalid room ID for room removal'));
     }
-    
+
     // Force to string for consistency
     const requestData = {
       ...data,
       estimate_id: String(data.estimate_id),
       room_id: String(data.room_id)
     };
-    
+
     return this._request('remove_room', requestData)
       .then(response => {
         // Invalidate relevant caches since we've modified data
@@ -366,19 +366,19 @@ class AjaxService {
   removeEstimate(data) {
     // Debug the data before making the request
     logger.log('removeEstimate data before request:', data);
-    
+
     // Ensure estimate_id is a valid string, not undefined or empty
     if (!data.estimate_id || data.estimate_id === 'undefined' || data.estimate_id === '') {
       logger.error('Invalid estimate_id in removeEstimate request:', data.estimate_id);
       return Promise.reject(new Error('Invalid estimate ID for estimate removal'));
     }
-    
+
     // Force to string for consistency
     const requestData = {
       ...data,
       estimate_id: String(data.estimate_id)
     };
-    
+
     return this._request('remove_estimate', requestData)
       .then(response => {
         // Invalidate all caches since this is a major change

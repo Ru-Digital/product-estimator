@@ -7,6 +7,12 @@
 > eslint 'src/js/**/*.js'
 
 
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimateStorage.js
+  359:5  warning  Unexpected console statement  no-console
+  361:5  warning  Unexpected console statement  no-console
+  372:5  warning  Unexpected console statement  no-console
+  374:5  warning  Unexpected console statement  no-console
+
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/TemplateEngine-enhanced.js
   407:42  warning  Unnecessary escape character: \/  no-useless-escape
 
@@ -67,7 +73,7 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-✖ 44 problems (0 errors, 44 warnings)
+✖ 48 problems (0 errors, 48 warnings)
 
 
 > product-estimator@1.3.0 lint:scss

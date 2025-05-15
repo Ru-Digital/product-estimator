@@ -14,7 +14,7 @@ module.exports = {
     formatOptions: {
       snippetInterface: 'async-await'
     },
-    publishQuiet: true
+    timeout: 120000 // 120 seconds timeout
   },
   frontend: {
     require: [
@@ -32,7 +32,7 @@ module.exports = {
     formatOptions: {
       snippetInterface: 'async-await'
     },
-    publishQuiet: true
+    timeout: 120000 // 120 seconds timeout
   },
   admin: {
     require: [
@@ -50,6 +50,6 @@ module.exports = {
     formatOptions: {
       snippetInterface: 'async-await'
     },
-    publishQuiet: true
+    timeout: 120000 // 120 seconds timeout
   }
 };

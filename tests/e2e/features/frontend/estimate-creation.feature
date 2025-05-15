@@ -9,36 +9,36 @@ Feature: Estimate management
     When I open the site header and click the "Estimate" link
     And I enter "Kitchen Reno" as the estimate name
     And I enter "4000" as the postcode
-    And I press the "Create Estimate" button
+    And I press the estimate "Create Estimate" button
     Then an estimate named "Kitchen Reno" should be stored in local storage
     And the "Add Room" form should be displayed
 
   Scenario: Validate postcode on estimate creation
     Given no estimates exist in local storage or the PHP session
-    When I open the "Estimate" link
+    When I open the site header and click the "Estimate" link
     And I leave the postcode field blank
-    And I press "Create Estimate"
+    And I press the estimate "Create Estimate" button
     Then a validation message "Postcode required" should appear
     And no estimate should be stored in local storage
 
-Feature: Create an estimate when one already exists
+  Rule: Creating an estimate when one already exists
   A customer should be able to add a second estimate via the standard
   "Estimate" entry-point without overwriting or hiding the first one.
 
-  @critical
-  Scenario: Add a second estimate from the Estimates screen
-    Given an estimate named "Kitchen Reno" with postcode "4000" is stored and visible in the Estimates list
-    When I click the site header "Estimate" link
-    And the Estimates list is displayed
-    And I press the "New Estimate" button
-    And I enter "Bathroom Reno" as the estimate name
-    And I enter "4000" as the postcode
-    And I press "Create Estimate"
-    Then an estimate card titled "Bathroom Reno" should appear in the Estimates list
-    And the existing estimate "Kitchen Reno" card should still be present
-    And the UI should indicate that "Bathroom Reno" is the currently selected estimate
+    @critical
+    Scenario: Add a second estimate from the Estimates screen
+      Given an estimate named "Kitchen Reno" with postcode "4000" is stored and visible in the Estimates list
+      When I click the site header "Estimate" link
+      And the Estimates list is displayed
+      And I press the estimate "New Estimate" button
+      And I enter "Bathroom Reno" as the estimate name
+      And I enter "4000" as the postcode
+      And I press the estimate "Create Estimate" button
+      Then an estimate card titled "Bathroom Reno" should appear in the Estimates list
+      And the existing estimate "Kitchen Reno" card should still be present
+      And the UI should indicate that "Bathroom Reno" is the currently selected estimate
 
-  Scenario: New estimate appears in selector dropdown
-    Given the two estimates "Kitchen Reno" and "Bathroom Reno" exist
-    When I open the estimate selector dropdown
-    Then the dropdown should list exactly two options: "Kitchen Reno" and "Bathroom Reno"
+    Scenario: New estimate appears in selector dropdown
+      Given the two estimates "Kitchen Reno" and "Bathroom Reno" exist
+      When I open the estimate selector dropdown
+      Then the dropdown should list exactly two options: "Kitchen Reno" and "Bathroom Reno"

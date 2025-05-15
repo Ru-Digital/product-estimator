@@ -1,6 +1,6 @@
 # Product Estimator E2E Tests
 
-This directory contains end-to-end tests for the Product Estimator plugin using Playwright with Cucumber.
+This directory contains end-to-end (E2E) tests for the Product Estimator plugin using Playwright and Cucumber.
 
 ## Directory Structure
 
@@ -23,65 +23,96 @@ tests/
 ├─ playwright.config.js          # Playwright configuration
 ├─ cucumber.js                   # Cucumber configuration
 ├─ package.json                  # Test-specific dependencies
-└─ .env.example                  # Environment variables template
+├─ .env                          # Environment variables
+└─ test-results/                 # Test artifacts and debugging tools
 ```
 
-## Installation
+## Setup
 
-1. First, ensure you have Node.js and npm installed
-2. Install the test dependencies:
+Before running the tests, make sure you have the necessary dependencies installed:
 
 ```bash
-# From the plugin root directory
-npm run test:setup
+# Install npm dependencies
+npm install
+
+# Install Playwright browsers
+npx playwright install
 ```
-
-## Configuration
-
-1. Copy the `.env.example` file to `.env`:
-
-```bash
-cp tests/.env.example tests/.env
-```
-
-2. Update the `.env` file with your specific configuration:
-   - `BASE_URL`: Your WordPress installation URL
-   - `BROWSER`: The browser to use for testing (chromium, firefox, webkit)
-   - `HEADLESS`: Whether to run tests in headless mode (true/false)
-   - `WP_ADMIN_USERNAME` and `WP_ADMIN_PASSWORD`: For admin tests
 
 ## Running Tests
 
-### From the plugin root directory:
+### Single Test Scenario (Recommended for debugging)
+
+This runs just the first basic test scenario for creating an estimate:
 
 ```bash
-# Run all tests
-npm run test:e2e
+# Run in headless mode
+npm run test:create-estimate
 
-# Run only frontend tests
+# Run in headed mode with slower execution for visual debugging
+npm run test:debug
+```
+
+### All Frontend Tests
+
+Run all the frontend test scenarios:
+
+```bash
 npm run test:frontend
+```
 
-# Run only admin tests
+### All Admin Tests
+
+Run all the admin test scenarios:
+
+```bash
 npm run test:admin
 ```
 
-### From the tests directory:
+### All Tests
+
+Run all tests (both frontend and admin):
 
 ```bash
-# Run all tests
 npm test
+```
 
-# Run frontend tests
-npm run test:frontend
+### Parallel Testing
 
-# Run admin tests
-npm run test:admin
+Run tests in parallel for faster execution:
 
-# Run tests in parallel
+```bash
 npm run test:parallel
+```
 
-# Generate HTML report
-npm run test:report
+## Test Results and Debugging
+
+Test results are stored in the following locations:
+
+- **Screenshots**: `test-results/screenshots/`
+- **Videos**: `test-results/videos/` (if video recording is enabled)
+- **HTML Reports**: `test-reports/`
+- **Debug Helper**: `test-results/element-finder.html` (a tool to help find elements in HTML)
+
+### Debugging Helper Tool
+
+For element selector debugging, the test suite automatically creates a debugging helper tool. After running any test, open `test-results/element-finder.html` in your browser. You can paste HTML snippets there to help find selectors for elements containing "estimator" or "estimate".
+
+## Configuration
+
+The tests can be configured using environment variables in the `.env` file:
+
+- `BASE_URL`: The base URL of the WordPress site (default: http://localhost/wp)
+- `HEADLESS`: Set to "false" to show browser UI during tests (default: true)
+- `SLOWMO`: Slow down Playwright operations by specified milliseconds (default: 0)
+- `BROWSER`: Choose browser to run tests (chromium, firefox, webkit) (default: chromium)
+- `RECORD_VIDEO`: Set to "true" to record videos of test runs (default: false)
+- `WP_ADMIN_USERNAME` and `WP_ADMIN_PASSWORD`: For admin tests
+
+Example usage with inline environment variables:
+
+```bash
+BASE_URL=https://example.com HEADLESS=false SLOWMO=100 npm run test:frontend
 ```
 
 ## Adding New Tests
@@ -98,20 +129,26 @@ npm run test:report
 2. Implement step definitions in `e2e/step-definitions/admin/`
 3. Create page objects in `e2e/page-objects/admin/` as needed
 
-## Test Reports
+## Troubleshooting
 
-Test reports are generated in the `test-reports` directory:
-- Cucumber JSON report: `cucumber-report.json`
-- HTML report: `cucumber-html-report.html`
+If you encounter issues with the tests:
 
-To generate an HTML report from the JSON data:
+1. **Element not found**: Check if selectors have changed in the HTML. Run the tests in headed mode with `npm run test:debug` to see what's happening.
+
+2. **Timeouts**: You may need to increase timeouts for slow connections or complex page loads. Check `cucumber.js` and the step definitions for timeout settings.
+
+3. **Check screenshots**: Look at the failure screenshots in `test-results/screenshots/` to see what the page looked like when the test failed.
+
+4. **Browser installation issues**: If you get errors about browser binaries, try running `npx playwright install` again.
+
+5. **Clear test results**: Sometimes clearing old test results can help: `npm run test:clear-results`
+
+## HTML Reports
+
+To generate a detailed HTML report after running tests:
 
 ```bash
 npm run test:report
 ```
 
-## Debugging Tests
-
-1. Set `HEADLESS=false` in your `.env` file to see the browser UI during test execution
-2. Set `SLOWMO=100` to slow down test execution by 100ms per action
-3. Set `DEBUG=pw:api` for Playwright API debugging output
+This will create an HTML report in `test-reports/` with detailed information about test runs, failures, and screenshots.

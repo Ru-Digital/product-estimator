@@ -16,7 +16,8 @@
     "test:setup": "cd tests && npm install",
     "test:e2e": "cd tests && npm run test",
     "test:frontend": "cd tests && npm run test:frontend",
-    "test:admin": "cd tests && npm run test:admin"
+    "test:admin": "cd tests && npm run test:admin",
+    "test:scenario": "cd tests && npm run test:scenario"
   },
   "repository": {
     "type": "git",

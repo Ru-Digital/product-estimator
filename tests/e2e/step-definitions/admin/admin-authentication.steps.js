@@ -22,7 +22,7 @@ When('I enter valid admin credentials', async function() {
   await this.loginPage.login(username, password);
 });
 
-When('I press the {string} button', async function(buttonText) {
+When('I press the login {string} button', async function(buttonText) {
   // This step is already handled in the login method above
   // The step is here for readability in the feature file
 });

@@ -24,7 +24,7 @@ Feature: Customer estimates management
     And estimates exist from various dates
     When I navigate to "Product Estimator > Customer Estimates"
     And I select "Last 7 days" from the date filter
-    And I click "Filter"
+    And I click the admin "Filter" button
     Then the list should only show estimates created within the last 7 days
 
   Scenario: Search for specific estimate
@@ -73,7 +73,7 @@ Feature: Customer estimates management
     And multiple estimates exist
     When I select three estimates using the checkboxes
     And I select "Delete" from the bulk actions dropdown
-    And I click "Apply"
+    And I click the admin action "Apply"
     And I confirm the deletion in the dialog
     Then all three estimates should be removed from the database
     And I should see a success notification
@@ -81,6 +81,6 @@ Feature: Customer estimates management
   Scenario: Export estimates to CSV
     Given I am logged in as an administrator
     And multiple estimates exist
-    When I click the "Export CSV" button
+    When I click the admin "Export CSV" button
     Then a CSV file should be downloaded
     And the CSV should contain all visible estimate data

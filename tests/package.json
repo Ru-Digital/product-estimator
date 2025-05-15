@@ -9,7 +9,13 @@
     "test:admin": "cucumber-js --profile admin",
     "test:e2e": "cucumber-js --profile default",
     "test:parallel": "cucumber-js --parallel 2",
-    "test:report": "node report-generator.js"
+    "test:report": "node report-generator.js",
+    "test:scenario": "cucumber-js --profile frontend --name \"Create the first estimate\"",
+    "test:debug": "HEADLESS=false SLOWMO=100 cucumber-js --profile frontend --name \"Create the first estimate\"",
+    "test:create-estimate": "cucumber-js --profile frontend --name \"Create the first estimate\"",
+    "test:clear-results": "rm -rf test-results/* test-reports/*",
+    "pretest:debug": "npm run test:clear-results",
+    "pretest:create-estimate": "npm run test:clear-results"
   },
   "keywords": [
     "playwright",

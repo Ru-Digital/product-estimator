@@ -7,7 +7,7 @@ Feature: Admin authentication
   Scenario: Login to WordPress admin
     Given I am on the WordPress login page
     When I enter valid admin credentials
-    And I press the "Log In" button
+    And I press the login "Log In" button
     Then I should be redirected to the WordPress dashboard
     And the admin menu should contain "Product Estimator"
 

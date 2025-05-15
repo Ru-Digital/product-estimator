@@ -78,11 +78,16 @@ class CustomerDetailsManager {
   onCustomerDetailsUpdated(event) {
     if (event.detail && event.detail.details) {
       logger.log('Received customer_details_updated event', event.detail);
-      // Update the display with the new details
+      
+      // Update the customer details display UI elements
       this.updateDisplayedDetails(event.detail.details);
 
-      // Check if email was added and update forms
+      // Only check and update email field in the customer details edit form,
+      // not in the new estimate form - this prevents field value synchronization issues
       this.checkAndUpdateEmailField(event.detail.details);
+      
+      // Important: we should never synchronize values between the customer details
+      // form and the new estimate form as they serve different purposes
     }
   }
 
@@ -94,9 +99,18 @@ class CustomerDetailsManager {
     const hasEmail = details && details.email && details.email.trim() !== '';
     logger.log(`Checking for email field updates: hasEmail=${hasEmail}`);
 
-    // If the edit form is already visible, update it
-    const editForms = document.querySelectorAll(this.config.selectors.editForm);
-    editForms.forEach(editForm => {
+    // If the customer details edit form is already visible, update ONLY that form
+    // NOT any other forms like the new estimate form
+    const customerEditForms = document.querySelectorAll(this.config.selectors.editForm);
+    customerEditForms.forEach(editForm => {
+      // Skip if this is not a customer details edit form
+      // (check for a customer-specific identifier to ensure we're only updating customer forms)
+      if (!editForm.classList.contains('customer-details-edit-form') && 
+          !editForm.closest('.saved-customer-details') &&
+          !editForm.querySelector('#edit-customer-name')) {
+        logger.log('Skipping non-customer details form to prevent field synchronization issues');
+        return;
+      }
       // Check if email field already exists
       let emailField = editForm.querySelector('#edit-customer-email');
 
@@ -140,7 +154,8 @@ class CustomerDetailsManager {
         emailField.value = details.email;
       }
 
-      // Update other fields if they exist
+      // Update other fields if they exist - but ONLY in the customer details edit form
+      // NOT in the estimate creation form, which has its own separate fields
       const nameField = editForm.querySelector('#edit-customer-name');
       if (nameField && details.name) {
         nameField.value = details.name;
@@ -157,10 +172,46 @@ class CustomerDetailsManager {
       }
     });
 
-    // Update data-has-email attribute on any new estimate forms
+    // Update ONLY the data-has-email attribute on new estimate forms,
+    // but DO NOT update any actual form field values in the new estimate form
     const newEstimateForms = document.querySelectorAll('#new-estimate-form');
     newEstimateForms.forEach(form => {
+      // Only update the data attribute, never the form fields directly
       form.setAttribute('data-has-email', hasEmail ? 'true' : 'false');
+      
+      // Add explicit protection to prevent postcode-to-name field synchronization
+      // Add a one-time event listener to prevent the first input to postcode field from affecting the name field
+      if (!form._fieldProtectionAdded) {
+        const postcodeField = form.querySelector('#customer-postcode');
+        const nameField = form.querySelector('#estimate-name');
+        
+        if (postcodeField && nameField) {
+          logger.log('Adding protection to prevent field value synchronization in estimate form');
+          
+          // Store the original values from fields when the form is first rendered
+          let nameOriginal = nameField.value;
+          
+          // Add an input event listener to detect when the postcode field changes
+          postcodeField.addEventListener('input', function() {
+            // If the name field now contains the postcode value (indicating unwanted sync),
+            // restore it to its proper value
+            if (nameField.value === postcodeField.value && nameOriginal !== postcodeField.value) {
+              logger.log('Preventing postcode-to-name field sync - restoring name field value');
+              nameField.value = nameOriginal;
+            }
+          });
+          
+          // Add a change event listener to the name field to keep track of user-intended changes
+          nameField.addEventListener('change', function() {
+            // Update the stored original value when the user deliberately changes it
+            nameOriginal = nameField.value;
+            logger.log('Name field changed by user, new value stored:', nameOriginal);
+          });
+          
+          // Mark this form as protected
+          form._fieldProtectionAdded = true;
+        }
+      }
     });
   }
   /**

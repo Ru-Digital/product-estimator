@@ -74,7 +74,7 @@ When('I select {string} from the date filter', async function(filterName) {
   await this.customerEstimatesPage.filterByDate(filterName.toLowerCase().replace(/\s+/g, ''));
 });
 
-When('I click {string}', async function(buttonText) {
+When('I click the admin {string} button', async function(buttonText) {
   this.adminBasePage = this.adminBasePage || new AdminBasePage(this.page);
   await this.adminBasePage.clickButtonWithText(buttonText);
 });
@@ -220,7 +220,7 @@ When('I select {string} from the bulk actions dropdown', async function(action) 
   this.bulkAction = action;
 });
 
-When('I click {string}', async function(buttonText) {
+When('I click the admin action {string}', async function(buttonText) {
   if (buttonText === 'Apply') {
     await this.customerEstimatesPage.performBulkAction(this.bulkAction);
   } else {
@@ -236,7 +236,7 @@ Then('all three estimates should be removed from the database', async function()
 });
 
 // Export to CSV
-When('I click the {string} button', async function(buttonText) {
+When('I click the admin {string} button', async function(buttonText) {
   if (buttonText === 'Export CSV') {
     this.downloadedFile = await this.customerEstimatesPage.clickExportCSV();
   } else {

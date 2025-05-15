@@ -3,12 +3,12 @@
 // Place this file in your plugin's root directory and access it directly for testing
 
 // First, set up the WordPress environment
-define('WP_USE_THEMES', false);
+define('WP_USE_THEMES', true);
 $wp_load_path = dirname(dirname(dirname(__DIR__))) . '/wp-load.php';
 require_once($wp_load_path);
 
 // Set debug mode
-error_reporting(E_ALL);
+error_reporting(E_ERROR);
 ini_set('display_errors', 1);
 
 // Create a simple HTML page structure
@@ -68,7 +68,7 @@ ini_set('display_errors', 1);
     </div>
 
 
-    <?php wp_footer(); // Include WordPress footer ?>
+<!--    --><?php //wp_footer(); // Include WordPress footer ?>
 
     <script>
         // jQuery code for our test buttons

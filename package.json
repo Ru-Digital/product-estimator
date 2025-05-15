@@ -12,7 +12,11 @@
     "lint:scss": "stylelint 'src/styles/**/*.scss'",
     "lint": "npm run lint:js && npm run lint:scss",
     "lint:fix": "npm run lint:js -- --fix && npm run lint:scss -- --fix",
-    "lint:build": "npm run lint > lint-report.txt || (echo 'Linting issues found. See lint-report.txt' && exit 0)"
+    "lint:build": "npm run lint > lint-report.txt || (echo 'Linting issues found. See lint-report.txt' && exit 0)",
+    "test:setup": "cd tests && npm install",
+    "test:e2e": "cd tests && npm run test",
+    "test:frontend": "cd tests && npm run test:frontend",
+    "test:admin": "cd tests && npm run test:admin"
   },
   "repository": {
     "type": "git",

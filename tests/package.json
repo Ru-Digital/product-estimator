@@ -1,0 +1,28 @@
+{
+  "name": "product-estimator-e2e-tests",
+  "version": "1.0.0",
+  "description": "E2E tests for Product Estimator Plugin",
+  "main": "index.js",
+  "scripts": {
+    "test": "cucumber-js",
+    "test:frontend": "cucumber-js --profile frontend",
+    "test:admin": "cucumber-js --profile admin",
+    "test:e2e": "cucumber-js --profile default",
+    "test:parallel": "cucumber-js --parallel 2",
+    "test:report": "node report-generator.js"
+  },
+  "keywords": [
+    "playwright",
+    "cucumber",
+    "e2e",
+    "testing"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@cucumber/cucumber": "^10.3.1",
+    "@playwright/test": "^1.42.1",
+    "cucumber-html-reporter": "^7.1.1",
+    "dotenv": "^16.4.5"
+  }
+}

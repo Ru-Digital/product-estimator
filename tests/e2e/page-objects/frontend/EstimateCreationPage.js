@@ -25,8 +25,8 @@ class EstimateCreationPage extends BasePage {
     // Form elements and components
     this.newEstimateForm = '#new-estimate-form, form.new-estimate-form, .product-estimator-new-estimate-form';
     this.estimateNameInput = 'input[name="estimate_name"], #estimate_name';
-    this.postcodeInput = 'input[name="postcode"], #postcode';
-    this.createEstimateButton = 'button[type="submit"], button.create-estimate-btn, .product-estimator-create-btn, input[type="submit"]';
+    this.postcodeInput = 'input[name="customer_postcode"], #customer-postcode';
+    this.createEstimateButton = 'button.create-estimate-btn, button[type="submit"], .product-estimator-create-btn, input[type="submit"]';
     this.newEstimateButton = 'button.new-estimate-btn, .product-estimator-new-estimate-btn, a.new-estimate-link';
 
     // Estimates list and selection
@@ -749,12 +749,12 @@ class EstimateCreationPage extends BasePage {
           ];
 
           const postcodeFieldSelectors = [
-            'input[name="postcode"]',
             'input[name="customer_postcode"]',
-            '#postcode',
-            '#customer_postcode',
+            '#customer-postcode',
+            'input[placeholder="Your postcode"]',
             'input[placeholder*="postcode" i]',
-            'input[placeholder*="post code" i]',
+            'input[placeholder*="post code" i]', 
+            '.customer-details-section input[type="text"]',
             'input[type="text"]:nth-child(2)'
           ];
 
@@ -862,7 +862,7 @@ class EstimateCreationPage extends BasePage {
             error: e.message
           };
         }
-      }, { estimateName: name, postcodeValue: postcode });
+      }, { estimateName: name, postcodeValue: postcode || '' });
 
       //console.log('Browser-side form fill result:', fillResult);
 
@@ -991,17 +991,18 @@ class EstimateCreationPage extends BasePage {
 
       // Define possible button selectors - prioritized by likelihood of being correct
       const buttonSelectors = [
+        'button.create-estimate-btn',
         this.createEstimateButton,
         'button[type="submit"]',
-        'form button:has-text("Create")',
         'button.pe-create-estimate-btn',
-        'button:has-text("Create Estimate")',
         'input[type="submit"]',
-        '#new-estimate-form button',
-        '.pe-new-estimate-form button',
-        'button.button',
-        'button.btn',
-        'button:has-text("Create")'
+        'form.submit-btn',
+        '#new-estimate-form button[type="submit"]',
+        '.pe-new-estimate-form button[type="submit"]',
+        'button.button[type="submit"]',
+        'button.btn[type="submit"]',
+        'form button', 
+        'form input[type="submit"]'
       ];
 
       // Use a single page.evaluate to efficiently find and click the button
@@ -1016,33 +1017,84 @@ class EstimateCreationPage extends BasePage {
                  element.offsetWidth > 0 && element.offsetHeight > 0;
         };
 
-        // Try each selector in order
-        for (const selector of selectors) {
-          const elements = document.querySelectorAll(selector);
-          for (const element of elements) {
-            if (isVisible(element)) {
-              // Set up submission monitoring first
-              try {
-                // Intercept form submissions
-                const formSubmitHandler = (e) => {
-                  //console.log('[Browser] Form submitted:', e.target.id || e.target.className);
-                  // We don't want to interfere with the actual submission
-                  document.removeEventListener('submit', formSubmitHandler, true);
-                };
-                document.addEventListener('submit', formSubmitHandler, { capture: true, once: true });
+        // Helper to find elements by text content
+        const findElementsByText = (tagName, text) => {
+          const elements = document.querySelectorAll(tagName);
+          return Array.from(elements).filter(el => 
+            el.textContent && el.textContent.toLowerCase().includes(text.toLowerCase())
+          );
+        };
 
-                // Click the button
-                //console.log(`[Browser] Clicking button: ${element.textContent || element.value || 'unnamed button'}`);
-                element.click();
-                return {
-                  clicked: true,
-                  selector: selector,
-                  buttonText: element.textContent?.trim() || element.value || null,
-                  isSubmitButton: element.type === 'submit'
-                };
-              } catch (e) {
-                //console.log(`[Browser] Error clicking element with selector ${selector}: ${e.message}`);
+        // Try standard selectors first
+        for (const selector of selectors) {
+          // Skip unsupported :has-text selectors
+          if (selector.includes(':has-text')) {
+            continue;
+          }
+          
+          try {
+            const elements = document.querySelectorAll(selector);
+            for (const element of elements) {
+              if (isVisible(element)) {
+                // Set up submission monitoring first
+                try {
+                  // Intercept form submissions
+                  const formSubmitHandler = (e) => {
+                    // We don't want to interfere with the actual submission
+                    document.removeEventListener('submit', formSubmitHandler, true);
+                  };
+                  document.addEventListener('submit', formSubmitHandler, { capture: true, once: true });
+
+                  // Click the button
+                  element.click();
+                  return {
+                    clicked: true,
+                    selector: selector,
+                    buttonText: element.textContent?.trim() || element.value || null,
+                    isSubmitButton: element.type === 'submit'
+                  };
+                } catch (e) {
+                  // Ignore errors for this element and continue
+                }
               }
+            }
+          } catch (e) {
+            // Skip selectors that cause errors and continue to the next one
+          }
+        }
+        
+        // Try text-based approach for buttons with "Create" or "Create Estimate" text
+        const createButtons = findElementsByText('button', 'Create');
+        for (const button of createButtons) {
+          if (isVisible(button)) {
+            try {
+              button.click();
+              return {
+                clicked: true,
+                method: 'text-based',
+                buttonText: button.textContent?.trim()
+              };
+            } catch (e) {
+              // Ignore errors and try next button
+            }
+          }
+        }
+        
+        // Try inputs with type="submit" and Create-related values
+        const submitInputs = document.querySelectorAll('input[type="submit"]');
+        for (const input of submitInputs) {
+          if (isVisible(input) && 
+              (input.value?.toLowerCase().includes('create') || 
+               input.className?.toLowerCase().includes('create'))) {
+            try {
+              input.click();
+              return {
+                clicked: true,
+                method: 'submit-input',
+                buttonText: input.value
+              };
+            } catch (e) {
+              // Ignore errors and continue
             }
           }
         }

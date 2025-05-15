@@ -254,6 +254,11 @@ class BasePage {
       // await this.page.screenshot({ path: 'test-results/before-click-header.png' });
       // console.log('Looking for Estimator button in the header...');
 
+      // Wait for the page to be fully loaded
+      await this.page.waitForLoadState('domcontentloaded');
+      await this.page.waitForLoadState('networkidle');
+      await this.page.waitForTimeout(1000); // Extra wait to ensure everything is initialized
+
       // First try the main menu estimator link specifically
       let mainMenuEstimatorButton = this.page.locator(this.headerEstimateLink);
       let count = await mainMenuEstimatorButton.count();
@@ -631,10 +636,13 @@ class BasePage {
         `label[for="${fieldName}"] + .pe-form-error`,            // Error after label
         `input[name="${fieldName}"] + .pe-form-error`,           // Error after input
         `input[name="${fieldName}"] ~ .pe-form-error`,           // Error as sibling to input
+        `#${fieldName.replace('_', '-')} + .pe-form-error`,      // Error after element with hyphens (HTML format)
+        `#${fieldName.replace('_', '-')} ~ .pe-form-error`,      // Error as sibling with hyphens (HTML format)
         `.field-${fieldName} .pe-form-error`,                    // Error inside field container
         `[data-field="${fieldName}"] .error-message`,            // Generic error message
         `.pe-validation-error[data-field="${fieldName}"]`,       // Alternative validation class
         `#${fieldName}-error`,                                   // ID-based error
+        `#${fieldName.replace('_', '-')}-error`,                 // ID-based error with hyphens (HTML format)
         `.error-message:has-text("${fieldName}")`,               // Error message containing field name
         `.pe-form-error`,                                        // Any form error (last resort)
         `.validation-error`,                                     // Any validation error (last resort)

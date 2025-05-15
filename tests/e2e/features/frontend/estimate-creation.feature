@@ -11,7 +11,7 @@ Feature: Estimate management
     And I enter "4000" as the postcode
     And I press the estimate "Create Estimate" button
     Then an estimate named "Kitchen Reno" should be stored in local storage
-    And the "Add Room" form should be displayed
+    And an estimate card titled "Kitchen Reno" should appear in the Estimates list
 
   Scenario: Validate postcode on estimate creation
     Given no estimates exist in local storage or the PHP session

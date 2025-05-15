@@ -570,8 +570,7 @@ class BasePage {
         }
       }
 
-      // If we get here, take a screenshot of the entire page for debugging
-      await this.page.screenshot({ path: 'test-results/modal-not-found.png', fullPage: true });
+      // If we get here, don't take a screenshot - only on errors
 
       // Log the current page HTML elements to help debug
       try {

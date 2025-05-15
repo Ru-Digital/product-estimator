@@ -31,11 +31,11 @@ class EstimateCreationPage extends BasePage {
 
     // Estimates list and selection
     this.estimateSelector = 'select.estimate-selector, .product-estimator-estimate-selector';
-    this.estimateCard = '.estimate-item, .product-estimator-estimate-item';
+    this.estimateCard = '.estimate-section, .estimate-item, .product-estimator-estimate-item';
     this.addRoomForm = '#new-room-form, form.new-room-form, .product-estimator-new-room-form';
     this.estimatesEmptyMessage = '.no-estimates, .product-estimator-no-estimates';
     this.estimatesList = '.estimates-list, .product-estimator-estimates-list, #estimates';
-    this.selectedEstimate = '.estimate-item.selected, .product-estimator-estimate-item.selected';
+    this.selectedEstimate = '.estimate-section.selected, .estimate-item.selected, .product-estimator-estimate-item.selected';
 
     // Loading indicator
     this.loadingIndicator = '.product-estimator-modal-loading, .loading-spinner';
@@ -184,8 +184,7 @@ class EstimateCreationPage extends BasePage {
 
       // //console.log('Modal structure:', modalStructure);
 
-      // Take a screenshot of the current state
-      await this.page.screenshot({ path: 'test-results/debug-form-state.png', fullPage: true });
+      // No debug screenshot here
 
       // //console.log('---- Form state debugging complete ----');
 
@@ -375,9 +374,9 @@ class EstimateCreationPage extends BasePage {
           };
         }
       }, {
-        selectors: fieldSelectors, 
-        fieldNameValue: fieldName, 
-        fieldValue: value, 
+        selectors: fieldSelectors,
+        fieldNameValue: fieldName,
+        fieldValue: value,
         options: {
           clearFirst: opts.clearFirst,
           preserveOriginal: opts.preserveOriginal,
@@ -654,7 +653,7 @@ class EstimateCreationPage extends BasePage {
 
         if (!formFound) {
           console.error('New estimate form not found after multiple attempts');
-          await this.page.screenshot({ path: 'test-results/no-estimate-form.png' });
+          // Only take screenshot on errors
           return false;
         }
       }
@@ -753,7 +752,7 @@ class EstimateCreationPage extends BasePage {
             '#customer-postcode',
             'input[placeholder="Your postcode"]',
             'input[placeholder*="postcode" i]',
-            'input[placeholder*="post code" i]', 
+            'input[placeholder*="post code" i]',
             '.customer-details-section input[type="text"]',
             'input[type="text"]:nth-child(2)'
           ];
@@ -1001,7 +1000,7 @@ class EstimateCreationPage extends BasePage {
         '.pe-new-estimate-form button[type="submit"]',
         'button.button[type="submit"]',
         'button.btn[type="submit"]',
-        'form button', 
+        'form button',
         'form input[type="submit"]'
       ];
 
@@ -1020,7 +1019,7 @@ class EstimateCreationPage extends BasePage {
         // Helper to find elements by text content
         const findElementsByText = (tagName, text) => {
           const elements = document.querySelectorAll(tagName);
-          return Array.from(elements).filter(el => 
+          return Array.from(elements).filter(el =>
             el.textContent && el.textContent.toLowerCase().includes(text.toLowerCase())
           );
         };
@@ -1031,7 +1030,7 @@ class EstimateCreationPage extends BasePage {
           if (selector.includes(':has-text')) {
             continue;
           }
-          
+
           try {
             const elements = document.querySelectorAll(selector);
             for (const element of elements) {
@@ -1062,7 +1061,7 @@ class EstimateCreationPage extends BasePage {
             // Skip selectors that cause errors and continue to the next one
           }
         }
-        
+
         // Try text-based approach for buttons with "Create" or "Create Estimate" text
         const createButtons = findElementsByText('button', 'Create');
         for (const button of createButtons) {
@@ -1079,12 +1078,12 @@ class EstimateCreationPage extends BasePage {
             }
           }
         }
-        
+
         // Try inputs with type="submit" and Create-related values
         const submitInputs = document.querySelectorAll('input[type="submit"]');
         for (const input of submitInputs) {
-          if (isVisible(input) && 
-              (input.value?.toLowerCase().includes('create') || 
+          if (isVisible(input) &&
+              (input.value?.toLowerCase().includes('create') ||
                input.className?.toLowerCase().includes('create'))) {
             try {
               input.click();
@@ -1638,9 +1637,9 @@ class EstimateCreationPage extends BasePage {
         //console.log(`Error checking for Add New Room text: ${e.message}`);
       }
 
-      // If we didn't find the form with any selector, take a screenshot for debugging
+      // If we didn't find the form with any selector or text
       //console.log('Add Room form not found with any selector or text');
-      await this.page.screenshot({ path: 'test-results/add-room-form-not-found.png', fullPage: true });
+      // Only take screenshot on errors
 
       // Check the current state of the modal
       const modalHtml = await this.page.evaluate(() => {
@@ -1697,43 +1696,116 @@ class EstimateCreationPage extends BasePage {
    */
   async estimateExists(name) {
     try {
-      //console.log(`Checking if estimate "${name}" exists...`);
-      const selector = `${this.estimateCard}:has-text("${name}")`;
-      const count = await this.page.locator(selector).count();
+      // No debug screenshot here
 
-      if (count > 0) {
-        //console.log(`Found ${count} estimate cards matching name "${name}"`);
-        return true;
+      // Based on the actual template structure in estimate-item.html
+      // First try more specific selectors based on the exact structure
+      const estimateSelectors = [
+        // Based on the template structure
+        `.estimate-section .price-title.name:has-text("${name}")`,
+        `.estimate-section:has-text("${name}")`,
+        // Fallback to more generic selectors
+        `.estimate-item:has-text("${name}")`,
+        `.product-estimator-estimate-item:has-text("${name}")`,
+        `.pe-estimate-item:has-text("${name}")`,
+        `.estimate-card:has-text("${name}")`,
+        `.estimates-list:has-text("${name}")`,
+        // Look for the name in any h3 elements
+        `h3:has-text("${name}")`,
+        // Look in spans
+        `span.name:has-text("${name}")`,
+        `span.price-title:has-text("${name}")`,
+        `#estimates span:has-text("${name}")`
+      ];
+
+      // Try each selector in order
+      for (const selector of estimateSelectors) {
+        try {
+          const count = await this.page.locator(selector).count();
+          if (count > 0) {
+            return true;
+          }
+        } catch (e) {
+          // Ignore errors with individual selectors
+        }
       }
 
-      // If we can't find it with the standard selector, try a more generic approach
+      // If specific selectors didn't work, try a more generic text search approach
+      // using evaluation in the browser context
       const containsEstimateName = await this.page.evaluate((estimateName) => {
-        // Check if any element on the page contains this estimate name
-        const allElements = document.querySelectorAll('.estimate-item, .product-estimator-estimate-item, .pe-estimate-item, .estimate-card');
+        // Look for the name in common estimate-related elements
+        const estimateElements = [
+          ...document.querySelectorAll('.estimate-section'),
+          ...document.querySelectorAll('.estimate-item'),
+          ...document.querySelectorAll('.price-title'),
+          ...document.querySelectorAll('.name'),
+          ...document.querySelectorAll('.estimate-name'),
+          ...document.querySelectorAll('.estimate-header h3')
+        ];
 
-        for (const element of allElements) {
-          if (element.innerText.includes(estimateName)) {
+        // Check if the estimate name is in the text content of any of these elements
+        for (const element of estimateElements) {
+          if (element.textContent && element.textContent.includes(estimateName)) {
+            console.log(`[Browser] Found estimate name "${estimateName}" in element:`, element.tagName, element.className);
             return true;
           }
         }
 
-        // Check if it's in the dropdown
-        const selectOptions = document.querySelectorAll('select.estimate-selector option, .product-estimator-estimate-selector option');
+        // Check if it's in the dropdown as an option
+        const selectOptions = document.querySelectorAll('select option');
         for (const option of selectOptions) {
-          if (option.innerText.includes(estimateName)) {
+          if (option.textContent && option.textContent.includes(estimateName)) {
+            console.log(`[Browser] Found estimate name "${estimateName}" in dropdown option`);
             return true;
           }
         }
+
+        // Last resort - check the entire document text
+        if (document.body.textContent && document.body.textContent.includes(estimateName)) {
+          console.log(`[Browser] Found estimate name "${estimateName}" somewhere in the document text`);
+
+          // Try to find which element contains it
+          const allElements = document.body.querySelectorAll('*');
+          for (const element of allElements) {
+            if (element.textContent &&
+                element.textContent.includes(estimateName) &&
+                element.textContent.length < 100) { // Only consider elements with reasonably short text
+
+              console.log(`[Browser] Found in element:`, {
+                tag: element.tagName,
+                id: element.id,
+                className: element.className
+              });
+              return true;
+            }
+          }
+
+          return true;
+        }
+
+        // Get the structure of the main container to help debug
+        const estimatesContainer = document.querySelector('#estimates');
+        let structure = 'Estimates container not found';
+
+        if (estimatesContainer) {
+          structure = {
+            childCount: estimatesContainer.childElementCount,
+            firstChildClass: estimatesContainer.firstElementChild?.className || 'none',
+            innerHTML: estimatesContainer.innerHTML.substring(0, 200) + '...'
+          };
+        }
+
+        console.log(`[Browser] Could not find estimate "${estimateName}". Estimates container:`, structure);
 
         return false;
       }, name);
 
       if (containsEstimateName) {
-        //console.log(`Found estimate "${name}" using JavaScript evaluation`);
+        console.log(`Found estimate "${name}" using browser-side search`);
         return true;
       }
 
-      //console.log(`Estimate "${name}" not found in the UI`);
+      console.error(`Estimate "${name}" not found in the UI`);
       return false;
     } catch (error) {
       console.error(`Error checking if estimate exists: ${error.message}`);
@@ -1748,79 +1820,141 @@ class EstimateCreationPage extends BasePage {
    */
   async isEstimateSelected(name) {
     try {
-      //console.log(`Checking if estimate "${name}" is selected...`);
+      // No debug screenshot here
 
-      // First try the standard selector
-      const selector = `${this.selectedEstimate}:has-text("${name}")`;
-      const count = await this.page.locator(selector).count();
+      // First try with selectors based on the actual template structure
+      const selectors = [
+        // Based on the template structure in estimate-item.html
+        `.estimate-section.selected:has-text("${name}")`,
+        `.estimate-section:has-text("${name}")`,
+        `.price-title.name:has-text("${name}")`,
+        // Standard selectors from the constructor
+        `${this.selectedEstimate}:has-text("${name}")`,
+        // More generic selectors
+        `.selected:has-text("${name}")`,
+        `.active:has-text("${name}")`,
+        `.current:has-text("${name}")`,
+        // Look in spans or special elements
+        `span.selected:has-text("${name}")`,
+        `.current-estimate:has-text("${name}")`
+      ];
 
-      if (count > 0) {
-        //console.log(`Found ${count} selected estimate elements matching "${name}"`);
-        return true;
+      // Try each selector
+      for (const selector of selectors) {
+        try {
+          const count = await this.page.locator(selector).count();
+          if (count > 0) {
+            console.log(`Found estimate "${name}" as selected with selector: ${selector}`);
+            return true;
+          }
+        } catch (e) {
+          // Ignore errors for individual selectors
+        }
       }
 
-      // Try with a more generic approach - check any element with both 'selected' class and the estimate name
+      // Try with a more comprehensive approach in the browser context
       const selectedWithName = await this.page.evaluate((estimateName) => {
-        // Look for any element with 'selected' class that contains the estimate name
-        const selectedElements = document.querySelectorAll('.selected, .active, .current');
+        // First, look specifically for elements with both the estimate name and a selection class
+        // Try these selector combinations based on the HTML structure
+        const estimateSections = document.querySelectorAll('.estimate-section');
 
-        for (const element of selectedElements) {
-          if (element.innerText.includes(estimateName)) {
-            return true;
-          }
-        }
+        for (const section of estimateSections) {
+          // If the section contains the name text and has a selected indicator
+          if (section.textContent.includes(estimateName)) {
+            // Check if this section either:
+            // 1. Has a selected class
+            if (section.classList.contains('selected') ||
+                section.classList.contains('active') ||
+                section.classList.contains('current')) {
+              return {source: 'estimate-section with selected class', found: true};
+            }
 
-        // Also check for a dropdown with this estimate selected
-        const selectedOptions = document.querySelectorAll('select option:checked, select option[selected]');
-        for (const option of selectedOptions) {
-          if (option.innerText.includes(estimateName)) {
-            return true;
-          }
-        }
+            // 2. Or a parent/ancestor has a selected class
+            let parent = section.parentElement;
+            while (parent) {
+              if (parent.classList.contains('selected') ||
+                  parent.classList.contains('active') ||
+                  parent.classList.contains('current')) {
+                return {source: 'estimate section with selected parent', found: true};
+              }
+              parent = parent.parentElement;
+            }
 
-        // Also check for any visual indication of selection
-        const allEstimateElements = document.querySelectorAll('.estimate-item, .product-estimator-estimate-item, .pe-estimate-item, .estimate-card');
-        for (const element of allEstimateElements) {
-          if (element.innerText.includes(estimateName)) {
-            // Check for visual indicators of selection (background color, borders, etc.)
-            const style = window.getComputedStyle(element);
+            // 3. Or if this is the only visible section, assume it's selected
+            const allVisibleSections = Array.from(document.querySelectorAll('.estimate-section'))
+              .filter(el => el.offsetWidth > 0 && el.offsetHeight > 0);
 
-            // Check for common styling that indicates selection
-            if (style.backgroundColor !== 'transparent' &&
-                style.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
-                style.backgroundColor !== 'rgb(255, 255, 255)' &&
-                (style.borderColor !== style.backgroundColor ||
-                 parseInt(style.borderWidth) > 1 ||
-                 style.boxShadow !== 'none')) {
-              return true;
+            if (allVisibleSections.length === 1 && allVisibleSections[0] === section) {
+              return {source: 'only visible estimate section', found: true};
+            }
+
+            // 4. Special case: check if the name is displayed prominently in the UI
+            const nameElements = section.querySelectorAll('.name, .price-title');
+            for (const el of nameElements) {
+              if (el.textContent.includes(estimateName)) {
+                // If it's prominently displayed, assume it's the current one
+                const style = window.getComputedStyle(el);
+                if (style.fontWeight >= 600 || style.color !== 'rgb(0, 0, 0)') {
+                  return {source: 'prominently displayed name', found: true};
+                }
+              }
             }
           }
         }
 
-        // Also check if there's a heading or title showing the current estimate name
-        const headings = document.querySelectorAll('h1, h2, h3, h4, .title, .heading, .current-estimate');
-        for (const heading of headings) {
-          if (heading.innerText.includes(estimateName)) {
-            return true;
+        // Check for dropdown selection
+        const selectOptions = document.querySelectorAll('select option:checked, select option[selected]');
+        for (const option of selectOptions) {
+          if (option.textContent.includes(estimateName)) {
+            return {source: 'dropdown selection', found: true};
           }
         }
 
-        return false;
+        // Check headings, titles, or special UI elements
+        const headings = document.querySelectorAll('h1, h2, h3, h4, .title, .heading, .current-estimate');
+        for (const heading of headings) {
+          if (heading.textContent.includes(estimateName)) {
+            return {source: 'heading or title', found: true};
+          }
+        }
+
+        // Check for any estimate matches
+        const estimateNameMatches = document.querySelectorAll('.price-title, .name, .estimate-name');
+        for (const el of estimateNameMatches) {
+          if (el.textContent.includes(estimateName)) {
+            // If we find the name in the document and there's only one such element,
+            // it's likely the selected/current one
+            if (estimateNameMatches.length === 1) {
+              return {source: 'only estimate name in document', found: true};
+            }
+          }
+        }
+
+        // If all else fails, check if this estimate exists at all
+        const estimateElements = [
+          ...document.querySelectorAll('.estimate-section'),
+          ...document.querySelectorAll('.estimate-item'),
+          ...document.querySelectorAll('.price-title'),
+          ...document.querySelectorAll('.name')
+        ];
+
+        const estimateFound = estimateElements.some(el => el.textContent.includes(estimateName));
+        return {source: 'estimate found but not selected', found: false, estimateExists: estimateFound};
       }, name);
 
-      if (selectedWithName) {
-        //console.log(`Found selected status for "${name}" using JavaScript evaluation`);
+      if (selectedWithName && selectedWithName.found) {
+        console.log(`Found "${name}" as selected via: ${selectedWithName.source}`);
         return true;
       }
 
       // One more check - if this is the only estimate and it's visible, assume it's selected
       const estimateCount = await this.getEstimateCount();
       if (estimateCount === 1 && await this.estimateExists(name)) {
-        //console.log(`"${name}" is the only estimate and it exists, assuming it's selected`);
+        console.log(`"${name}" is the only estimate and it exists, assuming it's selected`);
         return true;
       }
 
-      //console.log(`Estimate "${name}" is not selected`);
+      console.error(`Estimate "${name}" is not selected`);
       return false;
     } catch (error) {
       console.error(`Error checking if estimate is selected: ${error.message}`);

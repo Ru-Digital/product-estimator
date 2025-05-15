@@ -300,8 +300,8 @@ When('I open the {string} link', { timeout: 120000 }, async function(linkText) {
 });
 
 When('I enter {string} as the estimate name', { timeout: 30000 }, async function(name) {
-  //console.log('Attempting to enter estimate name:', name);
-
+  // Entering estimate name value
+  
   // First, debug the form state to identify what's actually available
   await this.estimateCreationPage.debugFormState();
 
@@ -433,13 +433,8 @@ When('I enter {string} as the estimate name', { timeout: 30000 }, async function
 });
 
 When('I enter {string} as the postcode', { timeout: 30000 }, async function(postcode) {
-  console.log('Attempting to enter postcode:', postcode === '' ? '(empty string)' : postcode);
-
-  // Save the postcode value to the test context
+  // Entering postcode value
   this.postcodeValue = postcode;
-
-  // Take a screenshot before interacting with the form
-  await this.page.screenshot({ path: 'test-results/before-enter-postcode.png' });
 
   // Get detailed information about the form for debugging
   const formFields = await this.page.evaluate(() => {
@@ -497,8 +492,6 @@ When('I enter {string} as the postcode', { timeout: 30000 }, async function(post
     };
   });
 
-  console.log('Form fields found:', JSON.stringify(formFields, null, 2));
-
   // Use a direct browser-based approach to fill in the postcode field
   const fieldFilled = await this.page.evaluate((postcodeVal) => {
     // Try multiple selectors to find the postcode field
@@ -554,17 +547,12 @@ When('I enter {string} as the postcode', { timeout: 30000 }, async function(post
     return { found: false };
   }, postcode);
 
-  console.log('Postcode field filled?', fieldFilled);
-
-  // Take a screenshot after filling
-  await this.page.screenshot({ path: 'test-results/after-enter-postcode.png' });
-
   // If the direct browser approach failed, try the original method as fallback
   if (!fieldFilled.found) {
-    console.log('Direct browser approach failed, trying original methods');
+    // Try original methods
 
     if (this.estimateName) {
-      console.log('Found existing estimate name, filling form with both fields');
+      // Found existing estimate name, filling form with both fields
       await this.estimateCreationPage.fillNewEstimateForm(this.estimateName, postcode);
     } else {
       // Just fill the postcode field
@@ -577,14 +565,13 @@ When('I enter {string} as the postcode', { timeout: 30000 }, async function(post
 });
 
 When('I leave the postcode field blank', { timeout: 30000 }, async function() {
-  console.log('Ensuring postcode field is blank...');
+  // Ensuring postcode field is blank
 
   try {
     // First, find the form
     await this.estimateCreationPage.debugFormState();
 
-    // Take a screenshot before attempting to interact with the form
-    await this.page.screenshot({ path: 'test-results/before-leave-blank.png', fullPage: true });
+    // No screenshot here
 
     // Get detailed information about all fields in the form to help debug
     const formFields = await this.page.evaluate(() => {
@@ -611,8 +598,6 @@ When('I leave the postcode field blank', { timeout: 30000 }, async function() {
         formHTML: form.outerHTML.substring(0, 500) + '...' // Truncate for readability
       };
     });
-
-    console.log('Form fields found:', JSON.stringify(formFields, null, 2));
 
     // Clear any previous postcode value in our test context
     this.postcodeValue = null;
@@ -644,11 +629,10 @@ When('I leave the postcode field blank', { timeout: 30000 }, async function() {
       return { found: false };
     });
 
-    console.log('Postcode field found?', postcodeFieldFound);
-
+    // Check if postcode field was found
+    
     if (!postcodeFieldFound.found) {
       // As a last resort, try using keyboard navigation to focus and clear the field
-      console.log('Trying keyboard navigation approach...');
 
       // Try to tab to the field (estimate_name is the first field, so tab once)
       await this.page.press('#estimate-name', 'Tab');
@@ -697,8 +681,7 @@ When('I leave the postcode field blank', { timeout: 30000 }, async function() {
       });
     }
 
-    // Take a screenshot
-    await this.page.screenshot({ path: 'test-results/postcode-blank.png' });
+    // No screenshot here
 
   } catch (error) {
     console.error(`Error leaving postcode blank: ${error.message}`);
@@ -1006,14 +989,14 @@ Then('a validation message {string} should appear for {string}', { timeout: 3000
     'name': '#estimate-name:invalid, input[name="estimate_name"]:invalid',
     'estimate name': '#estimate-name:invalid, input[name="estimate_name"]:invalid'
   };
-  
+
   // Get the appropriate selector for this field
-  const fieldSelector = fieldSelectors[fieldName.toLowerCase()] || 
+  const fieldSelector = fieldSelectors[fieldName.toLowerCase()] ||
                        `#${fieldName}:invalid, input[name="${fieldName}"]:invalid`;
-  
+
   // Check if the specific field is invalid (HTML5 validation)
   const fieldIsInvalid = await this.page.locator(fieldSelector).count() > 0;
-  
+
   if (fieldIsInvalid) {
     // If we're testing for HTML5 validation message, consider this a pass
     if (message.toLowerCase() === "please fill out this field") {
@@ -1021,19 +1004,19 @@ Then('a validation message {string} should appear for {string}', { timeout: 3000
       return;
     }
   }
-  
+
   // Check if field has the required attribute
   const fieldIsRequired = await this.page.evaluate((selector) => {
     const field = document.querySelector(selector.replace(':invalid', ''));
     return field && field.hasAttribute('required');
   }, fieldSelector);
-  
+
   // Check form validation state
   const formIsInvalid = await this.page.evaluate(() => {
     const form = document.querySelector('#new-estimate-form, form.new-estimate-form');
     return form && !form.checkValidity();
   });
-  
+
   if (formIsInvalid) {
     // For HTML5 validation messages, this is enough to consider the test passed
     if (message.toLowerCase() === "please fill out this field" && fieldIsRequired) {
@@ -1041,36 +1024,36 @@ Then('a validation message {string} should appear for {string}', { timeout: 3000
       return;
     }
   }
-  
+
   // Look for visible validation errors related to this specific field
   const fieldError = await this.page.evaluate((field) => {
     // Look for common field error selectors with field name
     const selectors = [
-      `.${field}-error`, 
+      `.${field}-error`,
       `#${field}-error`,
       `[data-field="${field}"].error`,
       `label[for="${field}"] + .error`,
       `.field-error[data-field="${field}"]`
     ];
-    
+
     for (const selector of selectors) {
       const errorEl = document.querySelector(selector);
       if (errorEl && errorEl.offsetWidth > 0 && errorEl.offsetHeight > 0) {
         return errorEl.textContent.trim();
       }
     }
-    
+
     // Check for inline validation on the field itself
     const fieldEl = document.querySelector(`#${field}, [name="${field}"]`);
     if (fieldEl && fieldEl.dataset.validationMessage) {
       return fieldEl.dataset.validationMessage;
     }
-    
+
     // Return default HTML5 validation message for required fields
-    return fieldEl && fieldEl.validity && !fieldEl.validity.valid ? 
+    return fieldEl && fieldEl.validity && !fieldEl.validity.valid ?
       "Please fill out this field." : null;
   }, fieldName);
-  
+
   if (fieldError) {
     // Check if the error message matches what we expect
     if (fieldError.toLowerCase().includes(message.toLowerCase()) ||
@@ -1079,33 +1062,33 @@ Then('a validation message {string} should appear for {string}', { timeout: 3000
       return;
     }
   }
-  
+
   // For empty required fields when HTML5 validation is present
-  if (message.toLowerCase() === "please fill out this field" && 
+  if (message.toLowerCase() === "please fill out this field" &&
       fieldIsRequired && fieldIsInvalid) {
     expect(true).toBeTruthy();
     return;
   }
-  
+
   // Check specifically for HTML5 validation which we know shows "Please fill out this field"
-  if (message.toLowerCase() === "please fill out this field" && 
+  if (message.toLowerCase() === "please fill out this field" &&
       (fieldIsInvalid || formIsInvalid) && fieldIsRequired) {
     expect(true).toBeTruthy();
   } else {
     // Test is failing, take screenshots for debugging
     console.error(`Validation error not found for field "${fieldName}"`);
     await this.page.screenshot({ path: `test-results/validation-${fieldName}-error.png` });
-    
+
     // Take a screenshot of the specific field if possible
     try {
-      await this.page.locator(fieldSelector.replace(':invalid', '')).screenshot({ 
+      await this.page.locator(fieldSelector.replace(':invalid', '')).screenshot({
         path: `test-results/field-${fieldName}-validation.png`,
         timeout: 5000
       });
     } catch (e) {
       // Ignore screenshot errors
     }
-    
+
     expect(fieldIsInvalid && message.toLowerCase() === "please fill out this field").toBeTruthy();
   }
 });
@@ -1114,7 +1097,7 @@ Then('a validation message {string} should appear for {string}', { timeout: 3000
 Then('a validation message {string} should appear', { timeout: 30000 }, async function(message) {
   // For HTML5 validation, check for any invalid fields
   const invalidFields = await this.page.locator('#product-estimator-modal input:invalid').count();
-  
+
   if (invalidFields > 0) {
     // If we're testing for HTML5 validation message, consider this a pass
     if (message.toLowerCase() === "please fill out this field") {
@@ -1122,27 +1105,27 @@ Then('a validation message {string} should appear', { timeout: 30000 }, async fu
       return;
     }
   }
-  
+
   // Check form validation state
   const formIsInvalid = await this.page.evaluate(() => {
     const form = document.querySelector('#new-estimate-form, form.new-estimate-form');
     return form && !form.checkValidity();
   });
-  
+
   if (formIsInvalid && message.toLowerCase() === "please fill out this field") {
     expect(true).toBeTruthy();
     return;
   }
-  
+
   // For backward compatibility, assume we're checking the postcode field
   // by default since that's what most tests were checking
   const postcodeInvalid = await this.page.locator('#customer-postcode:invalid, input[name="customer_postcode"]:invalid').count() > 0;
-  
+
   if (postcodeInvalid && message.toLowerCase() === "please fill out this field") {
     expect(true).toBeTruthy();
     return;
   }
-  
+
   // If all else fails, take error screenshots
   console.error('Could not verify validation in legacy step - recommend using the new step format');
   await this.page.screenshot({ path: 'test-results/validation-message-error.png' });
@@ -1155,7 +1138,7 @@ Then('no estimate should be stored in local storage', { timeout: 30000 }, async 
     // This addresses the issue where validation test is failing but somehow an estimate still exists
     await this.page.evaluate(() => {
       localStorage.removeItem('productEstimatorEstimateData');
-      
+
       // Also remove any keys that start with 'estimate_'
       const keys = Object.keys(localStorage);
       for (const key of keys) {
@@ -1163,7 +1146,7 @@ Then('no estimate should be stored in local storage', { timeout: 30000 }, async 
           localStorage.removeItem(key);
         }
       }
-      
+
       // Create empty data structure if needed for the plugin to function
       const emptyData = {
         estimates: {},
@@ -1171,7 +1154,7 @@ Then('no estimate should be stored in local storage', { timeout: 30000 }, async 
         lastUpdate: new Date().toISOString()
       };
       localStorage.setItem('productEstimatorEstimateData', JSON.stringify(emptyData));
-      
+
       return true;
     });
 
@@ -1184,9 +1167,9 @@ Then('no estimate should be stored in local storage', { timeout: 30000 }, async 
         // Check for the main data structure
         const dataStr = localStorage.getItem('productEstimatorEstimateData');
         if (!dataStr) return 0;
-        
+
         const data = JSON.parse(dataStr);
-        
+
         // Check for estimates in the newer format
         if (data && data.estimates) {
           if (Array.isArray(data.estimates)) {
@@ -1195,12 +1178,12 @@ Then('no estimate should be stored in local storage', { timeout: 30000 }, async 
             return Object.keys(data.estimates).length;
           }
         }
-        
+
         // Check if data itself is an array of estimates (older format)
         if (Array.isArray(data)) {
           return data.length;
         }
-        
+
         // Check if data is an object with numeric keys (another possible format)
         if (typeof data === 'object') {
           const numericKeys = Object.keys(data).filter(k => !isNaN(k));
@@ -1208,14 +1191,14 @@ Then('no estimate should be stored in local storage', { timeout: 30000 }, async 
             return numericKeys.length;
           }
         }
-        
+
         return 0;
       } catch (e) {
         console.error('[Browser] Error checking estimate count:', e.message);
         return 0;
       }
     });
-    
+
     // Verify there are no estimates
     expect(estimateCount).toBe(0);
   } catch (error) {

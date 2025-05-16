@@ -890,14 +890,34 @@ class ProductManager {
           this.modalManager.hideLoading();
         }
         
-        // Reload the products for this room
-        const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-        if (roomElement) {
-          const productsContainer = roomElement.querySelector('.room-products-container');
-          if (productsContainer) {
-            // Mark as not loaded to force reload
-            delete productsContainer.dataset.loaded;
-            this.loadProductsForRoom(estimateId, roomId, productsContainer);
+        // Navigate to the estimate list with the estimate and room expanded
+        if (this.modalManager && this.modalManager.estimateManager) {
+          // Show the estimates list with the specific estimate and room expanded
+          this.modalManager.estimateManager.showEstimatesList(estimateId, roomId);
+          
+          // Show success dialog after a brief delay to ensure the view has loaded
+          setTimeout(() => {
+            if (this.modalManager.confirmationDialog) {
+              this.modalManager.confirmationDialog.show({
+                title: 'Product Replaced Successfully',
+                message: 'The product has been successfully replaced in your estimate.',
+                type: 'success',
+                action: 'success',
+                showCancel: false,
+                confirmText: 'OK'
+              });
+            }
+          }, 200);
+        } else {
+          // Fallback: reload the products for this room if modalManager is not available
+          const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+          if (roomElement) {
+            const productsContainer = roomElement.querySelector('.room-products-container');
+            if (productsContainer) {
+              // Mark as not loaded to force reload
+              delete productsContainer.dataset.loaded;
+              this.loadProductsForRoom(estimateId, roomId, productsContainer);
+            }
           }
         }
       })

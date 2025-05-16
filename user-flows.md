@@ -89,10 +89,21 @@
 1. Arrive via product button and select room.
 2. ProductManager checks for duplicate products.
 3. If duplicate, warning dialog shown with **Cancel** option.
-4. If successful, product added to storage via DataService.
-5. Room totals updated.
-6. UI refreshed with new product.
-7. Success confirmation shown.
+4. DataService checks for primary product category conflicts.
+5. If primary category conflict detected (both new and existing products are in primary categories):
+   - Dialog appears: "A flooring product already exists in the selected room"
+   - Three options presented:
+     - **Replace the existing product**: Replaces existing primary product with new one
+     - **Go back to room select**: Returns to room selection form
+     - **Cancel**: Closes dialog, stays on current view
+6. If "Replace" chosen:
+   - Existing product replaced with new product
+   - Navigate to estimates list with estimate and room expanded
+   - Success dialog "Product Replaced Successfully" shown
+7. If no conflicts, product added to storage via DataService.
+8. Room totals updated.
+9. UI refreshed with new product.
+10. Success confirmation shown.
 
 #### Toggle Product Details
 1. Click **View Details** or **Hide Details** button.
@@ -263,8 +274,9 @@
 | **T-002** | Create estimate – validation | As above | 1. Submit form with empty `Postcode` | "Postcode required" error |
 | **T-003** | Add room with pre-selected product | Existing estimate; arrive via category button | 1. Navigate forms<br>2. Add room | Room + product added; totals correct |
 | **T-004** | Remove room | Estimate contains ≥1 room | 1. Expand room<br>2. **Remove Room** → confirm | Room removed; totals decrease |
-| **T-005** | Add product – category conflict | Room already has product A | 1. Add product B<br>2. Choose same room | Conflict dialog; **Cancel** keeps state |
-| **T-006** | Replace product | As above, choose **Replace** | Product A replaced by B; totals recomputed |
+| **T-005** | Add product – primary category conflict | Room already has product A (primary category) | 1. Add product B (primary category)<br>2. Choose same room | Conflict dialog with 3 options; **Cancel** keeps state |
+| **T-006** | Replace product – primary conflict | As above, choose **Replace the existing product** | Product A replaced by B; totals recomputed; estimates list shown; success dialog appears |
+| **T-006a** | Primary conflict – back to room | As T-005, choose **Go back to room select** | Returns to room selection form; no product added |
 | **T-007** | Suggested product | Suggestions enabled | 1. Expand room<br>2. View suggestion carousel<br>3. Tick suggestion checkbox | Product added to room; totals update; success message shown |
 | **T-008** | Upgrade product | Product supports upgrade | 1. View product in room<br>2. Select upgrade option from dropdown/radio/tiles<br>3. Confirm selection | Product updated with upgrade; price and totals update; UI refreshes |
 | **T-009** | Persistence check | Data exists | 1. Create estimate with rooms/products<br>2. Reload page | All data persists; estimates, rooms, products identical post-refresh |
@@ -477,24 +489,51 @@ Feature: Product management inside a room
   Customers add, replace, suggest, and upgrade products in rooms
 
   @critical
-  Scenario: Add a product that conflicts with category rules and cancel
-    Given room "Kitchen" already contains product A from category "Flooring"
-    And product B from category "Flooring" exists
+  Scenario: Add a product with primary category conflict and cancel
+    Given room "Kitchen" already contains product A from primary category "Flooring"
+    And product B from primary category "Flooring" exists
     When I click "Add to Estimate" for product B
     And I choose room "Kitchen"
-    And I cancel the conflict dialog
+    Then I see a dialog "A flooring product already exists in the selected room"
+    And the dialog shows three options: "Replace the existing product", "Go back to room select", "Cancel"
+    When I click "Cancel"
     Then product B should not be added to room "Kitchen"
     And totals should remain unchanged
+    And I remain on the current view
 
   @critical
-  Scenario: Replace an existing product due to category conflict
-    Given room "Kitchen" contains product A from category "Flooring"
-    And product B from category "Flooring" exists
+  Scenario: Replace an existing primary category product
+    Given room "Kitchen" contains product A from primary category "Flooring"
+    And product B from primary category "Flooring" exists
     When I click "Add to Estimate" for product B
     And I choose room "Kitchen"
-    And I confirm "Replace"
+    And I see the primary conflict dialog
+    And I click "Replace the existing product"
     Then product A should be removed from room "Kitchen"
     And product B should appear in its place
+    And I should see the estimates list with "Kitchen" expanded
+    And I should see a success dialog "Product Replaced Successfully"
+    And totals should be recalculated
+
+  Scenario: Primary category conflict - go back to room select
+    Given room "Kitchen" contains product A from primary category "Flooring"
+    And product B from primary category "Flooring" exists
+    When I click "Add to Estimate" for product B
+    And I choose room "Kitchen"
+    And I see the primary conflict dialog
+    And I click "Go back to room select"
+    Then I should see the room selection form
+    And product B should not be added to any room
+    And totals should remain unchanged
+
+  Scenario: Add products when not both are primary categories
+    Given room "Kitchen" contains product A from primary category "Flooring"
+    And product C from non-primary category "Accessories" exists
+    When I click "Add to Estimate" for product C
+    And I choose room "Kitchen"
+    Then no conflict dialog should appear
+    And product C should be added to room "Kitchen"
+    And room "Kitchen" should now contain both products A and C
     And totals should be recalculated
 
   @critical

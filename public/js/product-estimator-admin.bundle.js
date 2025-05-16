@@ -2845,9 +2845,9 @@ var GeneralSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
                 return data.text;
               }
 
-              // Highlight selected options in the dropdown
+              // Highlight selected options in the dropdown with hover-like styling
               if (data.element && _this4.dom.primaryProductCategories.val() && _this4.dom.primaryProductCategories.val().includes(data.id)) {
-                return _this4.$("<span class=\"select2-selected-highlight\">".concat(data.text, "</span>"));
+                return _this4.$("<span style=\"color: #fff; background-color: #2271b1; padding: 3px 6px; border-radius: 3px; display: block;\">".concat(data.text, "</span>"));
               }
               return data.text;
             }

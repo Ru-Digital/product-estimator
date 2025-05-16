@@ -1041,7 +1041,9 @@ textarea.error {
   vertical-align: middle;
 }
 
+/* Select2 Customizations */
 .select2-container--default {
+  /* Consistent search box styling */
   /* --- Single Select Specific Styling --- */
   /* --- Multiple Select Specific Styling --- */
   /* --- Dropdown Styling (common for single and multiple) --- */
@@ -1059,6 +1061,18 @@ textarea.error {
   border-color: #2271b1;
   box-shadow: 0 0 0 1px #2271b1;
   outline: 2px solid transparent;
+}
+.select2-container--default .select2-search--inline {
+  width: 100%;
+  padding: 0;
+}
+.select2-container--default .select2-search--inline .select2-search__field {
+  width: 100% !important;
+  max-width: 100%;
+  margin-top: 0;
+  margin-left: 0;
+  padding: 5px;
+  box-sizing: border-box;
 }
 .select2-container--default .select2-selection--single {
   height: 30px;
@@ -1099,7 +1113,8 @@ textarea.error {
 .select2-container--default .select2-selection--multiple {
   cursor: text;
   display: block;
-  min-height: 30px;
+  min-height: 36px;
+  overflow: hidden;
   padding: 0;
   /* The <li> holding the search field */
   /* Placeholder for multiple select (inside search field) */
@@ -1172,7 +1187,7 @@ textarea.error {
 .select2-container--default .select2-results__options {
   list-style: none;
   margin: 0;
-  max-height: 200px;
+  max-height: 250px;
   overflow-y: auto;
   padding: 0;
 }
@@ -1186,7 +1201,12 @@ textarea.error {
   color: #fff;
 }
 .select2-container--default .select2-results__option--selected {
-  background-color: #f0f0f1;
+  background-color: #2271b1;
+  color: #fff;
+}
+.select2-container--default .select2-results__option[aria-selected=true] {
+  background-color: #2271b1;
+  color: #fff;
 }
 .select2-container--default .select2-results__option[aria-disabled=true] {
   color: #a0a5aa;
@@ -1207,7 +1227,6 @@ textarea.error {
 .select2-selection__choice__remove,
 .select2-container--default .select2-selection--single .select2-selection__clear,
 .select2-container--default .select2-selection--multiple .select2-selection__clear {
-  color: #d63638;
   cursor: pointer;
   display: inline-block;
   float: none;
@@ -1612,53 +1631,7 @@ textarea.error {
   transform: translateY(-50%);
 }
 
-/* Select2 Customizations */
-.select2-selected-highlight {
-  background-color: #eaf2fa;
-  font-weight: bold;
-  padding: 2px 6px;
-  border-radius: 3px;
-  display: block;
-  border-left: 3px solid #2271b1;
-}
-
-/* Fix Select2 dropdown and search box */
-.select2-container--default .select2-search--inline {
-  width: 100%;
-  padding: 0;
-}
-.select2-container--default .select2-search__field {
-  width: 100% !important;
-  max-width: 100%;
-  margin-top: 0;
-  margin-left: 0;
-  padding: 5px;
-  box-sizing: border-box;
-}
-.select2-container--default .select2-selection--multiple {
-  min-height: 36px;
-  overflow: hidden;
-}
-.select2-container--default .select2-selection--multiple .select2-selection__rendered {
-  padding: 2px 5px;
-  box-sizing: border-box;
-  display: block;
-}
-.select2-container--default .select2-selection--multiple .select2-selection__choice {
-  margin: 3px;
-  padding: 3px 6px;
-  background-color: #f0f0f1;
-  border-color: #c3c4c7;
-}
-.select2-container--default.select2-container--focus .select2-selection--multiple {
-  border-color: #2271b1;
-}
-
-/* Improve dropdown appearance */
-.select2-container--default .select2-results > .select2-results__options {
-  max-height: 250px;
-}
-
+/* Select2 styles now centralized in ProductEstimatorSettings.scss */
 /* Currency Symbol Preview */
 .currency-preview {
   background: #f0f0f1;
@@ -1826,5 +1799,4 @@ textarea.error {
 @use 'modules/SimilarProductsSettings';
 */
 
-
-/*# sourceMappingURL=product-estimator-admin-bundled.css.map */
+/*# sourceMappingURL=product-estimator-admin-bundled.css.map*/

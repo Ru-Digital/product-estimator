@@ -420,10 +420,10 @@ class GeneralSettingsModule extends VerticalTabbedModule {
                 return data.text;
               }
               
-              // Highlight selected options in the dropdown
-              if (data.element && this.dom.primaryProductCategories.val() &&
+              // Highlight selected options in the dropdown with hover-like styling
+              if (data.element && this.dom.primaryProductCategories.val() && 
                   this.dom.primaryProductCategories.val().includes(data.id)) {
-                return this.$(`<span class="select2-selected-highlight">${data.text}</span>`);
+                return this.$(`<span style="color: #fff; background-color: #2271b1; padding: 3px 6px; border-radius: 3px; display: block;">${data.text}</span>`);
               }
               return data.text;
             }

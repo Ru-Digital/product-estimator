@@ -6,9 +6,11 @@
   "scripts": {
     "prebuild": "npm run lint:build",
     "build": "webpack --mode=production",
-    "dev": "webpack --mode=development --watch",
-    "dev:sourcemaps": "webpack --mode=development && node add-source-maps.js",
+    "predev": "node add-source-maps.js",
+    "dev": "webpack --mode=development --watch & (fswatch -o src/styles | xargs -n1 -I{} node add-source-maps.js)",
+    "dev:once": "webpack --mode=development && node add-source-maps.js",
     "dev:build": "webpack --mode=development && node add-source-maps.js && echo 'Development build completed with source maps!'",
+    "dev:watch:sourcemaps": "webpack --mode=development --watch & (fswatch -o src/styles | xargs -n1 -I{} node add-source-maps.js)",
     "analyze": "webpack --mode=production --profile --json > stats.json && webpack-bundle-analyzer stats.json",
     "lint:js": "eslint 'src/js/**/*.js'",
     "lint:scss": "stylelint 'src/styles/**/*.scss'",

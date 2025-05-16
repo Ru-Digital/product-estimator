@@ -2,11 +2,23 @@ const fs = require('fs');
 const path = require('path');
 const glob = require('glob');
 
+// Enable debug mode with DEBUG=sourcemaps environment variable
+const DEBUG = process.env.DEBUG === 'sourcemaps' || process.env.DEBUG === 'true';
+
+// Debug log function that only logs if debug mode is enabled
+function debugLog(...args) {
+  if (DEBUG) {
+    console.log('DEBUG:', ...args);
+  }
+}
+
 // Only run in development mode
 if (process.env.NODE_ENV === 'production') {
   console.log('Source maps are disabled in production mode');
   process.exit(0);
 }
+
+console.log('Generating source maps for CSS files...');
 
 // Check for the existence of CSS files and return the found path
 function findCssFile(baseName, possiblePaths) {
@@ -70,6 +82,12 @@ function ensureDirectoryExists(filePath) {
   }
 }
 
+// Check if we have any files to process
+if (files.length === 0) {
+  console.log('No CSS files found. Run webpack first to generate CSS files.');
+  process.exit(0);
+}
+
 // Generate source map files
 files.forEach(file => {
   try {
@@ -90,7 +108,7 @@ files.forEach(file => {
       version: 3,
       file: path.basename(file.css),
       sources: [file.sourceFile, ...sourceFiles],
-      sourceRoot: '',
+      sourceRoot: '/wp-content/plugins/product-estimator/',
       names: [],
       mappings: ''
     }, null, 2);

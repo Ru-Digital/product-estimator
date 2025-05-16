@@ -1572,6 +1572,30 @@ var ProductEstimatorSettings = /*#__PURE__*/function () {
     }
 
     /**
+     * Create a template renderer function for Select2 dropdown options
+     * that applies a hover-like style to selected items
+     * @returns {Function} Template renderer function for Select2
+     */
+  }, {
+    key: "createSelect2TemplateRenderer",
+    value: function createSelect2TemplateRenderer() {
+      var _this5 = this;
+      return function (data) {
+        // Skip custom formatting for the search field
+        if (data.loading || !data.id) {
+          return data.text;
+        }
+
+        // Determine if this option is selected in the dropdown
+        // This works for both single and multiple select
+        if (data.element && data.element.selected) {
+          return _this5.$("<span style=\"color: #fff; background-color: #2271b1; padding: 3px 6px; border-radius: 3px; display: block;\">".concat(data.text, "</span>"));
+        }
+        return data.text;
+      };
+    }
+
+    /**
      * Initializes multiple Select2 dropdowns in batch
      * @param {object} options - Configuration options
      * @param {Array} options.elements - Array of elements to initialize
@@ -1583,7 +1607,7 @@ var ProductEstimatorSettings = /*#__PURE__*/function () {
   }, {
     key: "initializeSelect2Dropdowns",
     value: function initializeSelect2Dropdowns(options) {
-      var _this5 = this;
+      var _this6 = this;
       var _options$elements = options.elements,
         elements = _options$elements === void 0 ? [] : _options$elements,
         _options$i18n = options.i18n,
@@ -1605,7 +1629,13 @@ var ProductEstimatorSettings = /*#__PURE__*/function () {
             return;
           }
           var placeholder = i18n[el.placeholderKey] || el.fallbackText || "Select ".concat(el.name);
-          _this5.initSelect2(el.element, placeholder, el.config || {});
+
+          // Apply consistent styling for selected items in dropdown
+          var config = el.config || {};
+          if (!config.templateResult) {
+            config.templateResult = _this6.createSelect2TemplateRenderer();
+          }
+          _this6.initSelect2(el.element, placeholder, config);
         });
       }, delay);
     }
@@ -2814,7 +2844,6 @@ var GeneralSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "_initializeSelect2",
     value: function _initializeSelect2() {
-      var _this4 = this;
       this.initializeSelect2Dropdowns({
         elements: [{
           element: this.dom.primaryProductCategories,
@@ -2838,19 +2867,8 @@ var GeneralSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
 
               // Return null if the term doesn't match
               return null;
-            },
-            templateResult: function templateResult(data) {
-              // Skip custom formatting for the search field
-              if (data.loading || !data.id) {
-                return data.text;
-              }
-
-              // Highlight selected options in the dropdown with hover-like styling
-              if (data.element && _this4.dom.primaryProductCategories.val() && _this4.dom.primaryProductCategories.val().includes(data.id)) {
-                return _this4.$("<span style=\"color: #fff; background-color: #2271b1; padding: 3px 6px; border-radius: 3px; display: block;\">".concat(data.text, "</span>"));
-              }
-              return data.text;
             }
+            // templateResult is now provided by the base class
           }
         }],
         moduleName: 'General Settings'

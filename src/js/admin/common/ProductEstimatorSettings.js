@@ -487,6 +487,28 @@ class ProductEstimatorSettings {
   }
 
   /**
+   * Create a template renderer function for Select2 dropdown options
+   * that applies a hover-like style to selected items
+   * @returns {Function} Template renderer function for Select2
+   */
+  createSelect2TemplateRenderer() {
+    return (data) => {
+      // Skip custom formatting for the search field
+      if (data.loading || !data.id) {
+        return data.text;
+      }
+      
+      // Determine if this option is selected in the dropdown
+      // This works for both single and multiple select
+      if (data.element && data.element.selected) {
+        return this.$(`<span style="color: #fff; background-color: #2271b1; padding: 3px 6px; border-radius: 3px; display: block;">${data.text}</span>`);
+      }
+
+      return data.text;
+    };
+  }
+
+  /**
    * Initializes multiple Select2 dropdowns in batch
    * @param {object} options - Configuration options
    * @param {Array} options.elements - Array of elements to initialize
@@ -517,7 +539,14 @@ class ProductEstimatorSettings {
         }
 
         const placeholder = (i18n[el.placeholderKey] || el.fallbackText || `Select ${el.name}`);
-        this.initSelect2(el.element, placeholder, el.config || {});
+        
+        // Apply consistent styling for selected items in dropdown
+        const config = el.config || {};
+        if (!config.templateResult) {
+          config.templateResult = this.createSelect2TemplateRenderer();
+        }
+        
+        this.initSelect2(el.element, placeholder, config);
       });
 
     }, delay);

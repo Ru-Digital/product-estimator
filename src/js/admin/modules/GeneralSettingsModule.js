@@ -413,20 +413,8 @@ class GeneralSettingsModule extends VerticalTabbedModule {
               
               // Return null if the term doesn't match
               return null;
-            },
-            templateResult: (data) => {
-              // Skip custom formatting for the search field
-              if (data.loading || !data.id) {
-                return data.text;
-              }
-              
-              // Highlight selected options in the dropdown with hover-like styling
-              if (data.element && this.dom.primaryProductCategories.val() && 
-                  this.dom.primaryProductCategories.val().includes(data.id)) {
-                return this.$(`<span style="color: #fff; background-color: #2271b1; padding: 3px 6px; border-radius: 3px; display: block;">${data.text}</span>`);
-              }
-              return data.text;
             }
+            // templateResult is now provided by the base class
           }
         }
       ],

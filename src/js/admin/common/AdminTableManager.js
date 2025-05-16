@@ -31,9 +31,6 @@ class AdminTableManager extends VerticalTabbedModule {
 
 
     super(vtmConfig); // Calls VerticalTabbedModule constructor
-
-    this.$ = jQuery; // jQuery utility
-
     this.config = config; // <<<< ADD THIS LINE
 
 
@@ -110,7 +107,7 @@ class AdminTableManager extends VerticalTabbedModule {
     if (this.settings.i18n) {
       for (const key of required.i18n_keys) {
         if (this.settings.i18n[key] === undefined) {
-          this.logger.warn(`AdminTableManager: Missing i18n key '${key}' in settings.i18n`); 
+          this.logger.warn(`AdminTableManager: Missing i18n key '${key}' in settings.i18n`);
           allValid = false;
         }
       }

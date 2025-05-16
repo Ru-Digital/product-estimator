@@ -332,6 +332,40 @@ class ModalManager {
         });
       }
       
+      // Replace product button click handler (Event delegation)
+      if (this.modal) {
+        this.modal.addEventListener('click', (e) => {
+          // Check if click is on a replace product button
+          const replaceButton = e.target.closest('.replace-product-in-room');
+          if (replaceButton) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Get data attributes from the button
+            const productId = replaceButton.dataset.productId;
+            const estimateId = replaceButton.dataset.estimateId;
+            const roomId = replaceButton.dataset.roomId;
+            const replaceProductId = replaceButton.dataset.replaceProductId;
+            const pricingMethod = replaceButton.dataset.pricingMethod;
+            
+            logger.log('Replace product button clicked', {
+              productId,
+              estimateId,
+              roomId,
+              replaceProductId,
+              pricingMethod
+            });
+            
+            // Check if ProductManager is available
+            if (this.productManager) {
+              this.productManager.replaceProductInRoom(estimateId, roomId, replaceProductId, productId);
+            } else {
+              logger.error('ProductManager not available for product replacement');
+            }
+          }
+        });
+      }
+      
       // Escape key handler
       const escHandler = (e) => {
         if (e.key === 'Escape' && this.isOpen) {

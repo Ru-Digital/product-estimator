@@ -130,6 +130,19 @@ abstract class AjaxHandlerBase {
         }
 
         try {
+            // Check if the product is a variation and get parent if so
+            $product = wc_get_product($product_id);
+            if (!$product) {
+                return [];
+            }
+            
+            $source_product_id = $product_id;
+            
+            // If it's a variation, use parent product for finding similar products
+            if ($product->is_type('variation')) {
+                $source_product_id = $product->get_parent_id();
+            }
+            
             // Ensure SimilarProductsFrontend is available
             if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\SimilarProductsFrontend')) {
                 $similar_products_frontend_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-similar-products-frontend.php';
@@ -145,8 +158,8 @@ abstract class AjaxHandlerBase {
                 PRODUCT_ESTIMATOR_VERSION
             );
 
-            // Find similar product IDs
-            $similar_product_ids = $similar_products_module->find_similar_products($product_id);
+            // Find similar product IDs using the parent product ID if it's a variation
+            $similar_product_ids = $similar_products_module->find_similar_products($source_product_id);
 
             if (empty($similar_product_ids)) {
                 return [];
@@ -186,12 +199,10 @@ abstract class AjaxHandlerBase {
                         $variations = $product_obj->get_available_variations();
                         foreach ($variations as $variation) {
                             if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation['variation_id'])) {
-                                $current_similar_id_to_use = $variation['variation_id']; // Use the variation ID
-                                $product_obj = wc_get_product($current_similar_id_to_use); // Get the variation product object
-                                if ($product_obj) { // Ensure variation product object is valid
-                                    $is_estimator_enabled = true;
-                                    break;
-                                }
+                                // If any variation has estimator enabled, consider the parent product enabled
+                                // but continue using the parent product ID, not the variation ID
+                                $is_estimator_enabled = true;
+                                break;
                             }
                         }
                     }

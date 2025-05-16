@@ -164,6 +164,11 @@ class SimilarProductsFrontend extends FrontendBase {
         $similarity_scores = array();
 
         foreach ($category_products as $candidate_id => $candidate_product) {
+            // Skip variations - we only want parent products or simple products
+            if ($candidate_product->is_type('variation')) {
+                continue;
+            }
+            
             $max_score = 0;
 
             foreach ($matching_rules as $rule) {

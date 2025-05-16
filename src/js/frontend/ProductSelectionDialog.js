@@ -25,6 +25,7 @@ class ProductSelectionDialog {
      * @param {object} options.product - Product data
      * @param {Array} options.variations - Available variations
      * @param {object} options.attributes - Product attributes
+     * @param {string} options.action - The action being performed ('add' or 'replace')
      * @param {Function} options.onSelect - Callback when variation is selected
      * @param {Function} options.onCancel - Callback when dialog is cancelled
      */
@@ -32,6 +33,7 @@ class ProductSelectionDialog {
         this.currentProduct = options.product;
         this.availableVariations = options.variations || [];
         this.attributes = options.attributes || {};
+        this.action = options.action || 'add';
         this.onSelectCallback = options.onSelect;
         this.onCancelCallback = options.onCancel;
         this.selectedVariations = {};
@@ -124,6 +126,12 @@ class ProductSelectionDialog {
         const productNameEl = this.dialogElement.querySelector('.pe-dialog-product-name');
         if (productNameEl) {
             productNameEl.textContent = this.currentProduct.name || 'Select Product Options';
+        }
+        
+        // Update confirm button text based on action
+        const confirmButton = this.dialogElement.querySelector('.pe-dialog-confirm');
+        if (confirmButton) {
+            confirmButton.textContent = this.action === 'replace' ? 'Replace Product' : 'Add to Estimate';
         }
 
         // Clear and populate variation options

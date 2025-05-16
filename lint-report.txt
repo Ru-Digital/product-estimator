@@ -23,8 +23,8 @@
   374:5  warning  Unexpected console statement  no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/ProductSelectionDialog.js
-  64:13  warning  Unexpected console statement  no-console
-  80:13  warning  Unexpected console statement  no-console
+  66:13  warning  Unexpected console statement  no-console
+  82:13  warning  Unexpected console statement  no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/TemplateEngine-enhanced.js
   407:42  warning  Unnecessary escape character: \/  no-useless-escape

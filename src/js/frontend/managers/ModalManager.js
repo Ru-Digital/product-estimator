@@ -586,6 +586,7 @@ class ModalManager {
                   },
                   variations: variationData.variations,
                   attributes: variationData.attributes,
+                  action: 'add',
                   onSelect: (selectedData) => {
                     logger.log('Variation selected:', selectedData);
                     // Hide variation dialog before showing estimate selection

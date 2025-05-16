@@ -1017,6 +1017,7 @@ class ProductManager {
               product: productData,
               variations: productData.variations,
               attributes: productData.attributes || {},
+              action: action,
               onSelect: (selectedData) => {
                 logger.log('Variation selected:', selectedData);
                 

@@ -1,0 +1,1830 @@
+/*!******************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/admin/Index.scss ***!
+  \******************************************************************************************************************************************************************************/
+@charset "UTF-8";
+/**
+ * Main admin styles entry point
+ *
+ * This file imports all shared utilities and components for the admin interface.
+ * We're using modern SASS with @use instead of the older @import syntax.
+ */
+/* Base utilities - these don't output CSS on their own */
+/**
+ * Shared variables for admin styles
+ */
+/**
+ * Main admin styles entry point
+ *
+ * This file imports all shared utilities and components for the admin interface.
+ * We're using modern SASS with @use instead of the older @import syntax.
+ */
+/* Base utilities - these don't output CSS on their own */
+/**
+ * Shared mixins for admin styles
+ */
+/* Core components */
+/**
+ * Admin styles for the Product Estimator plugin
+ */
+/* General Admin Styles */
+.product-estimator-admin-wrapper {
+  margin: 20px 0;
+  max-width: 1200px;
+}
+.product-estimator-admin-wrapper .meta-box-sortables {
+  min-height: 0;
+}
+.product-estimator-admin-wrapper .postbox-container {
+  float: none;
+  width: 100%;
+}
+
+/* Tab Navigation */
+.nav-tab-wrapper {
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 20px;
+}
+
+.nav-tab {
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+}
+.nav-tab:focus {
+  box-shadow: none;
+  outline: thin solid #2271b1;
+}
+
+/* Tab Content */
+.tab-content {
+  background: #fff;
+  border: 1px solid #ccc;
+  border-top: none;
+  padding: 20px;
+}
+
+/* Form Styling */
+.product-estimator-form {
+  max-width: 800px;
+}
+.product-estimator-form input[type=text], .product-estimator-form input[type=email], .product-estimator-form input[type=number], .product-estimator-form input + select {
+  min-width: 250px;
+}
+.product-estimator-form input.small-text {
+  min-width: 80px;
+}
+.product-estimator-form input.error {
+  border-color: #d63638;
+}
+
+.form-table th {
+  padding: 20px 10px 20px 0;
+  width: 200px;
+}
+.form-table td {
+  padding: 20px 10px;
+}
+
+/* Field Errors */
+.field-error {
+  color: #d63638;
+  display: block;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* Loading State */
+.loading {
+  color: #666;
+  padding: 40px;
+  text-align: center;
+}
+.loading::after {
+  animation: spin 1s linear infinite;
+  border: 2px solid #2271b1;
+  border-radius: 50%;
+  border-top-color: transparent;
+  content: "";
+  display: inline-block;
+  height: 20px;
+  margin-left: 10px;
+  width: 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Notice Styling */
+.notice {
+  margin: 20px 0;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+  .form-table td {
+    padding: 10px;
+  }
+  .product-estimator-form input[type=text],
+  .product-estimator-form input[type=email],
+  .product-estimator-form input[type=number],
+  .product-estimator-form select {
+    min-width: 100%;
+  }
+  .report-filters form {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .report-filters select,
+  .report-filters input[type=date] {
+    margin-right: 0;
+    width: 100%;
+  }
+}
+/* Dark Mode Support - Commented out for now
+@media (prefers-color-scheme: dark) {
+  .tab-content {
+    background: #fff;
+    border-color: #2c3338;
+  }
+
+  #report-placeholder {
+    background: #2c3338;
+    border-color: #2c3338;
+  }
+
+  .report-summary,
+  .report-filters {
+    background: #2c3338;
+  }
+
+  .nav-tab {
+    background: #2c3338;
+    border-color: #50575e;
+    color: #fff;
+  }
+
+  .nav-tab-active {
+    background: #2271b1;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  select {
+    background: #2c3338;
+    color: #fff;
+    border-color: #50575e;
+  }
+}
+*/
+/* Print Styles */
+@media print {
+  /* Set minimum lines for paragraph breaks */
+  p, li, tr {
+    orphans: 3; /* Minimum lines at bottom of page before break */
+    widows: 3; /* Minimum lines at top of page after break */
+  }
+  /* Avoid breaks inside these elements */
+  h1, h2, h3, h4,
+  .postbox,
+  tr,
+  thead {
+    page-break-inside: avoid;
+  }
+  /* Force page breaks before these elements */
+  h1, h2, h3 {
+    page-break-after: avoid;
+    page-break-before: auto;
+  }
+  /* Ensure tables have header rows on each page */
+  thead {
+    display: table-header-group;
+  }
+  /* Avoid breaks in the middle of images */
+  img {
+    page-break-inside: avoid;
+  }
+  .nav-tab-wrapper,
+  .report-filters,
+  .submit {
+    display: none;
+  }
+  .product-estimator-admin-wrapper {
+    margin: 0;
+  }
+  .tab-content {
+    border: none;
+    padding: 0;
+  }
+}
+/**
+ * Dashboard Admin CSS
+ *
+ * Additional styles for the main dashboard page
+ */
+/* Dashboard Widgets */
+.dashboard-widgets-wrap {
+  overflow: hidden;
+}
+.dashboard-widgets-wrap .postbox {
+  min-width: 0;
+}
+.dashboard-widgets-wrap .postbox table {
+  margin: 0;
+  width: 100%;
+}
+.dashboard-widgets-wrap .postbox table th,
+.dashboard-widgets-wrap .postbox table td {
+  padding: 8px 10px;
+}
+.dashboard-widgets-wrap .postbox table thead th {
+  border-bottom: 1px solid #ddd;
+  font-weight: 600;
+}
+.dashboard-widgets-wrap .postbox table tbody tr:nth-child(even) {
+  background: #f9f9f9;
+}
+.dashboard-widgets-wrap .postbox table a {
+  text-decoration: none;
+}
+.dashboard-widgets-wrap .postbox table a:hover {
+  text-decoration: underline;
+}
+.dashboard-widgets-wrap .postbox ul {
+  margin: 10px 0;
+  padding: 0 15px;
+}
+.dashboard-widgets-wrap .postbox ul li {
+  list-style: none;
+  margin-bottom: 10px;
+  padding-left: 20px;
+  position: relative;
+}
+.dashboard-widgets-wrap .postbox ul li::before {
+  color: #0073aa;
+  content: "\f345";
+  font-family: dashicons, sans-serif;
+  left: 0;
+  position: absolute;
+  top: 1px;
+}
+.dashboard-widgets-wrap .postbox ul li:last-child {
+  margin-bottom: 0;
+}
+.dashboard-widgets-wrap .postbox .inside p {
+  color: #666;
+  font-style: italic;
+  margin: 10px 15px;
+}
+.dashboard-widgets-wrap .main {
+  padding: 0;
+}
+.dashboard-widgets-wrap .main ul {
+  margin: 0;
+  padding: 10px 15px;
+}
+.dashboard-widgets-wrap .main ul li {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.dashboard-widgets-wrap .main ul li:last-child {
+  margin-bottom: 0;
+}
+.dashboard-widgets-wrap .hndle .page-title-action {
+  font-size: 13px;
+  font-weight: normal;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+/* Dashboard Overview Styling */
+@media only screen and (min-width: 800px) {
+  .product-estimator-admin-wrapper .postbox-container {
+    float: left;
+    width: 49%;
+  }
+  .product-estimator-admin-wrapper .postbox-container:nth-child(odd) {
+    margin-right: 2%;
+  }
+}
+@media only screen and (min-width: 1500px) {
+  .product-estimator-admin-wrapper .postbox-container {
+    width: 32%;
+  }
+  .product-estimator-admin-wrapper .postbox-container:nth-child(3n) {
+    margin-right: 0;
+  }
+  .product-estimator-admin-wrapper .postbox-container:nth-child(3n+1), .product-estimator-admin-wrapper .postbox-container:nth-child(3n+2) {
+    margin-right: 2%;
+  }
+}
+/* Stats Overview */
+.stats-overview {
+  display: flex;
+  flex-wrap: wrap;
+  margin: -5px;
+}
+.stats-overview .stat-item {
+  background: #f9f9f9;
+  border-radius: 4px;
+  flex: 1 1 200px;
+  margin: 5px;
+  padding: 15px;
+  text-align: center;
+}
+.stats-overview .stat-item .stat-number {
+  color: #2271b1;
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.stats-overview .stat-item .stat-label {
+  color: #666;
+  font-size: 13px;
+}
+
+/**
+ * Main admin styles entry point
+ *
+ * This file imports all shared utilities and components for the admin interface.
+ * We're using modern SASS with @use instead of the older @import syntax.
+ */
+/* Base utilities - these don't output CSS on their own */
+/**
+ * Generic Admin Tables CSS
+ *
+ * Provides common styling for admin interface tables, forms within tables,
+ * and list management UIs used across various settings modules.
+ *
+ * Uses shared variables and mixins from _variables.scss and _mixins.scss
+ */
+/* Animation Keyframes */
+@keyframes pe-slide-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pe-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Generic Table Module Container */
+.pe-admin-table-container {
+  margin: 20px 0;
+  max-width: 1200px;
+}
+
+/* Form Container (for add/edit forms) */
+.pe-admin-table-form-container {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-radius: 4px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  animation: pe-slide-down 0.3s ease-out;
+  display: none; /* Initially hidden, JS will toggle */
+  margin-bottom: 20px;
+  padding: 20px;
+  /* Generic Form Table (WordPress style) */
+  /* Form Actions (Save, Cancel buttons) */
+}
+.pe-admin-table-form-container .form-title {
+  border-bottom: 1px solid #eee;
+  font-size: 1.3em;
+  font-weight: 600;
+  margin-bottom: 15px;
+  margin-top: 0;
+  padding-bottom: 10px;
+}
+.pe-admin-table-form-container .form-table {
+  margin-top: 0;
+  width: 100%;
+}
+.pe-admin-table-form-container .form-table th {
+  font-weight: normal;
+  padding: 15px 10px 15px 0;
+  text-align: left;
+  vertical-align: top;
+  width: 200px;
+}
+.pe-admin-table-form-container .form-table td {
+  padding: 10px;
+  vertical-align: top;
+}
+.pe-admin-table-form-container .form-table select,
+.pe-admin-table-form-container .form-table textarea,
+.pe-admin-table-form-container .form-table input[type=text],
+.pe-admin-table-form-container .form-table input[type=number],
+.pe-admin-table-form-container .form-table input[type=email],
+.pe-admin-table-form-container .form-table input[type=url],
+.pe-admin-table-form-container .form-table input[type=password] {
+  border: 1px solid #8c8f94;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.07);
+  box-sizing: border-box;
+  height: 30px;
+  line-height: normal;
+  max-width: 450px;
+  padding: 6px 8px;
+  width: 100%;
+}
+.pe-admin-table-form-container .form-table select:focus,
+.pe-admin-table-form-container .form-table textarea:focus,
+.pe-admin-table-form-container .form-table input[type=text]:focus,
+.pe-admin-table-form-container .form-table input[type=number]:focus,
+.pe-admin-table-form-container .form-table input[type=email]:focus,
+.pe-admin-table-form-container .form-table input[type=url]:focus,
+.pe-admin-table-form-container .form-table input[type=password]:focus {
+  border-color: #2271b1;
+  box-shadow: 0 0 0 1px #2271b1;
+  outline: none;
+}
+.pe-admin-table-form-container .form-table textarea {
+  height: auto;
+  min-height: 80px;
+}
+.pe-admin-table-form-container .form-table .description {
+  color: #646970;
+  display: block;
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.pe-admin-table-form-container .form-actions {
+  align-items: center;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+}
+.pe-admin-table-form-container .form-actions .spinner {
+  float: none;
+  vertical-align: middle;
+}
+
+/* List Table Styles */
+.pe-admin-list-table-wrapper {
+  margin-top: 20px;
+  position: relative;
+}
+.pe-admin-list-table-wrapper > h3 {
+  font-size: 1.4em;
+  font-weight: 400;
+  margin: 0 0 10px;
+  padding: 0;
+}
+
+.pe-admin-list-table {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-radius: 3px;
+  border-spacing: 0;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  clear: both;
+  width: 100%;
+}
+.pe-admin-list-table thead th,
+.pe-admin-list-table tfoot th {
+  background-color: #f6f7f7;
+  border-bottom: 1px solid #ccd0d4;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4em;
+  padding: 10px;
+  text-align: left;
+}
+.pe-admin-list-table tfoot th {
+  border-bottom: none;
+  border-top: 1px solid #ccd0d4;
+}
+.pe-admin-list-table tbody td {
+  border-bottom: 1px solid #f0f0f1;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+.pe-admin-list-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.pe-admin-list-table tbody tr:hover {
+  background-color: #f0f6fc;
+}
+.pe-admin-list-table .actions .button {
+  margin-right: 5px;
+}
+.pe-admin-list-table .actions .button:last-child {
+  margin-right: 0;
+}
+
+/* "Add New" Button */
+.pe-add-new-item-button {
+  margin-bottom: 15px;
+}
+.pe-add-new-item-button:hover {
+  background-color: #135e96;
+  border-color: #135e96;
+}
+
+/* "No items" Message */
+.pe-no-items-message {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-radius: 3px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  color: #2c3338;
+  font-style: italic;
+  margin-top: 15px;
+  padding: 20px;
+  text-align: center;
+}
+
+/* Loading spinner on buttons */
+.pe-loading {
+  display: inline-block; /* Ensure proper display context */
+  opacity: 0.7;
+  position: relative;
+}
+.pe-loading::after {
+  animation: pe-spin 0.8s linear infinite;
+  border: 2px solid #f0f0f1;
+  border-radius: 50%;
+  border-top-color: #2271b1;
+  content: "";
+  display: inline-block;
+  height: 16px;
+  margin-left: 8px;
+  vertical-align: middle;
+  width: 16px;
+}
+.pe-loading::after {
+  margin-top: -8px; /* Half of spinner height */
+  position: absolute; /* Ensure proper positioning of spinner */
+  right: -24px; /* Position to the right of text */
+  top: 50%;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+  .pe-admin-table-form-container .form-table th,
+  .pe-admin-table-form-container .form-table td {
+    display: block;
+    padding-left: 0;
+    padding-right: 0;
+    width: 100%;
+  }
+  .pe-admin-table-form-container .form-table th {
+    font-weight: 600;
+    padding-bottom: 5px;
+  }
+  .pe-admin-table-form-container .form-table td {
+    padding-bottom: 15px;
+    padding-top: 0;
+  }
+  .pe-admin-table-form-container .form-table select,
+  .pe-admin-table-form-container .form-table textarea,
+  .pe-admin-table-form-container .form-table input[type=text],
+  .pe-admin-table-form-container .form-table input[type=number],
+  .pe-admin-table-form-container .form-table input[type=email],
+  .pe-admin-table-form-container .form-table input[type=url],
+  .pe-admin-table-form-container .form-table input[type=password],
+  .pe-admin-table-form-container .form-table .select2-container {
+    max-width: 100%;
+    width: 100%; /* Removed !important */
+  }
+  .pe-admin-table-form-container .form-actions {
+    flex-direction: column;
+  }
+  .pe-admin-table-form-container .form-actions button,
+  .pe-admin-table-form-container .form-actions .button,
+  .pe-admin-table-form-container .form-actions input[type=button],
+  .pe-admin-table-form-container .form-actions input[type=submit] {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  .pe-admin-table-form-container .form-actions button:last-child,
+  .pe-admin-table-form-container .form-actions .button:last-child,
+  .pe-admin-table-form-container .form-actions input[type=button]:last-child,
+  .pe-admin-table-form-container .form-actions input[type=submit]:last-child {
+    margin-bottom: 0;
+  }
+  /* Responsive List Table */
+  .pe-admin-list-table-wrapper {
+    -webkit-overflow-scrolling: touch; /* Better scrolling on iOS */
+    overflow-x: auto;
+  }
+  .pe-admin-list-table {
+    min-width: 500px; /* Reduced from 600px for smaller devices */
+    table-layout: fixed; /* Helps with responsive layouts */
+    width: 100%;
+  }
+  .pe-admin-list-table .actions {
+    white-space: nowrap;
+  }
+}
+/* Extra small devices */
+@media screen and (max-width: 480px) {
+  .pe-admin-list-table {
+    min-width: 450px; /* Even smaller minimum width */
+  }
+}
+/**
+ * Admin Vertical Tabs CSS
+ *
+ * General styles for a vertical tab layout in the WordPress admin.
+ * These styles are intended to be reusable across different settings modules.
+ */
+/* Wrapper for the entire vertical tabs interface */
+.pe-vtabs-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  margin-top: 20px;
+}
+
+/* Main container for navigation and content panels */
+.pe-vtabs-main-container {
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-radius: 3px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  gap: 0;
+}
+
+/* Area containing the vertical navigation tabs */
+.pe-vtabs-nav-area {
+  background-color: #f6f7f7;
+  border-right: 1px solid #dcdcde;
+  width: 200px;
+}
+
+/* List holding the navigation tab items */
+.pe-vtabs-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Individual navigation tab item */
+.pe-vtabs-nav-item {
+  border-bottom: 1px solid #dcdcde;
+  margin: 0;
+  padding: 0;
+}
+.pe-vtabs-nav-item:last-child {
+  border-bottom: none;
+}
+.pe-vtabs-nav-item a {
+  border-left: 3px solid transparent;
+  color: #2c3338;
+  display: block;
+  font-weight: 500;
+  padding: 12px 15px;
+  text-decoration: none;
+  transition: all 0.2s ease-in-out;
+}
+.pe-vtabs-nav-item a:hover {
+  background-color: #f0f0f1;
+  color: #135e96;
+}
+.pe-vtabs-nav-item.active a {
+  background-color: #fff;
+  border-left-color: #135e96;
+  color: #135e96;
+}
+
+/* Area containing the content panels for each tab */
+.pe-vtabs-content-area {
+  flex: 1;
+  min-height: 400px;
+  padding: 0;
+}
+
+/* Individual content panel for a tab */
+.pe-vtabs-tab-panel {
+  display: none;
+  padding: 25px;
+}
+.pe-vtabs-tab-panel.active {
+  display: block;
+}
+
+/* Description text at the top of a tab panel */
+.pe-vtabs-tab-description {
+  border-bottom: 1px solid #e0e0e0;
+  color: #50575e;
+  font-size: 14px;
+  margin-bottom: 20px;
+  margin-top: 0;
+  padding-bottom: 15px;
+}
+
+/* Form specific adjustments within a tab panel */
+.pe-vtabs-tab-form {
+  /* Submit button area within a form */
+  /* Spinner next to submit button */
+}
+.pe-vtabs-tab-form .form-table {
+  margin-top: 0;
+}
+.pe-vtabs-tab-form .form-table th {
+  padding-bottom: 15px;
+  padding-top: 15px;
+  width: 220px;
+}
+.pe-vtabs-tab-form .form-table td {
+  padding-bottom: 15px;
+  padding-top: 15px;
+  vertical-align: middle;
+}
+.pe-vtabs-tab-form input[type=text],
+.pe-vtabs-tab-form input[type=email],
+.pe-vtabs-tab-form input[type=number],
+.pe-vtabs-tab-form input[type=url],
+.pe-vtabs-tab-form input[type=search],
+.pe-vtabs-tab-form textarea,
+.pe-vtabs-tab-form select {
+  max-width: 450px;
+  width: 100%;
+}
+.pe-vtabs-tab-form textarea {
+  min-height: 100px;
+}
+.pe-vtabs-tab-form .submit {
+  border-top: 1px solid #e0e0e0;
+  margin-top: 25px;
+  padding-top: 20px;
+}
+.pe-vtabs-tab-form .spinner {
+  float: none;
+  margin: 4px 5px 0;
+  vertical-align: middle;
+}
+
+/* Generic Sidebar Panel for Vertical Tab Layouts */
+.pe-vtabs-sidebar-panel {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid #ccd0d4;
+  border-radius: 3px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+  flex: 0 0 280px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding: 20px;
+  position: sticky;
+  top: 48px;
+}
+.pe-vtabs-sidebar-panel h3 {
+  border-bottom: 1px solid #e0e0e0;
+  color: #2c3338;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 0;
+  padding-bottom: 10px;
+}
+.pe-vtabs-sidebar-panel h4 {
+  color: #2c3338;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  margin-top: 0;
+}
+.pe-vtabs-sidebar-panel p {
+  color: #50575e;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+.pe-vtabs-sidebar-panel p small {
+  color: #757575;
+  display: block;
+  margin-top: 10px;
+}
+.pe-vtabs-sidebar-panel ul {
+  list-style: none;
+  margin: 10px 0 0;
+  padding-left: 0;
+}
+.pe-vtabs-sidebar-panel ul li {
+  color: #50575e;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.pe-vtabs-sidebar-panel code,
+.pe-vtabs-sidebar-panel ul li code {
+  background: #f0f0f1;
+  border: 1px solid #dcdcde;
+  border-radius: 3px;
+  color: #3c434a;
+  display: inline-block;
+  font-size: 13px;
+  margin-right: 5px;
+  padding: 3px 6px;
+}
+
+/* Responsive Adjustments for the vertical tab layout */
+@media screen and (max-width: 1200px) {
+  .pe-vtabs-wrapper {
+    flex-direction: column;
+  }
+  .pe-vtabs-wrapper .pe-vtabs-sidebar-panel {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    margin-top: 30px;
+    max-height: none;
+    position: static;
+    width: 100%;
+  }
+}
+@media screen and (max-width: 782px) {
+  .pe-vtabs-main-container {
+    flex-direction: column;
+  }
+  .pe-vtabs-nav-area {
+    border-bottom: 1px solid #dcdcde;
+    border-right: none;
+    width: 100%;
+  }
+  .pe-vtabs-nav-list {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .pe-vtabs-nav-item {
+    border-bottom: none;
+    flex-grow: 1;
+    text-align: center;
+  }
+  .pe-vtabs-nav-item:not(:last-child) {
+    border-right: 1px solid #dcdcde;
+  }
+  .pe-vtabs-nav-item a {
+    border-bottom: 3px solid transparent;
+    border-left: none;
+    padding: 10px 12px;
+  }
+  .pe-vtabs-nav-item.active a {
+    background-color: #f0f0f1;
+    border-bottom-color: #135e96;
+    border-left-color: transparent;
+  }
+  .pe-vtabs-content-area {
+    min-height: auto;
+  }
+  .pe-vtabs-tab-panel {
+    padding: 20px;
+  }
+  .pe-vtabs-tab-form .form-table th,
+  .pe-vtabs-tab-form .form-table td {
+    display: block;
+    padding: 10px 0;
+    width: 100%;
+  }
+  .pe-vtabs-tab-form .form-table th {
+    font-weight: 600;
+    padding-bottom: 5px;
+  }
+}
+/**
+ * Main admin styles entry point
+ *
+ * This file imports all shared utilities and components for the admin interface.
+ * We're using modern SASS with @use instead of the older @import syntax.
+ */
+/* Base utilities - these don't output CSS on their own */
+/**
+ * Main Settings CSS
+ *
+ * Styles for the main settings page.
+ */
+/**
+ * Main admin styles entry point
+ *
+ * This file imports all shared utilities and components for the admin interface.
+ * We're using modern SASS with @use instead of the older @import syntax.
+ */
+/* Base utilities - these don't output CSS on their own */
+/**
+ * Animations for Product Estimator admin styles
+ *
+ * Centralized animation keyframes to avoid duplication across files.
+ */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes loading-dots {
+  0% {
+    content: ".";
+  }
+  33% {
+    content: "..";
+  }
+  66% {
+    content: "...";
+  }
+  100% {
+    content: ".";
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+/* Form Styling Specific to Settings */
+.product-estimator-form input[type=text],
+.product-estimator-form input[type=email],
+.product-estimator-form input[type=password],
+.product-estimator-form input[type=number],
+.product-estimator-form select,
+.product-estimator-form textarea {
+  max-width: 500px;
+  min-width: 250px;
+  width: 100%;
+}
+.product-estimator-form input.small-text {
+  min-width: 80px;
+  width: auto;
+}
+
+/* Field Errors */
+.field-error {
+  color: #d63638;
+  display: block;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+input.error,
+select.error,
+textarea.error {
+  border-color: #d63638;
+}
+
+/* Loading State */
+.loading {
+  color: #2c3338;
+  padding: 40px;
+  text-align: center;
+}
+.loading::after {
+  animation: 1s linear infinite spin;
+  border: 2px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 2px solid #2271b1;
+  content: "";
+  display: inline-block;
+  height: 20px;
+  margin-left: 10px;
+  width: 20px;
+}
+
+/* Required Fields */
+.form-table th.required label::after {
+  color: #d63638;
+  content: " *";
+}
+
+/* === Select2 Global Styles - Consistent across all modules === */
+.select2-container {
+  box-sizing: border-box;
+  display: inline-block;
+  margin: 0;
+  position: relative;
+  vertical-align: middle;
+}
+
+.select2-container--default {
+  /* --- Single Select Specific Styling --- */
+  /* --- Multiple Select Specific Styling --- */
+  /* --- Dropdown Styling (common for single and multiple) --- */
+  /* Search field within the dropdown */
+}
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+  background-color: #fff;
+  border: 1px solid #8c8f94;
+  border-radius: 3px;
+  box-sizing: border-box;
+}
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+  border-color: #2271b1;
+  box-shadow: 0 0 0 1px #2271b1;
+  outline: 2px solid transparent;
+}
+.select2-container--default .select2-selection--single {
+  height: 30px;
+  line-height: 28px;
+  padding: 0 8px;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  color: #50575e;
+  line-height: inherit;
+  overflow: hidden;
+  padding-left: 0;
+  padding-right: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+  color: #757575;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 28px;
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  width: 20px;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+  border-color: #50575e transparent transparent transparent;
+  border-style: solid;
+  border-width: 5px 4px 0;
+  height: 0;
+  left: 50%;
+  margin-left: -4px;
+  margin-top: -2px;
+  position: absolute;
+  top: 50%;
+  width: 0;
+}
+.select2-container--default .select2-selection--multiple {
+  cursor: text;
+  display: block;
+  min-height: 30px;
+  padding: 0;
+  /* The <li> holding the search field */
+  /* Placeholder for multiple select (inside search field) */
+}
+.select2-container--default .select2-selection--multiple .select2-selection__rendered {
+  box-sizing: border-box;
+  list-style: none;
+  margin: 0;
+  padding: 1px 0 0 3px;
+  width: 100%;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__rendered::after {
+  clear: both;
+  content: "";
+  display: table;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+  background-color: #f0f0f1;
+  border: 1px solid #c3c4c7;
+  border-radius: 3px;
+  color: #50575e;
+  cursor: default;
+  float: left;
+  line-height: 1.5;
+  margin-right: 4px;
+  margin-top: 3px;
+  padding: 2px 18px 2px 2px;
+  white-space: nowrap;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+  color: #d63638;
+  cursor: pointer;
+  display: inline-block;
+  float: none;
+  font-weight: bold;
+  margin-left: 0;
+  position: relative;
+  vertical-align: middle;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+  color: #50575e;
+}
+.select2-container--default .select2-selection--multiple .select2-search--inline {
+  float: left;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+.select2-container--default .select2-selection--multiple .select2-search__field {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  box-sizing: border-box;
+  font-size: 13px;
+  height: 26px;
+  line-height: 1.5;
+  margin: 3px 0 2px;
+  min-width: 320px;
+  outline: 0;
+  padding: 0 3px;
+  vertical-align: baseline;
+  width: 100%;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__placeholder {
+  color: #757575;
+  float: left;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+.select2-container--default .select2-results__options {
+  list-style: none;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0;
+}
+.select2-container--default .select2-results__option {
+  line-height: 1.5;
+  padding: 6px 8px;
+  user-select: none;
+}
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+  background-color: #2271b1;
+  color: #fff;
+}
+.select2-container--default .select2-results__option--selected {
+  background-color: #f0f0f1;
+}
+.select2-container--default .select2-results__option[aria-disabled=true] {
+  color: #a0a5aa;
+  cursor: not-allowed;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+  border: 1px solid #8c8f94;
+  border-radius: 3px;
+  box-sizing: border-box;
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 4px 0;
+  padding: 6px 8px;
+  width: 100%;
+}
+
+.select2-selection__choice__remove,
+.select2-container--default .select2-selection--single .select2-selection__clear,
+.select2-container--default .select2-selection--multiple .select2-selection__clear {
+  color: #d63638;
+  cursor: pointer;
+  display: inline-block;
+  float: none;
+  font-weight: bold;
+  margin-left: 0;
+  position: relative;
+  vertical-align: middle;
+}
+
+.select2-dropdown {
+  background-color: #fff;
+  border: 1px solid #8c8f94;
+  border-radius: 0 0 3px 3px;
+  border-top: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  z-index: 10051;
+}
+
+.select2-container--open .select2-dropdown--above {
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  border-top: 1px solid #8c8f94;
+}
+
+.select2-results {
+  display: block;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+  .product-estimator-form input[type=text],
+  .product-estimator-form input[type=email],
+  .product-estimator-form input[type=password],
+  .product-estimator-form input[type=number],
+  .product-estimator-form select,
+  .product-estimator-form textarea,
+  .product-estimator-form .select2-container {
+    min-width: 100%;
+    width: 100%;
+  }
+}
+/**
+ * Customer Estimates Admin CSS
+ *
+ * Styles for the customer estimates admin page
+ */
+/* List Table Styles */
+.wp-list-table .column-id {
+  width: 5%;
+}
+.wp-list-table .column-name {
+  width: 20%;
+}
+.wp-list-table .column-email {
+  width: 20%;
+}
+.wp-list-table .column-phone_number {
+  width: 12%;
+}
+.wp-list-table .column-postcode {
+  width: 8%;
+}
+.wp-list-table .column-total_amount {
+  width: 15%;
+}
+.wp-list-table .column-status {
+  width: 8%;
+}
+.wp-list-table .column-created_at {
+  width: 12%;
+}
+.wp-list-table .column-actions {
+  width: 15%;
+}
+.wp-list-table .column-actions button,
+.wp-list-table .column-actions a.button {
+  margin: 2px 0;
+  padding: 2px 8px;
+}
+
+/* Status Badges */
+.status-saved {
+  background-color: #2271b1;
+  border-radius: 3px;
+  color: #fff;
+  display: inline-block;
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+.status-pending {
+  background-color: #f0b849;
+  border-radius: 3px;
+  color: #fff;
+  display: inline-block;
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+.status-completed {
+  background-color: #00a32a;
+  border-radius: 3px;
+  color: #fff;
+  display: inline-block;
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+.status-cancelled {
+  background-color: #d63638;
+  border-radius: 3px;
+  color: #fff;
+  display: inline-block;
+  font-size: 12px;
+  padding: 3px 8px;
+}
+
+/* Single Estimate View */
+.estimate-details-container {
+  margin-top: 20px;
+}
+.estimate-details-container .postbox {
+  margin-bottom: 20px;
+}
+
+.room-details {
+  border-bottom: 1px solid #eee;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+}
+.room-details:last-child {
+  border-bottom: none;
+}
+.room-details h3 {
+  font-size: 18px;
+  margin: 0 0 15px;
+}
+.room-details .wp-list-table {
+  margin-top: 15px;
+}
+
+.room-dimensions {
+  color: #666;
+  font-size: 14px;
+  font-weight: normal;
+}
+
+.additional-product td {
+  background-color: #f9f9f9;
+}
+
+.note-row td {
+  background-color: #f9f9f9;
+  font-style: italic;
+}
+
+.estimate-total {
+  background-color: #f7f7f7;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-top: 30px;
+  padding: 20px;
+}
+.estimate-total h3 {
+  font-size: 20px;
+  margin-top: 0;
+}
+
+.total-amount {
+  color: #2271b1;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.estimate-actions {
+  border-top: 1px solid #ddd;
+  margin-top: 20px;
+  padding: 15px 0;
+}
+.estimate-actions .button {
+  margin-right: 10px;
+}
+
+/* Filter Bar */
+.tablenav .alignleft.actions select {
+  min-width: 150px;
+}
+
+/* Search Box */
+.search-box {
+  float: right;
+  margin-bottom: 10px;
+}
+
+/* Loading States */
+.loading-overlay {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  left: 0;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 9999;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+  border: 4px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 4px solid #3498db;
+  height: 40px;
+  width: 40px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+/* Admin Notices */
+.notice-success,
+.notice-error {
+  margin: 15px 0;
+}
+
+/* Responsive Table */
+@media screen and (max-width: 782px) {
+  .wp-list-table {
+    border: 0;
+  }
+  .wp-list-table thead {
+    display: none;
+  }
+  .wp-list-table tr {
+    border-bottom: 2px solid #ddd;
+    display: block;
+    margin-bottom: 15px;
+  }
+  .wp-list-table td {
+    border-bottom: 1px dotted #ccc;
+    display: block;
+    font-size: 13px;
+    padding: 8px 10px;
+    text-align: right;
+  }
+  .wp-list-table td::before {
+    content: attr(data-label);
+    float: left;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  .wp-list-table td:last-child {
+    border-bottom: 0;
+  }
+  .column-actions {
+    text-align: left !important;
+  }
+}
+/* Print Styles */
+@media print {
+  /* Set minimum lines for paragraph breaks */
+  p, li, tr {
+    orphans: 3; /* Minimum lines at bottom of page before break */
+    widows: 3; /* Minimum lines at top of page after break */
+  }
+  /* Avoid breaks inside these elements */
+  h1, h2, h3, h4,
+  .room-details,
+  tr,
+  thead {
+    page-break-inside: avoid;
+  }
+  /* Force page breaks before these elements */
+  h1, h2, h3,
+  .room-details {
+    page-break-after: avoid;
+    page-break-before: auto;
+  }
+  /* Ensure tables have header rows on each page */
+  thead {
+    display: table-header-group;
+  }
+  /* Avoid breaks in the middle of images */
+  img {
+    page-break-inside: avoid;
+  }
+  .estimate-actions,
+  .wp-header-end,
+  .wp-heading-inline a,
+  .tablenav,
+  .search-box {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  .estimate-details-container {
+    margin: 0;
+    padding: 0;
+  }
+  .postbox {
+    border: none;
+    box-shadow: none;
+  }
+}
+/* Module-specific styles - only import non-empty files */
+/**
+ * General Settings CSS
+ *
+ * Styles specific to the general settings tab.
+ */
+/* General Settings Section */
+#general .form-table {
+  margin-top: 0;
+}
+#general .form-table th {
+  padding-bottom: 15px;
+  padding-top: 15px;
+}
+#general .form-table td {
+  padding-bottom: 15px;
+  padding-top: 15px;
+  vertical-align: top;
+}
+
+/* Number Input Fields */
+#default_markup,
+#estimate_expiry_days {
+  width: 80px;
+}
+
+/* Info Indicator */
+.info-indicator {
+  color: #2271b1;
+  cursor: help;
+  margin-left: 5px;
+}
+
+/* Tooltip */
+.tooltip {
+  display: inline-block;
+  position: relative;
+}
+.tooltip .tooltip-text {
+  background-color: #555;
+  border-radius: 6px;
+  bottom: 125%;
+  color: #fff;
+  left: 50%;
+  margin-left: -100px;
+  opacity: 0;
+  padding: 5px;
+  position: absolute;
+  text-align: center;
+  transition: opacity 0.3s;
+  visibility: hidden;
+  width: 200px;
+  z-index: 1;
+}
+.tooltip:hover .tooltip-text {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Field Help Box */
+.field-help-box {
+  background-color: #f0f6fc;
+  border-left: 4px solid #2271b1;
+  margin: 15px 0;
+  max-width: 600px;
+  padding: 12px 15px;
+}
+.field-help-box h4 {
+  margin-bottom: 8px;
+  margin-top: 0;
+}
+
+/* Select Field */
+.select-wrapper {
+  display: inline-block;
+  position: relative;
+}
+.select-wrapper select {
+  appearance: none;
+  padding-right: 30px;
+}
+.select-wrapper::after {
+  color: #50575e;
+  content: "▼";
+  font-size: 12px;
+  pointer-events: none;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Select2 Customizations */
+.select2-selected-highlight {
+  background-color: #eaf2fa;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 3px;
+  display: block;
+  border-left: 3px solid #2271b1;
+}
+
+/* Fix Select2 dropdown and search box */
+.select2-container--default .select2-search--inline {
+  width: 100%;
+  padding: 0;
+}
+.select2-container--default .select2-search__field {
+  width: 100% !important;
+  max-width: 100%;
+  margin-top: 0;
+  margin-left: 0;
+  padding: 5px;
+  box-sizing: border-box;
+}
+.select2-container--default .select2-selection--multiple {
+  min-height: 36px;
+  overflow: hidden;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__rendered {
+  padding: 2px 5px;
+  box-sizing: border-box;
+  display: block;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+  margin: 3px;
+  padding: 3px 6px;
+  background-color: #f0f0f1;
+  border-color: #c3c4c7;
+}
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+  border-color: #2271b1;
+}
+
+/* Improve dropdown appearance */
+.select2-container--default .select2-results > .select2-results__options {
+  max-height: 250px;
+}
+
+/* Currency Symbol Preview */
+.currency-preview {
+  background: #f0f0f1;
+  border-radius: 4px;
+  font-family: monospace;
+  margin-left: 15px;
+  padding: 3px 8px;
+}
+
+/* PDF Settings styles */
+.file-preview-wrapper {
+  margin-bottom: 10px;
+  max-width: 500px;
+}
+
+.file-preview {
+  align-items: center;
+  display: flex;
+  margin: 0 0 5px;
+}
+
+.file-icon {
+  color: #c00;
+  font-size: 16px;
+  margin-right: 6px;
+}
+
+.file-details {
+  flex: 1;
+  overflow: hidden;
+}
+
+.file-name {
+  display: block;
+  font-size: 13px;
+  font-weight: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-name a {
+  color: #2271b1;
+  text-decoration: none;
+}
+.file-name a:hover {
+  color: #135e96;
+  text-decoration: underline;
+}
+
+/* File info text below the file upload input */
+.file-upload-info {
+  color: #666;
+  display: block;
+  font-size: 12px;
+  font-style: italic;
+  margin-top: 5px;
+}
+
+.file-upload-wrapper {
+  margin-bottom: 15px;
+  margin-top: 5px;
+}
+
+.select-file-button,
+.remove-file-button {
+  background: #f6f7f7 !important;
+  border: 1px solid #c3c4c7 !important;
+  border-radius: 3px !important;
+  box-shadow: none !important;
+  color: #2c3338 !important;
+  font-size: 12px !important;
+  height: 30px !important;
+  line-height: 28px !important;
+  padding: 0 10px !important;
+  text-decoration: none !important;
+  text-shadow: none !important;
+  transition: all 0.1s !important;
+}
+.select-file-button:hover,
+.remove-file-button:hover {
+  background: #f0f0f1 !important;
+  border-color: #8c8f94 !important;
+}
+.select-file-button:focus,
+.remove-file-button:focus {
+  border-color: #2271b1 !important;
+  box-shadow: 0 0 0 1px #2271b1 !important;
+  outline: 2px solid transparent !important;
+}
+
+.select-file-button {
+  margin-right: 5px !important;
+}
+
+.file-remove-button.hidden {
+  display: none !important;
+}
+
+/* Additional info text below upload field */
+.upload-instructions {
+  color: #666;
+  display: block;
+  font-size: 12px;
+  font-style: italic;
+  margin-top: 5px;
+}
+
+.required {
+  color: #d63638;
+}
+
+.file-required-notice {
+  color: #d63638;
+  font-style: italic;
+  margin: 5px 0;
+}
+
+/* Rich Text Editor fields */
+.wp-editor-wrap {
+  margin-bottom: 15px;
+  max-width: 800px;
+}
+
+.html-active .wp-editor-area {
+  border: 1px solid #ddd;
+}
+
+/* Make sure RTE fields have proper spacing */
+#pdf_footer_text_wrapper,
+#pdf_footer_contact_details_content_wrapper {
+  margin-bottom: 15px;
+}
+
+/* Textarea field for footer text */
+#pdf_footer_text {
+  max-width: 800px;
+  min-height: 100px;
+  width: 100%;
+}
+
+#pdf_footer_contact_details_content {
+  max-width: 800px;
+  min-height: 100px;
+  width: 100%;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+  .currency-preview {
+    display: block;
+    margin-left: 0;
+    margin-top: 10px;
+  }
+}
+/* These modules don't currently have custom styles, so we've commented them out
+   to reduce unnecessary imports. Uncomment them if you add styles to these files.
+
+@use 'modules/FeatureSwitches';
+@use 'modules/LabelSettings';
+@use 'modules/NetsuiteSettings';
+@use 'modules/NotificationSettings';
+@use 'modules/PricingRules';
+@use 'modules/ProductAdditionsSettings';
+@use 'modules/ProductUpgradesSettings';
+@use 'modules/SimilarProductsSettings';
+*/
+
+
+/*# sourceMappingURL=product-estimator-admin-bundled.css.map */

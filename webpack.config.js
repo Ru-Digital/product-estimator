@@ -1,4 +1,6 @@
 const path = require('path');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+// This configuration includes CSS source maps for easier debugging
 
 module.exports = {
   entry: {
@@ -6,22 +8,25 @@ module.exports = {
     'product-estimator': './src/js/index.js',
 
     // Admin entry point including all module scripts
-    'admin/product-estimator-admin': './src/js/admin.js',
+    'product-estimator-admin': './src/js/admin.js',
     
     // Admin styles entry
-    'admin/admin-styles': './src/styles/admin/Index.scss',
+    'admin-styles': './src/styles/admin/Index.scss',
     
     // Frontend styles entry
     'frontend-styles': './src/styles/frontend/Index.scss'
   },
+  
+  // Configure output paths - everything goes to public/js
   output: {
     filename: '[name].bundle.js',
     path: path.resolve(__dirname, 'public/js'),
+    sourceMapFilename: '[file].map',
   },
   mode: process.env.NODE_ENV || 'development',
 
-  // Add the devtool property here for source maps
-  devtool: 'source-map', // Or 'eval-source-map' for faster builds
+  // Only generate source maps in development mode
+  devtool: process.env.NODE_ENV === 'production' ? false : 'source-map',
 
   resolve: {
     // Add aliases for easier imports
@@ -50,32 +55,27 @@ module.exports = {
         test: /\.s[ac]ss$/i,
         use: [
           {
-            loader: 'file-loader',
+            loader: MiniCssExtractPlugin.loader,
             options: {
-              name(resourcePath) {
-                // Output different filenames based on the input path
-                if (resourcePath.includes('admin/Index.scss')) {
-                  return 'product-estimator-admin-bundled.css';
-                }
-                return 'product-estimator-frontend-bundled.css';
-              },
-              outputPath(url, resourcePath) {
-                // Output to different directories based on the input path
-                if (resourcePath.includes('admin/Index.scss')) {
-                  return '../../admin/css/' + url;
-                }
-                return '../../public/css/' + url;
-              }
+              // This allows source maps to correctly find the original scss files
+              esModule: false,
+              emit: true,
+            }
+          },
+          {
+            loader: 'css-loader',
+            options: {
+              sourceMap: true,
+              importLoaders: 1,
             }
           },
           {
             loader: 'sass-loader',
             options: {
-              // Use modern API
+              sourceMap: true,
               sassOptions: {
-                outputStyle: 'compressed'
-              },
-              api: 'modern'
+                outputStyle: process.env.NODE_ENV === 'production' ? 'compressed' : 'expanded'
+              }
             }
           }
         ]
@@ -97,6 +97,18 @@ module.exports = {
             }
           }
         ]
+      },
+      {
+        // Source map loader for existing source maps
+        test: /\.js\.map$/,
+        use: ['source-map-loader'],
+        enforce: 'pre'
+      },
+      {
+        // Source map loader for CSS files
+        test: /\.css$/,
+        use: ['source-map-loader'],
+        enforce: 'pre'
       }
     ]
   },
@@ -106,5 +118,20 @@ module.exports = {
       chunks: 'all',
       name: 'common'
     }
-  }
+  },
+  
+  // Configure plugins
+  plugins: [
+    new MiniCssExtractPlugin({
+      filename: (pathData) => {
+        // Output all CSS files to public/css with appropriate names
+        const chunkName = pathData.chunk.name;
+        if (chunkName === 'admin-styles') {
+          return '../css/product-estimator-admin-bundled.css';
+        }
+        return '../css/product-estimator-frontend-bundled.css';
+      },
+      chunkFilename: '[id].css'
+    })
+  ]
 };

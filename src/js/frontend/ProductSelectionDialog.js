@@ -39,6 +39,11 @@ class ProductSelectionDialog {
 
         this.create();
         
+        // Check if dialog creation succeeded
+        if (!this.dialogElement || !this.backdropElement) {
+            throw new Error('Failed to create product selection dialog');
+        }
+        
         // If we're transitioning from loading state, hide it first
         if (this.dialogElement && this.dialogElement.classList.contains('loading')) {
             this.hideLoading();
@@ -57,7 +62,7 @@ class ProductSelectionDialog {
         const template = this.templateEngine.getTemplate('product-selection-template');
         if (!template) {
             console.error('ProductSelectionDialog: Product selection template not found');
-            return;
+            throw new Error('Product selection template not found');
         }
 
         // Create dialog from template using the create method
@@ -73,7 +78,7 @@ class ProductSelectionDialog {
 
         if (!this.backdropElement || !this.dialogElement) {
             console.error('ProductSelectionDialog: Failed to create dialog elements');
-            return;
+            throw new Error('Failed to create dialog elements');
         }
 
         // Move the backdrop element directly to body

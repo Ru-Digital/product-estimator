@@ -341,26 +341,65 @@ class ModalManager {
             e.preventDefault();
             e.stopPropagation();
             
+            // Prevent double clicks
+            if (replaceButton.dataset.processing === 'true') {
+              logger.log('Replace button click ignored - already processing');
+              return;
+            }
+            
+            // Mark as processing to prevent double processing
+            replaceButton.dataset.processing = 'true';
+            
             // Get data attributes from the button
             const productId = replaceButton.dataset.productId;
             const estimateId = replaceButton.dataset.estimateId;
             const roomId = replaceButton.dataset.roomId;
             const replaceProductId = replaceButton.dataset.replaceProductId;
-            const pricingMethod = replaceButton.dataset.pricingMethod;
             
             logger.log('Replace product button clicked', {
               productId,
               estimateId,
               roomId,
-              replaceProductId,
-              pricingMethod
+              replaceProductId
             });
             
-            // Check if ProductManager is available
+            // Get room data for pricing calculations
+            const estimate = this.dataService.getEstimate(estimateId);
+            const room = estimate?.rooms?.[roomId];
+            
+            // Use the common variation handler
             if (this.productManager) {
-              this.productManager.replaceProductInRoom(estimateId, roomId, replaceProductId, productId);
+              this.productManager.handleProductVariationSelection(productId, {
+                action: 'replace',
+                estimateId,
+                roomId,
+                replaceProductId,
+                room,
+                button: replaceButton
+              })
+              .then(() => {
+                logger.log('Product replacement completed successfully');
+              })
+              .catch(error => {
+                logger.error('Error handling product replacement:', error);
+                
+                // Show error dialog only for actual errors (not cancellation)
+                if (error.message !== 'Variation selection cancelled') {
+                  this.confirmationDialog.show({
+                    title: 'Error',
+                    message: 'Unable to replace product. Please try again.',
+                    type: 'error',
+                    showCancel: false,
+                    confirmText: 'OK'
+                  });
+                }
+              })
+              .finally(() => {
+                replaceButton.dataset.processing = 'false';
+              });
             } else {
               logger.error('ProductManager not available for product replacement');
+              replaceButton.dataset.processing = 'false';
             }
           }
         });

@@ -467,6 +467,92 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             $similar_products_list = $this->fetch_and_format_similar_products($product_id, $room_area);
 
             $product_data['similar_products'] = $similar_products_list;
+            
+            // Check if this is a variable product and add variations data
+            if ($product->is_type('variable')) {
+                // Get variations data
+                $available_variations = $product->get_available_variations();
+                $attributes = $product->get_variation_attributes();
+                
+                // Format attributes for frontend
+                $formatted_attributes = [];
+                foreach ($attributes as $attribute_name => $options) {
+                    $formatted_options = [];
+                    
+                    // Check if this is a taxonomy attribute
+                    $attribute_taxonomy = wc_attribute_taxonomy_name($attribute_name);
+                    $is_taxonomy = taxonomy_exists($attribute_taxonomy);
+                    
+                    foreach ($options as $option) {
+                        $option_data = [
+                            'value' => $option,
+                            'label' => $option
+                        ];
+                        
+                        // If this is a taxonomy attribute, get the term details
+                        if ($is_taxonomy) {
+                            $term = get_term_by('slug', $option, $attribute_taxonomy);
+                            if ($term) {
+                                $option_data['label'] = $term->name;
+                                
+                                // Check for color or image meta
+                                $color = get_term_meta($term->term_id, 'product_attribute_color', true);
+                                $image = get_term_meta($term->term_id, 'product_attribute_image', true);
+                                
+                                if ($color) {
+                                    $option_data['color'] = $color;
+                                    $option_data['type'] = 'color';
+                                } elseif ($image) {
+                                    $option_data['image'] = wp_get_attachment_url($image);
+                                    $option_data['type'] = 'image';
+                                }
+                            }
+                        }
+                        
+                        $formatted_options[] = $option_data;
+                    }
+                    
+                    $formatted_attributes[$attribute_name] = [
+                        'label' => wc_attribute_label($attribute_name, $product),
+                        'options' => $formatted_options,
+                        'type' => isset($formatted_options[0]['type']) ? $formatted_options[0]['type'] : 'label'
+                    ];
+                }
+                
+                // Format variations for frontend
+                $formatted_variations = [];
+                foreach ($available_variations as $variation) {
+                    $variation_obj = wc_get_product($variation['variation_id']);
+                    $image_id = $variation_obj ? $variation_obj->get_image_id() : 0;
+                    $image_url = '';
+                    
+                    if ($image_id) {
+                        $image_url = wp_get_attachment_image_url($image_id, 'woocommerce_thumbnail');
+                    } elseif (isset($variation['image']['url'])) {
+                        $image_url = $variation['image']['url'];
+                    }
+                    
+                    $formatted_variations[] = [
+                        'variation_id' => $variation['variation_id'],
+                        'attributes' => $variation['attributes'],
+                        'display_price' => $variation['display_price'],
+                        'display_regular_price' => $variation['display_regular_price'],
+                        'image' => $variation['image'],
+                        'image_url' => $image_url,
+                        'is_in_stock' => $variation['is_in_stock'],
+                        'variation_description' => $variation['variation_description']
+                    ];
+                }
+                
+                // Add variations data to product data
+                $product_data['is_variable'] = true;
+                $product_data['variations'] = $formatted_variations;
+                $product_data['attributes'] = $formatted_attributes;
+            } else {
+                $product_data['is_variable'] = false;
+                $product_data['variations'] = [];
+                $product_data['attributes'] = [];
+            }
 
             wp_send_json_success([
                 'message' => __('Product data retrieved successfully', 'product-estimator'),

@@ -953,6 +953,137 @@ class ProductManager {
     this.currentEstimateId = null;
     this.currentProductId = null;
   }
+
+  /**
+   * Handle product selection with variation checking
+   * @param {string|number} productId - The product ID
+   * @param {object} options - Options for handling the product selection
+   * @param {string} options.action - The action to perform ('add' or 'replace')
+   * @param {string} options.estimateId - The estimate ID
+   * @param {string} options.roomId - The room ID
+   * @param {string} [options.replaceProductId] - Product ID to replace (for replace action)
+   * @param {object} [options.room] - Room data for pricing calculations
+   * @param {HTMLElement} [options.button] - The button element for state management
+   * @returns {Promise} - Promise that resolves when action is complete
+   */
+  handleProductVariationSelection(productId, options) {
+    const {
+      action,
+      estimateId,
+      roomId,
+      replaceProductId,
+      room,
+      button
+    } = options;
+
+    logger.log(`Handling product variation selection for ${action}`, { productId, estimateId, roomId });
+
+    // Store original button state if provided
+    let originalButtonState = null;
+    if (button) {
+      originalButtonState = {
+        text: button.textContent,
+        disabled: button.disabled
+      };
+      button.disabled = true;
+      button.innerHTML = '<span class="spinner"></span> Loading...';
+      button.classList.add('loading');
+    }
+
+    // Fetch product data to check for variations - use the same method as add product flow
+    return this.dataService.getProductVariationData(productId)
+    .then(variationData => {
+      // Check if product has variations
+      if (variationData && variationData.isVariable && variationData.variations && variationData.variations.length > 0) {
+        const productData = {
+          id: productId,
+          name: variationData.productName || 'Product',
+          variations: variationData.variations,
+          attributes: variationData.attributes
+        };
+        logger.log('Product has variations, showing selection dialog');
+        
+        // Reset button temporarily if provided
+        if (button && originalButtonState) {
+          button.innerHTML = originalButtonState.text;
+          button.disabled = originalButtonState.disabled;
+          button.classList.remove('loading');
+        }
+        
+        // Show product selection dialog
+        return new Promise((resolve, reject) => {
+          if (this.modalManager.productSelectionDialog) {
+            this.modalManager.productSelectionDialog.show({
+              product: productData,
+              variations: productData.variations,
+              attributes: productData.attributes || {},
+              onSelect: (selectedData) => {
+                logger.log('Variation selected:', selectedData);
+                
+                const selectedVariationId = selectedData.variationId;
+                
+                if (!selectedVariationId) {
+                  reject(new Error('No variation selected'));
+                  return;
+                }
+                
+                // Re-disable button if provided
+                if (button) {
+                  button.innerHTML = '<span class="spinner"></span> Loading...';
+                  button.disabled = true;
+                  button.classList.add('loading');
+                }
+                
+                // Perform the action based on type
+                if (action === 'add') {
+                  resolve(this.addProductToRoom(estimateId, roomId, selectedVariationId));
+                } else if (action === 'replace') {
+                  resolve(this.replaceProductInRoom(estimateId, roomId, replaceProductId, selectedVariationId));
+                } else {
+                  reject(new Error(`Unknown action: ${action}`));
+                }
+              },
+              onCancel: () => {
+                logger.log('Variation selection cancelled');
+                // Reset button if provided
+                if (button && originalButtonState) {
+                  button.innerHTML = originalButtonState.text;
+                  button.disabled = originalButtonState.disabled;
+                  button.classList.remove('loading');
+                  button.dataset.processing = 'false';
+                }
+                reject(new Error('Variation selection cancelled'));
+              }
+            });
+          } else {
+            reject(new Error('Product selection dialog not available'));
+          }
+        });
+      } else {
+        // No variations, proceed directly with action
+        logger.log('Product has no variations, proceeding directly');
+        
+        if (action === 'add') {
+          return this.addProductToRoom(estimateId, roomId, productId);
+        } else if (action === 'replace') {
+          return this.replaceProductInRoom(estimateId, roomId, replaceProductId, productId);
+        } else {
+          throw new Error(`Unknown action: ${action}`);
+        }
+      }
+    })
+    .finally(() => {
+      // Always reset button state at the end
+      if (button && originalButtonState) {
+        button.innerHTML = originalButtonState.text;
+        button.disabled = originalButtonState.disabled;
+        button.classList.remove('loading');
+        if (button.dataset) {
+          button.dataset.processing = 'false';
+        }
+      }
+    });
+  }
 }
 
 export default ProductManager;

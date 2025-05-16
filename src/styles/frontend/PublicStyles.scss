@@ -34,6 +34,33 @@
   }
 }
 
+/* Button Loading State */
+.product-estimator-button.loading {
+  cursor: wait !important;
+  opacity: 0.7;
+  position: relative;
+  
+  .button-loading-spinner {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    width: 100%;
+    
+    .dashicons {
+      animation: spin 1s linear infinite;
+      font-size: 16px;
+      height: 16px;
+      width: 16px;
+    }
+  }
+}
+
+// Let WooCommerce handle the single_add_to_estimator_button loading state
+.single_add_to_estimator_button.loading {
+  cursor: wait !important;
+  opacity: 0.7;
+}
+
 /* Product Card Actions */
 
 .product-card-actions {

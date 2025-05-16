@@ -422,16 +422,53 @@ class ModalManager {
   }
   
   /**
+   * Reset button state after loading
+   */
+  resetButtonState() {
+    if (!this._buttonConfig || !this._buttonConfig.button) {
+      return;
+    }
+    
+    const { button } = this._buttonConfig;
+    
+    // Get original data from data attributes
+    const originalText = button.dataset.originalText || button.textContent;
+    const wasDisabled = button.dataset.originalDisabled === 'true';
+    
+    // Only clear content for buttons we added spinners to
+    if (button.classList.contains('product-estimator-category-button')) {
+      button.innerHTML = '';
+    }
+    
+    // Reset button to original state
+    button.textContent = originalText;
+    button.disabled = wasDisabled;
+    button.classList.remove('loading');
+    
+    // Clean up data attributes
+    delete button.dataset.originalText;
+    delete button.dataset.originalDisabled;
+    
+    // Clear the config
+    this._buttonConfig = null;
+  }
+  
+  /**
    * Open the modal
    * @param {string|null} productId - Optional product ID to add
    * @param {boolean} forceListView - Force showing the estimates list
+   * @param {object} buttonConfig - Optional button configuration for reset
    */
-  openModal(productId = null, forceListView = false) {
+  openModal(productId = null, forceListView = false, buttonConfig = null) {
     logger.log('MODAL OPEN CALLED WITH:', {
       productId: productId,
       forceListView: forceListView,
-      typeOfProductId: typeof productId
+      typeOfProductId: typeof productId,
+      hasButtonConfig: !!buttonConfig
     });
+    
+    // Store button config for later reset
+    this._buttonConfig = buttonConfig;
     
     // Debounce logic - prevent rapid open/close calls
     if (this._modalActionInProgress) {
@@ -457,14 +494,13 @@ class ModalManager {
       if (productId && !forceListView) {
         logger.log('Checking for product variations', { productId });
         
-        // Show a loading state immediately
-        if (this.productSelectionDialog) {
-          this.productSelectionDialog.showLoading();
-        }
+        // Don't show loading dialog immediately - the button already has loading state
         
         // Check if this is a variable product
         this.dataService.getProductVariationData(productId)
           .then(variationData => {
+            // Don't reset button state here - wait until dialog is closed
+            
             if (variationData && variationData.isVariable && variationData.variations && variationData.variations.length > 0) {
               // Show product selection dialog for variations
               logger.log('Product has variations, showing selection dialog', variationData);
@@ -482,6 +518,9 @@ class ModalManager {
                     // Hide variation dialog before showing estimate selection
                     this.productSelectionDialog.hideDialog();
                     
+                    // Reset button state since we're proceeding with the selected variation
+                    this.resetButtonState();
+                    
                     // Small delay for smoother transition
                     setTimeout(() => {
                       this.proceedWithModalOpen(selectedData.variationId || selectedData.productId, forceListView);
@@ -490,6 +529,7 @@ class ModalManager {
                   onCancel: () => {
                     logger.log('Product selection cancelled');
                     this._modalActionInProgress = false;
+                    this.resetButtonState();
                   }
                 });
               } else {
@@ -498,23 +538,17 @@ class ModalManager {
                 this.proceedWithModalOpen(productId, forceListView);
               }
             } else {
-              // Hide loading if shown
-              if (this.productSelectionDialog) {
-                this.productSelectionDialog.hideLoading();
-              }
-              
-              // No variations, proceed normally
+              // No variations, reset button state and proceed normally
               logger.log('Product has no variations, proceeding normally');
+              this.resetButtonState();
               this.proceedWithModalOpen(productId, forceListView);
             }
           })
           .catch(error => {
             logger.error('Error checking product variations:', error);
             
-            // Hide loading if shown
-            if (this.productSelectionDialog) {
-              this.productSelectionDialog.hideLoading();
-            }
+            // Reset button state on error
+            this.resetButtonState();
             
             // On error, proceed with normal flow
             this.proceedWithModalOpen(productId, forceListView);
@@ -619,6 +653,9 @@ class ModalManager {
     try {
       // Ensure loader is hidden
       this.ensureLoaderHidden();
+      
+      // Reset button state if we have one
+      this.resetButtonState();
       
       // Hide the modal
       if (this.modal) {

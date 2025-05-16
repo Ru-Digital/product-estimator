@@ -145,6 +145,7 @@ class EstimatorCore {
       // IMPORTANT: Remove any existing event listeners first
       if (this._clickHandler) {
         document.removeEventListener('click', this._clickHandler);
+        logger.log('Removed existing click handler');
       }
 
       // Create a single handler function and store a reference to it
@@ -167,6 +168,7 @@ class EstimatorCore {
         if (button && !menuButton) {  // Ensure we don't process both if menu button matches both selectors
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation(); // Prevent any other handlers from running
 
           // Get product ID from data attribute
           const productId = button.dataset.productId || null;
@@ -177,14 +179,51 @@ class EstimatorCore {
             dataAttribute: button.dataset
           });
 
+          // Add loading state to the button - prevent duplicates
+          if (button.classList.contains('loading')) {
+            logger.log('Button already has loading state, skipping');
+            return;
+          }
+
+          // Store original content
+          const originalButtonText = button.textContent;
+          const buttonWasDisabled = button.disabled;
+          
+          // Store as data attributes for later restoration
+          button.dataset.originalText = originalButtonText;
+          button.dataset.originalDisabled = buttonWasDisabled;
+          
+          // Add loading state
+          button.disabled = true;
+          button.classList.add('loading');
+          
+          // Only add our spinner to product-estimator-category-button
+          if (button.classList.contains('product-estimator-category-button')) {
+            // Clear button content and add our spinner
+            button.innerHTML = '';
+            
+            const loadingSpinner = document.createElement('span');
+            loadingSpinner.className = 'button-loading-spinner';
+            loadingSpinner.innerHTML = '<span class="dashicons dashicons-update-alt spinning"></span>';
+            button.appendChild(loadingSpinner);
+          }
+          // For single_add_to_estimator_button, just let WooCommerce handle the loading state
+
           if (this.modalManager) {
             logger.log('OPENING MODAL WITH:', {
               productId: productId,
               forceListView: false
             });
 
+            // Pass button reference to modal manager so it can reset the state
+            const config = {
+              originalButtonText,
+              buttonWasDisabled,
+              button
+            };
+
             // Explicitly pass productId and set forceListView to false
-            this.modalManager.openModal(productId, false);
+            this.modalManager.openModal(productId, false, config);
           }
         }
       };

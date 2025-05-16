@@ -126,6 +126,7 @@ class GeneralSettingsModule extends VerticalTabbedModule {
 
   /**
    * Called when sub-tab is changed - needs to setup TinyMCE and field validation
+   * @param subTabId
    */
   onSubTabActivated(subTabId) {
     logger.log(`Sub-tab activated: ${subTabId}`);
@@ -143,6 +144,7 @@ class GeneralSettingsModule extends VerticalTabbedModule {
 
   /**
    * Initialize TinyMCE editors for the given sub-tab
+   * @param subTabId
    */
   setupTinyMCEEditors(subTabId) {
     // Map sub-tab IDs to editor fields

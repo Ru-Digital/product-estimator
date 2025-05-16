@@ -9,16 +9,22 @@
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/admin/modules/GeneralSettingsModule.js
   103:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
-  127:3  warning  Missing JSDoc @param "subTabId" declaration  jsdoc/require-param
-  144:3  warning  Missing JSDoc @param "subTabId" declaration  jsdoc/require-param
-  292:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
-  325:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
+  129:1  warning  Missing JSDoc @param "subTabId" description  jsdoc/require-param-description
+  129:1  warning  Missing JSDoc @param "subTabId" type         jsdoc/require-param-type
+  147:1  warning  Missing JSDoc @param "subTabId" description  jsdoc/require-param-description
+  147:1  warning  Missing JSDoc @param "subTabId" type         jsdoc/require-param-type
+  294:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
+  327:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimateStorage.js
   359:5  warning  Unexpected console statement  no-console
   361:5  warning  Unexpected console statement  no-console
   372:5  warning  Unexpected console statement  no-console
   374:5  warning  Unexpected console statement  no-console
+
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/ProductSelectionDialog.js
+  59:13  warning  Unexpected console statement  no-console
+  75:13  warning  Unexpected console statement  no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/TemplateEngine-enhanced.js
   407:42  warning  Unnecessary escape character: \/  no-useless-escape
@@ -66,9 +72,9 @@
   29:1  warning  There should be no empty line within import group  import/order
   35:1  warning  There should be no empty line within import group  import/order
   38:1  warning  There should be no empty line within import group  import/order
-  42:1  warning  There should be no empty line within import group  import/order
-  47:1  warning  There should be no empty line within import group  import/order
-  52:1  warning  There should be no empty line within import group  import/order
+  45:1  warning  There should be no empty line within import group  import/order
+  50:1  warning  There should be no empty line within import group  import/order
+  55:1  warning  There should be no empty line within import group  import/order
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/format.js
   36:1  warning  Missing JSDoc @returns declaration                 jsdoc/require-returns
@@ -79,8 +85,7 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-✖ 52 problems (0 errors, 52 warnings)
-  0 errors and 2 warnings potentially fixable with the `--fix` option.
+✖ 56 problems (0 errors, 56 warnings)
 
 
 > product-estimator@1.3.0 lint:scss

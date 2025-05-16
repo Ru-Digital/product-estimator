@@ -13,6 +13,7 @@ import { loadEstimateData, saveEstimateData, clearEstimateData } from '../Estima
 import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails } from '../CustomerStorage';
 import TemplateEngine from '../TemplateEngine';
 import ConfirmationDialog from '../ConfirmationDialog';
+import ProductSelectionDialog from '../ProductSelectionDialog';
 
 // Import specialized managers
 import EstimateManager from './EstimateManager';
@@ -279,6 +280,21 @@ class ModalManager {
       logger.error('Error creating ConfirmationDialog:', error);
     }
     
+    // Set up product selection dialog for variations
+    logger.log('Creating ProductSelectionDialog instance');
+    try {
+      this.productSelectionDialog = new ProductSelectionDialog(this, TemplateEngine);
+      
+      // Make it available to the product manager
+      if (this.productManager) {
+        this.productManager.productSelectionDialog = this.productSelectionDialog;
+      }
+      
+      logger.log('ProductSelectionDialog instance created successfully');
+    } catch (error) {
+      logger.error('Error creating ProductSelectionDialog:', error);
+    }
+    
     // Verify dialog instance was created (elements will be created on demand)
     if (this.confirmationDialog) {
       logger.log('ConfirmationDialog instance ready for use, elements will be created when needed');
@@ -437,6 +453,94 @@ class ModalManager {
     }
     
     try {
+      // If we have a product ID, check for variations first
+      if (productId && !forceListView) {
+        logger.log('Checking for product variations', { productId });
+        
+        // Show a loading state immediately
+        if (this.productSelectionDialog) {
+          this.productSelectionDialog.showLoading();
+        }
+        
+        // Check if this is a variable product
+        this.dataService.getProductVariationData(productId)
+          .then(variationData => {
+            if (variationData && variationData.isVariable && variationData.variations && variationData.variations.length > 0) {
+              // Show product selection dialog for variations
+              logger.log('Product has variations, showing selection dialog', variationData);
+              
+              if (this.productSelectionDialog) {
+                this.productSelectionDialog.show({
+                  product: {
+                    id: productId,
+                    name: variationData.productName || 'Select Product Options'
+                  },
+                  variations: variationData.variations,
+                  attributes: variationData.attributes,
+                  onSelect: (selectedData) => {
+                    logger.log('Variation selected:', selectedData);
+                    // Hide variation dialog before showing estimate selection
+                    this.productSelectionDialog.hideDialog();
+                    
+                    // Small delay for smoother transition
+                    setTimeout(() => {
+                      this.proceedWithModalOpen(selectedData.variationId || selectedData.productId, forceListView);
+                    }, 150);
+                  },
+                  onCancel: () => {
+                    logger.log('Product selection cancelled');
+                    this._modalActionInProgress = false;
+                  }
+                });
+              } else {
+                logger.error('ProductSelectionDialog not available');
+                // Fallback to normal flow
+                this.proceedWithModalOpen(productId, forceListView);
+              }
+            } else {
+              // Hide loading if shown
+              if (this.productSelectionDialog) {
+                this.productSelectionDialog.hideLoading();
+              }
+              
+              // No variations, proceed normally
+              logger.log('Product has no variations, proceeding normally');
+              this.proceedWithModalOpen(productId, forceListView);
+            }
+          })
+          .catch(error => {
+            logger.error('Error checking product variations:', error);
+            
+            // Hide loading if shown
+            if (this.productSelectionDialog) {
+              this.productSelectionDialog.hideLoading();
+            }
+            
+            // On error, proceed with normal flow
+            this.proceedWithModalOpen(productId, forceListView);
+          });
+        
+        return; // Exit early, we'll continue in the callback
+      }
+      
+      // No product ID or forcing list view, proceed normally
+      this.proceedWithModalOpen(productId, forceListView);
+      
+    } catch (error) {
+      logger.error('Error opening modal:', error);
+      this.hideLoading();
+      this.showError('An error occurred opening the modal. Please try again.');
+    }
+  }
+  
+  /**
+   * Continue with opening the modal after variation check
+   * @private
+   * @param {string|number} productId - The product ID to add
+   * @param {boolean} forceListView - Whether to force the list view
+   */
+  proceedWithModalOpen(productId, forceListView) {
+    try {
       // Reset any previous modal state (hides all view wrappers)
       this.resetModalState();
       
@@ -486,7 +590,7 @@ class ModalManager {
         }
       }
     } catch (error) {
-      logger.error('Error opening modal:', error);
+      logger.error('Error proceeding with modal open:', error);
       this.hideLoading();
       this.showError('An error occurred opening the modal. Please try again.');
     }

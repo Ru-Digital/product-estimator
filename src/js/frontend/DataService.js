@@ -83,6 +83,32 @@ class DataService {
   }
 
   /**
+   * Get product variation data including available variations and attributes
+   * @param {string|number} productId - The product ID to get variation data for
+   * @returns {Promise<object>} Promise resolving to variation data
+   */
+  getProductVariationData(productId) {
+    logger.log(`Getting variation data for product ID: ${productId}`);
+    
+    return this.ajaxService._request('product_estimator_get_product_variations', {
+      product_id: productId
+    })
+    .then(data => {
+      logger.log(`Variation data received for product ${productId}:`, data);
+      return {
+        isVariable: data.is_variable || false,
+        productName: data.product_name || '',
+        variations: data.variations || [],
+        attributes: data.attributes || {}
+      };
+    })
+    .catch(error => {
+      logger.error('Error getting product variation data:', error);
+      throw error;
+    });
+  }
+
+  /**
    * Check if any estimates exist in the session by checking localStorage
    * @returns {Promise<boolean>} True if estimates exist
    */

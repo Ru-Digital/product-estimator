@@ -233,3 +233,198 @@
     padding: 10px;
   }
 }
+
+/* Product Selection Dialog */
+
+.pe-product-selection-dialog {
+  @include modal-container(600px, $z-index-dialog);
+  animation: modal-slide-in 0.3s ease-out;
+  
+  .pe-dialog-body {
+    padding: $spacing-lg $spacing-lg 0;
+  }
+  
+  .pe-dialog-product-name {
+    color: $text-color;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: $spacing-md;
+  }
+  
+  
+  .pe-dialog-variations {
+    margin-bottom: $spacing-md;
+  }
+  
+  .pe-variation-group {
+    margin-bottom: $spacing-lg;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  .pe-variation-label {
+    color: $text-color;
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: $spacing-sm;
+  }
+  
+  .pe-variation-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-sm;
+  }
+  
+  .pe-variation-swatch {
+    align-items: center;
+    background: $bg-lighter;
+    border: 2px solid transparent;
+    border-radius: $border-radius;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    min-width: 100px;
+    padding: $spacing-sm;
+    position: relative;
+    text-align: center;
+    transition: border-color 0.2s, background-color 0.2s;
+    
+    &:hover {
+      background: $bg-light;
+      border-color: color.adjust($primary-color, $alpha: -0.7);
+    }
+    
+    &:focus {
+      outline: 2px solid $info-color;
+      outline-offset: 2px;
+    }
+    
+    &.selected {
+      background: color.adjust($primary-color, $alpha: -0.95);
+      border-color: $primary-color;
+    }
+    
+    &[disabled] {
+      background: $bg-lighter;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+    
+    &[data-type="image"] {
+      min-width: 120px;
+      
+      .pe-swatch-content {
+        height: 80px;
+        margin-bottom: $spacing-sm;
+        width: 80px;
+      }
+    }
+  }
+  
+  .pe-swatch-content {
+    display: block;
+    margin-bottom: $spacing-xs;
+  }
+  
+  .pe-swatch-color {
+    border: 1px solid $border-color;
+    border-radius: $border-radius;
+    display: block;
+    height: 40px;
+    width: 40px;
+  }
+  
+  .pe-swatch-image {
+    border: 1px solid $border-color;
+    border-radius: $border-radius;
+    display: block;
+    height: 100%;
+    object-fit: contain;
+    width: 100%;
+  }
+  
+  .pe-swatch-label {
+    color: $text-color;
+    font-size: 0.85rem;
+    line-height: 1.2;
+  }
+  
+  
+  .pe-dialog-footer {
+    margin-top: $spacing-lg;
+  }
+  
+  .pe-dialog-confirm[disabled] {
+    background: $bg-lighter;
+    border-color: $border-color;
+    color: $text-light;
+    cursor: not-allowed;
+    
+    &:hover {
+      background: $bg-lighter;
+      border-color: $border-color;
+    }
+  }
+  
+  /* Mobile responsiveness */
+  @media screen and (max-width: $breakpoint-sm) {
+    max-width: none;
+    width: 95%;
+    
+    .pe-variation-swatches {
+      justify-content: space-around;
+    }
+    
+    .pe-variation-swatch {
+      min-width: 70px;
+      padding: $spacing-xs;
+    }
+    
+    .pe-swatch-color {
+      height: 35px;
+      width: 35px;
+    }
+    
+    .pe-swatch-image {
+      height: 50px;
+      width: 50px;
+    }
+    
+    .pe-dialog-footer {
+      flex-direction: column-reverse;
+      gap: $spacing-xs;
+      
+      .pe-dialog-btn {
+        width: 100%;
+      }
+    }
+  }
+  
+  /* Loading state styles */
+
+  &.loading {
+
+    .pe-dialog-body {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      min-height: 150px;
+    }
+    
+    .pe-loading-message {
+      color: $text-color;
+      font-size: 1rem;
+      text-align: center;
+      
+      &::after {
+        animation: ellipsis 1.5s infinite;
+        content: '';
+        display: inline-block;
+        width: 1.5em;
+      }
+    }
+  }
+}

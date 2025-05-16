@@ -40,6 +40,9 @@ import modalContainerTemplate from '@templates/layout/modal-container.html';
 // UI Templates
 // Dialog Templates
 import confirmationDialogTemplate from '@templates/ui/dialogs/confirmation.html';
+import productSelectionTemplate from '@templates/ui/dialogs/product-selection.html';
+import variationOptionTemplate from '@templates/ui/dialogs/variation-option.html';
+import variationSwatchTemplate from '@templates/ui/dialogs/variation-swatch.html';
 
 // Empty State Templates
 import estimatesEmptyTemplate from '@templates/ui/empty-states/estimates-empty.html';
@@ -84,6 +87,9 @@ const templates = {
   'modal-messages-template': modalMessagesTemplate,
   'modal-container-template': modalContainerTemplate,
   'confirmation-dialog-template': confirmationDialogTemplate,
+  'product-selection-template': productSelectionTemplate,
+  'variation-option-template': variationOptionTemplate,
+  'variation-swatch-template': variationSwatchTemplate,
   'toggle-button-hide-template': toggleButtonHideTemplate,
   'toggle-button-show-template': toggleButtonShowTemplate
 };

@@ -1,6 +1,3 @@
-/*!*********************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/frontend/Index.scss ***!
-  \*********************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main SCSS file for Product Estimator frontend styles
@@ -145,6 +142,23 @@
   }
   20%, 40%, 60%, 80% {
     transform: translateX(5px);
+  }
+}
+@keyframes ellipsis {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75% {
+    content: "...";
+  }
+  100% {
+    content: "";
   }
 }
 /**
@@ -2711,6 +2725,178 @@ body.modal-open {
     width: 100%;
   }
 }
+/* Product Selection Dialog */
+.pe-product-selection-dialog {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  left: 50%;
+  max-height: 90vh;
+  max-width: 600px;
+  overflow: hidden;
+  position: fixed;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  z-index: 1000000;
+  animation: modal-slide-in 0.3s ease-out;
+  /* Mobile responsiveness */
+  /* Loading state styles */
+}
+.pe-product-selection-dialog .pe-dialog-body {
+  padding: 1.5rem 1.5rem 0;
+}
+.pe-product-selection-dialog .pe-dialog-product-name {
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+.pe-product-selection-dialog .pe-dialog-variations {
+  margin-bottom: 1rem;
+}
+.pe-product-selection-dialog .pe-variation-group {
+  margin-bottom: 1.5rem;
+}
+.pe-product-selection-dialog .pe-variation-group:last-child {
+  margin-bottom: 0;
+}
+.pe-product-selection-dialog .pe-variation-label {
+  color: #333;
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.pe-product-selection-dialog .pe-variation-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pe-product-selection-dialog .pe-variation-swatch {
+  align-items: center;
+  background: #f3f3f3;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  min-width: 100px;
+  padding: 0.5rem;
+  position: relative;
+  text-align: center;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.pe-product-selection-dialog .pe-variation-swatch:hover {
+  background: #f9f9f9;
+  border-color: rgba(0, 131, 63, 0.3);
+}
+.pe-product-selection-dialog .pe-variation-swatch:focus {
+  outline: 2px solid #2271b1;
+  outline-offset: 2px;
+}
+.pe-product-selection-dialog .pe-variation-swatch.selected {
+  background: rgba(0, 131, 63, 0.05);
+  border-color: #00833F;
+}
+.pe-product-selection-dialog .pe-variation-swatch[disabled] {
+  background: #f3f3f3;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.pe-product-selection-dialog .pe-variation-swatch[data-type=image] {
+  min-width: 120px;
+}
+.pe-product-selection-dialog .pe-variation-swatch[data-type=image] .pe-swatch-content {
+  height: 80px;
+  margin-bottom: 0.5rem;
+  width: 80px;
+}
+.pe-product-selection-dialog .pe-swatch-content {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.pe-product-selection-dialog .pe-swatch-color {
+  border: 1px solid #eee;
+  border-radius: 4px;
+  display: block;
+  height: 40px;
+  width: 40px;
+}
+.pe-product-selection-dialog .pe-swatch-image {
+  border: 1px solid #eee;
+  border-radius: 4px;
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+.pe-product-selection-dialog .pe-swatch-label {
+  color: #333;
+  font-size: 0.85rem;
+  line-height: 1.2;
+}
+.pe-product-selection-dialog .pe-dialog-footer {
+  margin-top: 1.5rem;
+}
+.pe-product-selection-dialog .pe-dialog-confirm[disabled] {
+  background: #f3f3f3;
+  border-color: #eee;
+  color: #666;
+  cursor: not-allowed;
+}
+.pe-product-selection-dialog .pe-dialog-confirm[disabled]:hover {
+  background: #f3f3f3;
+  border-color: #eee;
+}
+@media screen and (max-width: 480px) {
+  .pe-product-selection-dialog {
+    max-width: none;
+    width: 95%;
+  }
+  .pe-product-selection-dialog .pe-variation-swatches {
+    justify-content: space-around;
+  }
+  .pe-product-selection-dialog .pe-variation-swatch {
+    min-width: 70px;
+    padding: 0.25rem;
+  }
+  .pe-product-selection-dialog .pe-swatch-color {
+    height: 35px;
+    width: 35px;
+  }
+  .pe-product-selection-dialog .pe-swatch-image {
+    height: 50px;
+    width: 50px;
+  }
+  .pe-product-selection-dialog .pe-dialog-footer {
+    flex-direction: column-reverse;
+    gap: 0.25rem;
+  }
+  .pe-product-selection-dialog .pe-dialog-footer .pe-dialog-btn {
+    width: 100%;
+  }
+}
+.pe-product-selection-dialog.loading .pe-dialog-body {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 150px;
+}
+.pe-product-selection-dialog.loading .pe-loading-message {
+  color: #333;
+  font-size: 1rem;
+  text-align: center;
+}
+.pe-product-selection-dialog.loading .pe-loading-message::after {
+  animation: ellipsis 1.5s infinite;
+  content: "";
+  display: inline-block;
+  width: 1.5em;
+}
+
 /**
  * Main SCSS file for Product Estimator frontend styles
  *

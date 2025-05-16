@@ -132,3 +132,18 @@
 
   20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
+
+// Ellipsis animation
+
+@keyframes ellipsis {
+
+  0% { content: ''; }
+
+  25% { content: '.'; }
+
+  50% { content: '..'; }
+
+  75% { content: '...'; }
+
+  100% { content: ''; }
+}

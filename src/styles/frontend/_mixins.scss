@@ -69,6 +69,13 @@
   @include button-base($error-color, white, color.adjust($error-color, $lightness: -10%));
 }
 
+/// Warning button style (orange/amber)
+
+@mixin button-warning {
+
+  @include button-base($warning-color, white, color.adjust($warning-color, $lightness: -10%));
+}
+
 /// Ghost/outline button style
 
 @mixin button-ghost($color: $text-color) {

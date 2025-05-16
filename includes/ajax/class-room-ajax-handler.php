@@ -11,6 +11,13 @@ class RoomAjaxHandler extends AjaxHandlerBase {
     use EstimateDbHandler;
 
     /**
+     * Check if a product is in one of the primary product categories
+     *
+     * @param int $product_id The product ID to check
+     * @return bool True if the product is in a primary category
+     */
+
+    /**
      * Register WordPress hooks for AJAX endpoints
      *
      * @return void
@@ -22,6 +29,7 @@ class RoomAjaxHandler extends AjaxHandlerBase {
         $this->register_ajax_endpoint('add_product_to_room', 'addProductToRoom');
         $this->register_ajax_endpoint('remove_product_from_room', 'removeProductFromRoom');
         $this->register_ajax_endpoint('replace_product_in_room', 'replaceProductInRoom');
+        $this->register_ajax_endpoint('check_primary_category_conflict', 'checkPrimaryCategoryConflict');
     }
 
     /**
@@ -401,6 +409,23 @@ class RoomAjaxHandler extends AjaxHandlerBase {
                     wp_send_json_error([
                         'message' => $result['message'],
                         'duplicate' => true,
+                        'estimate_id' => $result['estimate_id'],
+                        'room_id' => $result['room_id']
+                    ]);
+                    return;
+                }
+
+                // Check if this is a primary category conflict case
+                if (isset($result['primary_conflict']) && $result['primary_conflict']) {
+                    wp_send_json_error([
+                        'message' => $result['message'],
+                        'primary_conflict' => true,
+                        'new_product_id' => $result['new_product_id'],
+                        'new_product_name' => $result['new_product_name'],
+                        'existing_product_id' => $result['existing_product_id'],
+                        'existing_product_name' => $result['existing_product_name'],
+                        'room_name' => $result['room_name'],
+                        'estimate_name' => $result['estimate_name'],
                         'estimate_id' => $result['estimate_id'],
                         'room_id' => $result['room_id']
                     ]);
@@ -973,6 +998,13 @@ class RoomAjaxHandler extends AjaxHandlerBase {
             $estimate = $session->getEstimate($estimate_id);
 
             if ($estimate && isset($estimate['rooms'][$room_id]['products'])) {
+                // Check if the new product is in a primary category
+                $new_product_is_primary = $this->isProductInPrimaryCategories($product_id);
+
+                // Track if we found a primary category conflict
+                $found_primary_conflict = false;
+                $conflicting_product = null;
+
                 foreach ($estimate['rooms'][$room_id]['products'] as $existing_product) {
                     // Check if this is a product (not a note) and has matching ID
                     if (!isset($existing_product['type']) &&
@@ -988,6 +1020,44 @@ class RoomAjaxHandler extends AjaxHandlerBase {
                             'room_id' => $room_id
                         ];
                     }
+
+                    // Check for primary category conflict
+                    if ($new_product_is_primary && !isset($existing_product['type']) && isset($existing_product['id'])) {
+                        $existing_product_is_primary = $this->isProductInPrimaryCategories($existing_product['id']);
+
+                        if ($existing_product_is_primary) {
+                            // Both products are in primary categories - this is a conflict
+                            $found_primary_conflict = true;
+                            $conflicting_product = $existing_product;
+                        }
+                    }
+                }
+
+                // If we found a primary category conflict, return appropriate response
+                if ($found_primary_conflict) {
+                    // Get product names for the dialog message
+                    $new_product = wc_get_product($product_id);
+                    $new_product_name = $new_product ? $new_product->get_name() : __('Product', 'product-estimator');
+
+                    $existing_product_name = isset($conflicting_product['name']) ? $conflicting_product['name'] : __('existing product', 'product-estimator');
+
+                    // Get room and estimate names
+                    $room_name = isset($estimate['rooms'][$room_id]['name']) ? $estimate['rooms'][$room_id]['name'] : __('the room', 'product-estimator');
+                    $estimate_name = isset($estimate['name']) ? $estimate['name'] : __('the estimate', 'product-estimator');
+
+                    return [
+                        'success' => false,
+                        'primary_conflict' => true,
+                        'message' => 'Primary product already in this room', 'product-estimator',
+                        'new_product_id' => $product_id,
+                        'new_product_name' => $new_product_name,
+                        'existing_product_id' => $conflicting_product['id'],
+                        'existing_product_name' => $existing_product_name,
+                        'room_name' => $room_name,
+                        'estimate_name' => $estimate_name,
+                        'estimate_id' => $estimate_id,
+                        'room_id' => $room_id
+                    ];
                 }
             }
 

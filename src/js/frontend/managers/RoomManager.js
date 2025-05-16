@@ -68,6 +68,23 @@ class RoomManager {
   }
 
   /**
+   * Get the name of a room
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   * @returns {string} The room name or a default value
+   */
+  getRoomName(estimateId, roomId) {
+    const estimateData = loadEstimateData();
+    if (estimateData && estimateData.estimates) {
+      const estimate = estimateData.estimates[estimateId];
+      if (estimate && estimate.rooms && estimate.rooms[roomId]) {
+        return estimate.rooms[roomId].name || `Room #${roomId}`;
+      }
+    }
+    return 'selected room';
+  }
+
+  /**
    * Show the room selection form
    * @param {string} estimateId - The estimate ID
    * @param {string|null} productId - Optional product ID to add

@@ -220,6 +220,12 @@ class ProductManager {
     // Convert the productId to string to ensure proper handling
     return this.dataService.addProductToRoom(roomId, productId, estimateId)
       .then(result => {
+        // Check if the result is actually an error (primary conflict)
+        if (result && !result.success && result.primaryConflict) {
+          // This is a primary conflict error, throw it to the catch block
+          throw result;
+        }
+        
         logger.log('Product added successfully:', result);
 
         // Update totals only if we have valid data and the room is likely to be visible
@@ -265,6 +271,92 @@ class ProductManager {
           
           // Return a rejected promise with the error object
           // but don't log it as an error since it's expected behavior
+          return Promise.reject(error);
+        }
+        
+        // Handle primary category conflict case from LOCAL STORAGE
+        if (error.primaryConflict === true) {
+          // Hide loading indicator
+          if (this.modalManager) {
+            this.modalManager.hideLoading();
+          }
+          
+          // Show confirmation dialog for primary category conflict
+          if (this.modalManager && this.modalManager.confirmationDialog) {
+            const roomName = this.modalManager.roomManager ? 
+              this.modalManager.roomManager.getRoomName(error.estimateId, error.roomId) : 'selected room';
+              
+            this.modalManager.confirmationDialog.show({
+              title: 'A flooring product already exists in the selected room',
+              message: `The ${roomName} already contains "${error.existingProductName}". Would you like to replace it with "${error.newProductName}"?`,
+              type: 'product',
+              action: 'replace',
+              confirmText: 'Replace the existing product',
+              cancelText: 'Go back to room select',
+              additionalButtons: [{
+                text: 'Cancel',
+                callback: () => {
+                  // Simply close the dialog - no action needed
+                }
+              }],
+              onConfirm: () => {
+                // User chose to replace the existing product
+                this.replaceProductInRoom(error.estimateId, error.roomId, error.existingProductId, error.newProductId);
+              },
+              onCancel: () => {
+                // User chose to go back to room select
+                if (this.modalManager) {
+                  this.modalManager.roomManager.showRoomSelection(error.estimateId);
+                }
+              }
+            });
+          }
+          
+          // Return a rejected promise with the error object
+          // but don't log it as an error since it's expected behavior
+          return Promise.reject(error);
+        }
+        
+        // Handle primary category conflict case from SERVER
+        if (error && error.data && error.data.primary_conflict) {
+          // Hide loading indicator
+          if (this.modalManager) {
+            this.modalManager.hideLoading();
+          }
+          
+          // Show confirmation dialog for primary category conflict
+          if (this.modalManager && this.modalManager.confirmationDialog) {
+            this.modalManager.confirmationDialog.show({
+              title: 'Primary Product Category Conflict',
+              message: error.message || error.data.message,
+              type: 'product',
+              action: 'replace',
+              confirmText: 'Replace existing product',
+              cancelText: 'Back',
+              additionalButtons: [{
+                text: 'Cancel',
+                callback: () => {
+                  // Simply close the dialog - no action needed
+                }
+              }],
+              onConfirm: () => {
+                // User chose to replace the existing product
+                const newProductId = error.data.new_product_id;
+                const existingProductId = error.data.existing_product_id;
+                const roomId = error.data.room_id;
+                const estimateId = error.data.estimate_id;
+                
+                // Replace the product
+                this.replaceProductInRoom(estimateId, roomId, existingProductId, newProductId);
+              },
+              onCancel: () => {
+                // User chose to go back - we can optionally do something here
+                // For now, just close the dialog
+              }
+            });
+          }
+          
+          // Return a rejected promise with the error object
           return Promise.reject(error);
         }
         
@@ -769,6 +861,64 @@ class ProductManager {
           }
         } else {
           logger.error('Error updating variation. Please try again.');
+        }
+      });
+  }
+
+  /**
+   * Replace a product in a room with another product
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   * @param {string|number} oldProductId - The product ID to replace
+   * @param {string|number} newProductId - The new product ID
+   */
+  replaceProductInRoom(estimateId, roomId, oldProductId, newProductId) {
+    logger.log('Replacing product in room', { estimateId, roomId, oldProductId, newProductId });
+    
+    // Show loading
+    if (this.modalManager) {
+      this.modalManager.showLoading();
+    }
+    
+    // Use dataService to replace the product
+    this.dataService.replaceProductInRoom(estimateId, roomId, oldProductId, newProductId)
+      .then(() => {
+        logger.log('Product replaced successfully');
+        
+        // Hide loading
+        if (this.modalManager) {
+          this.modalManager.hideLoading();
+        }
+        
+        // Reload the products for this room
+        const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+        if (roomElement) {
+          const productsContainer = roomElement.querySelector('.room-products-container');
+          if (productsContainer) {
+            // Mark as not loaded to force reload
+            delete productsContainer.dataset.loaded;
+            this.loadProductsForRoom(estimateId, roomId, productsContainer);
+          }
+        }
+      })
+      .catch(error => {
+        logger.error('Error replacing product:', error);
+        
+        // Hide loading
+        if (this.modalManager) {
+          this.modalManager.hideLoading();
+        }
+        
+        // Show error dialog
+        if (this.modalManager && this.modalManager.confirmationDialog) {
+          this.modalManager.confirmationDialog.show({
+            title: 'Error',
+            message: 'Error replacing product. Please try again.',
+            type: 'product',
+            action: 'error',
+            showCancel: false,
+            confirmText: 'OK'
+          });
         }
       });
   }

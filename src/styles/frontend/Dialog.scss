@@ -73,6 +73,9 @@
 .pe-dialog-footer {
 
   @include modal-footer($bg-lighter, $border-color);
+  display: flex;
+  gap: $spacing-sm;
+  justify-content: flex-end;
 }
 
 .pe-dialog-btn {
@@ -174,6 +177,26 @@
   .pe-dialog-confirm {
     @include button-primary;
   }
+}
+
+/* Styles for replace dialogs */
+
+.pe-dialog-action-replace {
+
+  .pe-dialog-title {
+    color: $warning-color;
+  }
+  
+  .pe-dialog-confirm {
+    @include button-warning;
+  }
+}
+
+/* Additional button styling */
+
+.pe-dialog-additional {
+  @include button-secondary;
+  margin-left: $spacing-sm;
 }
 
 /* Icon support */

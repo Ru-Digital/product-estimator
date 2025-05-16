@@ -308,7 +308,8 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 'min_price_total' => 0,
                 'max_price_total' => 0,
                 'similar_products' => [],
-                'room_suggested_products' => [] // Initialize as empty array
+                'room_suggested_products' => [], // Initialize as empty array
+                'is_primary_category' => false // Default to false
             ];
 
             if ($pricing_data['pricing_method'] === 'sqm' && $room_area > 0) {
@@ -318,6 +319,9 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 $product_data['min_price_total'] = $pricing_data['min_price'];
                 $product_data['max_price_total'] = $pricing_data['max_price'];
             }
+
+            // Check if product is in primary categories
+            $product_data['is_primary_category'] = $this->isProductInPrimaryCategories($product_id);
 
             $product_id_for_categories = $product->is_type('variation') ? $product->get_parent_id() : $product_id;
             $product_categories = wp_get_post_terms($product_id_for_categories, 'product_cat', array('fields' => 'ids'));
@@ -391,6 +395,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                             'pricing_method' => $related_pricing_data['pricing_method'],
                             'min_price_total' => ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $related_pricing_data['min_price'] * $room_area : $related_pricing_data['min_price'],
                             'max_price_total' => ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $related_pricing_data['max_price'] * $room_area : $related_pricing_data['max_price'],
+                            'is_primary_category' => $this->isProductInPrimaryCategories($related_product_id),
                         ];
                         $product_data['additional_products'][$related_product_id] = $additional_product_entry;
                     }
@@ -423,6 +428,13 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                     $raw_suggestions = $product_additions_manager->get_suggestions_for_room($current_room_contents_for_suggestions_formatted, $room_area);
 
                     if (is_array($raw_suggestions)) {
+                        // Add is_primary_category flag to each suggestion
+                        foreach ($raw_suggestions as $key => $suggestion) {
+                            if (isset($suggestion['id'])) {
+                                $raw_suggestions[$key]['is_primary_category'] = $this->isProductInPrimaryCategories($suggestion['id']);
+                            }
+                        }
+                        
                         // Ensure the suggestions are a numerically indexed array for JSON
                         $product_data['room_suggested_products'] = array_values($raw_suggestions);
                         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -471,6 +483,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             ]);
         }
     }
+
 
     /**
      * Get the appropriate pricing rule for a product

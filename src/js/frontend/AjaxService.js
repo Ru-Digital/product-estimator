@@ -76,12 +76,20 @@ class AjaxService {
     // Use the wpAjax utility from ajax.js
     return wpAjax(action, data, this.config.nonce)
       .catch(error => {
+        // Check if this is a primary_conflict or duplicate case - these are expected responses, not errors
+        if (error && error.data && (error.data.primary_conflict || error.data.duplicate)) {
+          // This is expected behavior, don't log as error
+          logger.log(`Request '${action}' returned expected response:`, error.data.primary_conflict ? 'primary conflict' : 'duplicate');
+          throw error; // Still throw it so the calling code can handle it
+        }
+
         logger.error(`Request '${action}' error:`, error);
 
         // Create a more informative error
         const enhancedError = new Error(`AJAX request failed: ${error.message}`);
         enhancedError.originalError = error;
         enhancedError.action = action;
+        enhancedError.data = error.data; // Make sure to preserve the data
 
         // If we're allowed to fail, return a fallback empty response
         if (allowFailure) {
@@ -198,6 +206,17 @@ class AjaxService {
         // Invalidate relevant caches since we've modified data
         this.invalidateCache('suggestions');
         return response;
+      })
+      .catch(error => {
+        // Check if this is a primary_conflict or duplicate case - these are expected responses, not errors
+        if (error && error.data && (error.data.primary_conflict || error.data.duplicate)) {
+          // This is expected behavior, just pass it through
+          throw error;
+        }
+        
+        // For other errors, log them and rethrow
+        logger.error(`Request 'add_product_to_room' error:`, error);
+        throw error;
       });
   }
 

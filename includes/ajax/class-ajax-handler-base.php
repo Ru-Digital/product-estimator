@@ -73,6 +73,50 @@ abstract class AjaxHandlerBase {
     }
 
     /**
+     * Check if a product is in any of the primary product categories
+     * 
+     * @param int $product_id The product ID
+     * @return bool True if the product is in a primary category, false otherwise
+     */
+    protected function isProductInPrimaryCategories($product_id) {
+        // Get the primary product categories from settings
+        $settings = get_option('product_estimator_settings', []);
+        $primary_categories = isset($settings['primary_product_categories']) ? $settings['primary_product_categories'] : [];
+        
+        if (empty($primary_categories)) {
+            return false;
+        }
+        
+        // Get the product
+        $product = wc_get_product($product_id);
+        if (!$product) {
+            return false;
+        }
+        
+        // Check if it's a variation and get the parent product
+        if ($product->is_type('variation')) {
+            $parent_id = $product->get_parent_id();
+            $product_id = $parent_id;
+        }
+        
+        // Get product categories
+        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+        
+        if (is_wp_error($product_categories)) {
+            return false;
+        }
+        
+        // Check if any of the product categories match the primary categories
+        foreach ($product_categories as $category_id) {
+            if (in_array($category_id, $primary_categories)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
      * Helper function to fetch and format detailed similar products.
      *
      * @param int $product_id The source product ID.
@@ -177,7 +221,8 @@ abstract class AjaxHandlerBase {
                     'min_price_total' => $price_data['min_total'], // Use total prices
                     'max_price_total' => $price_data['max_total'], // Use total prices
                     'image' => wp_get_attachment_image_url($product_obj->get_image_id(), 'thumbnail') ?: '',
-                    'pricing_method' => $price_data['breakdown'][0]['pricing_method'] ?? 'sqm' // Get pricing method from main product in breakdown
+                    'pricing_method' => $price_data['breakdown'][0]['pricing_method'] ?? 'sqm', // Get pricing method from main product in breakdown
+                    'is_primary_category' => $this->isProductInPrimaryCategories($product_id)
                 ];
 
                 $count++;

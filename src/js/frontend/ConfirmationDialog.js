@@ -256,6 +256,7 @@ class ConfirmationDialog {
     const messageEl = this.dialog.querySelector('.pe-dialog-message');
     const confirmEl = this.dialog.querySelector('.pe-dialog-confirm');
     const cancelEl = this.dialog.querySelector('.pe-dialog-cancel');
+    const buttonsContainer = this.dialog.querySelector('.pe-dialog-buttons');
 
     // Update text content with settings
     if (titleEl) {
@@ -263,7 +264,12 @@ class ConfirmationDialog {
     }
 
     if (messageEl) {
-      messageEl.textContent = settings.message;
+      // Allow HTML content in the message for more complex formatting
+      if (settings.message.includes('<br') || settings.message.includes('<span') || settings.message.includes('<strong')) {
+        messageEl.innerHTML = settings.message;
+      } else {
+        messageEl.textContent = settings.message;
+      }
     }
 
     if (confirmEl) {
@@ -288,6 +294,37 @@ class ConfirmationDialog {
           confirmEl.classList.add('full-width');
         }
       }
+    }
+    
+    // Handle additional buttons if provided
+    if (settings.additionalButtons && buttonsContainer) {
+      // Clear any existing additional buttons
+      const existingAdditionalButtons = buttonsContainer.querySelectorAll('.pe-dialog-additional');
+      existingAdditionalButtons.forEach(btn => btn.remove());
+      
+      // Add new additional buttons
+      settings.additionalButtons.forEach((buttonConfig, index) => {
+        const button = document.createElement('button');
+        button.className = 'pe-button pe-button-secondary pe-dialog-additional';
+        button.textContent = buttonConfig.text || `Button ${index + 1}`;
+        
+        // Set up click handler
+        button.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.hide();
+          if (typeof buttonConfig.callback === 'function') {
+            buttonConfig.callback();
+          }
+        });
+        
+        // Insert the button after the cancel button or before confirm if no cancel
+        if (cancelEl && settings.showCancel) {
+          buttonsContainer.insertBefore(button, confirmEl);
+        } else {
+          buttonsContainer.insertBefore(button, confirmEl);
+        }
+      });
     }
 
     // Prevent scrolling on the body while modal is active

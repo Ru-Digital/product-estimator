@@ -345,6 +345,9 @@ class DataService {
             data: { duplicate: true, estimate_id: estimateId, room_id: roomId }
           });
         }
+        
+        // Note: Primary category checking happens on the server side during the AJAX request
+        // We can't check it here without the product category information and settings
       }
     } else {
       logger.warn(`DataService: Room ID ${roomId} not found in local storage for estimate ${estimateId}. Room dimensions will be null for product data fetch.`);
@@ -421,6 +424,37 @@ class DataService {
 
         const comprehensiveProductData = productDataResponse.product_data;
         let roomSuggestedProductsToStore = []; // Initialize to empty
+
+        // Check if the new product is in a primary category
+        if (comprehensiveProductData.is_primary_category === true) {
+          // Check existing products in the room for primary category conflicts
+          const estimate = getEstimate(estimateId);
+          const room = estimate && estimate.rooms && estimate.rooms[roomId];
+          const existingProducts = room && room.products ? room.products : {};
+          
+          for (const productKey in existingProducts) {
+            const existingProduct = existingProducts[productKey];
+            // Skip non-product items like notes
+            if (existingProduct.type === 'note') continue;
+            
+            if (existingProduct.is_primary_category === true) {
+              // Found an existing primary category product - return conflict response
+              logger.log('DataService: Primary category conflict detected. Existing product:', existingProduct.name, 'New product:', comprehensiveProductData.name);
+              
+              return {
+                success: false,
+                error: new Error('Primary category conflict - flooring product already exists in this room'),
+                primaryConflict: true,
+                existingProductId: existingProduct.id,
+                newProductId: productId,
+                roomId: roomId,
+                estimateId: estimateId,
+                existingProductName: existingProduct.name,
+                newProductName: comprehensiveProductData.name
+              };
+            }
+          }
+        }
 
         // Add debug logs to see what's happening with similar_products
 
@@ -529,7 +563,19 @@ class DataService {
               this.invalidateCache();
             })
             .catch(error => {
-              // Just log the error - UI is already updated based on localStorage
+              // Check if this is a primary_conflict case - not an error, just expected behavior
+              if (error && error.data && error.data.primary_conflict) {
+                logger.log('DataService: Primary category conflict detected during background sync - this is expected');
+                return;
+              }
+              
+              // Check if this is a duplicate case - not an error, just expected behavior
+              if (error && error.data && error.data.duplicate) {
+                logger.log('DataService: Duplicate product detected during background sync - this is expected');
+                return;
+              }
+              
+              // For other errors, log them as actual errors
               logger.error('Background server sync error:', error);
               logger.warn('Product added to local storage only. Changes may not persist between sessions.');
             });

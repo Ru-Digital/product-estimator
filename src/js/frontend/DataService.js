@@ -701,9 +701,10 @@ class DataService {
         const comprehensiveNewProductData = productDataResponse.product_data;
         let roomSuggestedProductsToStore = []; // Initialize to empty
 
-        // Ensure similar_products is an array on the new product data, even if missing or null from backend
-        if (!Array.isArray(comprehensiveNewProductData.similar_products)) {
-          comprehensiveNewProductData.similar_products = [];
+        // Keep similar_products in their original format (object or array)
+        // Don't convert to empty array if it's an object with data
+        if (!comprehensiveNewProductData.similar_products) {
+          comprehensiveNewProductData.similar_products = {};
         }
 
         if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {

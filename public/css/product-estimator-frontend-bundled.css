@@ -1,6 +1,3 @@
-/*!*********************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/frontend/Index.scss ***!
-  \*********************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main SCSS file for Product Estimator frontend styles
@@ -1236,6 +1233,51 @@
   /* Accordion expand/collapse indicator */
   /* Additional spacing for room dimensions and total price */
 }
+.accordion-header-wrapper .accordion-header.room-item-header {
+  align-items: flex-start;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 15px;
+}
+.accordion-header-wrapper .accordion-header.room-item-header .room-image-wrapper {
+  align-self: center;
+  flex-shrink: 0;
+}
+.accordion-header-wrapper .accordion-header.room-item-header .room-details-wrapper {
+  align-self: center;
+  flex: 1;
+  min-width: 0;
+}
+.accordion-header-wrapper .accordion-header.room-item-header .room-details-wrapper .room-details {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #00833F;
+}
+.accordion-header-wrapper .accordion-header.room-item-header .room-details-wrapper .room-details .room-name-wrapper {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+.accordion-header-wrapper .accordion-header.room-item-header .room-details-wrapper .room-details .room-name-wrapper .primary-product-name {
+  color: #333333;
+}
+.accordion-header-wrapper .accordion-header.room-item-header .room-details-wrapper .room-details .room-name-wrapper .room-dimensions {
+  font-weight: 400;
+}
+.accordion-header-wrapper .accordion-header.room-item-header .room-details-wrapper .room-details .room-price {
+  font-size: 14px;
+  font-weight: 600;
+  margin-left: auto;
+}
+.accordion-header-wrapper .accordion-header.room-item-header .price-graph-container {
+  flex-basis: 100%;
+  width: 100%;
+}
 .accordion-header-wrapper .accordion-header:hover {
   background-color: #f3f3f3;
 }
@@ -1254,38 +1296,35 @@
 .accordion-header-wrapper .accordion-header.active::after {
   transform: translateY(-50%) rotate(180deg);
 }
-.accordion-header-wrapper .accordion-header .room-name {
-  font-weight: 400;
-}
 .accordion-header-wrapper .accordion-header .room-dimensions {
   color: #666;
-  font-size: 15px;
-  margin-right: 10px;
+  margin-left: 10px;
   white-space: nowrap;
 }
-.accordion-header-wrapper .accordion-header .room-name,
+.accordion-header-wrapper .accordion-header .primary-product-name,
 .accordion-header-wrapper .accordion-header .room-dimensions {
-  margin-right: 10px;
-  white-space: nowrap;
+  margin-left: 10px;
 }
-.accordion-header-wrapper .accordion-header .room-dimensions,
 .accordion-header-wrapper .accordion-header .room-total-price {
   margin-right: 30px; /* Ensure text doesn't overlap with indicator */
 }
 
-.remove-room {
+.room-actions {
   align-items: center;
-  background: transparent;
-  border: none;
-  color: #999;
-  cursor: pointer;
+  align-self: center;
   display: flex;
   justify-content: center;
   margin-right: 10px;
   padding: 8px;
+}
+.room-actions .remove-room {
+  background: transparent;
+  border: none;
+  color: #999;
+  cursor: pointer;
   transition: color 0.2s ease;
 }
-.remove-room:hover {
+.room-actions .remove-room:hover {
   background: transparent;
   color: #d63638;
 }
@@ -2028,7 +2067,6 @@ body.modal-open {
   font-family: -apple-system, blinkmacsystemfont, "Segoe UI", roboto, oxygen-sans, ubuntu, cantarell, "Helvetica Neue", sans-serif;
   margin: 10px 0;
   max-width: 100%;
-  padding: 0 20px; /* ✅ Full padding around container */
   position: relative;
   width: 100%;
 }
@@ -2041,11 +2079,25 @@ body.modal-open {
   justify-content: space-between;
   margin-bottom: 8px;
 }
+.price-range-title .primary-product-image {
+  border: 1px solid #eee;
+  border-radius: 4px;
+  flex-shrink: 0;
+  height: 60px;
+  margin-right: 15px;
+  object-fit: cover;
+  width: 60px;
+}
+.price-range-title .primary-product-image[data-visible-if=has_primary_product]:not([src=""]) {
+  display: inline-block;
+}
+.price-range-title .primary-product-image[data-visible-if=has_primary_product][src=""] {
+  display: none;
+}
 
 .price-title {
   color: #00833F;
   flex: 1;
-  margin-right: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2139,9 +2191,7 @@ body.modal-open {
 /* Dimensions Display */
 .price-dimensions {
   color: #666;
-  font-size: 0.9em;
   font-weight: 400;
-  margin-left: 8px;
 }
 
 .price-notice {

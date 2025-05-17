@@ -205,6 +205,11 @@ export function addRoom(estimateId, roomData) {
     roomData.id = roomId;
   }
 
+  // Initialize primary_category_product_id
+  if (!Object.prototype.hasOwnProperty.call(roomData, 'primary_category_product_id')) {
+    roomData.primary_category_product_id = null;
+  }
+
   estimate.rooms[roomId] = roomData;
   saveEstimateData(storedData);
 
@@ -267,6 +272,31 @@ export function addSuggestionsToRoom(suggestedProducts, estimateId, roomId) {
   saveEstimateData(storedData);
 
   return room.product_suggestions;
+}
+
+/**
+ * Update the primary category product ID for a room
+ * Finds the product with is_primary_category = true and sets it on the room
+ * @param {object} room - The room object to update
+ */
+function updateRoomPrimaryCategory(room) {
+  if (!room.products || typeof room.products !== 'object') {
+    room.primary_category_product_id = null;
+    return;
+  }
+
+  // Find the product with is_primary_category = true
+  let primaryCategoryProductId = null;
+  
+  for (const productId in room.products) {
+    const product = room.products[productId];
+    if (product && product.is_primary_category === true) {
+      primaryCategoryProductId = productId;
+      break; // Only one primary category product should exist per room
+    }
+  }
+  
+  room.primary_category_product_id = primaryCategoryProductId;
 }
 
 /**
@@ -361,6 +391,9 @@ export function addProductToRoom(estimateId, roomId, productData) {
     console.log('EstimateStorage: Product has NO similar_products before save');
   }
 
+  // Update the primary category product ID for the room
+  updateRoomPrimaryCategory(room);
+
   saveEstimateData(storedData);
 
   // Verify after save
@@ -425,6 +458,10 @@ export function removeProductFromRoom(estimateId, roomId, productIndex, productI
 
   // Remove the product by deleting its key
   delete room.products[productIdStr];
+  
+  // Update the primary category product ID for the room
+  updateRoomPrimaryCategory(room);
+  
   saveEstimateData(storedData);
   logger.log(`[removeProductFromRoom] Product with ID '${productId}' successfully removed from localStorage for room '${roomId}', estimate '${estimateId}'.`);
   return true; // Successfully removed by ID
@@ -547,6 +584,9 @@ export function replaceProductInRoom(estimateId, roomId, oldProductId, newProduc
 
     // Add the new product
     room.products[newProductIdStr] = newProductData;
+
+    // Update the primary category product ID for the room
+    updateRoomPrimaryCategory(room);
 
     // Save and return
     saveEstimateData(storedData);

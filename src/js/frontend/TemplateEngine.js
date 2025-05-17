@@ -349,6 +349,17 @@ class TemplateEngine {
           });
         }
         // --- END ADDED ---
+        
+        // Handle primary product image for room items
+        if (key === 'primary_product_image') {
+          const primaryImgElements = element.querySelectorAll('img.primary-product-image');
+          logger.log('Found primary-product-image elements:', primaryImgElements.length, 'with value:', value);
+          primaryImgElements.forEach(img => {
+            img.src = value || 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+            img.alt = 'Primary product';
+            logger.log('Set image src to:', img.src);
+          });
+        }
 
 
         // Also set data attributes
@@ -734,6 +745,22 @@ class TemplateEngine {
       }
     }
     // --- END ADDED ---
+    
+    // Handle visibility conditions based on data-visible-if attribute
+    const visibleElements = element.querySelectorAll('[data-visible-if]');
+    visibleElements.forEach(el => {
+      const condition = el.getAttribute('data-visible-if');
+      if (condition) {
+        // Check if the condition is truthy in the data
+        const isVisible = !!data[condition];
+        if (!isVisible) {
+          el.style.display = 'none';
+        } else {
+          // Make sure it's visible if condition is true
+          el.style.display = '';
+        }
+      }
+    });
   }
 
 

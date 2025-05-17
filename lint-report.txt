@@ -17,10 +17,10 @@
   327:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimateStorage.js
-  359:5  warning  Unexpected console statement  no-console
-  361:5  warning  Unexpected console statement  no-console
-  372:5  warning  Unexpected console statement  no-console
-  374:5  warning  Unexpected console statement  no-console
+  389:5  warning  Unexpected console statement  no-console
+  391:5  warning  Unexpected console statement  no-console
+  405:5  warning  Unexpected console statement  no-console
+  407:5  warning  Unexpected console statement  no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/ProductSelectionDialog.js
   66:13  warning  Unexpected console statement  no-console

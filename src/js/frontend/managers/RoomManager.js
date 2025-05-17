@@ -126,7 +126,7 @@ class RoomManager {
 
         // Check if the estimate has any rooms
         const hasRooms = estimate.rooms && Object.keys(estimate.rooms).length > 0;
-        
+
         // If the estimate has no rooms, show the new room form directly
         if (!hasRooms) {
           logger.log('Estimate has no rooms, showing new room form directly');
@@ -210,9 +210,9 @@ class RoomManager {
         // The response is an object with { has_rooms: boolean, rooms: Array }
         const hasRooms = response && response.has_rooms ? response.has_rooms : false;
         const roomsArray = response && response.rooms ? response.rooms : [];
-        
+
         logger.log('Got rooms for selection, has_rooms:', hasRooms, 'count:', roomsArray.length);
-        
+
         // Clear existing options
         selectElement.innerHTML = '';
 
@@ -295,12 +295,12 @@ class RoomManager {
             .then(() => {
               // Hide loading
               this.modalManager.hideLoading();
-              
+
               // First show the estimates list with the relevant room expanded
               if (this.modalManager.estimateManager) {
                 this.modalManager.estimateManager.showEstimatesList(estimateId, roomId);
               }
-              
+
               // Then show a confirmation dialog using ConfirmationDialog
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 setTimeout(() => {
@@ -323,7 +323,7 @@ class RoomManager {
               if (error && error.data && error.data.duplicate) {
                 return; // Dialog already shown, just return
               }
-              
+
               // Handle other errors
               logger.log('Error adding product to room:', error);
               this.modalManager.showError('Error adding product to room. Please try again.');
@@ -512,6 +512,44 @@ class RoomManager {
       return Promise.reject(new Error('Container not provided for rendering room'));
     }
 
+    // Get primary category product for the room
+    let primaryProductImage = null;
+    let primaryProductName = null;
+
+    logger.log('Looking for primary product in room:', {
+      roomName: room.name,
+      primaryCategoryProductId: room.primary_category_product_id,
+      productsObject: room.products,
+      productsKeys: room.products ? Object.keys(room.products) : [],
+      roomStructure: room
+    });
+
+    if (room.primary_category_product_id && room.products) {
+      const primaryProduct = room.products[room.primary_category_product_id];
+      if (primaryProduct) {
+        primaryProductImage = primaryProduct.image || null;
+        primaryProductName = primaryProduct.name || null;
+        logger.log('Primary product found:', {
+          productId: room.primary_category_product_id,
+          image: primaryProductImage,
+          name: primaryProductName,
+          productData: primaryProduct
+        });
+      } else {
+        logger.log('Primary product not found in products object:', {
+          searchedId: room.primary_category_product_id,
+          availableIds: Object.keys(room.products),
+          productsStructure: room.products
+        });
+      }
+    } else {
+      logger.log('Cannot find primary product:', {
+        primaryId: room.primary_category_product_id,
+        hasProducts: !!room.products,
+        roomData: room
+      });
+    }
+
     // Create room element using TemplateEngine with complete template data
     const templateData = {
       id: roomId,                // For direct data attribute setting
@@ -521,8 +559,18 @@ class RoomManager {
       estimateId: estimateId,   // For backward compatibility
       roomName: room.name || `Room #${roomId}`,
       room_name: room.name || `Room #${roomId}`,
+      'room-name': room.name || `Room #${roomId}`, // Add hyphenated version for class matching
       roomTotal: format.currency(room.total || 0),
       room_price: format.currency(room.total || 0),
+      'room-price': format.currency(room.total || 0), // Add hyphenated version for class matching
+      room_dimensions: room.dimensions_display || (room.width && room.length ?
+        `${room.width}m x ${room.length}m` : ''),
+      'room-dimensions': room.dimensions_display || (room.width && room.length ?
+        `${room.width}m x ${room.length}m` : ''), // Add hyphenated version for class matching
+      primary_product_image: primaryProductImage,  // Add primary product image
+      primary_product_name: primaryProductName || '', // Add primary product name
+      'primary-product-name': primaryProductName || '', // Add hyphenated version for class matching
+      has_primary_product: !!primaryProductImage,  // Flag to show/hide image
       isExpanded: expand
     };
 
@@ -531,26 +579,26 @@ class RoomManager {
 
     // Direct insertion into container using TemplateEngine
     TemplateEngine.insert('room-item-template', templateData, container);
-    
+
     // Get the room element that was just inserted (should be last child)
     const roomElement = container.lastElementChild;
-    
+
     // Double-check data attributes are set correctly
     if (roomElement) {
       // Ensure room element has the room-item class for consistent selection
       roomElement.classList.add('room-item');
-      
+
       // Explicitly set data attributes on the room element
       roomElement.dataset.roomId = roomId;
       roomElement.dataset.estimateId = estimateId;
-      
+
       // Also set data attributes on the remove button
       const removeButton = roomElement.querySelector('.remove-room');
       if (removeButton) {
         removeButton.dataset.roomId = roomId;
         removeButton.dataset.estimateId = estimateId;
       }
-      
+
       // Set expanded state if needed
       const header = roomElement.querySelector('.accordion-header-wrapper');
       if (header && expand) {
@@ -562,7 +610,7 @@ class RoomManager {
       if (content) {
         content.style.display = expand ? 'block' : 'none';
       }
-      
+
       // Add loading placeholder to products container
       const productsContainer = roomElement.querySelector('.product-list');
       if (productsContainer) {
@@ -571,10 +619,10 @@ class RoomManager {
           message: 'Loading products...'
         }, productsContainer);
       }
-      
+
       // Bind event handlers for this room
       this.bindRoomEvents(roomElement, estimateId, roomId);
-      
+
       // If the room is expanded, load its products
       if (expand && content && content.style.display === 'block') {
         const productsContainer = roomElement.querySelector('.product-list');
@@ -584,13 +632,13 @@ class RoomManager {
           return this.modalManager.productManager.loadProductsForRoom(estimateId, roomId, productsContainer);
         }
       }
-      
+
       // Log that the room element was rendered with the expected attributes
       logger.log(`Room element rendered with data-room-id=${roomElement.dataset.roomId} and data-estimate-id=${roomElement.dataset.estimateId}`);
     } else {
       logger.error('Failed to find rendered room element after insertion');
     }
-    
+
     return Promise.resolve(roomElement);
   }
 
@@ -675,7 +723,7 @@ class RoomManager {
       if (productList && productList.parentElement) {
         // Insert the actions footer template after the product list
         TemplateEngine.insert('room-actions-footer-template', {}, productList.parentElement);
-        
+
         // Get the newly added button
         addProductButton = roomElement.querySelector('.add-product-button');
       }
@@ -739,10 +787,10 @@ class RoomManager {
     try {
       // Clear existing content first in case it was loaded before
       newRoomForm.innerHTML = '';
-      
+
       // Create the template data object
       const templateData = {};
-      
+
       // Insert the template with our data
       TemplateEngine.insert('new-room-form-template', templateData, newRoomForm);
       logger.log('New room form template inserted into wrapper.');
@@ -755,7 +803,7 @@ class RoomManager {
 
         if (productId) {
           formElement.dataset.productId = productId;
-          
+
           // Update the submit button text if we're in the add product flow
           const submitButton = formElement.querySelector('.submit-btn');
           if (submitButton) {
@@ -847,12 +895,12 @@ class RoomManager {
                 .then(() => {
                   // Hide loading
                   this.modalManager.hideLoading();
-                  
+
                   // First show the estimates list with the newly created room expanded
                   if (this.modalManager.estimateManager) {
                     this.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.room_id);
                   }
-                  
+
                   // Then show a confirmation dialog using ConfirmationDialog (with slight delay to allow UI to render)
                   if (this.modalManager && this.modalManager.confirmationDialog) {
                     setTimeout(() => {
@@ -879,7 +927,7 @@ class RoomManager {
                     this.modalManager.hideLoading();
                     return; // Dialog for duplicate already shown, just return
                   }
-                  
+
                   // For other errors, log and rethrow so the main catch handler can process it
                   logger.log('Error adding product to new room:', error);
                   this.modalManager.hideLoading();
@@ -893,7 +941,7 @@ class RoomManager {
               if (this.modalManager.estimateManager) {
                 this.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.id);
               }
-              
+
               // Then show a confirmation dialog using ConfirmationDialog (with slight delay to allow UI to render)
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 setTimeout(() => {
@@ -917,7 +965,7 @@ class RoomManager {
             // First, switch view to show the estimate with the new room expanded
             if (this.modalManager.estimateManager) {
               this.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.id);
-              
+
               // Then show a confirmation dialog
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 setTimeout(() => {
@@ -1085,24 +1133,24 @@ class RoomManager {
         // Find the room element in the DOM - try both room-item and accordion-item classes
         // because our template uses accordion-item but we add room-item class in code
         let roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-        
+
         if (!roomElement) {
           // Try with just the original template class (accordion-item)
           roomElement = document.querySelector(`.accordion-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
         }
-        
+
         if (roomElement) {
           // Remove the room element
           roomElement.remove();
           logger.log('Room element removed from DOM');
-          
+
           // Instead of checking DOM right away, check localStorage
           // The element was just removed, so we'll rely on the getEstimate call below
           // to handle showing the empty state if there are no more rooms
           logger.log('Room element removed. Will check localStorage for remaining rooms.');
         } else {
           logger.warn(`Room element not found for removal with ID ${roomId}`);
-          
+
           // Since we've already removed the room from localStorage,
           // refresh the estimate view to ensure UI is in sync
           if (this.modalManager.estimateManager) {
@@ -1115,7 +1163,7 @@ class RoomManager {
           .then(estimate => {
             // Check if any rooms remain in the estimate (using storage data)
             const hasRoomsInStorage = estimate && estimate.rooms && Object.keys(estimate.rooms).length > 0;
-            
+
             // Find the estimate item and rooms container
             const estimateItem = document.querySelector(`.estimate-item[data-estimate-id="${estimateId}"]`);
             if (estimateItem) {
@@ -1124,19 +1172,19 @@ class RoomManager {
               if (totalElement) {
                 totalElement.textContent = format.currency(estimate.total || 0);
               }
-              
+
               // Find the rooms container
               const roomsContainer = estimateItem.querySelector('.estimate-rooms-container');
               if (roomsContainer) {
                 // Check if there are any room elements in the DOM
                 const roomElementsInDOM = roomsContainer.querySelectorAll('.room-item, .accordion-item');
                 const hasRoomsInDOM = roomElementsInDOM.length > 0;
-                
+
                 // If no rooms in storage OR no room elements in DOM, show empty template
                 if (!hasRoomsInStorage || !hasRoomsInDOM) {
-                  logger.log('No rooms remaining in estimate, showing empty rooms template', 
+                  logger.log('No rooms remaining in estimate, showing empty rooms template',
                     { hasRoomsInStorage, roomCountInDOM: roomElementsInDOM.length });
-                  
+
                   // Clear existing content and show empty template
                   roomsContainer.innerHTML = '';
                   TemplateEngine.insert('rooms-empty-template', {}, roomsContainer);
@@ -1179,7 +1227,7 @@ class RoomManager {
    * @param {string} estimateId - The estimate ID
    * @param {string} roomId - The room ID
    * @param {object} totals - The totals data
-   * 
+   *
    * TODO: Fix room totals update to properly handle timing issues and DOM element availability.
    * Currently, the room element may not be available in the DOM when this is called,
    * particularly after adding a product to a newly created room.
@@ -1189,7 +1237,7 @@ class RoomManager {
 
     // Find the room element
     let roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-    
+
     // If not found, just log a warning and store the totals for later
     if (!roomElement) {
       logger.warn('Room element not found for updating totals - will be updated on next view refresh', { estimateId, roomId });

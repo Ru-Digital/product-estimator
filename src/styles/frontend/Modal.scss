@@ -185,7 +185,7 @@
   padding: 8px;
   transition: color 0.2s ease;
   z-index: 5;
-  
+
   &:hover {
     background: transparent;
     color: $error-color;
@@ -289,6 +289,60 @@
     transition: $transition-base;
     width: 100%;
 
+    &.room-item-header {
+      align-items: flex-start;
+      flex-direction: row;  // Keep default row direction for horizontal layout
+      flex-wrap: wrap;  // Allow wrapping for the price graph container
+      gap: 10px;
+      padding: 15px;
+
+      .room-image-wrapper {
+        align-self: center;  // Vertically center the image
+        flex-shrink: 0;  // Prevent image from shrinking
+      }
+
+      .room-details-wrapper {
+        align-self: center;  // Vertically center within the header
+        flex: 1;  // Take remaining space in the row
+        min-width: 0;  // Allow content to shrink for proper truncation
+
+        .room-details {
+          align-items: center;
+          display: flex;
+          justify-content: space-between;
+          font-size: 1.2rem;
+          font-weight: 600;
+          color: $primary-color;
+
+          .room-name-wrapper {
+            align-items: center;
+            display: flex;
+            gap: 8px;
+            margin: 0;
+
+            .primary-product-name {
+              color: #333333;
+            }
+
+            .room-dimensions {
+              font-weight: 400;
+            }
+          }
+
+          .room-price {
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: auto;  // Push to the right
+          }
+        }
+      }
+
+      .price-graph-container {
+        flex-basis: 100%;  // Full width on new line
+        width: 100%;
+      }
+    }
+
     &:hover {
       background-color: $bg-lighter;
     }
@@ -312,48 +366,49 @@
       transform: translateY(-50%) rotate(180deg);
     }
 
-    .room-name {
-      font-weight: 400;
-    }
-
     .room-dimensions {
       color: $text-light;
-      font-size: 15px;
-      margin-right: 10px;
+
+      margin-left: 10px;
       white-space: nowrap;
     }
 
-    .room-name,
+    .primary-product-name,
     .room-dimensions {
-      margin-right: 10px;
-      white-space: nowrap;
+      margin-left: 10px;
+
     }
 
     /* Additional spacing for room dimensions and total price */
 
-    .room-dimensions,
     .room-total-price {
       margin-right: 30px; /* Ensure text doesn't overlap with indicator */
     }
   }
 }
 
-.remove-room {
+.room-actions {
   align-items: center;
-  background: transparent;
-  border: none;
-  color: $text-lighter;
-  cursor: pointer;
+  align-self: center;  // Vertically center within the header
   display: flex;
   justify-content: center;
   margin-right: 10px;
   padding: 8px;
-  transition: color 0.2s ease;
 
-  &:hover {
+  .remove-room {
     background: transparent;
-    color: $error-color;
+    border: none;
+    color: $text-lighter;
+    cursor: pointer;
+    transition: color 0.2s ease;
+
+    &:hover {
+      background: transparent;
+      color: $error-color;
+    }
   }
+
+
 }
 
 .accordion-content {
@@ -1172,7 +1227,6 @@ body.modal-open {
   font-family: $font-family;
   margin: 10px 0;
   max-width: 100%;
-  padding: 0 20px; /* ✅ Full padding around container */
   position: relative;
   width: 100%;
 }
@@ -1185,12 +1239,31 @@ body.modal-open {
   font-weight: bold;
   justify-content: space-between;
   margin-bottom: 8px;
+
+  .primary-product-image {
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    flex-shrink: 0;
+    height: 60px;
+    margin-right: 15px;
+    object-fit: cover;
+    width: 60px;
+
+    &[data-visible-if="has_primary_product"] {
+      &:not([src=""]) {
+        display: inline-block;
+      }
+
+      &[src=""] {
+        display: none;
+      }
+    }
+  }
 }
 
 .price-title {
   color: $primary-color;
   flex: 1;
-  margin-right: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1305,9 +1378,7 @@ body.modal-open {
 
 .price-dimensions {
   color: $text-light;
-  font-size: 0.9em;
   font-weight: 400;
-  margin-left: 8px;
 }
 
 .price-notice {

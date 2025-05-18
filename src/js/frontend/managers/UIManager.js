@@ -89,85 +89,20 @@ class UIManager {
    * Bind toggle functionality for similar products
    */
   bindSimilarProductsToggle() {
-    // Similar products toggle containers are only in room items now
-    // Look for room-level toggle buttons only
-    const productToggleButtons = document.querySelectorAll('.similar-products-toggle');
-    logger.log(`Found ${productToggleButtons.length} similar products toggle buttons to bind`);
-    
-    productToggleButtons.forEach(button => {
-      if (!button._toggleBound) {
-        button._toggleHandler = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          this.toggleSimilarProducts(button);
-        };
-        
-        button.addEventListener('click', button._toggleHandler);
-        button._toggleBound = true;
-      }
-    });
-    
-    logger.log('Similar products toggle bound');
+    // This method is deprecated - similar products toggles are now handled by RoomManager
+    // Keeping the method stub for backward compatibility
+    logger.log('Similar products toggle binding skipped - handled by RoomManager');
   }
   
   /**
    * Toggle the visibility of similar products in room items
    * @param {HTMLElement} toggleButton - The button that was clicked
+   * @deprecated This method is deprecated - toggle functionality is now handled by RoomManager
    */
   toggleSimilarProducts(toggleButton) {
-    // Find parent room item - similar products are only in room items now
-    const roomItem = toggleButton.closest('.room-item');
-    
-    if (!roomItem) {
-      logger.log('Room item not found for toggle button');
-      return;
-    }
-    
-    // Find similar products container
-    const similarProductsContainer = roomItem.querySelector('.similar-products-container');
-    
-    if (!similarProductsContainer) {
-      logger.log('Similar products container not found');
-      return;
-    }
-    
-    // Toggle expanded state
-    const isExpanded = toggleButton.classList.contains('expanded');
-    logger.log(`Similar products toggle clicked, current expanded state: ${isExpanded}`);
-    
-    // Get the icon element
-    const iconElement = toggleButton.querySelector('.toggle-icon');
-    
-    if (isExpanded) {
-      // Hide similar products
-      similarProductsContainer.classList.remove('visible');
-      similarProductsContainer.style.display = 'none';
-      toggleButton.classList.remove('expanded');
-      
-      // Update icon
-      if (iconElement) {
-        iconElement.classList.remove('dashicons-arrow-up-alt2');
-        iconElement.classList.add('dashicons-arrow-down-alt2');
-      }
-      
-      logger.log('Similar products hidden');
-    } else {
-      // Show similar products
-      similarProductsContainer.classList.add('visible');
-      similarProductsContainer.style.display = 'block';
-      toggleButton.classList.add('expanded');
-      
-      // Update icon
-      if (iconElement) {
-        iconElement.classList.remove('dashicons-arrow-down-alt2');
-        iconElement.classList.add('dashicons-arrow-up-alt2');
-      }
-      
-      logger.log('Similar products shown');
-      
-      // Initialize carousels if they exist
-      this.initializeCarouselInContainer(similarProductsContainer);
-    }
+    // This method is deprecated - similar products toggles are now handled by RoomManager
+    logger.log('toggleSimilarProducts called but is deprecated - should be handled by RoomManager');
+    // Method body removed to avoid conflicts with RoomManager
   }
   
   /**

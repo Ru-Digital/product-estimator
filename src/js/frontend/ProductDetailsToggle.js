@@ -203,14 +203,12 @@ class ProductDetailsToggle {
   setup() {
     logger.log('Setting up product details toggles');
 
-    // Prepare the DOM structure for all toggle types
-    this.prepareProductsToggle();
+    // Prepare the DOM structure for toggle types
+    // Skip prepareProductsToggle and prepareIncludesToggle - handled by RoomManager
     this.prepareNotesToggle();
-    this.prepareIncludesToggle();
     this.prepareSuggestionsToggle();
 
-
-    // Then bind events to all toggle buttons
+    // Then bind events to toggle buttons
     this.bindEvents();
 
     // Re-initialize carousels after setup
@@ -396,29 +394,8 @@ class ProductDetailsToggle {
    * Bind click events to all toggle buttons
    */
   bindEvents() {
-    // Bind product toggle buttons
-    const productToggleButtons = document.querySelectorAll(this.config.selectors.productToggleButton);
-    logger.log(`Found ${productToggleButtons.length} similar products toggle buttons to bind`);
-
-    productToggleButtons.forEach(button => {
-      // Skip if already bound
-      if (button._toggleBound) {
-        return;
-      }
-
-      // Store reference to handler for potential removal
-      button._toggleHandler = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.toggleSimilarProducts(button);
-      };
-
-      // Add event listener
-      button.addEventListener('click', button._toggleHandler);
-
-      // Mark as bound to avoid duplicate handlers
-      button._toggleBound = true;
-    });
+    // Skip binding similar products toggles - these are now handled by RoomManager
+    logger.log('Skipping similar products toggle binding - handled by RoomManager');
 
     // Bind notes toggle buttons
     const notesToggleButtons = document.querySelectorAll(this.config.selectors.notesToggleButton);
@@ -446,29 +423,8 @@ class ProductDetailsToggle {
       button._toggleBound = true;
     });
 
-    // Bind includes toggle buttons
-    const includesToggleButtons = document.querySelectorAll(this.config.selectors.includesToggleButton);
-    logger.log(`Found ${includesToggleButtons.length} includes toggle buttons to bind`);
-
-    includesToggleButtons.forEach(button => {
-      // Skip if already bound
-      if (button._toggleBound) {
-        return;
-      }
-
-      // Store reference to handler for potential removal
-      button._toggleHandler = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.toggleIncludes(button);
-      };
-
-      // Add event listener
-      button.addEventListener('click', button._toggleHandler);
-
-      // Mark as bound to avoid duplicate handlers
-      button._toggleBound = true;
-    });
+    // Skip binding includes toggles - these are now handled by RoomManager
+    logger.log('Skipping includes toggle binding - handled by RoomManager');
 
     if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
 

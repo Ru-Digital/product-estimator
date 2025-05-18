@@ -751,17 +751,30 @@ class RoomManager {
    * @param {HTMLElement} roomElement - The room element
    */
   bindIncludesToggle(roomElement) {
+    logger.log('bindIncludesToggle called for room element');
     const toggleButton = roomElement.querySelector('.product-includes-toggle');
     const includesContainer = roomElement.querySelector('.includes-container');
     
+    logger.log('Found includes toggle button:', !!toggleButton);
+    logger.log('Found includes container:', !!includesContainer);
+    
     if (toggleButton && includesContainer) {
-      toggleButton.addEventListener('click', () => {
+      // Remove any existing click handler to prevent duplicates
+      if (toggleButton._clickHandler) {
+        logger.log('Removing existing includes toggle handler');
+        toggleButton.removeEventListener('click', toggleButton._clickHandler);
+      }
+      
+      toggleButton._clickHandler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        logger.log('Includes toggle clicked');
         const isExpanded = toggleButton.classList.contains('expanded');
+        logger.log('Current expanded state:', isExpanded);
         
         if (isExpanded) {
           toggleButton.classList.remove('expanded');
           includesContainer.classList.remove('visible');
-          includesContainer.style.display = 'none';
           
           // Update toggle icon
           const toggleIcon = toggleButton.querySelector('.toggle-icon');
@@ -769,10 +782,10 @@ class RoomManager {
             toggleIcon.classList.remove('dashicons-arrow-up-alt2');
             toggleIcon.classList.add('dashicons-arrow-down-alt2');
           }
+          logger.log('Includes collapsed');
         } else {
           toggleButton.classList.add('expanded');
           includesContainer.classList.add('visible');
-          includesContainer.style.display = '';
           
           // Update toggle icon
           const toggleIcon = toggleButton.querySelector('.toggle-icon');
@@ -780,8 +793,14 @@ class RoomManager {
             toggleIcon.classList.remove('dashicons-arrow-down-alt2');
             toggleIcon.classList.add('dashicons-arrow-up-alt2');
           }
+          logger.log('Includes expanded');
         }
-      });
+      };
+      
+      toggleButton.addEventListener('click', toggleButton._clickHandler);
+      logger.log('Includes toggle event handler attached');
+    } else {
+      logger.warn('Could not bind includes toggle - missing elements');
     }
   }
 
@@ -790,17 +809,26 @@ class RoomManager {
    * @param {HTMLElement} roomElement - The room element
    */
   bindSimilarProductsToggle(roomElement) {
+    logger.log('bindSimilarProductsToggle called for room element');
     const toggleButton = roomElement.querySelector('.similar-products-toggle');
     const similarProductsContainer = roomElement.querySelector('.similar-products-container');
+    
+    logger.log('Found similar products toggle button:', !!toggleButton);
+    logger.log('Found similar products container:', !!similarProductsContainer);
     
     if (toggleButton && similarProductsContainer) {
       // Remove any existing click handler to prevent duplicates
       if (toggleButton._clickHandler) {
+        logger.log('Removing existing similar products toggle handler');
         toggleButton.removeEventListener('click', toggleButton._clickHandler);
       }
       
-      toggleButton._clickHandler = () => {
+      toggleButton._clickHandler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        logger.log('Similar products toggle clicked');
         const isExpanded = toggleButton.classList.contains('expanded');
+        logger.log('Current expanded state:', isExpanded);
         
         if (isExpanded) {
           toggleButton.classList.remove('expanded');
@@ -812,6 +840,7 @@ class RoomManager {
             toggleIcon.classList.remove('dashicons-arrow-up-alt2');
             toggleIcon.classList.add('dashicons-arrow-down-alt2');
           }
+          logger.log('Similar products collapsed');
         } else {
           toggleButton.classList.add('expanded');
           similarProductsContainer.classList.add('visible');
@@ -822,6 +851,7 @@ class RoomManager {
             toggleIcon.classList.remove('dashicons-arrow-down-alt2');
             toggleIcon.classList.add('dashicons-arrow-up-alt2');
           }
+          logger.log('Similar products expanded');
           
           // Trigger carousel initialization if not already loaded
           const carouselContainer = similarProductsContainer.querySelector('.similar-products-carousel');
@@ -832,6 +862,9 @@ class RoomManager {
       };
       
       toggleButton.addEventListener('click', toggleButton._clickHandler);
+      logger.log('Similar products toggle event handler attached');
+    } else {
+      logger.warn('Could not bind similar products toggle - missing elements');
     }
   }
 

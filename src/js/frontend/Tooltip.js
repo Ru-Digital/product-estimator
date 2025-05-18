@@ -2,6 +2,8 @@
  * Tooltip component for displaying context-sensitive help text and rich content
  * @class Tooltip
  */
+import { format } from '@utils';
+
 export default class Tooltip {
   /**
    * Create a tooltip instance
@@ -319,13 +321,46 @@ export default class Tooltip {
    */
   createRichTooltip(data, position) {
     try {
-      const fragment = this.templateEngine.create('tooltip-rich', data);
+      // Create the template with empty data first
+      const fragment = this.templateEngine.create('tooltip-rich', {});
       
       const tooltip = fragment.querySelector('.pe-tooltip');
       if (!tooltip) {
         console.error('Rich tooltip element not found in template');
         return null;
       }
+      
+      // Manually populate the content elements
+      const titleElement = tooltip.querySelector('.pe-tooltip-title');
+      const notesElement = tooltip.querySelector('.pe-tooltip-notes-content');
+      const detailsElement = tooltip.querySelector('.pe-tooltip-details-content');
+      
+      if (titleElement) titleElement.textContent = data.title || 'Product Information';
+      
+      if (notesElement) {
+        // Format notes with line breaks preserved
+        if (data.notes && data.notes !== 'No additional notes available') {
+          // Replace newlines with <br> tags for proper display
+          notesElement.innerHTML = data.notes.replace(/\n/g, '<br>');
+        } else {
+          notesElement.textContent = 'No notes available';
+        }
+      }
+      
+      if (detailsElement) {
+        // Format details with line breaks preserved
+        if (data.details && data.details !== 'No additional details available') {
+          detailsElement.innerHTML = data.details.replace(/\n/g, '<br>');
+        } else {
+          detailsElement.textContent = 'No details available';
+        }
+      }
+      
+      console.log('[Tooltip] Populated rich tooltip:', {
+        title: titleElement?.textContent,
+        notes: notesElement?.textContent,
+        details: detailsElement?.textContent
+      });
       
       tooltip.className = `pe-tooltip pe-tooltip-rich pe-tooltip-${position}`;
       
@@ -349,23 +384,100 @@ export default class Tooltip {
     };
     
     // Try to get product data from the parent product container
-    const productItem = trigger.closest('.include-item');
-    if (productItem) {
-      const productId = productItem.getAttribute('data-product-id');
+    const includeItem = trigger.closest('.include-item');
+    if (includeItem) {
+      // Get the product ID from the include item
+      const productId = includeItem.getAttribute('data-product-id');
       
-      // Get product notes from the room data
-      const roomItem = productItem.closest('.room-item');
-      if (roomItem && window.productEstimator?.rooms) {
-        const roomId = roomItem.getAttribute('data-room-id');
-        const room = window.productEstimator.rooms[roomId];
-        const product = room?.products?.[productId];
-        
-        if (product) {
-          data.notes = product.notes || 'No notes available';
-          data.details = product.description || 'No details available';
-          data.title = product.name || data.title;
-        }
+      // Get the product name from the displayed element
+      const productName = includeItem.querySelector('.include-item-name')?.textContent;
+      if (productName) {
+        data.title = productName.trim();
       }
+      
+      console.log('[Tooltip] Looking for product data:', { 
+        productId, 
+        productName: data.title,
+        includeItem 
+      });
+      
+      // For includes/notes we need to get the product data from room
+      const roomItem = includeItem.closest('.room-item');
+      if (roomItem) {
+        const roomId = roomItem.getAttribute('data-room-id');
+        const estimateId = roomItem.getAttribute('data-estimate-id');
+        
+        console.log('[Tooltip] Found room context:', { roomId, estimateId });
+        
+        // Access data from localStorage
+        const storedData = localStorage.getItem('productEstimatorEstimateData');
+        if (storedData) {
+          try {
+            const parsedData = JSON.parse(storedData);
+            const estimate = parsedData?.estimates?.[estimateId];
+            if (estimate?.rooms?.[roomId]) {
+              const room = estimate.rooms[roomId];
+              
+              console.log('[Tooltip] Room data:', room);
+              console.log('[Tooltip] Looking for product with ID:', productId);
+              
+              // Get the product data by ID
+              if (productId && room.products?.[productId]) {
+                const product = room.products[productId];
+                
+                console.log('[Tooltip] Found product:', product);
+                
+                // Check for additional_notes
+                if (product.additional_notes) {
+                  const notes = Object.values(product.additional_notes)
+                    .filter(note => note.type === 'note')
+                    .map(note => note.note_text)
+                    .filter(text => text && text.trim());
+                  
+                  console.log('[Tooltip] Found notes:', notes);
+                  
+                  if (notes.length > 0) {
+                    data.notes = notes.join('\n\n');
+                  }
+                }
+                
+                // Check for additional_products information
+                if (product.additional_products) {
+                  const additionalInfo = Object.values(product.additional_products)
+                    .map(prod => `${prod.name}${prod.min_price > 0 ? ` - ${format.currency(prod.min_price)}` : ' (included)'}`)
+                    .filter(text => text && text.trim());
+                  
+                  console.log('[Tooltip] Found additional products:', additionalInfo);
+                  
+                  if (additionalInfo.length > 0) {
+                    data.details = 'Additional Products:\n' + additionalInfo.join('\n');
+                  }
+                }
+              } else {
+                console.log('[Tooltip] Product not found in room.products');
+              }
+            } else {
+              console.log('[Tooltip] Room not found in estimate');
+            }
+          } catch (error) {
+            console.error('[Tooltip] Error parsing localStorage data:', error);
+          }
+        } else {
+          console.log('[Tooltip] No productEstimatorEstimateData in localStorage');
+        }
+        
+        // Fallback to default messages if no data found
+        if (!data.notes) {
+          data.notes = 'No additional notes available';
+        }
+        if (!data.details) {
+          data.details = 'No additional details available';
+        }
+      } else {
+        console.log('[Tooltip] No room-item found');
+      }
+    } else {
+      console.log('[Tooltip] No include-item found');
     }
     
     // Allow custom data attributes to override

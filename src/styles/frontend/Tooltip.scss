@@ -119,7 +119,6 @@
   height: 18px;
   justify-content: center;
   line-height: 1;
-  margin-left: $spacing-xs;
   transition: $transition-base;
   width: 18px;
 
@@ -250,14 +249,14 @@
     }
     
     .product-includes-icon {
-      background-color: color.adjust($warning-color, $lightness: 20%);
+      background-color: $primary-color;
       flex-shrink: 0;
       height: 20px;
       margin-right: $spacing-sm;
       width: 20px;
       
       .dashicons {
-        color: $warning-color;
+        color: $bg-color;
         font-size: 12px;
         height: 12px;
         line-height: 20px;

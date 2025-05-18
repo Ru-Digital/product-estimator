@@ -854,11 +854,16 @@ body.modal-open {
   line-height: 1.4;
   position: relative;
 
+  &-content {
+    align-items: center;
+    display: flex;
+    flex: 1;
+    gap: 8px;
+  }
+
   &-name {
     color: $text-light;
-    flex: 1;
     font-weight: normal;
-    padding-right: 8px;
   }
 
   &-prices {

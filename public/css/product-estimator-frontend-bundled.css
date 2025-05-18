@@ -1733,11 +1733,15 @@ body.modal-open {
   line-height: 1.4;
   position: relative;
 }
+.include-item-content {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 8px;
+}
 .include-item-name {
   color: #666;
-  flex: 1;
   font-weight: normal;
-  padding-right: 8px;
 }
 .include-item-prices {
   align-items: flex-end;
@@ -4160,7 +4164,6 @@ button.replace-product-in-room.loading {
   height: 18px;
   justify-content: center;
   line-height: 1;
-  margin-left: 0.25rem;
   transition: all 0.2s ease;
   width: 18px;
 }
@@ -4283,14 +4286,14 @@ button.replace-product-in-room.loading {
   padding-bottom: 0;
 }
 .pe-tooltip-rich .pe-tooltip-notes-content .note-item .product-includes-icon {
-  background-color: #ffd566;
+  background-color: #00833F;
   flex-shrink: 0;
   height: 20px;
   margin-right: 0.5rem;
   width: 20px;
 }
 .pe-tooltip-rich .pe-tooltip-notes-content .note-item .product-includes-icon .dashicons {
-  color: #ffb900;
+  color: #fff;
   font-size: 12px;
   height: 12px;
   line-height: 20px;

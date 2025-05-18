@@ -4268,6 +4268,42 @@ button.replace-product-in-room.loading {
   margin: 0.5rem 0;
   padding-left: 1.5rem;
 }
+.pe-tooltip-rich .pe-tooltip-notes-content .note-item {
+  align-items: flex-start;
+  background: transparent;
+  border: none;
+  display: flex;
+  margin: 0;
+  padding: 0.5rem 0;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content .note-item:first-child {
+  padding-top: 0;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content .note-item:last-child {
+  padding-bottom: 0;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content .note-item .product-includes-icon {
+  background-color: #ffd566;
+  flex-shrink: 0;
+  height: 20px;
+  margin-right: 0.5rem;
+  width: 20px;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content .note-item .product-includes-icon .dashicons {
+  color: #ffb900;
+  font-size: 12px;
+  height: 12px;
+  line-height: 20px;
+  width: 12px;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content .note-item .include-item-note {
+  flex: 1;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content .note-item .include-item-note .note-text {
+  color: #333;
+  font-size: 0.875rem;
+  margin: 0;
+}
 .pe-tooltip-rich .pe-tooltip-arrow {
   border-width: 10px;
 }

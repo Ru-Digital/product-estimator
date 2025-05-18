@@ -338,10 +338,37 @@ export default class Tooltip {
       if (titleElement) titleElement.textContent = data.title || 'Product Information';
       
       if (notesElement) {
-        // Format notes with line breaks preserved
+        // Format notes using the note-item template
         if (data.notes && data.notes !== 'No additional notes available') {
-          // Replace newlines with <br> tags for proper display
-          notesElement.innerHTML = data.notes.replace(/\n/g, '<br>');
+          // Clear the container
+          notesElement.innerHTML = '';
+          
+          // Split notes by newlines and render each one using the template
+          const notes = data.notes.split('\n\n');
+          notes.forEach(noteText => {
+            if (noteText.trim()) {
+              // Create note item from template
+              const noteFragment = this.templateEngine.create('note-item-template', {
+                'note-text': noteText
+              });
+              
+              // Update text manually since template might not populate correctly
+              const noteTextElement = noteFragment.querySelector('.note-text');
+              if (noteTextElement) {
+                noteTextElement.textContent = noteText;
+              }
+              
+              // Remove extra margins and stylings for tooltip context
+              const noteItem = noteFragment.querySelector('.note-item');
+              if (noteItem) {
+                noteItem.style.margin = '0';
+                noteItem.style.padding = '8px 0';
+                noteItem.style.border = 'none';
+              }
+              
+              notesElement.appendChild(noteFragment);
+            }
+          });
         } else {
           notesElement.textContent = 'No notes available';
         }

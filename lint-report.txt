@@ -37,26 +37,26 @@
   311:7   warning  Unexpected console statement                                           no-console
   318:1   warning  Invalid JSDoc @param "data" type "Object"; prefer: "object"            jsdoc/check-types
   329:9   warning  Unexpected console statement                                           no-console
-  359:7   warning  Unexpected console statement                                           no-console
-  369:7   warning  Unexpected console statement                                           no-console
-  377:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"                 jsdoc/check-types
-  398:7   warning  Unexpected console statement                                           no-console
-  410:9   warning  Unexpected console statement                                           no-console
-  421:15  warning  Unexpected console statement                                           no-console
-  422:15  warning  Unexpected console statement                                           no-console
-  428:17  warning  Unexpected console statement                                           no-console
-  437:19  warning  Unexpected console statement                                           no-console
-  450:19  warning  Unexpected console statement                                           no-console
-  457:17  warning  Unexpected console statement                                           no-console
-  460:15  warning  Unexpected console statement                                           no-console
-  463:13  warning  Unexpected console statement                                           no-console
-  466:11  warning  Unexpected console statement                                           no-console
-  477:9   warning  Unexpected console statement                                           no-console
-  480:7   warning  Unexpected console statement                                           no-console
-  504:11  warning  'arrowSize' is assigned a value but never used                         no-unused-vars
-  601:1   warning  Invalid JSDoc @param "content" type "Object"; prefer: "object"         jsdoc/check-types
-  602:1   warning  Invalid JSDoc @param "options" type "Object"; prefer: "object"         jsdoc/check-types
-  643:1   warning  Invalid JSDoc @param "content" type "Object"; prefer: "object"         jsdoc/check-types
+  386:7   warning  Unexpected console statement                                           no-console
+  396:7   warning  Unexpected console statement                                           no-console
+  404:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"                 jsdoc/check-types
+  425:7   warning  Unexpected console statement                                           no-console
+  437:9   warning  Unexpected console statement                                           no-console
+  448:15  warning  Unexpected console statement                                           no-console
+  449:15  warning  Unexpected console statement                                           no-console
+  455:17  warning  Unexpected console statement                                           no-console
+  464:19  warning  Unexpected console statement                                           no-console
+  477:19  warning  Unexpected console statement                                           no-console
+  484:17  warning  Unexpected console statement                                           no-console
+  487:15  warning  Unexpected console statement                                           no-console
+  490:13  warning  Unexpected console statement                                           no-console
+  493:11  warning  Unexpected console statement                                           no-console
+  504:9   warning  Unexpected console statement                                           no-console
+  507:7   warning  Unexpected console statement                                           no-console
+  531:11  warning  'arrowSize' is assigned a value but never used                         no-unused-vars
+  628:1   warning  Invalid JSDoc @param "content" type "Object"; prefer: "object"         jsdoc/check-types
+  629:1   warning  Invalid JSDoc @param "options" type "Object"; prefer: "object"         jsdoc/check-types
+  670:1   warning  Invalid JSDoc @param "content" type "Object"; prefer: "object"         jsdoc/check-types
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/EstimateManager.js
    11:10  warning  'format' is defined but never used                     no-unused-vars

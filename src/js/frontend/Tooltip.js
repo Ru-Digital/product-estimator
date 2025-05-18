@@ -27,6 +27,9 @@ export default class Tooltip {
       document.addEventListener('focusin', this.handleFocusIn.bind(this), true);
       document.addEventListener('focusout', this.handleFocusOut.bind(this), true);
       document.addEventListener('click', this.handleClick.bind(this), true);
+      
+      // Close tooltips on scroll
+      window.addEventListener('scroll', this.handleScroll.bind(this), true);
     } catch (error) {
       console.error('Error initializing tooltip system:', error);
     }
@@ -161,6 +164,22 @@ export default class Tooltip {
         this.hideRichTooltip(triggerElement);
       });
     }
+  }
+
+  /**
+   * Handle scroll event to close all tooltips
+   * @param {Event} event - Scroll event
+   */
+  handleScroll(event) {
+    // Close all regular tooltips
+    this.activeTooltips.forEach((tooltip, trigger) => {
+      this.hideTooltip(trigger);
+    });
+    
+    // Close all rich tooltips
+    this.activeRichTooltips.forEach((tooltip, trigger) => {
+      this.hideRichTooltip(trigger);
+    });
   }
 
   /**
@@ -565,7 +584,7 @@ export default class Tooltip {
     if (top < 0) top = gap;
     if (top + tooltipRect.height > viewport.height) top = viewport.height - tooltipRect.height - gap;
     
-    // Apply positioning
+    // Apply positioning - with absolute position, we need scroll offsets
     tooltip.style.top = `${top + window.scrollY}px`;
     tooltip.style.left = `${left + window.scrollX}px`;
     

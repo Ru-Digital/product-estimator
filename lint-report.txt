@@ -28,35 +28,36 @@
   82:13  warning  Unexpected console statement  no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/Tooltip.js
-   10:1   warning  Invalid JSDoc @param "templateEngine" type "Object"; prefer: "object"  jsdoc/check-types
-   31:7   warning  Unexpected console statement                                           no-console
-  152:17  warning  'key' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
-  181:9   warning  Unexpected console statement                                           no-console
-  245:9   warning  Unexpected console statement                                           no-console
-  297:9   warning  Unexpected console statement                                           no-console
-  311:7   warning  Unexpected console statement                                           no-console
-  318:1   warning  Invalid JSDoc @param "data" type "Object"; prefer: "object"            jsdoc/check-types
-  329:9   warning  Unexpected console statement                                           no-console
-  386:7   warning  Unexpected console statement                                           no-console
-  396:7   warning  Unexpected console statement                                           no-console
-  404:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"                 jsdoc/check-types
-  425:7   warning  Unexpected console statement                                           no-console
-  437:9   warning  Unexpected console statement                                           no-console
-  448:15  warning  Unexpected console statement                                           no-console
-  449:15  warning  Unexpected console statement                                           no-console
-  455:17  warning  Unexpected console statement                                           no-console
-  464:19  warning  Unexpected console statement                                           no-console
-  477:19  warning  Unexpected console statement                                           no-console
-  484:17  warning  Unexpected console statement                                           no-console
-  487:15  warning  Unexpected console statement                                           no-console
-  490:13  warning  Unexpected console statement                                           no-console
-  493:11  warning  Unexpected console statement                                           no-console
-  504:9   warning  Unexpected console statement                                           no-console
-  507:7   warning  Unexpected console statement                                           no-console
-  531:11  warning  'arrowSize' is assigned a value but never used                         no-unused-vars
-  628:1   warning  Invalid JSDoc @param "content" type "Object"; prefer: "object"         jsdoc/check-types
-  629:1   warning  Invalid JSDoc @param "options" type "Object"; prefer: "object"         jsdoc/check-types
-  670:1   warning  Invalid JSDoc @param "content" type "Object"; prefer: "object"         jsdoc/check-types
+   10:1   warning  Invalid JSDoc @param "templateEngine" type "Object"; prefer: "object"    jsdoc/check-types
+   34:7   warning  Unexpected console statement                                             no-console
+  155:17  warning  'key' is defined but never used. Allowed unused args must match /^_/u    no-unused-vars
+  173:16  warning  'event' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  200:9   warning  Unexpected console statement                                             no-console
+  264:9   warning  Unexpected console statement                                             no-console
+  316:9   warning  Unexpected console statement                                             no-console
+  330:7   warning  Unexpected console statement                                             no-console
+  337:1   warning  Invalid JSDoc @param "data" type "Object"; prefer: "object"              jsdoc/check-types
+  348:9   warning  Unexpected console statement                                             no-console
+  405:7   warning  Unexpected console statement                                             no-console
+  415:7   warning  Unexpected console statement                                             no-console
+  423:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"                   jsdoc/check-types
+  444:7   warning  Unexpected console statement                                             no-console
+  456:9   warning  Unexpected console statement                                             no-console
+  467:15  warning  Unexpected console statement                                             no-console
+  468:15  warning  Unexpected console statement                                             no-console
+  474:17  warning  Unexpected console statement                                             no-console
+  483:19  warning  Unexpected console statement                                             no-console
+  496:19  warning  Unexpected console statement                                             no-console
+  503:17  warning  Unexpected console statement                                             no-console
+  506:15  warning  Unexpected console statement                                             no-console
+  509:13  warning  Unexpected console statement                                             no-console
+  512:11  warning  Unexpected console statement                                             no-console
+  523:9   warning  Unexpected console statement                                             no-console
+  526:7   warning  Unexpected console statement                                             no-console
+  550:11  warning  'arrowSize' is assigned a value but never used                           no-unused-vars
+  647:1   warning  Invalid JSDoc @param "content" type "Object"; prefer: "object"           jsdoc/check-types
+  648:1   warning  Invalid JSDoc @param "options" type "Object"; prefer: "object"           jsdoc/check-types
+  689:1   warning  Invalid JSDoc @param "content" type "Object"; prefer: "object"           jsdoc/check-types
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/EstimateManager.js
    11:10  warning  'format' is defined but never used                     no-unused-vars
@@ -119,7 +120,7 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-✖ 90 problems (0 errors, 90 warnings)
+✖ 91 problems (0 errors, 91 warnings)
   0 errors and 6 warnings potentially fixable with the `--fix` option.
 
 

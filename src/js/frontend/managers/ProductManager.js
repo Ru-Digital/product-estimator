@@ -426,7 +426,6 @@ class ProductManager {
       description: product.description || '',
       
       // Include additional product data if available
-      additional_products: product.additional_products || [],
       additional_notes: product.additional_notes || [],
       similar_products: product.similar_products || [],
     };
@@ -506,13 +505,8 @@ class ProductManager {
 
       variationsContainer.appendChild(select);
 
-      // Add variations container to product element (after product includes)
-      const includesContainer = productElement.querySelector('.includes-container');
-      if (includesContainer) {
-        productElement.insertBefore(variationsContainer, includesContainer.nextSibling);
-      } else {
-        productElement.appendChild(variationsContainer);
-      }
+      // Add variations container to product element
+      productElement.appendChild(variationsContainer);
     }
 
     // Bind events

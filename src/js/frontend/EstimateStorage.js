@@ -524,55 +524,7 @@ export function replaceProductInRoom(estimateId, roomId, oldProductId, newProduc
   const newProductIdStr = String(newProductId);
 
   // Handle replacement based on type
-  if (replaceType === 'additional_products' && parentProductId !== null) {
-    const parentProductIdStr = String(parentProductId);
-
-    // Get the parent product directly
-    const parentProduct = room.products[parentProductIdStr];
-
-    if (!parentProduct) {
-      logger.warn(`Parent product with ID ${parentProductIdStr} not found.`);
-      return false;
-    }
-
-    // Check if the parent product has additional products
-    if (!parentProduct.additional_products || !Array.isArray(parentProduct.additional_products)) {
-      logger.warn(`Parent product with ID ${parentProductIdStr} has no additional products.`);
-      return false;
-    }
-
-    // Find the additional product to replace
-    for (let j = 0; j < parentProduct.additional_products.length; j++) {
-      const addProduct = parentProduct.additional_products[j];
-
-      // Check if this is the product to replace
-      if (addProduct.id == oldProductIdStr ||
-          (addProduct.replacement_chain && addProduct.replacement_chain.includes(oldProductIdStr))) {
-
-        logger.log(`Found product to replace: ${oldProductIdStr} under parent ${parentProductIdStr}`);
-
-        // Handle replacement chain
-        if (!addProduct.replacement_chain) {
-          addProduct.replacement_chain = [];
-        }
-        if (!addProduct.replacement_chain.includes(addProduct.id)) {
-          addProduct.replacement_chain.push(addProduct.id);
-        }
-        newProductData.replacement_chain = addProduct.replacement_chain;
-
-        // Replace the product
-        room.products[parentProductIdStr].additional_products[j] = newProductData;
-
-        // Save and return
-        saveEstimateData(storedData);
-        return true;
-      }
-    }
-
-    logger.warn(`Additional product with ID ${oldProductIdStr} not found under parent ${parentProductIdStr}.`);
-    return false;
-
-  } else if (replaceType === 'main') {
+  if (replaceType === 'main') {
     // Check if the product exists
     if (!room.products[oldProductIdStr]) {
       logger.warn(`Main product with ID ${oldProductIdStr} not found in room.`);

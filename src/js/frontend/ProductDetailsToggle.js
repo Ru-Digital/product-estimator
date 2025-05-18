@@ -740,14 +740,12 @@ class ProductDetailsToggle {
    * Prepare the DOM for includes toggle
    */
   prepareIncludesToggle() {
-    // Find all product items AND room items for includes toggle
-    const productItems = document.querySelectorAll(this.config.selectors.productItem);
+    // Find room items for includes toggle (product items no longer have includes)
     const roomItems = document.querySelectorAll('.room-item');
-    const allItems = [...productItems, ...roomItems];
     
-    logger.log(`Found ${productItems.length} product items and ${roomItems.length} room items to process for includes toggle`);
+    logger.log(`Found ${roomItems.length} room items to process for includes toggle`);
 
-    allItems.forEach(item => {
+    roomItems.forEach(item => {
       // Skip if already processed for includes toggle
       if (item.classList.contains('includes-toggle-processed')) {
         return;
@@ -834,18 +832,16 @@ class ProductDetailsToggle {
    * @param {HTMLElement} toggleButton - The button that was clicked
    */
   toggleIncludes(toggleButton) {
-    // Find parent product item OR room item (since includes can be at room level now)
-    const productItem = toggleButton.closest(this.config.selectors.productItem);
+    // Find parent room item (product items no longer have includes)
     const roomItem = toggleButton.closest('.room-item');
-    const parentItem = productItem || roomItem;
 
-    if (!parentItem) {
-      logger.log('Parent item (product or room) not found for includes toggle button');
+    if (!roomItem) {
+      logger.log('Room item not found for includes toggle button');
       return;
     }
 
     // Find includes container
-    const includesContainer = parentItem.querySelector('.includes-container');
+    const includesContainer = roomItem.querySelector('.includes-container');
 
     if (!includesContainer) {
       logger.log('Includes container not found');

@@ -1,6 +1,3 @@
-/*!*********************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/frontend/Index.scss ***!
-  \*********************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main SCSS file for Product Estimator frontend styles
@@ -2199,7 +2196,6 @@ body.modal-open {
   font-size: 10px;
   font-weight: normal;
   margin-top: 5px;
-  text-align: right;
 }
 
 /* Email Prompt Modal Styles */

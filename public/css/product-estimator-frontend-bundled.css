@@ -4271,7 +4271,7 @@ button.replace-product-in-room.loading {
   padding-left: 1.5rem;
 }
 .pe-tooltip-rich .pe-tooltip-notes-content .note-item {
-  align-items: flex-start;
+  align-items: center;
   background: transparent;
   border: none;
   display: flex;
@@ -4285,9 +4285,12 @@ button.replace-product-in-room.loading {
   padding-bottom: 0;
 }
 .pe-tooltip-rich .pe-tooltip-notes-content .note-item .product-includes-icon {
+  align-items: center;
   background-color: #00833F;
+  display: flex;
   flex-shrink: 0;
   height: 20px;
+  justify-content: center;
   margin-right: 0.5rem;
   width: 20px;
 }
@@ -4295,15 +4298,18 @@ button.replace-product-in-room.loading {
   color: #fff;
   font-size: 12px;
   height: 12px;
-  line-height: 20px;
+  line-height: 12px;
   width: 12px;
 }
 .pe-tooltip-rich .pe-tooltip-notes-content .note-item .include-item-note {
+  align-items: center;
+  display: flex;
   flex: 1;
 }
 .pe-tooltip-rich .pe-tooltip-notes-content .note-item .include-item-note .note-text {
   color: #333;
   font-size: 0.875rem;
+  line-height: 20px;
   margin: 0;
 }
 .pe-tooltip-rich .pe-tooltip-arrow {

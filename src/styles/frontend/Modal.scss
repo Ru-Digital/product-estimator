@@ -291,8 +291,7 @@
 
     &.room-item-header {
       align-items: flex-start;
-      flex-direction: row;  // Keep default row direction for horizontal layout
-      flex-wrap: wrap;  // Allow wrapping for the price graph container
+      flex-flow: row wrap;  // Keep horizontal layout with wrapping
       gap: 10px;
       padding: 15px;
 
@@ -308,11 +307,11 @@
 
         .room-details {
           align-items: center;
+          color: $primary-color;
           display: flex;
-          justify-content: space-between;
           font-size: 1.2rem;
           font-weight: 600;
-          color: $primary-color;
+          justify-content: space-between;
 
           .room-name-wrapper {
             align-items: center;
@@ -321,7 +320,7 @@
             margin: 0;
 
             .primary-product-name {
-              color: #333333;
+              color: #333;
             }
 
             .room-dimensions {
@@ -368,7 +367,6 @@
 
     .room-dimensions {
       color: $text-light;
-
       margin-left: 10px;
       white-space: nowrap;
     }
@@ -1249,6 +1247,7 @@ body.modal-open {
     width: 60px;
 
     &[data-visible-if="has_primary_product"] {
+
       &:not([src=""]) {
         display: inline-block;
       }
@@ -1385,7 +1384,8 @@ body.modal-open {
   font-size: 10px;
   font-weight: normal;
   margin-top: 5px;
-  //text-align: right;
+
+  // text-align: right;
 }
 
 /* Email Prompt Modal Styles */

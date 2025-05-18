@@ -28,7 +28,9 @@
   }
 
   // Position variations
+
   &-top {
+
     .pe-tooltip-arrow {
       bottom: -8px;
       left: 50%;
@@ -37,6 +39,7 @@
   }
 
   &-bottom {
+
     .pe-tooltip-arrow {
       left: 50%;
       top: -8px;
@@ -45,13 +48,16 @@
   }
 
   &-left {
+
     .pe-tooltip-arrow {
       right: -8px;
       top: 50%;
       transform: translateY(-50%);
     }
   }
+
   &-right {
+
     .pe-tooltip-arrow {
       left: -8px;
       top: 50%;
@@ -61,21 +67,24 @@
 }
 
 // Tooltip trigger styles
+
 [data-tooltip] {
   cursor: help;
   position: relative;
 
   // Add subtle underline for keyboard users
+
   &:focus {
     outline: 2px solid $primary-color;
     outline-offset: 2px;
   }
 
   // Add info icon if element is empty
+
   &:empty::before {
     color: $info-color;
     content: "\f348"; // Dashicons info
-    font-family: dashicons;
+    font-family: dashicons, sans-serif;
     font-size: 16px;
     line-height: 1;
     vertical-align: middle;
@@ -83,6 +92,7 @@
 }
 
 // Tooltip helper icon style (optional use)
+
 .pe-tooltip-icon {
   align-items: center;
   color: $info-color;
@@ -97,7 +107,7 @@
 
   &::before {
     content: "\f348"; // Dashicons info
-    font-family: dashicons;
+    font-family: dashicons, sans-serif;
   }
 
   &:hover {
@@ -106,6 +116,7 @@
 }
 
 // Info icon button style (for clickable help)
+
 .pe-info-button {
   @include button-reset;
   align-items: center;
@@ -142,6 +153,7 @@
 }
 
 // Rich tooltip styles
+
 .pe-tooltip-rich {
   background-color: $bg-color;
   border: 1px solid $border-color-dark;
@@ -203,7 +215,7 @@
     color: $text-color;
     font-size: $font-size-small;
     font-weight: 600;
-    margin: 0 0 $spacing-sm 0;
+    margin: 0 0 $spacing-sm;
     text-transform: uppercase;
   }
 
@@ -219,7 +231,7 @@
     }
 
     p {
-      margin: 0 0 $spacing-sm 0;
+      margin: 0 0 $spacing-sm;
 
       &:last-child {
         margin-bottom: 0;
@@ -234,6 +246,7 @@
   }
   
   // Style note items inside tooltip
+
   .pe-tooltip-notes-content .note-item {
     align-items: center;
     background: transparent;
@@ -284,6 +297,7 @@
   }
 
   // Rich tooltip arrow styles
+
   .pe-tooltip-arrow {
     border-width: 10px;
   }

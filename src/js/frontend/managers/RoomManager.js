@@ -661,6 +661,9 @@ class RoomManager {
       // Render aggregated product includes at the room level
       this.renderRoomIncludes(room, roomElement);
 
+      // Render product upgrades for the room
+      this.renderRoomUpgrades(room, roomElement);
+
       // Initialize similar products for the room
       this.initializeSimilarProductsForRoom(estimateId, roomId);
 
@@ -827,6 +830,225 @@ class RoomManager {
               logger.log('Product removal cancelled by user');
             }
           });
+        }
+      };
+
+      button.addEventListener('click', button._clickHandler);
+    });
+  }
+
+  /**
+   * Render product upgrades for a room
+   * @param {object} room - The room data
+   * @param {HTMLElement} roomElement - The room element
+   */
+  renderRoomUpgrades(room, roomElement) {
+    logger.log('Rendering room upgrades', { roomName: room.name });
+
+    // Get estimate and room IDs from the room element
+    const estimateId = roomElement.dataset.estimateId;
+    const roomId = roomElement.dataset.roomId;
+
+    if (!estimateId || !roomId) {
+      logger.error('Missing estimate or room ID on room element');
+      return;
+    }
+
+    // Find the upgrades container in the room element
+    const upgradesListContainer = roomElement.querySelector('.product-upgrades-list');
+    const upgradesContainer = roomElement.querySelector('.product-upgrades-container');
+    
+    if (!upgradesListContainer) {
+      logger.warn('Product upgrades list container not found in room element');
+      return;
+    }
+
+    // Clear existing upgrades
+    upgradesListContainer.innerHTML = '';
+
+    // Collect all upgrades from all products in the room
+    let allUpgrades = [];
+    
+    if (room.products && typeof room.products === 'object') {
+      Object.values(room.products).forEach(product => {
+        logger.log('Checking product for upgrades:', {
+          productId: product.id,
+          productName: product.name,
+          hasAdditionalProducts: !!product.additional_products,
+          additionalProductsCount: product.additional_products ? Object.keys(product.additional_products).length : 0
+        });
+        
+        // Check if additional_products is an object (as in the localStorage data)
+        if (product.additional_products && typeof product.additional_products === 'object') {
+          // Iterate through additional products object
+          Object.values(product.additional_products).forEach((item, index) => {
+            logger.log(`Additional product:`, {
+              id: item.id,
+              name: item.name,
+              has_upgrades: item.has_upgrades,
+              upgrades: item.upgrades,
+              entire_item: item
+            });
+            
+            // Check if this additional product has upgrades
+            if (item.has_upgrades && item.upgrades && item.upgrades.products && Array.isArray(item.upgrades.products)) {
+              logger.log(`Found ${item.upgrades.products.length} upgrades for ${item.name}`);
+              
+              // Create upgrade sections for each additional product with upgrades
+              const upgradeSection = {
+                ...item.upgrades,
+                parent_product_id: item.id,
+                parent_product_name: item.name,
+                products: item.upgrades.products.map(upgradeProduct => ({
+                  ...upgradeProduct,
+                  room_id: roomId,
+                  estimate_id: estimateId,
+                  replace_product_id: item.id,
+                  pricing_method: upgradeProduct.pricing_method || 'fixed',
+                  parent_product_name: item.name
+                }))
+              };
+              
+              allUpgrades.push(upgradeSection);
+            }
+          });
+        }
+      });
+    }
+
+    logger.log(`Found ${allUpgrades.length} upgrades for room ${room.name}`);
+
+    // If we have upgrades, show the container and render them
+    if (allUpgrades.length > 0) {
+      if (upgradesContainer) {
+        upgradesContainer.style.display = '';
+      }
+
+      // Render each upgrade section
+      allUpgrades.forEach(upgradeSection => {
+        logger.log('Rendering upgrade section:', {
+          title: upgradeSection.title,
+          description: upgradeSection.description,
+          productCount: upgradeSection.products ? upgradeSection.products.length : 0,
+          parentProduct: upgradeSection.parent_product_name
+        });
+
+        // Create a section container for each upgrade group
+        const sectionContainer = document.createElement('div');
+        sectionContainer.className = 'product-upgrades';
+        sectionContainer.setAttribute('data-product-id', upgradeSection.parent_product_id);
+        
+        // Create the upgrade option container
+        const optionContainer = document.createElement('div');
+        optionContainer.className = 'product-upgrade-option';
+        optionContainer.setAttribute('data-upgrade-id', upgradeSection.parent_product_id);
+        
+        // Add section title and description if available
+        if (upgradeSection.title) {
+          const titleElement = document.createElement('h6');
+          titleElement.className = 'upgrade-title';
+          titleElement.textContent = upgradeSection.title;
+          optionContainer.appendChild(titleElement);
+        }
+        
+        if (upgradeSection.description) {
+          const descElement = document.createElement('p');
+          descElement.className = 'upgrade-description';
+          descElement.textContent = upgradeSection.description;
+          optionContainer.appendChild(descElement);
+        }
+        
+        // Create tiles container structure
+        const tilesContainer = document.createElement('div');
+        tilesContainer.className = 'product-upgrade-tiles';
+        tilesContainer.setAttribute('data-upgrade-id', upgradeSection.parent_product_id);
+        
+        // Create tiles wrapper
+        const tilesWrapper = document.createElement('div');
+        tilesWrapper.className = 'tiles-wrapper';
+        
+        // Render each upgrade product in the section
+        if (upgradeSection.products && Array.isArray(upgradeSection.products)) {
+          upgradeSection.products.forEach(upgrade => {
+            const upgradeData = {
+              product_id: upgrade.id,
+              estimate_id: upgrade.estimate_id,
+              room_id: upgrade.room_id,
+              replace_product_id: upgrade.replace_product_id,
+              pricing_method: upgrade.pricing_method,
+              replace_type: 'product_upgrade',
+              name: upgrade.name,
+              product_name: upgrade.name,
+              price: upgrade.min_total || upgrade.price || 0,
+              product_price: format.currency(upgrade.min_total || upgrade.price || 0),
+              image: upgrade.image || '',
+              url: upgrade.url || '#',
+              parent_product_name: upgrade.parent_product_name
+            };
+
+            logger.log('Rendering upgrade product:', upgradeData);
+            TemplateEngine.insert('product-upgrade-item-template', upgradeData, tilesWrapper);
+          });
+        }
+        
+        // Assemble the structure: tiles wrapper -> tiles container -> option container -> section container
+        tilesContainer.appendChild(tilesWrapper);
+        optionContainer.appendChild(tilesContainer);
+        sectionContainer.appendChild(optionContainer);
+        upgradesListContainer.appendChild(sectionContainer);
+      });
+
+      // Bind events for upgrade buttons
+      this.bindUpgradeButtons(upgradesListContainer);
+    } else {
+      // Hide the upgrades container if no upgrades
+      if (upgradesContainer) {
+        upgradesContainer.style.display = 'none';
+      }
+    }
+  }
+
+  /**
+   * Bind events for upgrade buttons
+   * @param {HTMLElement} upgradesContainer - The upgrades container
+   */
+  bindUpgradeButtons(upgradesContainer) {
+    const upgradeButtons = upgradesContainer.querySelectorAll('.replace-product-in-room');
+    
+    upgradeButtons.forEach(button => {
+      if (button._clickHandler) {
+        button.removeEventListener('click', button._clickHandler);
+      }
+
+      button._clickHandler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const productId = button.dataset.productId;
+        const estimateId = button.dataset.estimateId;
+        const roomId = button.dataset.roomId;
+        const replaceProductId = button.dataset.replaceProductId;
+        const pricingMethod = button.dataset.pricingMethod;
+        const replaceType = button.dataset.replaceType;
+
+        logger.log('Upgrade button clicked', {
+          productId,
+          estimateId,
+          roomId,
+          replaceProductId,
+          pricingMethod,
+          replaceType
+        });
+
+        // Use the productManager to handle the replacement
+        if (this.modalManager.productManager) {
+          // Note: replaceProductInRoom expects: estimateId, roomId, oldProductId, newProductId
+          this.modalManager.productManager.replaceProductInRoom(
+            estimateId,
+            roomId,
+            replaceProductId,  // OLD product to replace
+            productId          // NEW product (the upgrade)
+          );
         }
       };
 
@@ -1704,6 +1926,9 @@ class RoomManager {
 
     // Re-render the includes with updated room data
     this.renderRoomIncludes(room, roomElement);
+    
+    // Re-render the upgrades with updated room data  
+    this.renderRoomUpgrades(room, roomElement);
     
     // If the room has products now, make sure similar products section is visible
     if (room.products && Object.keys(room.products).length > 0) {

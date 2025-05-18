@@ -1,3 +1,6 @@
+/*!*********************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/frontend/Index.scss ***!
+  \*********************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main SCSS file for Product Estimator frontend styles
@@ -1235,8 +1238,7 @@
 }
 .accordion-header-wrapper .accordion-header.room-item-header {
   align-items: flex-start;
-  flex-direction: row;
-  flex-wrap: wrap;
+  flex-flow: row wrap;
   gap: 10px;
   padding: 15px;
 }
@@ -1251,11 +1253,11 @@
 }
 .accordion-header-wrapper .accordion-header.room-item-header .room-details-wrapper .room-details {
   align-items: center;
+  color: #00833F;
   display: flex;
-  justify-content: space-between;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #00833F;
+  justify-content: space-between;
 }
 .accordion-header-wrapper .accordion-header.room-item-header .room-details-wrapper .room-details .room-name-wrapper {
   align-items: center;
@@ -1264,7 +1266,7 @@
   margin: 0;
 }
 .accordion-header-wrapper .accordion-header.room-item-header .room-details-wrapper .room-details .room-name-wrapper .primary-product-name {
-  color: #333333;
+  color: #333;
 }
 .accordion-header-wrapper .accordion-header.room-item-header .room-details-wrapper .room-details .room-name-wrapper .room-dimensions {
   font-weight: 400;
@@ -3858,9 +3860,9 @@ button.replace-product-in-room.loading {
  */
 /* Container for upgrade options inside product includes */
 .product-upgrades {
-  border-top: 1px dashed #eee;
-  margin-top: 12px;
-  padding-top: 12px;
+  border-top: 1px solid rgba(238, 238, 238, 0.5);
+  margin-top: 16px;
+  padding-top: 16px;
   width: 100%;
 }
 
@@ -3872,16 +3874,17 @@ button.replace-product-in-room.loading {
 /* Upgrade title */
 .upgrade-title {
   color: #333;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  margin: 0 0 5px;
+  margin: 0 0 8px;
 }
 
 /* Upgrade description */
 .upgrade-description {
   color: #666;
-  font-size: 12px;
-  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0 0 12px;
 }
 
 /* Dropdown style */
@@ -3921,18 +3924,20 @@ button.replace-product-in-room.loading {
 .product-upgrade-tiles .tiles-wrapper {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   margin-top: 8px;
 }
 .product-upgrade-tiles .upgrade-tile {
-  background-color: #f3f3f3;
+  background-color: #fff;
   border: 1px solid #eee;
-  border-radius: 4px;
-  cursor: pointer;
-  flex: 1 0 calc(33.333% - 10px);
-  max-width: 120px;
-  min-width: 80px;
-  padding: 8px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex: 0 0 calc(33.333% - 12px);
+  flex-direction: column;
+  max-width: 180px;
+  min-width: 120px;
+  padding: 12px;
   position: relative;
   text-align: center;
   transition: all 0.2s ease;
@@ -3962,8 +3967,8 @@ button.replace-product-in-room.loading {
 }
 .product-upgrade-tiles .tile-image {
   display: block;
-  height: 60px;
-  margin-bottom: 5px;
+  height: 80px;
+  margin-bottom: 8px;
   margin-left: auto;
   margin-right: auto;
   max-width: 100%;
@@ -3971,18 +3976,39 @@ button.replace-product-in-room.loading {
 }
 .product-upgrade-tiles .tile-label {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 500;
   line-height: 1.3;
+  margin-bottom: 8px;
 }
-
-/* Price display */
-.upgrade-price {
-  color: #00833F;
+.product-upgrade-tiles .upgrade-price {
+  color: #666;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.product-upgrade-tiles .replace-product-in-room {
+  background-color: #33373d;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
   font-size: 12px;
-  font-weight: bold;
-  margin-left: 5px;
+  font-weight: 600;
+  margin-top: auto;
+  padding: 8px 16px;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+.product-upgrade-tiles .replace-product-in-room:hover {
+  background-color: rgb(74.2232142857, 80.0446428571, 88.7767857143);
+}
+.product-upgrade-tiles .replace-product-in-room:active {
+  transform: translateY(1px);
 }
 
+/* Price display styling is handled inside .tile-image block */
 /* Header for upgrades section */
 .product-upgrades-header {
   align-items: center;
@@ -4005,19 +4031,23 @@ button.replace-product-in-room.loading {
 /* Mobile responsiveness */
 @media screen and (max-width: 768px) {
   .product-upgrade-tiles .upgrade-tile {
-    min-width: calc(50% - 10px);
+    flex: 0 0 calc(50% - 12px);
+    max-width: none;
   }
 }
 @media screen and (max-width: 480px) {
   .product-upgrade-tiles .tiles-wrapper {
-    gap: 6px;
+    gap: 8px;
   }
   .product-upgrade-tiles .upgrade-tile {
-    min-width: calc(50% - 6px);
-    padding: 6px;
+    flex: 0 0 calc(50% - 8px);
+    padding: 10px;
   }
   .product-upgrade-tiles .tile-image {
-    height: 40px;
+    height: 60px;
+  }
+  .product-upgrade-tiles .tile-label {
+    font-size: 12px;
   }
 }
 /* Highlight animation for upgraded products */
@@ -4109,7 +4139,7 @@ button.replace-product-in-room.loading {
 [data-tooltip]:empty::before {
   color: #2271b1;
   content: "\f348";
-  font-family: dashicons;
+  font-family: dashicons, sans-serif;
   font-size: 16px;
   line-height: 1;
   vertical-align: middle;
@@ -4129,14 +4159,13 @@ button.replace-product-in-room.loading {
 }
 .pe-tooltip-icon::before {
   content: "\f348";
-  font-family: dashicons;
+  font-family: dashicons, sans-serif;
 }
 .pe-tooltip-icon:hover {
   color: rgb(25.7819905213, 85.6872037915, 134.2180094787);
 }
 
 .pe-info-button {
-  -webkit-appearance: none;
   appearance: none;
   background: none;
   border: none;
@@ -4197,7 +4226,6 @@ button.replace-product-in-room.loading {
   margin: 0;
 }
 .pe-tooltip-rich .pe-tooltip-close {
-  -webkit-appearance: none;
   appearance: none;
   background: none;
   border: none;
@@ -4236,7 +4264,7 @@ button.replace-product-in-room.loading {
   color: #333;
   font-size: 0.875rem;
   font-weight: 600;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.5rem;
   text-transform: uppercase;
 }
 .pe-tooltip-rich .pe-tooltip-notes-content,
@@ -4252,7 +4280,7 @@ button.replace-product-in-room.loading {
 }
 .pe-tooltip-rich .pe-tooltip-notes-content p,
 .pe-tooltip-rich .pe-tooltip-details-content p {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.5rem;
 }
 .pe-tooltip-rich .pe-tooltip-notes-content p:last-child,
 .pe-tooltip-rich .pe-tooltip-details-content p:last-child {

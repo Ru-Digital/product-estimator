@@ -1195,6 +1195,7 @@ class RoomAjaxHandler extends AjaxHandlerBase {
                         'pricing_source' => $related_pricing_data['pricing_source'],
                         'min_price' => $related_pricing_data['min_price'],
                         'max_price' => $related_pricing_data['max_price'],
+                        'is_primary_category' => false, // Additional products are never primary
                     ];
 
                     // Calculate totals based on pricing method

@@ -10,6 +10,7 @@ import { createLogger } from '@utils';
 import includeItemTemplate from '@templates/components/product/include-item.html';
 import noteItemTemplate from '@templates/components/product/note-item.html';
 import upgradeItemTemplate from '@templates/components/product/upgrade-item.html';
+import additionalProductOptionTemplate from '@templates/components/product/additional-product-option.html';
 import similarItemTemplate from '@templates/components/product/similar-item.html';
 import suggestionItemTemplate from '@templates/components/product/suggestion-item.html';
 
@@ -72,6 +73,7 @@ const templates = {
   'include-item-template': includeItemTemplate,
   'similar-product-item-template': similarItemTemplate,
   'product-upgrade-item-template': upgradeItemTemplate,
+  'additional-product-option-template': additionalProductOptionTemplate,
   'select-option-template': selectOptionTemplate,
   'loading-placeholder-template': loadingPlaceholderTemplate,
   'room-actions-footer-template': roomActionsFooterTemplate,

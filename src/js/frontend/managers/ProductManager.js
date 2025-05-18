@@ -202,7 +202,8 @@ class ProductManager {
         // Update similar products to include the new product's similar items
         if (this.modalManager && this.modalManager.roomManager) {
           try {
-            this.modalManager.roomManager.initializeSimilarProductsForRoom(estimateId, roomId);
+            // Force refresh to ensure we get similar products from server for newly added products
+            this.modalManager.roomManager.initializeSimilarProductsForRoom(estimateId, roomId, true);
           } catch (e) {
             logger.log('Non-critical error updating similar products UI:', e);
           }

@@ -420,6 +420,22 @@
 
 /* Room products section removed - products now displayed directly in room template */
 
+/* Room empty state */
+
+.room-empty-state {
+  padding: 30px;
+  text-align: center;
+
+  .products {
+    color: $text-light;
+
+    p {
+      font-size: $font-size-base;
+      margin: 0;
+    }
+  }
+}
+
 .product-item {
   align-items: start;
   border: 1px solid $border-color;
@@ -499,7 +515,6 @@
   padding: 4px;
   position: absolute;
   right: 10px;
-  top: 10px;
   transition: color 0.2s ease;
 
   &:hover {

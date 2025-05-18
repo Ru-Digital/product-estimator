@@ -1882,9 +1882,16 @@ class RoomManager {
             
             logger.log('Replace button clicked', { productId, replaceProductId, roomId, estimateId });
             
-            // Delegate to ProductManager to handle replacement
+            // Delegate to ProductManager to handle replacement with variation check
             if (this.modalManager && this.modalManager.productManager) {
-              this.modalManager.productManager.replaceProductInRoom(estimateId, roomId, replaceProductId, productId);
+              // Check if product has variations before replacing
+              this.modalManager.productManager.handleProductVariationSelection(productId, {
+                action: 'replace',
+                estimateId: estimateId,
+                roomId: roomId,
+                replaceProductId: replaceProductId,
+                button: replaceButton
+              });
             } else {
               logger.error('ProductManager not available for product replacement');
             }

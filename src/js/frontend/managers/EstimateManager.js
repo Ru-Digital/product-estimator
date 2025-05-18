@@ -516,7 +516,7 @@ class EstimateManager {
 
               // Delegate to RoomManager to load rooms for this estimate
               if (this.modalManager.roomManager) {
-                this.modalManager.roomManager.loadRoomsForEstimate(estimateElement.dataset.estimateId, content);
+                this.modalManager.roomManager.loadRoomsForEstimate(estimateElement.dataset.estimateId, content, null, false);
               }
             }
           }
@@ -628,8 +628,9 @@ class EstimateManager {
               content.dataset.loaded = 'true';
 
               // Delegate to RoomManager to load rooms for this estimate
+              // Pass bypassCache=true when expanding to ensure fresh data
               if (this.modalManager.roomManager) {
-                this.modalManager.roomManager.loadRoomsForEstimate(expandEstimateId, content, expandRoomId);
+                this.modalManager.roomManager.loadRoomsForEstimate(expandEstimateId, content, expandRoomId, true);
               }
             }
           }

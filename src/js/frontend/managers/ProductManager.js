@@ -228,6 +228,12 @@ class ProductManager {
         
         logger.log('Product added successfully:', result);
 
+        // Invalidate the room cache for this estimate to ensure fresh data is loaded
+        // This is crucial for updating the room's primary product image and name
+        const cacheKey = `estimate_${estimateId}`;
+        this.dataService.invalidateCache('rooms');
+        logger.log(`Invalidated room cache for estimate ${estimateId}`);
+
         // Update totals only if we have valid data and the room is likely to be visible
         // TODO: Improve room totals updating to handle timing issues better
         if (this.modalManager && this.modalManager.roomManager && result && result.room_totals) {

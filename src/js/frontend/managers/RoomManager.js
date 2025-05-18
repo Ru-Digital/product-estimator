@@ -423,10 +423,11 @@ class RoomManager {
    * @param {string} estimateId - The estimate ID
    * @param {HTMLElement} container - The container to render rooms in
    * @param {string|null} expandRoomId - Optional room ID to expand
+   * @param {boolean} bypassCache - Whether to bypass the cache when loading rooms
    * @returns {Promise} - Promise that resolves when rooms are loaded
    */
-  loadRoomsForEstimate(estimateId, container, expandRoomId = null) {
-    logger.log('Loading rooms for estimate', { estimateId, expandRoomId });
+  loadRoomsForEstimate(estimateId, container, expandRoomId = null, bypassCache = false) {
+    logger.log('Loading rooms for estimate', { estimateId, expandRoomId, bypassCache });
 
     if (!container) {
       return Promise.reject(new Error('Container not provided for loading rooms'));
@@ -447,7 +448,7 @@ class RoomManager {
     }
 
     // Load rooms from storage or API
-    return this.dataService.getRoomsForEstimate(estimateId)
+    return this.dataService.getRoomsForEstimate(estimateId, bypassCache)
       .then(response => {
         // Clear existing content
         roomsContainer.innerHTML = '';

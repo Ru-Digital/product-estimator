@@ -14,6 +14,7 @@ import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails } from '
 import TemplateEngine from '../TemplateEngine';
 import ConfirmationDialog from '../ConfirmationDialog';
 import ProductSelectionDialog from '../ProductSelectionDialog';
+import Tooltip from '../Tooltip';
 
 // Import specialized managers
 import EstimateManager from './EstimateManager';
@@ -90,6 +91,7 @@ class ModalManager {
     this.formManager = null;
     this.uiManager = null;
     this.confirmationDialog = null; // Will be assigned to the global instance or created new
+    this.tooltip = null; // Tooltip component
     
     // Bind methods to preserve 'this' context
     this._modalClickHandler = this._modalClickHandler.bind(this);
@@ -300,6 +302,23 @@ class ModalManager {
       logger.log('ConfirmationDialog instance ready for use, elements will be created when needed');
     } else {
       logger.error('ConfirmationDialog instance was not created properly');
+    }
+    
+    // Initialize tooltip system
+    logger.log('Creating Tooltip instance');
+    try {
+      this.tooltip = new Tooltip(TemplateEngine);
+      this.tooltip.init();
+      
+      // Make it available globally
+      if (!window.productEstimator) {
+        window.productEstimator = {};
+      }
+      window.productEstimator.tooltip = this.tooltip;
+      
+      logger.log('Tooltip instance created successfully and initialized');
+    } catch (error) {
+      logger.error('Error creating Tooltip:', error);
     }
     
     // Initialize each manager

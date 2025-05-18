@@ -4053,4 +4053,294 @@ button.replace-product-in-room.loading {
   padding-left: 8px;
 }
 
+/**
+ * Main SCSS file for Product Estimator frontend styles
+ *
+ * This file imports all frontend stylesheets for the Product Estimator plugin,
+ * including shared utilities, variables, mixins, and component-specific styles.
+ */
+/**
+ * Tooltip styles for Product Estimator
+ */
+.pe-tooltip {
+  background-color: #333;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  max-width: 250px;
+  padding: 0.5rem 1rem;
+  position: absolute;
+  word-wrap: break-word;
+  z-index: 1000000;
+}
+.pe-tooltip-content {
+  position: relative;
+  z-index: 1;
+}
+.pe-tooltip-arrow {
+  position: absolute;
+}
+.pe-tooltip-top .pe-tooltip-arrow {
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.pe-tooltip-bottom .pe-tooltip-arrow {
+  left: 50%;
+  top: -8px;
+  transform: translateX(-50%);
+}
+.pe-tooltip-left .pe-tooltip-arrow {
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.pe-tooltip-right .pe-tooltip-arrow {
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+[data-tooltip] {
+  cursor: help;
+  position: relative;
+}
+[data-tooltip]:focus {
+  outline: 2px solid #00833F;
+  outline-offset: 2px;
+}
+[data-tooltip]:empty::before {
+  color: #2271b1;
+  content: "\f348";
+  font-family: dashicons;
+  font-size: 16px;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.pe-tooltip-icon {
+  align-items: center;
+  color: #2271b1;
+  cursor: help;
+  display: inline-flex;
+  font-size: 14px;
+  height: 16px;
+  justify-content: center;
+  line-height: 1;
+  margin-left: 0.25rem;
+  width: 16px;
+}
+.pe-tooltip-icon::before {
+  content: "\f348";
+  font-family: dashicons;
+}
+.pe-tooltip-icon:hover {
+  color: rgb(25.7819905213, 85.6872037915, 134.2180094787);
+}
+
+.pe-info-button {
+  -webkit-appearance: none;
+  appearance: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+  text-align: inherit;
+  align-items: center;
+  background: transparent;
+  border: 1px solid #eee;
+  border-radius: 50%;
+  color: #999;
+  cursor: help;
+  display: inline-flex;
+  font-size: 12px;
+  height: 18px;
+  justify-content: center;
+  line-height: 1;
+  margin-left: 0.25rem;
+  transition: all 0.2s ease;
+  width: 18px;
+}
+.pe-info-button::before {
+  content: "?";
+  font-weight: bold;
+}
+.pe-info-button:hover, .pe-info-button:focus {
+  background-color: #f9f9f9;
+  border-color: #2271b1;
+  color: #2271b1;
+}
+.pe-info-button:focus {
+  outline: 2px solid #00833F;
+  outline-offset: 2px;
+}
+
+.pe-tooltip-rich {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  color: #333;
+  max-width: 400px;
+  min-width: 300px;
+  padding: 0;
+}
+.pe-tooltip-rich .pe-tooltip-header {
+  align-items: center;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem;
+}
+.pe-tooltip-rich .pe-tooltip-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+.pe-tooltip-rich .pe-tooltip-close {
+  -webkit-appearance: none;
+  appearance: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+  text-align: inherit;
+  align-items: center;
+  background: transparent;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  display: flex;
+  font-size: 18px;
+  height: 24px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: all 0.2s ease;
+  width: 24px;
+}
+.pe-tooltip-rich .pe-tooltip-close:hover, .pe-tooltip-rich .pe-tooltip-close:focus {
+  background-color: #f3f3f3;
+  border-radius: 3px;
+  color: #333;
+}
+.pe-tooltip-rich .pe-tooltip-close:focus {
+  outline: 2px solid #00833F;
+  outline-offset: 2px;
+}
+.pe-tooltip-rich .pe-tooltip-content {
+  padding: 1rem;
+}
+.pe-tooltip-rich .pe-tooltip-section-title {
+  color: #333;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content,
+.pe-tooltip-rich .pe-tooltip-details-content {
+  color: #333;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content:last-child,
+.pe-tooltip-rich .pe-tooltip-details-content:last-child {
+  margin-bottom: 0;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content p,
+.pe-tooltip-rich .pe-tooltip-details-content p {
+  margin: 0 0 0.5rem 0;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content p:last-child,
+.pe-tooltip-rich .pe-tooltip-details-content p:last-child {
+  margin-bottom: 0;
+}
+.pe-tooltip-rich .pe-tooltip-notes-content ul,
+.pe-tooltip-rich .pe-tooltip-notes-content ol,
+.pe-tooltip-rich .pe-tooltip-details-content ul,
+.pe-tooltip-rich .pe-tooltip-details-content ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+.pe-tooltip-rich .pe-tooltip-arrow {
+  border-width: 10px;
+}
+.pe-tooltip-rich.pe-tooltip-top .pe-tooltip-arrow {
+  border-top-color: #ddd;
+}
+.pe-tooltip-rich.pe-tooltip-top .pe-tooltip-arrow::after {
+  border-style: solid;
+  border-top-color: #fff;
+  border-width: 9px;
+  bottom: -9px;
+  content: "";
+  left: -9px;
+  position: absolute;
+}
+.pe-tooltip-rich.pe-tooltip-bottom .pe-tooltip-arrow {
+  border-bottom-color: #ddd;
+}
+.pe-tooltip-rich.pe-tooltip-bottom .pe-tooltip-arrow::after {
+  border-bottom-color: #f9f9f9;
+  border-style: solid;
+  border-width: 9px;
+  content: "";
+  left: -9px;
+  position: absolute;
+  top: -9px;
+}
+.pe-tooltip-rich.pe-tooltip-left .pe-tooltip-arrow {
+  border-left-color: #ddd;
+}
+.pe-tooltip-rich.pe-tooltip-left .pe-tooltip-arrow::after {
+  border-left-color: #fff;
+  border-style: solid;
+  border-width: 9px;
+  content: "";
+  position: absolute;
+  right: -9px;
+  top: -9px;
+}
+.pe-tooltip-rich.pe-tooltip-right .pe-tooltip-arrow {
+  border-right-color: #ddd;
+}
+.pe-tooltip-rich.pe-tooltip-right .pe-tooltip-arrow::after {
+  border-right-color: #fff;
+  border-style: solid;
+  border-width: 9px;
+  content: "";
+  left: -9px;
+  position: absolute;
+  top: -9px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pe-tooltip {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    color: #f0f0f0;
+  }
+  .pe-tooltip-rich {
+    background-color: #2a2a2a;
+  }
+  .pe-tooltip-rich .pe-tooltip-header {
+    background-color: #333;
+    border-bottom-color: #444;
+  }
+  .pe-tooltip-rich .pe-tooltip-close {
+    color: #999;
+  }
+  .pe-tooltip-rich .pe-tooltip-close:hover, .pe-tooltip-rich .pe-tooltip-close:focus {
+    background-color: #444;
+    color: #f0f0f0;
+  }
+}
+
 /*# sourceMappingURL=product-estimator-frontend-bundled.css.map*/

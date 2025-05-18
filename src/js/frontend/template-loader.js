@@ -57,6 +57,10 @@ import formErrorTemplate from '@templates/ui/errors/form-error.html';
 // Message Templates
 import modalMessagesTemplate from '@templates/ui/messages/modal-messages.html';
 
+// Tooltip Templates
+import tooltipTemplate from '@templates/ui/tooltip.html';
+import tooltipRichTemplate from '@templates/ui/tooltip-rich.html';
+
 import TemplateEngine from './TemplateEngine';
 const logger = createLogger('TemplateLoader');
 
@@ -91,7 +95,9 @@ const templates = {
   'variation-option-template': variationOptionTemplate,
   'variation-swatch-template': variationSwatchTemplate,
   'toggle-button-hide-template': toggleButtonHideTemplate,
-  'toggle-button-show-template': toggleButtonShowTemplate
+  'toggle-button-show-template': toggleButtonShowTemplate,
+  'tooltip': tooltipTemplate,
+  'tooltip-rich': tooltipRichTemplate
 };
 
 /**

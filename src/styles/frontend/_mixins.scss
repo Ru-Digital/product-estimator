@@ -13,6 +13,19 @@
 // Button Styles
 // =======================================================
 
+/// Reset button styles
+@mixin button-reset {
+  -webkit-appearance: none;
+  appearance: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+  text-align: inherit;
+}
+
 /// Base button style
 /// @param {Color} $bg-color - The button background color
 /// @param {Color} $text-color - The button text color

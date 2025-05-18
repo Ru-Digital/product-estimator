@@ -33,7 +33,6 @@ class ProductManager {
     this.currentProductId = null;
 
     // Bind methods to preserve 'this' context
-    this.loadProductsForRoom = this.loadProductsForRoom.bind(this);
     this.showProductSelection = this.showProductSelection.bind(this);
     this.addProductToRoom = this.addProductToRoom.bind(this);
     this.handleProductRemoval = this.handleProductRemoval.bind(this);
@@ -64,60 +63,11 @@ class ProductManager {
    * @param {string} roomId - The room ID
    * @param {HTMLElement} container - The container to render products in
    * @returns {Promise} - Promise that resolves when products are loaded
+   * @deprecated Products are now displayed as part of the room-item template
    */
   loadProductsForRoom(estimateId, roomId, container) {
-    logger.log('Loading products for room', { estimateId, roomId });
-
-    if (!container) {
-      return Promise.reject(new Error('Container not provided for loading products'));
-    }
-
-    // Show loading indicator
-    const loadingPlaceholder = container.querySelector('.loading-placeholder');
-    if (loadingPlaceholder) {
-      loadingPlaceholder.style.display = 'block';
-    }
-
-    // Load products from storage or API
-    return this.dataService.getProductsForRoom(estimateId, roomId)
-      .then(products => {
-        // Clear existing content (except the loading placeholder)
-        if (loadingPlaceholder && loadingPlaceholder.parentNode === container) {
-          container.innerHTML = '';
-          container.appendChild(loadingPlaceholder);
-        } else {
-          container.innerHTML = '';
-        }
-
-        // Mark the container as loaded
-        container.dataset.loaded = 'true';
-
-        if (!products || products.length === 0) {
-          // No products, show empty state using template
-          TemplateEngine.insert('products-empty-template', {}, container);
-        } else {
-          // Use the existing container - no need to create a new div
-          // Render each product directly in the container
-          products.forEach((product, index) => {
-            this.renderProduct(product, index, roomId, estimateId, container);
-          });
-        }
-
-        // Hide loading placeholder
-        if (loadingPlaceholder) {
-          loadingPlaceholder.style.display = 'none';
-        }
-
-        return products;
-      })
-      .catch(error => {
-        logger.error('Error loading products for room:', error);
-
-        // Show error message using template
-        TemplateEngine.insert('product-error-template', {}, container);
-
-        throw error;
-      });
+    logger.warn('loadProductsForRoom is deprecated - products are now displayed as part of room-item template');
+    return Promise.resolve([]);
   }
 
   /**
@@ -160,16 +110,8 @@ class ProductManager {
             }
           }
 
-          // Reload the products for this room
-          const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-          if (roomElement) {
-            const productsContainer = roomElement.querySelector('.room-products-container');
-            if (productsContainer) {
-              // Mark as not loaded to force reload
-              delete productsContainer.dataset.loaded;
-              this.loadProductsForRoom(estimateId, roomId, productsContainer);
-            }
-          }
+          // Products are now displayed as part of room-item template
+          // No need to reload products separately
         })
         .catch(error => {
           logger.error('Error adding product to room:', error);
@@ -413,114 +355,11 @@ class ProductManager {
       return null;
     }
 
-    // Get formatted price
-    const formattedPrice = format.currency(product.price || product.min_price_total || 0);
-
-    // Create comprehensive template data with proper mapped field names
-    const templateData = {
-      // Data attributes for the product element
-      id: product.id,
-      product_id: product.id,
-      product_index: index,
-      room_id: roomId,
-      estimate_id: estimateId,
-      
-      // Visual fields for display
-      name: product.name || 'Product',
-      price_title: product.name || 'Product',
-      product_price: formattedPrice,
-      price_dimensions: product.dimensions || '',
-      image: product.image || 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==',
-      sku: product.sku || '',
-      description: product.description || '',
-      
-      // Include additional product data if available
-      additional_notes: product.additional_notes || [],
-    };
-
-    logger.log('Product template data:', templateData);
-
-    // Insert the product template directly into the container
-    TemplateEngine.insert('product-item-template', templateData, container);
-
-    // Get the product element that was just added
-    const productElement = container.querySelector(`.product-item[data-product-id="${product.id}"]`);
+    // Products are now rendered as part of the room-item template
+    // This method is no longer used since all product display is handled in room-item
+    logger.warn('renderProduct method is deprecated - products are now rendered as part of room-item template');
     
-    if (!productElement) {
-      logger.error('Product element not found after insertion');
-      return null;
-    }
-
-    // Double-check all required data attributes
-    productElement.dataset.productId = product.id;
-    productElement.dataset.productIndex = index;
-    productElement.dataset.roomId = roomId;
-    productElement.dataset.estimateId = estimateId;
-
-    // Ensure product name and price are properly set
-    const productNameElement = productElement.querySelector('.price-title');
-    if (productNameElement) {
-      productNameElement.textContent = product.name || 'Product';
-    }
-
-    const productPriceElement = productElement.querySelector('.product-price');
-    if (productPriceElement) {
-      productPriceElement.textContent = formattedPrice;
-    }
-
-    // Set product image if available
-    const productImage = productElement.querySelector('.product-thumbnail');
-    if (productImage && product.image) {
-      productImage.src = product.image;
-      productImage.alt = product.name || 'Product';
-    }
-
-    // Add variations if needed
-    if (product.variations && product.variations.length > 0) {
-      // Create variations container
-      const variationsContainer = document.createElement('div');
-      variationsContainer.className = 'product-variations';
-
-      // Create label
-      const label = document.createElement('label');
-      label.setAttribute('for', `variation-${roomId}-${product.id}-${index}`);
-      label.textContent = 'Options:';
-      variationsContainer.appendChild(label);
-
-      // Create select
-      const select = document.createElement('select');
-      select.id = `variation-${roomId}-${product.id}-${index}`;
-      select.className = 'variation-select';
-
-      // Add default option
-      const defaultOption = document.createElement('option');
-      defaultOption.value = '';
-      defaultOption.textContent = 'Select an option';
-      select.appendChild(defaultOption);
-
-      // Add variation options
-      product.variations.forEach(variation => {
-        const option = document.createElement('option');
-        option.value = variation.id;
-        option.textContent = `${variation.name} (${format.currency(variation.price || 0)})`;
-
-        if (variation.id === product.selectedVariation) {
-          option.selected = true;
-        }
-
-        select.appendChild(option);
-      });
-
-      variationsContainer.appendChild(select);
-
-      // Add variations container to product element
-      productElement.appendChild(variationsContainer);
-    }
-
-    // Bind events
-    this.bindProductEvents(productElement, product, index, roomId, estimateId);
-
-    return productElement;
+    return null;
   }
 
   /**
@@ -532,79 +371,8 @@ class ProductManager {
    * @param {string} estimateId - The estimate ID
    */
   bindProductEvents(productElement, product, index, roomId, estimateId) {
-    logger.log('Binding events to product element', { index, roomId, estimateId });
-
-    if (!productElement) {
-      logger.error('Product element not available for binding events');
-      return;
-    }
-
-    // Bind remove button - use the template's .remove-product class
-    const removeButton = productElement.querySelector('.remove-product');
-    if (removeButton) {
-      // Make sure data attributes are set properly
-      removeButton.dataset.estimateId = estimateId;
-      removeButton.dataset.roomId = roomId;
-      removeButton.dataset.productIndex = index;
-      removeButton.dataset.productId = product.id;
-      
-      logger.log('Remove button data attributes set:', { 
-        estimateId: removeButton.dataset.estimateId,
-        roomId: removeButton.dataset.roomId,
-        productIndex: removeButton.dataset.productIndex,
-        productId: removeButton.dataset.productId
-      });
-      
-      if (removeButton._clickHandler) {
-        removeButton.removeEventListener('click', removeButton._clickHandler);
-      }
-
-      removeButton._clickHandler = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Get the data attributes from the button element
-        const buttonEstimateId = e.currentTarget.dataset.estimateId;
-        const buttonRoomId = e.currentTarget.dataset.roomId;
-        const buttonProductIndex = e.currentTarget.dataset.productIndex;
-        const buttonProductId = e.currentTarget.dataset.productId;
-        
-        // Use the data from the button itself, falling back to the closure variables if needed
-        const targetEstimateId = buttonEstimateId || estimateId;
-        const targetRoomId = buttonRoomId || roomId;
-        const targetProductIndex = buttonProductIndex || index;
-        const targetProductId = buttonProductId || product.id;
-        
-        logger.log('Remove product clicked with data:', { 
-          estimateId: targetEstimateId, 
-          roomId: targetRoomId, 
-          productIndex: targetProductIndex,
-          productId: targetProductId
-        });
-        
-        // Call handleProductRemoval with the data attributes from the button
-        this.handleProductRemoval(targetEstimateId, targetRoomId, targetProductIndex, targetProductId);
-      };
-
-      removeButton.addEventListener('click', removeButton._clickHandler);
-    } else {
-      logger.log('Remove button not found in product element');
-    }
-
-    // Bind variation select
-    const variationSelect = productElement.querySelector('.variation-select');
-    if (variationSelect) {
-      if (variationSelect._changeHandler) {
-        variationSelect.removeEventListener('change', variationSelect._changeHandler);
-      }
-
-      variationSelect._changeHandler = (e) => {
-        const variationId = e.target.value;
-        this.handleVariationSelection(variationId, productElement, estimateId, roomId, index, product.id);
-      };
-
-      variationSelect.addEventListener('change', variationSelect._changeHandler);
-    }
+    logger.log('Binding events to product element is deprecated', { index, roomId, estimateId });
+    // This method is no longer used since all product display and events are handled in room-item template
   }
 
   /**

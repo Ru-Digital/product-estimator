@@ -418,24 +418,7 @@
   padding: 15px 0;
 }
 
-.room-products {
-  padding: 15px;
-
-  h5 {
-    color: $text-color;
-    font-size: $font-size-base;
-    margin-bottom: 15px;
-    margin-top: 0;
-  }
-}
-
-/* Room Products */
-
-.product-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
+/* Room products section removed - products now displayed directly in room template */
 
 .product-item {
   align-items: start;

@@ -58,21 +58,7 @@ class TemplateEngine {
 
           logger.log(`[init] TemplateElement for "${id}" created. Inner HTML starts with:`, (contentToCheck?.innerHTML || 'No innerHTML or content').substring(0, 200) + '...'); // Added context
 
-          // Specifically check if the room template contains .product-list
-          if (id === 'room-item-template') {
-            // Use a temporary div to query the content/innerHTML safely
-            const queryTempDiv = document.createElement('div');
-            if (contentToCheck?.innerHTML) {
-              queryTempDiv.innerHTML = contentToCheck.innerHTML;
-            } else {
-              // If no innerHTML (e.g., just text nodes or complex structure), append children
-              Array.from(contentToCheck?.childNodes || []).forEach(node => queryTempDiv.appendChild(node.cloneNode(true)));
-            }
-            logger.log(`[init] Checking "${id}" content for .product-list:`, queryTempDiv.querySelector('.product-list') ? 'Found' : 'Not Found'); // Added context
-            if (!queryTempDiv.querySelector('.product-list')) {
-              logger.error(`[init] CRITICAL: .product-list not found in "${id}" template element content after creation.`); // Critical error if missing
-            }
-          }
+          // Product list check removed - products are now displayed directly in room template
         } else {
           logger.error(`[init] Failed to assign template element for ID: "${id}"`); // Added context
         }
@@ -212,18 +198,7 @@ class TemplateEngine {
     }
 
 
-    // *** Logging block to check the fragment content before returning (from your existing code) ***
-    if (templateId === 'room-item-template') {
-      // Query selector on a DocumentFragment works as expected
-      const productListCheck = clone.querySelector('.product-list');
-      logger.log(`[create] Created fragment for "${templateId}". Checking for .product-list before returning:`, productListCheck ? 'Found' : 'Not Found'); // Add this log
-      if (!productListCheck) {
-        logger.error(`[create] CRITICAL: .product-list not found in "${templateId}" fragment before returning. This fragment will not render products correctly.`); // Critical error if missing
-        // Optionally log the fragment's innerHTML for inspection (can be verbose)
-        // const tempDivForCheck = document.createElement('div'); tempDivForCheck.appendChild(clone.cloneNode(true)); logger.log('Fragment innerHTML for check:', tempDivForCheck.innerHTML);
-      }
-    }
-    // *** End logging block ***
+    // Product list check removed - products are now displayed directly in room template
 
 
     return clone; // Return the populated DocumentFragment

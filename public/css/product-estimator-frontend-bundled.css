@@ -1336,23 +1336,7 @@
   padding: 15px 0;
 }
 
-.room-products {
-  padding: 15px;
-}
-.room-products h5 {
-  color: #333;
-  font-size: 1rem;
-  margin-bottom: 15px;
-  margin-top: 0;
-}
-
-/* Room Products */
-.product-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
+/* Room products section removed - products now displayed directly in room template */
 .product-item {
   align-items: start;
   border: 1px solid #eee;

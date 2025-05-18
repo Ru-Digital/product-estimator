@@ -7,7 +7,6 @@ import { createLogger } from '@utils';
 
 // Component Templates
 // Product Components
-import productItemTemplate from '@templates/components/product/product-item.html';
 import includeItemTemplate from '@templates/components/product/include-item.html';
 import noteItemTemplate from '@templates/components/product/note-item.html';
 import upgradeItemTemplate from '@templates/components/product/upgrade-item.html';
@@ -66,7 +65,6 @@ const logger = createLogger('TemplateLoader');
 
 // Create a map of all templates
 const templates = {
-  'product-item-template': productItemTemplate,
   'room-item-template': roomItemTemplate,
   'estimate-item-template': estimateItemTemplate,
   'suggestion-item-template': suggestionItemTemplate,

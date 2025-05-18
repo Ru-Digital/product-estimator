@@ -649,14 +649,7 @@ class RoomManager {
         content.style.display = expand ? 'block' : 'none';
       }
 
-      // Add loading placeholder to products container
-      const productsContainer = roomElement.querySelector('.product-list');
-      if (productsContainer) {
-        // Use TemplateEngine to create the loading placeholder
-        TemplateEngine.insert('loading-placeholder-template', {
-          message: 'Loading products...'
-        }, productsContainer);
-      }
+      // Product list section removed - products now displayed as part of room-item template
 
       // Bind event handlers for this room
       this.bindRoomEvents(roomElement, estimateId, roomId);
@@ -668,15 +661,7 @@ class RoomManager {
       // Render aggregated product includes at the room level
       this.renderRoomIncludes(room, roomElement);
 
-      // If the room is expanded, load its products
-      if (expand && content && content.style.display === 'block') {
-        const productsContainer = roomElement.querySelector('.product-list');
-
-        // Delegate to ProductManager to load products for this room
-        if (this.modalManager.productManager && productsContainer) {
-          return this.modalManager.productManager.loadProductsForRoom(estimateId, roomId, productsContainer);
-        }
-      }
+      // Product loading removed - products now displayed as part of room-item template
 
       // Log that the room element was rendered with the expected attributes
       logger.log(`Room element rendered with data-room-id=${roomElement.dataset.roomId} and data-estimate-id=${roomElement.dataset.estimateId}`);
@@ -909,16 +894,7 @@ class RoomManager {
           headerWrapper.classList.add('expanded');
           content.style.display = 'block';
 
-          // Load products if not already loaded
-          const productsContainer = content.querySelector('.product-list');
-          if (productsContainer && !productsContainer.dataset.loaded) {
-            productsContainer.dataset.loaded = 'true';
-
-            // Delegate to ProductManager to load products
-            if (this.modalManager.productManager) {
-              this.modalManager.productManager.loadProductsForRoom(estimateId, roomId, productsContainer);
-            }
-          }
+          // Product loading removed - products now displayed as part of room-item template
           
           // Initialize similar products for the room
           this.initializeSimilarProductsForRoom(estimateId, roomId);

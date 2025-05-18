@@ -740,32 +740,35 @@ class ProductDetailsToggle {
    * Prepare the DOM for includes toggle
    */
   prepareIncludesToggle() {
-    // Find all product items
+    // Find all product items AND room items for includes toggle
     const productItems = document.querySelectorAll(this.config.selectors.productItem);
-    logger.log(`Found ${productItems.length} product items to process for includes toggle`);
+    const roomItems = document.querySelectorAll('.room-item');
+    const allItems = [...productItems, ...roomItems];
+    
+    logger.log(`Found ${productItems.length} product items and ${roomItems.length} room items to process for includes toggle`);
 
-    productItems.forEach(productItem => {
+    allItems.forEach(item => {
       // Skip if already processed for includes toggle
-      if (productItem.classList.contains('includes-toggle-processed')) {
+      if (item.classList.contains('includes-toggle-processed')) {
         return;
       }
 
       // Find product includes section
-      const includesSection = productItem.querySelector(this.config.selectors.productIncludes);
+      const includesSection = item.querySelector(this.config.selectors.productIncludes);
 
-      // Check if product has includes to toggle
+      // Check if item has includes to toggle
       if (!includesSection) {
-        logger.log('No includes section found for product item, skipping', productItem);
+        logger.log('No includes section found for item, skipping', item);
         return; // No includes to toggle
       }
 
       logger.log('Found includes section, processing', includesSection);
 
-      // Mark the product item as having includes
-      productItem.classList.add('has-includes');
+      // Mark the item as having includes
+      item.classList.add('has-includes');
 
       // Check if container already exists
-      let includesContainer = productItem.querySelector('.includes-container');
+      let includesContainer = item.querySelector('.includes-container');
 
       // If no container exists but there is an includes section, we need to create one
       if (!includesContainer) {
@@ -784,14 +787,14 @@ class ProductDetailsToggle {
           includesSection.parentNode.removeChild(includesSection);
         }
 
-        // Add the container to the product item
-        productItem.appendChild(includesContainer);
+        // Add the container to the item
+        item.appendChild(includesContainer);
       }
 
       // Add toggle button if not already present
-      let toggleButton = productItem.querySelector('.product-includes-toggle');
+      let toggleButton = item.querySelector('.product-includes-toggle');
       if (!toggleButton) {
-        logger.log('Adding includes toggle button to product item');
+        logger.log('Adding includes toggle button to item');
         toggleButton = document.createElement('button');
 
         // Mark as expanded by default and use the proper class for the arrow
@@ -805,7 +808,7 @@ class ProductDetailsToggle {
       `;
 
         // Insert button before the includes container
-        productItem.insertBefore(toggleButton, includesContainer);
+        item.insertBefore(toggleButton, includesContainer);
       } else {
         // Make sure existing button has the correct state
         toggleButton.classList.add('expanded');
@@ -821,8 +824,8 @@ class ProductDetailsToggle {
       includesContainer.classList.add('visible');
 
       // Mark as processed to avoid duplicating
-      productItem.classList.add('includes-toggle-processed');
-      logger.log('Product item processed for includes toggle');
+      item.classList.add('includes-toggle-processed');
+      logger.log('Item processed for includes toggle');
     });
   }
 
@@ -831,16 +834,18 @@ class ProductDetailsToggle {
    * @param {HTMLElement} toggleButton - The button that was clicked
    */
   toggleIncludes(toggleButton) {
-    // Find parent product item
+    // Find parent product item OR room item (since includes can be at room level now)
     const productItem = toggleButton.closest(this.config.selectors.productItem);
+    const roomItem = toggleButton.closest('.room-item');
+    const parentItem = productItem || roomItem;
 
-    if (!productItem) {
-      logger.log('Product item not found for includes toggle button');
+    if (!parentItem) {
+      logger.log('Parent item (product or room) not found for includes toggle button');
       return;
     }
 
     // Find includes container
-    const includesContainer = productItem.querySelector('.includes-container');
+    const includesContainer = parentItem.querySelector('.includes-container');
 
     if (!includesContainer) {
       logger.log('Includes container not found');

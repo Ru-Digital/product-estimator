@@ -248,6 +248,15 @@ class ProductManager {
           }
         }
 
+        // Update room includes to reflect the new product's includes
+        if (this.modalManager && this.modalManager.roomManager) {
+          try {
+            this.modalManager.roomManager.updateRoomIncludes(estimateId, roomId);
+          } catch (e) {
+            logger.log('Non-critical error updating room includes UI');
+          }
+        }
+
         // Hide loading
         if (this.modalManager) {
           this.modalManager.hideLoading();
@@ -753,6 +762,13 @@ class ProductManager {
           // Update room primary product display
           // This will refresh the primary product image and name in the room header
           this.modalManager.roomManager.updateRoomPrimaryProduct(estimateId, roomId);
+          
+          // Update room includes to reflect the removed product's includes
+          try {
+            this.modalManager.roomManager.updateRoomIncludes(estimateId, roomId);
+          } catch (e) {
+            logger.log('Non-critical error updating room includes UI after product removal');
+          }
         }
 
         // Hide loading
@@ -825,6 +841,13 @@ class ProductManager {
           this.modalManager.roomManager.updateRoomTotals(estimateId, roomId, {
             total: result.roomTotal
           });
+          
+          // Update room includes to reflect any changes from variation selection
+          try {
+            this.modalManager.roomManager.updateRoomIncludes(estimateId, roomId);
+          } catch (e) {
+            logger.log('Non-critical error updating room includes UI after variation change');
+          }
         }
 
         // Hide loading

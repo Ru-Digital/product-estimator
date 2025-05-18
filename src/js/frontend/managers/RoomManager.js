@@ -498,6 +498,39 @@ class RoomManager {
   }
 
   /**
+   * Aggregate all product includes from all products in a room
+   * @param {object} room - The room data
+   * @returns {Array} - Array of aggregated product includes
+   */
+  aggregateProductIncludes(room) {
+    const aggregatedIncludes = [];
+    const includesMap = new Map(); // To track unique includes by product ID
+
+    if (room.products) {
+      Object.values(room.products).forEach(product => {
+        if (product.additional_products && Array.isArray(product.additional_products)) {
+          product.additional_products.forEach(include => {
+            const productId = include.id || include.product_id;
+            if (productId && !includesMap.has(productId)) {
+              includesMap.set(productId, {
+                id: productId,
+                product_id: productId,
+                name: include.name || include.product_name || 'Product',
+                price: include.price || include.total || 0,
+                image: include.image || '',
+                sku: include.sku || ''
+              });
+            }
+          });
+        }
+      });
+    }
+
+    // Convert map values to array
+    return Array.from(includesMap.values());
+  }
+
+  /**
    * Render a single room in the estimate
    * @param {object} room - The room data
    * @param {string} roomId - The room ID
@@ -624,6 +657,9 @@ class RoomManager {
       // Bind event handlers for this room
       this.bindRoomEvents(roomElement, estimateId, roomId);
 
+      // Render aggregated product includes at the room level
+      this.renderRoomIncludes(room, roomElement);
+
       // If the room is expanded, load its products
       if (expand && content && content.style.display === 'block') {
         const productsContainer = roomElement.querySelector('.product-list');
@@ -641,6 +677,104 @@ class RoomManager {
     }
 
     return Promise.resolve(roomElement);
+  }
+
+  /**
+   * Render aggregated product includes for a room
+   * @param {object} room - The room data
+   * @param {HTMLElement} roomElement - The room element
+   */
+  renderRoomIncludes(room, roomElement) {
+    logger.log('Rendering room includes (products)', { roomName: room.name });
+
+    // Find the includes container in the room element
+    const includesContainer = roomElement.querySelector('.product-includes-items');
+    if (!includesContainer) {
+      logger.warn('Product includes container not found in room element');
+      return;
+    }
+
+    // Clear existing includes
+    includesContainer.innerHTML = '';
+
+    // Check if room has products
+    if (!room.products || Object.keys(room.products).length === 0) {
+      logger.log('No products in room, no includes to render');
+      
+      // Hide the includes section when no products
+      const includesSection = roomElement.querySelector('.includes-container');
+      if (includesSection) {
+        includesSection.style.display = 'none';
+      }
+      return;
+    }
+
+    // Show the includes section
+    const includesSection = roomElement.querySelector('.includes-container');
+    if (includesSection) {
+      includesSection.style.display = '';
+    }
+
+    // Get products array from room
+    const products = Array.isArray(room.products) ? room.products : Object.values(room.products);
+    
+    // Render each product as an include item
+    products.forEach(product => {
+      const price = product.price || product.regular_price || 0;
+      const productData = {
+        product_id: product.id || product.product_id,
+        name: product.name || 'Product',
+        product_name: product.name || 'Product',
+        price: price,
+        product_price: format.currency(price),
+        image: product.image || '',
+        sku: product.sku || ''
+      };
+
+      logger.log('Rendering product as include:', productData);
+      TemplateEngine.insert('include-item-template', productData, includesContainer);
+    });
+
+    logger.log(`Rendered ${products.length} products in room includes`);
+  }
+
+  /**
+   * Bind toggle functionality for includes section
+   * @param {HTMLElement} roomElement - The room element
+   */
+  bindIncludesToggle(roomElement) {
+    const toggleButton = roomElement.querySelector('.product-includes-toggle');
+    const includesContainer = roomElement.querySelector('.includes-container');
+    
+    if (toggleButton && includesContainer) {
+      toggleButton.addEventListener('click', () => {
+        const isExpanded = toggleButton.classList.contains('expanded');
+        
+        if (isExpanded) {
+          toggleButton.classList.remove('expanded');
+          includesContainer.classList.remove('visible');
+          includesContainer.style.display = 'none';
+          
+          // Update toggle icon
+          const toggleIcon = toggleButton.querySelector('.toggle-icon');
+          if (toggleIcon) {
+            toggleIcon.classList.remove('dashicons-arrow-up-alt2');
+            toggleIcon.classList.add('dashicons-arrow-down-alt2');
+          }
+        } else {
+          toggleButton.classList.add('expanded');
+          includesContainer.classList.add('visible');
+          includesContainer.style.display = '';
+          
+          // Update toggle icon
+          const toggleIcon = toggleButton.querySelector('.toggle-icon');
+          if (toggleIcon) {
+            toggleIcon.classList.remove('dashicons-arrow-down-alt2');
+            toggleIcon.classList.add('dashicons-arrow-up-alt2');
+          }
+        }
+      });
+    }
   }
 
   /**
@@ -1082,6 +1216,12 @@ class RoomManager {
    * @param {string} estimateId - The estimate ID
    * @param {string} roomId - The room ID to remove
    */
+  /**
+   * Update room includes after products change
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   */
+
   handleRoomRemoval(estimateId, roomId) {
     logger.log('Handling room removal', { estimateId, roomId });
 
@@ -1360,6 +1500,37 @@ class RoomManager {
     // Clean up any resources or state as needed
     this.currentEstimateId = null;
     this.currentProductId = null;
+  }
+
+
+  /**
+   * Update room includes (called when products are added/removed)
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   */
+  updateRoomIncludes(estimateId, roomId) {
+    logger.log('Updating room includes', { estimateId, roomId });
+
+    // Find the room element
+    const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+    
+    if (!roomElement) {
+      logger.warn('Room element not found for updating includes', { estimateId, roomId });
+      return;
+    }
+
+    // Get the current room data from storage
+    const estimateData = loadEstimateData();
+    const estimate = estimateData.estimates?.[estimateId];
+    const room = estimate?.rooms?.[roomId];
+    
+    if (!room) {
+      logger.warn('Room not found in storage for includes update', { estimateId, roomId });
+      return;
+    }
+
+    // Re-render the includes with updated room data
+    this.renderRoomIncludes(room, roomElement);
   }
 }
 

@@ -16,6 +16,14 @@
   294:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
   327:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
 
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/DataService.js
+  420:11  warning  Unexpected console statement  no-console
+  424:13  warning  Unexpected console statement  no-console
+  425:13  warning  Unexpected console statement  no-console
+  428:15  warning  Unexpected console statement  no-console
+  430:17  warning  Unexpected console statement  no-console
+  435:11  warning  Unexpected console statement  no-console
+
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimateStorage.js
   389:5    warning  Unexpected console statement                          no-console
   391:5    warning  Unexpected console statement                          no-console
@@ -123,7 +131,7 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-✖ 94 problems (0 errors, 94 warnings)
+✖ 100 problems (0 errors, 100 warnings)
   0 errors and 6 warnings potentially fixable with the `--fix` option.
 
 

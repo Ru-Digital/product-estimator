@@ -414,6 +414,26 @@ class DataService {
     const localStoragePromise = fetchProductAndSuggestionsPromise
       .then(productDataResponse => {
         logger.log('DataService: Fetched comprehensive product data response:', productDataResponse);
+        
+        // Log specifically for additional products and their upgrades
+        if (productDataResponse.product_data && productDataResponse.product_data.additional_products) {
+          console.log('ADDITIONAL PRODUCTS CHECK: Found additional products:', productDataResponse.product_data.additional_products);
+          
+          // Check each additional product for upgrades
+          Object.entries(productDataResponse.product_data.additional_products).forEach(([productId, productData]) => {
+            console.log(`ADDITIONAL PRODUCTS CHECK: Product ${productId} - ${productData.name}`);
+            console.log(`  - has_upgrades: ${productData.has_upgrades}`);
+            
+            if (productData.has_upgrades && productData.upgrades) {
+              console.log(`  - upgrades data:`, productData.upgrades);
+              if (productData.upgrades.products) {
+                console.log(`  - number of upgrade products: ${productData.upgrades.products.length}`);
+              }
+            }
+          });
+        } else {
+          console.log('ADDITIONAL PRODUCTS CHECK: No additional products found in response');
+        }
 
         // Critical validation: If getProductDataForStorage failed or returned no response
         if (!productDataResponse) {

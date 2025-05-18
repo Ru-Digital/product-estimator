@@ -847,29 +847,25 @@ body.modal-open {
 /* Individual include item */
 
 .include-item {
-  align-items: flex-start;
+  align-items: center;
   display: flex;
   font-size: 12px;
-  justify-content: space-between;
-  line-height: 1.4;
+  gap: 8px;
+  min-height: 24px;
   position: relative;
-
-  &-content {
-    align-items: center;
-    display: flex;
-    flex: 1;
-    gap: 8px;
-  }
 
   &-name {
     color: $text-light;
     font-weight: normal;
+    line-height: 24px;
+    margin: 0;
+    white-space: nowrap;
   }
 
   &-prices {
-    align-items: flex-end;
+    align-items: center;
     display: flex;
-    flex-direction: column;
+    margin-left: auto;
   }
 
   &-total-price {

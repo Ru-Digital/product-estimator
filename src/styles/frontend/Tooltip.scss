@@ -115,7 +115,8 @@
   color: $bg-color;
   cursor: help;
   display: inline-flex;
-  font-size: 11px;
+  flex-shrink: 0;
+  font-size: 12px;
   height: 18px;
   justify-content: center;
   line-height: 1;
@@ -124,6 +125,7 @@
 
   &::before {
     content: "?";
+    font-size: 11px;
     font-weight: bold;
   }
 

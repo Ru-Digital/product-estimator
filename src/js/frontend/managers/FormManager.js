@@ -287,7 +287,7 @@ class FormManager {
                   // with the newly created room expanded, rather than showing a success message
                   if (this.modalManager && this.modalManager.estimateManager) {
                     logger.log('Product added to room successfully, showing estimates list with new room expanded');
-                    this.modalManager.estimateManager.showEstimatesList(newRoom.room_id, formEstimateId);
+                    this.modalManager.estimateManager.showEstimatesList(formEstimateId, newRoom.room_id);
                   } else {
                     // Fall back to showing a success message if estimateManager is not available
                     logger.log('EstimateManager not available, showing success message');
@@ -326,7 +326,7 @@ class FormManager {
             
             // Show the estimates list with the new room expanded
             if (this.modalManager && this.modalManager.estimateManager) {
-              this.modalManager.estimateManager.showEstimatesList(newRoom.room_id, formEstimateId);
+              this.modalManager.estimateManager.showEstimatesList(formEstimateId, newRoom.room_id);
             } else {
               // Hide loading
               if (this.modalManager) {

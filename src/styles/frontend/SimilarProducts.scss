@@ -21,17 +21,7 @@
   /* border-top: 1px dashed #e5e5e5; */
   width: 100%;
   
-  /* When inside a product item, use different border styling */
-
-  .product-item & {
-    /* border-top: 1px dashed #ffcca3; */
-    align-self: flex-start;
-    flex-shrink: 0;
-    margin-left: 0;
-    margin-right: 0;
-    padding-left: 0;
-    padding-right: 0;
-  }
+  /* Legacy product item styling - no longer needed since similar products are only in room items */
   
   /* When inside a room item, use different styling */
   
@@ -55,24 +45,8 @@
   }
 }
 
-/* Product item and wrapper structure */
-
-.product-item {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  max-width: 100%;
-  overflow: hidden;
-  position: relative;
-  width: 100%;
-}
-
-.product-wrapper {
-  flex-shrink: 0;
-  max-width: 100%;
-  overflow: hidden;
-  width: 100%;
-}
+/* Product item structure - legacy, no longer handles similar products */
+/* Similar products are now only displayed at the room level */
 
 /* Carousel container */
 
@@ -85,13 +59,7 @@
   position: relative;
   width: 100%;
   
-  /* Make sure carousel container has proper width */
-
-  .product-item & {
-    display: block;
-    max-width: 100%;
-    width: 100%;
-  }
+  /* Legacy product-item carousel styling - no longer needed */
   
   /* Navigation arrows */
 

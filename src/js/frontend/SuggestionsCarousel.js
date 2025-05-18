@@ -58,11 +58,11 @@ class SuggestionsCarousel {
 
   getContainerWidth() {
     if (this.isSimilarProducts) {
-      // For similar products, find the product-item width
-      const parentItem = this.container.closest('.product-item');
+      // For similar products, find the room-item width (similar products are now only in room items)
+      const parentItem = this.container.closest('.room-item');
       if (parentItem) {
         const parentWidth = parentItem.offsetWidth;
-        // logger.log(`[${this.id}] Found product-item parent: ${parentWidth}px`);
+        // logger.log(`[${this.id}] Found room-item parent: ${parentWidth}px`);
         return parentWidth - 10; // Subtract a small buffer
       }
     }
@@ -77,8 +77,8 @@ class SuggestionsCarousel {
   setContainerSize() {
     // Force consistent sizing for similar products
     if (this.isSimilarProducts) {
-      // Set max-width explicitly for similar products
-      const parentEl = this.container.closest('.product-item');
+      // Set max-width explicitly for similar products (now in room items)
+      const parentEl = this.container.closest('.room-item');
       if (parentEl) {
         const parentWidth = parentEl.offsetWidth;
         // logger.log(`[${this.id}] Similar products parent width: ${parentWidth}px`);
@@ -191,28 +191,28 @@ class SuggestionsCarousel {
 
   /**
    * Get available width for carousel items considering all parent containers
-   * This method makes sure we respect the product-item width
+   * This method makes sure we respect the room-item width
    * @returns {number} Available width in pixels
    */
   getAvailableWidth() {
     // Start with the basic container width
     let availableWidth = this.container.clientWidth - 50; // Subtract arrow space
 
-    // Check if this is a similar products carousel (within product-item)
+    // Check if this is a similar products carousel (within room-item)
     if (this.isSimilarProducts) {
-      // Find the product-item parent to ensure we respect its width
-      let parentProductItem = this.container.closest('.product-item');
-      if (parentProductItem) {
-        // Get product-item width and consider its padding
-        const productItemStyles = window.getComputedStyle(parentProductItem);
-        const productItemWidth = parentProductItem.clientWidth -
-          (parseFloat(productItemStyles.paddingLeft) +
-            parseFloat(productItemStyles.paddingRight));
+      // Find the room-item parent to ensure we respect its width
+      let parentRoomItem = this.container.closest('.room-item');
+      if (parentRoomItem) {
+        // Get room-item width and consider its padding
+        const roomItemStyles = window.getComputedStyle(parentRoomItem);
+        const roomItemWidth = parentRoomItem.clientWidth -
+          (parseFloat(roomItemStyles.paddingLeft) +
+            parseFloat(roomItemStyles.paddingRight));
 
-        // Use the minimum of container width or product-item width
-        availableWidth = Math.min(availableWidth, productItemWidth);
+        // Use the minimum of container width or room-item width
+        availableWidth = Math.min(availableWidth, roomItemWidth);
 
-        // logger.log(`Product item width: ${productItemWidth}px, Available width: ${availableWidth}px`);
+        // logger.log(`Room item width: ${roomItemWidth}px, Available width: ${availableWidth}px`);
       }
     } else {
       // For suggested products - respect the accordion item width

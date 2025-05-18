@@ -89,9 +89,9 @@ class UIManager {
    * Bind toggle functionality for similar products
    */
   bindSimilarProductsToggle() {
-    // Similar products toggle containers are added dynamically to product items and rooms
-    // Look for both product-level and room-level toggle buttons
-    const productToggleButtons = document.querySelectorAll('.product-details-toggle, .similar-products-toggle');
+    // Similar products toggle containers are only in room items now
+    // Look for room-level toggle buttons only
+    const productToggleButtons = document.querySelectorAll('.similar-products-toggle');
     logger.log(`Found ${productToggleButtons.length} similar products toggle buttons to bind`);
     
     productToggleButtons.forEach(button => {
@@ -111,22 +111,20 @@ class UIManager {
   }
   
   /**
-   * Toggle the visibility of similar products
+   * Toggle the visibility of similar products in room items
    * @param {HTMLElement} toggleButton - The button that was clicked
    */
   toggleSimilarProducts(toggleButton) {
-    // Find parent - try room item first, then product item (for backward compatibility)
+    // Find parent room item - similar products are only in room items now
     const roomItem = toggleButton.closest('.room-item');
-    const productItem = toggleButton.closest('.product-item');
-    const parentItem = roomItem || productItem;
     
-    if (!parentItem) {
-      logger.log('Parent item (room or product) not found for toggle button');
+    if (!roomItem) {
+      logger.log('Room item not found for toggle button');
       return;
     }
     
     // Find similar products container
-    const similarProductsContainer = parentItem.querySelector('.similar-products-container');
+    const similarProductsContainer = roomItem.querySelector('.similar-products-container');
     
     if (!similarProductsContainer) {
       logger.log('Similar products container not found');

@@ -77,11 +77,7 @@
   }
 }
 
-/* Ensure the toggle is only shown when there are similar products */
-
-.product-item:not(.has-similar-products) .product-details-toggle {
-  display: none;
-}
+/* Legacy - Similar products are no longer shown in product items */
 
 /* 2. Product Notes Toggle */
 

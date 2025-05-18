@@ -3219,18 +3219,9 @@ body.modal-open {
   position: relative;
   /* border-top: 1px dashed #e5e5e5; */
   width: 100%;
-  /* When inside a product item, use different border styling */
+  /* Legacy product item styling - no longer needed since similar products are only in room items */
   /* When inside a room item, use different styling */
   /* Visual cues for similar products */
-}
-.product-item .product-similar-products {
-  /* border-top: 1px dashed #ffcca3; */
-  align-self: flex-start;
-  flex-shrink: 0;
-  margin-left: 0;
-  margin-right: 0;
-  padding-left: 0;
-  padding-right: 0;
 }
 .room-item .product-similar-products {
   border-top: 1px dashed #e5e5e5;
@@ -3244,24 +3235,8 @@ body.modal-open {
   content: "↺";
 }
 
-/* Product item and wrapper structure */
-.product-item {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  max-width: 100%;
-  overflow: hidden;
-  position: relative;
-  width: 100%;
-}
-
-.product-wrapper {
-  flex-shrink: 0;
-  max-width: 100%;
-  overflow: hidden;
-  width: 100%;
-}
-
+/* Product item structure - legacy, no longer handles similar products */
+/* Similar products are now only displayed at the room level */
 /* Carousel container */
 .similar-products-carousel {
   box-sizing: border-box;
@@ -3271,15 +3246,10 @@ body.modal-open {
   padding: 0 30px; /* Increased padding to make room for buttons */
   position: relative;
   width: 100%;
-  /* Make sure carousel container has proper width */
+  /* Legacy product-item carousel styling - no longer needed */
   /* Navigation arrows */
   /* Suggestions container */
   /* Suggestion items */
-}
-.product-item .similar-products-carousel {
-  display: block;
-  max-width: 100%;
-  width: 100%;
 }
 .similar-products-carousel .suggestions-nav {
   align-items: center;
@@ -3641,11 +3611,7 @@ button.replace-product-in-room.loading {
   width: 100%;
 }
 
-/* Ensure the toggle is only shown when there are similar products */
-.product-item:not(.has-similar-products) .product-details-toggle {
-  display: none;
-}
-
+/* Legacy - Similar products are no longer shown in product items */
 /* 2. Product Notes Toggle */
 .product-notes-toggle {
   background-color: #f3f3f3;

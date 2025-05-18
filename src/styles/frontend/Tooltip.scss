@@ -17,16 +17,16 @@
   position: absolute;
   word-wrap: break-word;
   z-index: $z-index-dialog;
-  
+
   &-content {
     position: relative;
     z-index: 1;
   }
-  
+
   &-arrow {
     position: absolute;
   }
-  
+
   // Position variations
   &-top {
     .pe-tooltip-arrow {
@@ -35,7 +35,7 @@
       transform: translateX(-50%);
     }
   }
-  
+
   &-bottom {
     .pe-tooltip-arrow {
       left: 50%;
@@ -43,7 +43,7 @@
       transform: translateX(-50%);
     }
   }
-  
+
   &-left {
     .pe-tooltip-arrow {
       right: -8px;
@@ -64,13 +64,13 @@
 [data-tooltip] {
   cursor: help;
   position: relative;
-  
+
   // Add subtle underline for keyboard users
   &:focus {
     outline: 2px solid $primary-color;
     outline-offset: 2px;
   }
-  
+
   // Add info icon if element is empty
   &:empty::before {
     color: $info-color;
@@ -94,12 +94,12 @@
   line-height: 1;
   margin-left: $spacing-xs;
   width: 16px;
-  
+
   &::before {
     content: "\f348"; // Dashicons info
     font-family: dashicons;
   }
-  
+
   &:hover {
     color: color.adjust($info-color, $lightness: -10%);
   }
@@ -109,32 +109,31 @@
 .pe-info-button {
   @include button-reset;
   align-items: center;
-  background: transparent;
-  border: 1px solid $border-color;
+  background-color: $primary-color;
+  border: none;
   border-radius: 50%;
-  color: $text-lighter;
+  color: $bg-color;
   cursor: help;
   display: inline-flex;
-  font-size: 12px;
+  font-size: 11px;
   height: 18px;
   justify-content: center;
   line-height: 1;
   margin-left: $spacing-xs;
   transition: $transition-base;
   width: 18px;
-  
+
   &::before {
     content: "?";
     font-weight: bold;
   }
-  
+
   &:hover,
   &:focus {
-    background-color: $bg-light;
-    border-color: $info-color;
-    color: $info-color;
+    background-color: $primary-hover;
+    color: $bg-color;
   }
-  
+
   &:focus {
     outline: 2px solid $primary-color;
     outline-offset: 2px;
@@ -150,7 +149,7 @@
   max-width: 400px;
   min-width: 300px;
   padding: 0;
-  
+
   .pe-tooltip-header {
     align-items: center;
     background-color: $bg-light;
@@ -159,13 +158,13 @@
     justify-content: space-between;
     padding: $spacing-md;
   }
-  
+
   .pe-tooltip-title {
     font-size: $font-size-base;
     font-weight: 600;
     margin: 0;
   }
-  
+
   .pe-tooltip-close {
     @include button-reset;
     align-items: center;
@@ -181,24 +180,24 @@
     padding: 0;
     transition: $transition-base;
     width: 24px;
-    
+
     &:hover,
     &:focus {
       background-color: $bg-lighter;
       border-radius: $border-radius-sm;
       color: $text-color;
     }
-    
+
     &:focus {
       outline: 2px solid $primary-color;
       outline-offset: 2px;
     }
   }
-  
+
   .pe-tooltip-content {
     padding: $spacing-md;
   }
-  
+
   .pe-tooltip-section-title {
     color: $text-color;
     font-size: $font-size-small;
@@ -206,41 +205,41 @@
     margin: 0 0 $spacing-sm 0;
     text-transform: uppercase;
   }
-  
+
   .pe-tooltip-notes-content,
   .pe-tooltip-details-content {
     color: $text-color;
     font-size: $font-size-base;
     line-height: 1.5;
     margin-bottom: $spacing-md;
-    
+
     &:last-child {
       margin-bottom: 0;
     }
-    
+
     p {
       margin: 0 0 $spacing-sm 0;
-      
+
       &:last-child {
         margin-bottom: 0;
       }
     }
-    
+
     ul,
     ol {
       margin: $spacing-sm 0;
       padding-left: $spacing-lg;
     }
   }
-  
+
   // Rich tooltip arrow styles
   .pe-tooltip-arrow {
     border-width: 10px;
   }
-  
+
   &.pe-tooltip-top .pe-tooltip-arrow {
     border-top-color: $border-color-dark;
-    
+
     &::after {
       border-style: solid;
       border-top-color: $bg-color;
@@ -251,10 +250,10 @@
       position: absolute;
     }
   }
-  
+
   &.pe-tooltip-bottom .pe-tooltip-arrow {
     border-bottom-color: $border-color-dark;
-    
+
     &::after {
       border-bottom-color: $bg-light;
       border-style: solid;
@@ -265,10 +264,10 @@
       top: -9px;
     }
   }
-  
+
   &.pe-tooltip-left .pe-tooltip-arrow {
     border-left-color: $border-color-dark;
-    
+
     &::after {
       border-left-color: $bg-color;
       border-style: solid;
@@ -279,10 +278,10 @@
       top: -9px;
     }
   }
-  
+
   &.pe-tooltip-right .pe-tooltip-arrow {
     border-right-color: $border-color-dark;
-    
+
     &::after {
       border-right-color: $bg-color;
       border-style: solid;
@@ -291,34 +290,6 @@
       left: -9px;
       position: absolute;
       top: -9px;
-    }
-  }
-}
-
-// Dark theme support
-@media (prefers-color-scheme: dark) {
-  .pe-tooltip {
-    background-color: #1a1a1a;
-    border: 1px solid #333;
-    color: #f0f0f0;
-  }
-  
-  .pe-tooltip-rich {
-    background-color: #2a2a2a;
-    
-    .pe-tooltip-header {
-      background-color: #333;
-      border-bottom-color: #444;
-    }
-    
-    .pe-tooltip-close {
-      color: #999;
-      
-      &:hover,
-      &:focus {
-        background-color: #444;
-        color: #f0f0f0;
-      }
     }
   }
 }

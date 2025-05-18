@@ -257,6 +257,15 @@ class ProductManager {
           }
         }
 
+        // Update similar products to include the new product's similar items
+        if (this.modalManager && this.modalManager.roomManager) {
+          try {
+            this.modalManager.roomManager.initializeSimilarProductsForRoom(estimateId, roomId);
+          } catch (e) {
+            logger.log('Non-critical error updating similar products UI:', e);
+          }
+        }
+
         // Hide loading
         if (this.modalManager) {
           this.modalManager.hideLoading();
@@ -762,6 +771,13 @@ class ProductManager {
           } catch (e) {
             logger.log('Non-critical error updating room includes UI after product removal');
           }
+          
+          // Update similar products after product removal
+          try {
+            this.modalManager.roomManager.initializeSimilarProductsForRoom(estimateId, roomId);
+          } catch (e) {
+            logger.log('Non-critical error updating similar products UI after product removal:', e);
+          }
         }
 
         // Hide loading
@@ -920,6 +936,15 @@ class ProductManager {
         if (this.modalManager && this.modalManager.estimateManager) {
           // Show the estimates list with the specific estimate and room expanded
           this.modalManager.estimateManager.showEstimatesList(estimateId, roomId);
+          
+          // After product replacement, update similar products with a small delay
+          // to ensure the view has fully rendered and room element is available
+          setTimeout(() => {
+            if (this.modalManager.roomManager) {
+              // Reinitialize similar products for the room using localStorage data
+              this.modalManager.roomManager.initializeSimilarProductsForRoom(estimateId, roomId);
+            }
+          }, 300);
           
           // Show success dialog after a brief delay to ensure the view has loaded
           setTimeout(() => {

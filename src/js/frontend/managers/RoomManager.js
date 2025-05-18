@@ -1634,9 +1634,10 @@ class RoomManager {
    * Initialize similar products for a room
    * @param {string} estimateId - The estimate ID
    * @param {string} roomId - The room ID
+   * @param {boolean} forceRefresh - Whether to force refresh from server even if data exists
    */
-  initializeSimilarProductsForRoom(estimateId, roomId) {
-    logger.log('Initializing similar products for room', { estimateId, roomId });
+  initializeSimilarProductsForRoom(estimateId, roomId, forceRefresh = false) {
+    logger.log('Initializing similar products for room', { estimateId, roomId, forceRefresh });
     
     // Load the room data from localStorage
     const estimateData = loadEstimateData();
@@ -1672,7 +1673,7 @@ class RoomManager {
     const roomArea = room.width * room.length;
     
     // Load similar products for all products in the room
-    this.loadSimilarProductsForRoom(estimateId, roomId, productIds, roomArea);
+    this.loadSimilarProductsForRoom(estimateId, roomId, productIds, roomArea, forceRefresh);
   }
   
   /**
@@ -1681,9 +1682,10 @@ class RoomManager {
    * @param {string} roomId - The room ID
    * @param {Array} productIds - Array of product IDs in the room
    * @param {number} roomArea - The room area
+   * @param {boolean} forceRefresh - Whether to force refresh from server
    */
-  loadSimilarProductsForRoom(estimateId, roomId, productIds, roomArea) {
-    logger.log('Loading similar products for room', { estimateId, roomId, productIds, roomArea });
+  loadSimilarProductsForRoom(estimateId, roomId, productIds, roomArea, forceRefresh = false) {
+    logger.log('Loading similar products for room', { estimateId, roomId, productIds, roomArea, forceRefresh });
     
     // Get the room element
     const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"]`);
@@ -1711,8 +1713,15 @@ class RoomManager {
     productIds.forEach(productId => {
       const product = room?.products?.[productId];
       
-      // Check if this product has similar products already stored
-      if (product?.similar_products) {
+      logger.log(`Processing product ${productId}:`, {
+        hasProduct: !!product,
+        hasSimilarProducts: !!product?.similar_products,
+        similarProductsType: Array.isArray(product?.similar_products) ? 'array' : typeof product?.similar_products,
+        forceRefresh: forceRefresh
+      });
+      
+      // Check if this product has similar products already stored and we're not forcing refresh
+      if (product?.similar_products && !forceRefresh) {
         const similarProductsArray = Array.isArray(product.similar_products) 
           ? product.similar_products 
           : Object.values(product.similar_products);
@@ -1725,13 +1734,20 @@ class RoomManager {
         allSimilarProducts.push(...enhancedSimilarProducts);
         logger.log(`Found ${similarProductsArray.length} similar products for product ${productId} in localStorage`);
       } else {
-        // Product doesn't have similar products stored, need to fetch from server
+        // Product doesn't have similar products stored or we're forcing refresh
         productsMissingSimilar.push(productId);
+        if (forceRefresh) {
+          logger.log(`Forcing refresh of similar products for product ${productId}`);
+        } else if (!product) {
+          logger.log(`Product ${productId} not found in room data`);
+        } else {
+          logger.log(`Product ${productId} has no similar products in localStorage`);
+        }
       }
     });
     
-    // If we found all similar products in localStorage, render them immediately
-    if (productsMissingSimilar.length === 0 && allSimilarProducts.length > 0) {
+    // If we found all similar products in localStorage and not forcing refresh, render them immediately
+    if (productsMissingSimilar.length === 0 && allSimilarProducts.length > 0 && !forceRefresh) {
       logger.log('All similar products found in localStorage, rendering immediately');
       
       // Remove duplicates by product ID

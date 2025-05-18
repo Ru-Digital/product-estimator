@@ -1274,6 +1274,85 @@ class RoomManager {
   }
 
   /**
+   * Update room header elements (primary product image and name) without re-rendering the entire room
+   * This reuses the same logic as renderRoom for determining primary product
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   */
+  updateRoomPrimaryProduct(estimateId, roomId) {
+    logger.log('Updating room primary product display', { estimateId, roomId });
+    
+    // Get the room data from storage
+    const estimateData = loadEstimateData();
+    const estimate = estimateData.estimates?.[estimateId];
+    const room = estimate?.rooms?.[roomId];
+    
+    if (!room) {
+      logger.warn('Room not found in storage for primary product update', { estimateId, roomId });
+      return;
+    }
+    
+    // Find the room element in the DOM
+    const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
+    
+    if (!roomElement) {
+      logger.warn('Room element not found in DOM for primary product update', { estimateId, roomId });
+      return;
+    }
+    
+    // Use the same logic as renderRoom to determine primary product
+    let primaryProductImage = null;
+    let primaryProductName = null;
+    
+    logger.log('Looking for primary product in room:', {
+      roomName: room.name,
+      primaryCategoryProductId: room.primary_category_product_id,
+      productsObject: room.products,
+      productsKeys: room.products ? Object.keys(room.products) : []
+    });
+    
+    if (room.primary_category_product_id && room.products) {
+      const primaryProduct = room.products[room.primary_category_product_id];
+      if (primaryProduct) {
+        primaryProductImage = primaryProduct.image || null;
+        primaryProductName = primaryProduct.name || null;
+        logger.log('Primary product found:', {
+          productId: room.primary_category_product_id,
+          image: primaryProductImage,
+          name: primaryProductName
+        });
+      }
+    }
+    
+    // Update primary product image element
+    const imageElement = roomElement.querySelector('.primary-product-image');
+    if (imageElement) {
+      if (primaryProductImage) {
+        imageElement.src = primaryProductImage;
+        imageElement.style.display = '';
+      } else {
+        // Use placeholder and hide via display none
+        imageElement.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+        imageElement.style.display = 'none';
+      }
+    }
+    
+    // Update primary product name element
+    const nameElement = roomElement.querySelector('.primary-product-name');
+    if (nameElement) {
+      nameElement.textContent = primaryProductName || '';
+      // The template uses data-visible-if which should handle visibility,
+      // but we'll also set display for immediate effect
+      nameElement.style.display = primaryProductName ? '' : 'none';
+    }
+    
+    logger.log('Room primary product display updated', {
+      hasPrimaryProduct: !!primaryProductImage,
+      primaryProductName: primaryProductName
+    });
+  }
+
+  /**
    * Called when the modal is closed
    */
   onModalClosed() {

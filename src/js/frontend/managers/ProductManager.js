@@ -749,6 +749,10 @@ class ProductManager {
           this.modalManager.roomManager.updateRoomTotals(estimateId, roomId, {
             total: result.roomTotal
           });
+          
+          // Update room primary product display
+          // This will refresh the primary product image and name in the room header
+          this.modalManager.roomManager.updateRoomPrimaryProduct(estimateId, roomId);
         }
 
         // Hide loading

@@ -19,6 +19,7 @@ class ProductDetailsToggle {
         notesToggleButton: '.product-notes-toggle',
         includesToggleButton: '.product-includes-toggle', // Add new selector
         productItem: '.product-item',
+        roomItem: '.room-item',
         similarProductsContainer: '.similar-products-container',
         productIncludes: '.product-includes',
         similarProducts: '.product-similar-products',
@@ -220,10 +221,11 @@ class ProductDetailsToggle {
    */
   /**
    * Prepare the DOM for similar products toggle
-   * REMOVED logic that unconditionally showed the container.
-   * Visibility is now solely controlled by ModalManager based on data.
+   * Now handles similar products in both product items and room items
+   * Visibility is controlled by ModalManager based on data.
    */
   prepareProductsToggle() {
+    // Handle similar products in product items (legacy, should be removed)
     const productItems = document.querySelectorAll(this.config.selectors.productItem);
     logger.log(`Found ${productItems.length} product items to process for similar products toggle`);
 
@@ -242,10 +244,31 @@ class ProductDetailsToggle {
       // Only mark as having similar products if the container exists
       // ModalManager will hide toggle/container later if data is empty
       productItem.classList.add('has-similar-products');
+    });
+
+    // Handle similar products in room items (new location)
+    const roomItems = document.querySelectorAll(this.config.selectors.roomItem);
+    logger.log(`Found ${roomItems.length} room items to process for similar products toggle`);
+
+    roomItems.forEach(roomItem => {
+      if (roomItem.classList.contains('products-toggle-processed')) {
+        return;
+      }
+
+      const similarProductsSection = roomItem.querySelector(this.config.selectors.similarProducts);
+      if (!similarProductsSection) {
+        // Mark as processed even if no section found, to prevent re-checking
+        roomItem.classList.add('products-toggle-processed');
+        return;
+      }
+
+      // Only mark as having similar products if the container exists
+      // ModalManager will hide toggle/container later if data is empty
+      roomItem.classList.add('has-similar-products');
 
       // Container and button variables (for later if needed)
-      // let similarProductsContainer = productItem.querySelector(this.config.selectors.similarProductsContainer);
-      // let toggleButton = productItem.querySelector(this.config.selectors.productToggleButton);
+      // let similarProductsContainer = roomItem.querySelector(this.config.selectors.similarProductsContainer);
+      // let toggleButton = roomItem.querySelector(this.config.selectors.productToggleButton);
 
       // --- START REMOVAL / COMMENT ---
       // // Initially show the similar products container (expanded by default) <<-- REMOVE THIS LOGIC
@@ -261,8 +284,8 @@ class ProductDetailsToggle {
 
 
       // Mark as processed
-      productItem.classList.add('products-toggle-processed');
-      logger.log('Product item processed for similar products toggle (visibility managed elsewhere).');
+      roomItem.classList.add('products-toggle-processed');
+      logger.log('Room item processed for similar products toggle (visibility managed elsewhere).');
     });
   }
 

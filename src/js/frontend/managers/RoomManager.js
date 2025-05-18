@@ -44,6 +44,10 @@ class RoomManager {
     this.updateRoomTotals = this.updateRoomTotals.bind(this);
     this.renderRoom = this.renderRoom.bind(this);
     this.onModalClosed = this.onModalClosed.bind(this);
+    this.initializeSimilarProductsForRoom = this.initializeSimilarProductsForRoom.bind(this);
+    this.loadSimilarProductsForRoom = this.loadSimilarProductsForRoom.bind(this);
+    this.bindIncludesToggle = this.bindIncludesToggle.bind(this);
+    this.bindSimilarProductsToggle = this.bindSimilarProductsToggle.bind(this);
   }
 
   /**
@@ -657,6 +661,10 @@ class RoomManager {
       // Bind event handlers for this room
       this.bindRoomEvents(roomElement, estimateId, roomId);
 
+      // Bind toggle functionality for includes and similar products
+      this.bindIncludesToggle(roomElement);
+      this.bindSimilarProductsToggle(roomElement);
+
       // Render aggregated product includes at the room level
       this.renderRoomIncludes(room, roomElement);
 
@@ -778,6 +786,56 @@ class RoomManager {
   }
 
   /**
+   * Bind toggle functionality for similar products section
+   * @param {HTMLElement} roomElement - The room element
+   */
+  bindSimilarProductsToggle(roomElement) {
+    const toggleButton = roomElement.querySelector('.similar-products-toggle');
+    const similarProductsContainer = roomElement.querySelector('.similar-products-container');
+    
+    if (toggleButton && similarProductsContainer) {
+      // Remove any existing click handler to prevent duplicates
+      if (toggleButton._clickHandler) {
+        toggleButton.removeEventListener('click', toggleButton._clickHandler);
+      }
+      
+      toggleButton._clickHandler = () => {
+        const isExpanded = toggleButton.classList.contains('expanded');
+        
+        if (isExpanded) {
+          toggleButton.classList.remove('expanded');
+          similarProductsContainer.style.display = 'none';
+          
+          // Update toggle icon
+          const toggleIcon = toggleButton.querySelector('.toggle-icon');
+          if (toggleIcon) {
+            toggleIcon.classList.remove('dashicons-arrow-up-alt2');
+            toggleIcon.classList.add('dashicons-arrow-down-alt2');
+          }
+        } else {
+          toggleButton.classList.add('expanded');
+          similarProductsContainer.style.display = 'block';
+          
+          // Update toggle icon
+          const toggleIcon = toggleButton.querySelector('.toggle-icon');
+          if (toggleIcon) {
+            toggleIcon.classList.remove('dashicons-arrow-down-alt2');
+            toggleIcon.classList.add('dashicons-arrow-up-alt2');
+          }
+          
+          // Trigger carousel initialization if not already loaded
+          const carouselContainer = similarProductsContainer.querySelector('.similar-products-carousel');
+          if (carouselContainer && this.modalManager.uiManager) {
+            this.modalManager.uiManager.initializeCarouselInContainer(carouselContainer);
+          }
+        }
+      };
+      
+      toggleButton.addEventListener('click', toggleButton._clickHandler);
+    }
+  }
+
+  /**
    * Bind events to a room element
    * @param {HTMLElement} roomElement - The room element
    * @param {string} estimateId - The estimate ID
@@ -828,6 +886,9 @@ class RoomManager {
               this.modalManager.productManager.loadProductsForRoom(estimateId, roomId, productsContainer);
             }
           }
+          
+          // Initialize similar products for the room
+          this.initializeSimilarProductsForRoom(estimateId, roomId);
         }
       };
 
@@ -1531,6 +1592,209 @@ class RoomManager {
 
     // Re-render the includes with updated room data
     this.renderRoomIncludes(room, roomElement);
+    
+    // Also update similar products since product list changed
+    this.initializeSimilarProductsForRoom(estimateId, roomId);
+  }
+  
+  /**
+   * Initialize similar products for a room
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   */
+  initializeSimilarProductsForRoom(estimateId, roomId) {
+    logger.log('Initializing similar products for room', { estimateId, roomId });
+    
+    // Load the room data from localStorage
+    const estimateData = loadEstimateData();
+    const room = estimateData.estimates?.[estimateId]?.rooms?.[roomId];
+    
+    if (!room) {
+      logger.warn('Room not found for similar products initialization');
+      return;
+    }
+    
+    // Get all product IDs from the room
+    const productIds = Object.keys(room.products || {});
+    
+    if (productIds.length === 0) {
+      logger.log('No products in room, skipping similar products initialization');
+      // Hide the similar products section if no products
+      const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"]`);
+      if (roomElement) {
+        const toggleButton = roomElement.querySelector('.similar-products-toggle');
+        const container = roomElement.querySelector('.similar-products-container');
+        
+        if (toggleButton) {
+          toggleButton.style.display = 'none';
+        }
+        if (container) {
+          container.style.display = 'none';
+        }
+      }
+      return;
+    }
+    
+    // Calculate room area for pricing calculations
+    const roomArea = room.width * room.length;
+    
+    // Load similar products for all products in the room
+    this.loadSimilarProductsForRoom(estimateId, roomId, productIds, roomArea);
+  }
+  
+  /**
+   * Load similar products for all products in a room
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   * @param {Array} productIds - Array of product IDs in the room
+   * @param {number} roomArea - The room area
+   */
+  loadSimilarProductsForRoom(estimateId, roomId, productIds, roomArea) {
+    logger.log('Loading similar products for room', { estimateId, roomId, productIds, roomArea });
+    
+    // Get the room element
+    const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"]`);
+    if (!roomElement) {
+      logger.warn('Room element not found in DOM');
+      return;
+    }
+    
+    const similarProductsContainer = roomElement.querySelector('.similar-products-list');
+    const toggleButton = roomElement.querySelector('.similar-products-toggle');
+    
+    if (!similarProductsContainer) {
+      logger.warn('Similar products container not found in room element');
+      return;
+    }
+    
+    // Show loading state
+    similarProductsContainer.innerHTML = '<div class="loading">Loading similar products...</div>';
+    
+    // Collect all similar products for all products in the room
+    const allSimilarProducts = [];
+    const similarProductPromises = [];
+    
+    productIds.forEach(productId => {
+      const promise = this.dataService.getSimilarProducts(productId, roomArea)
+        .then(similarProducts => {
+          logger.log(`Received ${similarProducts.length} similar products for product ${productId}`);
+          // Add the source product ID to each similar product for replacement tracking
+          const enhancedSimilarProducts = similarProducts.map(sp => ({
+            ...sp,
+            sourceProductId: productId // The product these suggestions are for
+          }));
+          allSimilarProducts.push(...enhancedSimilarProducts);
+        })
+        .catch(error => {
+          logger.error(`Error loading similar products for product ${productId}:`, error);
+        });
+      
+      similarProductPromises.push(promise);
+    });
+    
+    // Wait for all requests to complete
+    Promise.all(similarProductPromises)
+      .then(() => {
+        // Remove duplicates by product ID
+        const uniqueProducts = {};
+        allSimilarProducts.forEach(product => {
+          if (!uniqueProducts[product.id]) {
+            uniqueProducts[product.id] = product;
+          }
+        });
+        
+        const similarProductsList = Object.values(uniqueProducts);
+        
+        if (similarProductsList.length === 0) {
+          // No similar products found
+          similarProductsContainer.innerHTML = '<div class="no-similar-products">No similar products available</div>';
+          
+          // Hide the toggle button and container
+          if (toggleButton) {
+            toggleButton.style.display = 'none';
+          }
+          if (similarProductsContainer.parentElement) {
+            similarProductsContainer.parentElement.style.display = 'none';
+          }
+          return;
+        }
+        
+        // Clear loading state
+        similarProductsContainer.innerHTML = '';
+        
+        // Render each similar product
+        similarProductsList.forEach((product) => {
+          // Add room context to product data and ensure all required fields
+          const productData = {
+            ...product,
+            id: product.id || product.product_id,
+            product_id: product.id || product.product_id,
+            estimate_id: estimateId,
+            room_id: roomId,
+            // Map fields from different possible structures
+            name: product.name || product.product_name || 'Similar Product',
+            product_name: product.name || product.product_name || 'Similar Product',
+            price: product.price || product.regular_price || 0,
+            product_price: format.currency(product.price || product.regular_price || 0),
+            image: product.image || product.product_image || '',
+            product_img: product.image || product.product_image || '',
+            pricing_method: product.pricing_method || 'sq_ft',
+            replace_product_id: product.sourceProductId || productIds[0] || '', // Use source product ID or first product as fallback
+          };
+          
+          logger.log('Rendering similar product with data:', productData);
+          
+          // Use TemplateEngine to insert the similar product template
+          TemplateEngine.insert('similar-product-item-template', productData, similarProductsContainer);
+          
+          // Bind replace button event for this product
+          const lastSimilarItem = similarProductsContainer.lastElementChild;
+          if (lastSimilarItem) {
+            const replaceButton = lastSimilarItem.querySelector('.replace-product-in-room');
+            if (replaceButton) {
+              replaceButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const productId = replaceButton.dataset.productId;
+                const replaceProductId = replaceButton.dataset.replaceProductId;
+                const roomId = replaceButton.dataset.roomId;
+                const estimateId = replaceButton.dataset.estimateId;
+                
+                logger.log('Replace button clicked', { productId, replaceProductId, roomId, estimateId });
+                
+                // Delegate to ProductManager to handle replacement
+                if (this.modalManager && this.modalManager.productManager) {
+                  this.modalManager.productManager.replaceProductInRoom(estimateId, roomId, replaceProductId, productId);
+                } else {
+                  logger.error('ProductManager not available for product replacement');
+                }
+              });
+            }
+          }
+        });
+        
+        // Initialize carousel if needed
+        const carouselContainer = roomElement.querySelector('.similar-products-carousel');
+        if (carouselContainer && similarProductsList.length > 0) {
+          // The SuggestionsCarousel should automatically initialize when content is added
+          // But we can trigger initialization manually if needed
+          if (this.modalManager.uiManager) {
+            this.modalManager.uiManager.initializeCarouselInContainer(carouselContainer);
+          }
+        }
+        
+        // Make sure the toggle button is visible
+        if (toggleButton) {
+          toggleButton.style.display = 'block';
+        }
+        
+        logger.log(`Rendered ${similarProductsList.length} similar products for room ${roomId}`);
+      })
+      .catch(error => {
+        logger.error('Error loading similar products:', error);
+        similarProductsContainer.innerHTML = '<div class="error">Failed to load similar products</div>';
+      });
   }
 }
 

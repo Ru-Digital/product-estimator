@@ -33,6 +33,14 @@
     padding-right: 0;
   }
   
+  /* When inside a room item, use different styling */
+  
+  .room-item & {
+    border-top: 1px dashed #e5e5e5;
+    margin-bottom: 20px;
+    padding-top: 20px;
+  }
+  
   /* Visual cues for similar products */
 
   h5 {
@@ -188,5 +196,34 @@ button.replace-product-in-room {
   &.loading {
     cursor: not-allowed;
     opacity: 0.7;
+  }
+}
+
+/* Toggle button in room context */
+
+.room-item .similar-products-toggle {
+  background-color: transparent;
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 15px 0;
+  padding: 10px 15px;
+  transition: $transition-base;
+  width: 100%;
+  
+  &:hover {
+    background-color: rgb(0 0 0 / 0.05);
+    border-color: $border-color-dark;
+  }
+  
+  .toggle-icon {
+    float: right;
+    transition: transform 0.3s ease;
+  }
+  
+  &.expanded .toggle-icon {
+    transform: rotate(180deg);
   }
 }

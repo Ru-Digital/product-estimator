@@ -824,11 +824,21 @@ class DataService {
     // Use the specific AjaxService method - it now handles its own caching
     return this.ajaxService.getSimilarProducts(requestData, bypassCache)
       .then(data => {
-        // Assuming the backend returns an object with a 'products' key containing the array
+        // Handle different response formats from the backend
         if (data && Array.isArray(data.products)) {
+          // Expected array format
           return data.products;
+        } else if (data && typeof data.products === 'object' && !Array.isArray(data.products)) {
+          // Backend returned an object with products as an object (keyed by ID)
+          // Convert to array format
+          logger.log('Converting products object to array format');
+          return Object.values(data.products);
+        } else if (data && data.message && data.source_product_id) {
+          // Fallback: empty products with just a message
+          logger.log(data.message);
+          return [];
         } else {
-          logger.warn('get_similar_products did not return expected data structure (expected { products: [...] })', data);
+          logger.warn('get_similar_products did not return expected data structure', data);
           // Return an empty array if the response format is unexpected
           return [];
         }

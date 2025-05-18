@@ -3220,6 +3220,7 @@ body.modal-open {
   /* border-top: 1px dashed #e5e5e5; */
   width: 100%;
   /* When inside a product item, use different border styling */
+  /* When inside a room item, use different styling */
   /* Visual cues for similar products */
 }
 .product-item .product-similar-products {
@@ -3230,6 +3231,11 @@ body.modal-open {
   margin-right: 0;
   padding-left: 0;
   padding-right: 0;
+}
+.room-item .product-similar-products {
+  border-top: 1px dashed #e5e5e5;
+  margin-bottom: 20px;
+  padding-top: 20px;
 }
 .product-similar-products h5::before {
   background-color: #ff6b00;
@@ -3359,6 +3365,31 @@ button.replace-product-in-room:hover {
 button.replace-product-in-room.loading {
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+/* Toggle button in room context */
+.room-item .similar-products-toggle {
+  background-color: transparent;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 15px 0;
+  padding: 10px 15px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+.room-item .similar-products-toggle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-color: #ddd;
+}
+.room-item .similar-products-toggle .toggle-icon {
+  float: right;
+  transition: transform 0.3s ease;
+}
+.room-item .similar-products-toggle.expanded .toggle-icon {
+  transform: rotate(180deg);
 }
 
 /**

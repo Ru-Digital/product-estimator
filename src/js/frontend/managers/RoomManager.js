@@ -804,7 +804,7 @@ class RoomManager {
         
         if (isExpanded) {
           toggleButton.classList.remove('expanded');
-          similarProductsContainer.style.display = 'none';
+          similarProductsContainer.classList.remove('visible');
           
           // Update toggle icon
           const toggleIcon = toggleButton.querySelector('.toggle-icon');
@@ -814,7 +814,7 @@ class RoomManager {
           }
         } else {
           toggleButton.classList.add('expanded');
-          similarProductsContainer.style.display = 'block';
+          similarProductsContainer.classList.add('visible');
           
           // Update toggle icon
           const toggleIcon = toggleButton.querySelector('.toggle-icon');
@@ -1629,7 +1629,7 @@ class RoomManager {
           toggleButton.style.display = 'none';
         }
         if (container) {
-          container.style.display = 'none';
+          container.classList.remove('visible');
         }
       }
       return;
@@ -1713,9 +1713,8 @@ class RoomManager {
           if (toggleButton) {
             toggleButton.style.display = 'none';
           }
-          if (similarProductsContainer.parentElement) {
-            similarProductsContainer.parentElement.style.display = 'none';
-          }
+          // Remove visible class from container
+          similarProductsContainer.classList.remove('visible');
           return;
         }
         

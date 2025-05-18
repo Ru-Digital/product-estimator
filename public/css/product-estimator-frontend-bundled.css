@@ -3345,6 +3345,18 @@ body.modal-open {
   margin-left: 2px;
 }
 
+/* Animation for loading dots */
+@keyframes loading-dots {
+  0% {
+    content: ".";
+  }
+  33% {
+    content: "..";
+  }
+  66% {
+    content: "...";
+  }
+}
 /* Replace button */
 button.replace-product-in-room {
   background-color: #33373d;
@@ -3367,31 +3379,48 @@ button.replace-product-in-room.loading {
   opacity: 0.7;
 }
 
-/* Toggle button in room context */
+/* Toggle button in room context - matching Product Includes styles */
 .room-item .similar-products-toggle {
-  background-color: transparent;
-  border: 1px solid #eee;
-  border-radius: 4px;
+  align-items: center;
+  background-color: #f3f3f3;
+  border: none;
+  border-top: 1px dashed #eee;
+  color: #666;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  margin: 15px 0;
-  padding: 10px 15px;
+  display: flex;
+  font-size: 12px;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 8px 0;
   transition: all 0.2s ease;
   width: 100%;
 }
 .room-item .similar-products-toggle:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  border-color: #ddd;
+  background-color: rgb(230.25, 230.25, 230.25);
 }
 .room-item .similar-products-toggle .toggle-icon {
-  float: right;
+  margin-left: 5px;
   transition: transform 0.3s ease;
 }
 .room-item .similar-products-toggle.expanded .toggle-icon {
-  transform: rotate(180deg);
+  /* transform: rotate(180deg); */
+}
+.room-item .similar-products-toggle.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+.room-item .similar-products-toggle.loading::after {
+  animation: loading-dots 1.5s infinite;
+  content: "...";
 }
 
+/* Mobile responsiveness - matching Product Includes styles */
+@media screen and (max-width: 768px) {
+  .room-item .similar-products-toggle {
+    font-size: 11px;
+    padding: 6px 0;
+  }
+}
 /**
  * Main SCSS file for Product Estimator frontend styles
  *

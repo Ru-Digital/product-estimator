@@ -174,6 +174,17 @@
   margin-left: 2px;
 }
 
+/* Animation for loading dots */
+
+@keyframes loading-dots {
+
+  0% { content: "."; }
+
+  33% { content: ".."; }
+
+  66% { content: "..."; }
+}
+
 /* Replace button */
 
 button.replace-product-in-room {
@@ -199,31 +210,53 @@ button.replace-product-in-room {
   }
 }
 
-/* Toggle button in room context */
+/* Toggle button in room context - matching Product Includes styles */
 
 .room-item .similar-products-toggle {
-  background-color: transparent;
-  border: 1px solid $border-color;
-  border-radius: $border-radius;
+  align-items: center;
+  background-color: $bg-lighter;
+  border: none;
+  border-top: 1px dashed $border-color;
+  color: $text-light;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  margin: 15px 0;
-  padding: 10px 15px;
+  display: flex;
+  font-size: 12px;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 8px 0;
   transition: $transition-base;
   width: 100%;
   
   &:hover {
-    background-color: rgb(0 0 0 / 0.05);
-    border-color: $border-color-dark;
+    background-color: color.adjust($bg-lighter, $lightness: -5%);
   }
   
   .toggle-icon {
-    float: right;
+    margin-left: 5px;
     transition: transform 0.3s ease;
   }
   
   &.expanded .toggle-icon {
-    transform: rotate(180deg);
+    /* transform: rotate(180deg); */
+  }
+  
+  &.loading {
+    opacity: 0.7;
+    pointer-events: none;
+    
+    &::after {
+      animation: loading-dots 1.5s infinite;
+      content: "...";
+    }
+  }
+}
+
+/* Mobile responsiveness - matching Product Includes styles */
+
+@media screen and (max-width: $breakpoint-md) {
+
+  .room-item .similar-products-toggle {
+    font-size: 11px;
+    padding: 6px 0;
   }
 }

@@ -74,29 +74,47 @@ abstract class AjaxHandlerBase {
 
     /**
      * Check if a product is in one of the primary product categories
-     * 
+     *
      * @param int $product_id The product ID to check
      * @return bool True if the product is in a primary category
      */
     protected function isProductInPrimaryCategories($product_id) {
-        // Get the primary categories from settings
-        $general_settings = get_option('product_estimator_general', []);
-        $primary_category_ids = isset($general_settings['primary_product_categories']) ? $general_settings['primary_product_categories'] : [];
-        
-        // If no primary categories are configured, no product can be primary
-        if (empty($primary_category_ids)) {
+        // Get the primary product categories from settings
+        $settings = get_option('product_estimator_settings', []);
+        $primary_categories = isset($settings['primary_product_categories']) ? $settings['primary_product_categories'] : [];
+
+        if (empty($primary_categories)) {
             return false;
         }
-        
-        // Get the product's categories
-        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
-        
-        // Check if any of the product's categories are in the primary categories list
-        $is_primary = !empty(array_intersect($product_categories, $primary_category_ids));
-        
-        return $is_primary;
-    }
 
+        // Get the product
+        $product = wc_get_product($product_id);
+        if (!$product) {
+            return false;
+        }
+
+        // Check if it's a variation and get the parent product
+        if ($product->is_type('variation')) {
+            $parent_id = $product->get_parent_id();
+            $product_id = $parent_id;
+        }
+
+        // Get product categories
+        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
+
+        if (is_wp_error($product_categories)) {
+            return false;
+        }
+
+        // Check if any of the product categories match the primary categories
+        foreach ($product_categories as $category_id) {
+            if (in_array($category_id, $primary_categories)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     /**
      * Helper function to fetch and format detailed similar products.
      *

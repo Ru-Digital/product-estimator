@@ -46,6 +46,12 @@ class ProductSelectionDialog {
             throw new Error('Failed to create product selection dialog');
         }
         
+        // Reset the confirm button to disabled state
+        const confirmButton = this.dialogElement.querySelector('.pe-dialog-confirm');
+        if (confirmButton) {
+            confirmButton.disabled = true;
+        }
+        
         // If we're transitioning from loading state, hide it first
         if (this.dialogElement && this.dialogElement.classList.contains('loading')) {
             this.hideLoading();
@@ -132,6 +138,8 @@ class ProductSelectionDialog {
         const confirmButton = this.dialogElement.querySelector('.pe-dialog-confirm');
         if (confirmButton) {
             confirmButton.textContent = this.action === 'replace' ? 'Replace Product' : 'Add to Estimate';
+            // Reset button state to disabled for variations
+            confirmButton.disabled = true;
         }
 
         // Clear and populate variation options

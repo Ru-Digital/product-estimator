@@ -545,7 +545,7 @@ class RoomManager {
 
           additionalProducts.forEach(include => {
             const additionalProductId = include.id || include.product_id;
-            
+
             // Skip variable products - they'll be handled by renderAdditionalProducts()
             if (include.is_variable && include.variations) {
               logger.log('Skipping variable additional product from includes:', {
@@ -554,7 +554,7 @@ class RoomManager {
               });
               return;
             }
-            
+
             if (additionalProductId && !includesMap.has(additionalProductId)) {
               // Get the correct price - check for selected variation
               let price = include.price || include.total || 0;
@@ -791,20 +791,20 @@ class RoomManager {
               // Add section title
               const titleElement = document.createElement('h6');
               titleElement.className = 'additional-product-title';
-              
+
               // Use section title from product's additional_products_section if available
               let sectionTitle = `${additionalProduct.name} Variations`;
               let sectionDescription = '';
-              
+
               // Check if we have section info from the product
               if (product.additional_products_section) {
                 sectionTitle = product.additional_products_section.title || sectionTitle;
                 sectionDescription = product.additional_products_section.description || '';
               }
-              
+
               titleElement.textContent = sectionTitle;
               sectionContainer.appendChild(titleElement);
-              
+
               // Add section description if available
               if (sectionDescription) {
                 const descriptionElement = document.createElement('p');
@@ -852,7 +852,7 @@ class RoomManager {
                   if (variation.selected === true) {
                     variationElement.classList.add('selected');
                   }
-                  
+
                   // Apply background color from section options
                   const optionColorKey = `option_colour_${index + 1}`;
                   if (product.additional_products_section && product.additional_products_section[optionColorKey]) {
@@ -993,7 +993,7 @@ class RoomManager {
     const estimate = estimatesData.estimates[estimateId];
     if (estimate && estimate.rooms[roomId]) {
       this.renderAdditionalProducts(estimate.rooms[roomId], roomElement);
-      
+
       // Update only the includes section without triggering similar products reload
       // Since variation changes don't affect primary products, we don't need to refresh similar products
       const includesData = this.aggregateProductIncludes(estimate.rooms[roomId]);
@@ -1126,14 +1126,14 @@ class RoomManager {
       TemplateEngine.insert('include-item-template', productData, includesContainer);
     });
 
-    // Skip rendering additional products with variations here since they are already handled 
+    // Skip rendering additional products with variations here since they are already handled
     // by renderAdditionalProducts() method which displays them properly in variation grids
-    
+
     // Only render additional products that don't have variations
-    const nonVariableAdditionalProducts = additionalProducts.filter(product => 
+    const nonVariableAdditionalProducts = additionalProducts.filter(product =>
       !product.is_variable || !product.variations
     );
-    
+
     if (nonVariableAdditionalProducts.length > 0) {
       nonVariableAdditionalProducts.forEach((include, index) => {
         const price = include.price || 0;
@@ -1604,8 +1604,6 @@ class RoomManager {
         } else {
           headerWrapper.classList.add('expanded');
           content.style.display = 'block';
-
-          // Product loading removed - products now displayed as part of room-item template
 
           // Initialize similar products for the room
           this.initializeSimilarProductsForRoom(estimateId, roomId);
@@ -2473,7 +2471,7 @@ class RoomManager {
         }));
         allSimilarProducts.push(...enhancedSimilarProducts);
         logger.log(`Found ${similarProductsArray.length} similar products for product ${productId} in localStorage`);
-        
+
         // Get section info from localStorage if available
         if (!sectionInfo && product.similar_products_section) {
           sectionInfo = product.similar_products_section;
@@ -2504,7 +2502,7 @@ class RoomManager {
 
     // Always render what we have from localStorage, don't fetch missing ones
     logger.log(`Rendering ${similarProductsData.length} similar products from localStorage`);
-    
+
     // Use section info from localStorage if available
     this.renderSimilarProductsList(similarProductsList, similarProductsContainer, toggleButton, similarProductsData, estimateId, roomId, productIds, roomElement, sectionInfo);
   }
@@ -2537,7 +2535,7 @@ class RoomManager {
       }
       return;
     }
-    
+
     // Add has-similar-products class to container
     if (similarProductsContainer) {
       similarProductsContainer.classList.add('has-similar-products');
@@ -2553,27 +2551,27 @@ class RoomManager {
       if (existingHeader) {
         existingHeader.remove();
       }
-      
+
       const sectionHeader = document.createElement('div');
       sectionHeader.className = 'similar-products-section-header';
-      
+
       if (sectionInfo.section_title) {
         const title = document.createElement('h6');
         title.className = 'similar-products-section-title';
         title.textContent = sectionInfo.section_title;
         sectionHeader.appendChild(title);
       }
-      
+
       if (sectionInfo.section_description) {
         const description = document.createElement('p');
         description.className = 'similar-products-section-description';
         description.textContent = sectionInfo.section_description;
         sectionHeader.appendChild(description);
       }
-      
+
       // Find the product-similar-products container which wraps the carousel
       const productSimilarProducts = similarProductsContainer.querySelector('.product-similar-products');
-      
+
       // Insert it before the product-similar-products container
       if (productSimilarProducts) {
         similarProductsContainer.insertBefore(sectionHeader, productSimilarProducts);

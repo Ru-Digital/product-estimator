@@ -14102,8 +14102,10 @@ var RoomManager = /*#__PURE__*/function () {
       if (estimate && estimate.rooms[roomId]) {
         this.renderAdditionalProducts(estimate.rooms[roomId], roomElement);
 
-        // Also update the includes to refresh tooltips with selected variation
-        this.updateRoomIncludes(estimateId, roomId);
+        // Update only the includes section without triggering similar products reload
+        // Since variation changes don't affect primary products, we don't need to refresh similar products
+        var includesData = this.aggregateProductIncludes(estimate.rooms[roomId]);
+        this.renderRoomIncludes(includesData, roomElement, roomId, estimateId);
       }
 
       // Also update the main product display if needed

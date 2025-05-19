@@ -22,20 +22,20 @@
   padding: 8px 0;
   transition: $transition-base;
   width: 100%;
-  
+
   &:hover {
     background-color: color.adjust($bg-lighter, $lightness: -5%);
   }
-  
+
   .toggle-icon {
     margin-left: 5px;
     transition: transform 0.3s ease;
   }
-  
+
   &.loading {
     opacity: 0.7;
     pointer-events: none;
-    
+
     &::after {
       animation: loading-dots 1.5s infinite;
       content: "...";
@@ -48,7 +48,8 @@
   display: none; /* Hidden by default */
   overflow: hidden;
   transition: max-height 0.3s ease;
-  
+  padding: 20px;
+
   &.visible {
     display: block;
   }
@@ -59,7 +60,7 @@
 .product-details-toggle {
 
   @extend %toggle-button;
-  
+
   &.expanded .toggle-icon {
     /* transform: rotate(180deg); */
   }
@@ -70,7 +71,7 @@
 .similar-products-container {
 
   @extend %toggle-container;
-  
+
   &.visible {
     box-sizing: border-box;
     width: 100%;
@@ -86,11 +87,11 @@
   @extend %toggle-button;
   background-color: $bg-lighter;
   border-top: 1px dashed #e0e0e0;
-  
+
   &:hover {
     background-color: color.adjust($bg-lighter, $lightness: -5%);
   }
-  
+
   &.expanded .toggle-icon {
     /* transform: rotate(180deg); */
   }
@@ -102,7 +103,7 @@
 
   @extend %toggle-container;
   width: 100%;
-  
+
   /* Style the notes container */
 
   .product-notes {
@@ -125,11 +126,11 @@
   @extend %toggle-button;
   background-color: $bg-lighter;
   border-top: 1px dashed #e0e0e0;
-  
+
   &:hover {
     background-color: color.adjust($bg-lighter, $lightness: -5%);
   }
-  
+
   &.expanded .toggle-icon {
     /* transform: rotate(180deg); */
   }
@@ -140,7 +141,7 @@
 .includes-container {
 
   @extend %toggle-container;
-  
+
   /* Style the includes container */
 
   .product-includes {
@@ -177,12 +178,12 @@
   margin-top: 10px !important;
   padding: 8px 0 !important;
   width: 100% !important;
-  
+
   &.expanded + .suggestions-container,
   &.expanded + .suggestions-container .product-suggestions {
     display: block !important;
   }
-  
+
   &:not(.expanded) + .suggestions-container {
     display: none !important;
   }
@@ -256,7 +257,7 @@
   padding: 8px !important;
   text-align: center !important;
   width: 100% !important;
-  
+
   &:hover {
     background-color: $primary-color !important;
   }
@@ -277,11 +278,11 @@
   transform: translateY(-50%) !important;
   width: 36px !important;
   z-index: 10 !important;
-  
+
   &.prev {
     left: 0 !important;
   }
-  
+
   &.next {
     right: 0 !important;
   }
@@ -308,7 +309,7 @@
   min-height: 115px;
   overflow: hidden !important;
   width: 100% !important;
-  
+
   img {
     max-height: 250px !important;
     max-width: 100% !important;

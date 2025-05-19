@@ -1,3 +1,6 @@
+/*!*********************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/frontend/Index.scss ***!
+  \*********************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main SCSS file for Product Estimator frontend styles
@@ -1098,6 +1101,13 @@
   overflow: hidden;
 }
 
+.room-item {
+  border: 1px solid #eee;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
 .estimate-name {
   color: #00833F;
   flex-grow: 1;
@@ -1200,9 +1210,6 @@
 
 .accordion-item {
   border-bottom: 1px solid #eee;
-}
-.accordion-item:last-child {
-  border-bottom: none;
 }
 
 /* Removal buttons styling */
@@ -3210,7 +3217,6 @@ body.modal-open {
   margin-top: 20px;
   max-width: 100%;
   overflow: visible; /* Changed from hidden to allow nav buttons to show */
-  padding-top: 15px;
   position: relative;
   /* border-top: 1px dashed #e5e5e5; */
   width: 100%;
@@ -3219,9 +3225,7 @@ body.modal-open {
   /* Visual cues for similar products */
 }
 .room-item .product-similar-products {
-  border-top: 1px dashed #e5e5e5;
   margin-bottom: 20px;
-  padding-top: 20px;
 }
 .product-similar-products h5::before {
   background-color: #ff6b00;
@@ -3590,6 +3594,7 @@ button.replace-product-in-room.loading {
   display: none; /* Hidden by default */
   overflow: hidden;
   transition: max-height 0.3s ease;
+  padding: 20px;
 }
 .visible.includes-container, .visible.notes-container, .visible.similar-products-container {
   display: block;
@@ -4086,8 +4091,6 @@ button.replace-product-in-room.loading {
  * Additional Products styling for Product Estimator
  */
 .additional-products-container {
-  border-top: 1px solid #eee;
-  margin-top: 20px;
   padding-top: 20px;
 }
 

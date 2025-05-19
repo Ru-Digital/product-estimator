@@ -140,6 +140,14 @@
   overflow: hidden;
 }
 
+// Room items should have the same border styling as estimate sections
+.room-item {
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
 .estimate-name {
   color: $primary-color;
   flex-grow: 1;
@@ -256,10 +264,6 @@
 
 .accordion-item {
   border-bottom: 1px solid $border-color;
-
-  &:last-child {
-    border-bottom: none;
-  }
 }
 
 /* Removal buttons styling */

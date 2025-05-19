@@ -15,22 +15,19 @@
   margin-top: 20px;
   max-width: 100%;
   overflow: visible; /* Changed from hidden to allow nav buttons to show */
-  padding-top: 15px;
   position: relative;
 
   /* border-top: 1px dashed #e5e5e5; */
   width: 100%;
-  
+
   /* Legacy product item styling - no longer needed since similar products are only in room items */
-  
+
   /* When inside a room item, use different styling */
-  
+
   .room-item & {
-    border-top: 1px dashed #e5e5e5;
     margin-bottom: 20px;
-    padding-top: 20px;
   }
-  
+
   /* Visual cues for similar products */
 
   h5 {
@@ -38,7 +35,7 @@
     &::before {
       background-color: #ff6b00;
     }
-    
+
     &::after {
       content: "↺";
     }
@@ -59,9 +56,9 @@
   padding: 0 30px; /* Increased padding to make room for buttons */
   position: relative;
   width: 100%;
-  
+
   /* Legacy product-item carousel styling - no longer needed */
-  
+
   /* Navigation arrows */
 
   .suggestions-nav {
@@ -78,15 +75,15 @@
     transform: translateY(-50%);
     width: 24px; /* Increased size for better visibility */
     z-index: 10; /* Increased z-index to ensure visibility */
-    
+
     &.prev {
       left: 3px;
     }
-    
+
     &.next {
       right: 3px;
     }
-    
+
     .dashicons {
       align-items: center;
       display: flex;
@@ -94,7 +91,7 @@
       justify-content: center;
     }
   }
-  
+
   /* Suggestions container */
 
   .suggestions-container {
@@ -104,7 +101,7 @@
     margin: 0 auto;
     max-width: 100%;
   }
-  
+
   /* Suggestion items */
 
   .suggestion-item {
@@ -113,22 +110,22 @@
     padding: 8px;
     width: 170px;
   }
-  
+
   .suggestion-image {
     height: 80px;
   }
-  
+
   .suggestion-name {
     font-size: 12px;
     line-height: 1.2;
     max-height: 2.4em;
     overflow: hidden;
   }
-  
+
   .suggestion-price {
     font-size: 12px;
   }
-  
+
   .add-suggestion-to-room {
     font-size: 11px;
     padding: 4px 8px;
@@ -168,11 +165,11 @@ button.replace-product-in-room {
   text-transform: uppercase;
   transition: $transition-base;
   width: 100%;
-  
+
   &:hover {
     background-color: $primary-color;
   }
-  
+
   &.loading {
     cursor: not-allowed;
     opacity: 0.7;
@@ -195,24 +192,24 @@ button.replace-product-in-room {
   padding: 8px 0;
   transition: $transition-base;
   width: 100%;
-  
+
   &:hover {
     background-color: color.adjust($bg-lighter, $lightness: -5%);
   }
-  
+
   .toggle-icon {
     margin-left: 5px;
     transition: transform 0.3s ease;
   }
-  
+
   &.expanded .toggle-icon {
     /* transform: rotate(180deg); */
   }
-  
+
   &.loading {
     opacity: 0.7;
     pointer-events: none;
-    
+
     &::after {
       animation: loading-dots 1.5s infinite;
       content: "...";

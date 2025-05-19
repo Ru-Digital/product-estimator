@@ -655,6 +655,21 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             $similar_products_list = $this->fetch_and_format_similar_products($product_id, $room_area);
 
             $product_data['similar_products'] = $similar_products_list;
+            
+            // Get section info for similar products
+            $section_info = null;
+            if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\SimilarProductsFrontend')) {
+                $similar_products_module = new \RuDigital\ProductEstimator\Includes\Frontend\SimilarProductsFrontend(
+                    'product-estimator',
+                    PRODUCT_ESTIMATOR_VERSION
+                );
+                
+                $section_info = $similar_products_module->get_section_info_for_product($product_id);
+            }
+            
+            if ($section_info) {
+                $product_data['similar_products_section'] = $section_info;
+            }
 
             // Check if this is a variable product and add variations data
             if ($product->is_type('variable')) {

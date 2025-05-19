@@ -365,9 +365,21 @@ class SuggestionAjaxHandler extends AjaxHandlerBase {
         // Use the helper function to get the data
         $similar_products_data = $this->fetch_and_format_similar_products($product_id, $room_area, $limit);
 
+        // Get section info for this product
+        $section_info = null;
+        if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\SimilarProductsFrontend')) {
+            $similar_products_module = new \RuDigital\ProductEstimator\Includes\Frontend\SimilarProductsFrontend(
+                'product-estimator',
+                PRODUCT_ESTIMATOR_VERSION
+            );
+            
+            $section_info = $similar_products_module->get_section_info_for_product($product_id);
+        }
+
         wp_send_json_success([
             'products' => $similar_products_data, // Ensure key is 'products' for consistency with frontend
             'source_product_id' => $product_id,
+            'section_info' => $section_info,
             'message' => sprintf(__('%d similar products found.', 'product-estimator'), count($similar_products_data))
         ]);
     }

@@ -2596,13 +2596,24 @@ var DataService = /*#__PURE__*/function () {
       return this.ajaxService.getSimilarProducts(requestData, bypassCache).then(function (data) {
         // Handle different response formats from the backend
         if (data && Array.isArray(data.products)) {
-          // Expected array format
+          // If we have section_info, return the full response
+          if (data.section_info) {
+            return data;
+          }
+          // Otherwise just return the products array for backward compatibility
           return data.products;
         } else if (data && (0,_babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_2__["default"])(data.products) === 'object' && !Array.isArray(data.products)) {
           // Backend returned an object with products as an object (keyed by ID)
           // Convert to array format
           logger.log('Converting products object to array format');
-          return Object.values(data.products);
+          var productsArray = Object.values(data.products);
+          // If we have section_info, return the full response with converted products
+          if (data.section_info) {
+            return _objectSpread(_objectSpread({}, data), {}, {
+              products: productsArray
+            });
+          }
+          return productsArray;
         } else if (data && data.message && data.source_product_id) {
           // Fallback: empty products with just a message
           logger.log(data.message);
@@ -15545,8 +15556,7 @@ var RoomManager = /*#__PURE__*/function () {
   }, {
     key: "loadSimilarProductsForRoom",
     value: function loadSimilarProductsForRoom(estimateId, roomId, productIds, roomArea) {
-      var _estimateData$estimat4,
-        _this12 = this;
+      var _estimateData$estimat4;
       var forceRefresh = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : false;
       logger.log('Loading similar products for room', {
         estimateId: estimateId,
@@ -15562,10 +15572,11 @@ var RoomManager = /*#__PURE__*/function () {
         logger.warn('Room element not found in DOM');
         return;
       }
-      var similarProductsContainer = roomElement.querySelector('.similar-products-list');
+      var similarProductsList = roomElement.querySelector('.similar-products-list');
+      var similarProductsContainer = roomElement.querySelector('.similar-products-container');
       var toggleButton = roomElement.querySelector('.similar-products-toggle');
-      if (!similarProductsContainer) {
-        logger.warn('Similar products container not found in room element');
+      if (!similarProductsList || !similarProductsContainer) {
+        logger.warn('Similar products list or container not found in room element');
         return;
       }
 
@@ -15576,6 +15587,7 @@ var RoomManager = /*#__PURE__*/function () {
       // First try to collect similar products from localStorage
       var allSimilarProducts = [];
       var productsMissingSimilar = [];
+      var sectionInfo = null;
       productIds.forEach(function (productId) {
         var _room$products;
         var product = room === null || room === void 0 || (_room$products = room.products) === null || _room$products === void 0 ? void 0 : _room$products[productId];
@@ -15583,6 +15595,7 @@ var RoomManager = /*#__PURE__*/function () {
           hasProduct: !!product,
           hasSimilarProducts: !!(product !== null && product !== void 0 && product.similar_products),
           similarProductsType: Array.isArray(product === null || product === void 0 ? void 0 : product.similar_products) ? 'array' : (0,_babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_2__["default"])(product === null || product === void 0 ? void 0 : product.similar_products),
+          hasSimilarProductsSection: !!(product !== null && product !== void 0 && product.similar_products_section),
           forceRefresh: forceRefresh
         });
 
@@ -15598,6 +15611,12 @@ var RoomManager = /*#__PURE__*/function () {
           });
           allSimilarProducts.push.apply(allSimilarProducts, (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_0__["default"])(enhancedSimilarProducts));
           logger.log("Found ".concat(similarProductsArray.length, " similar products for product ").concat(productId, " in localStorage"));
+
+          // Get section info from localStorage if available
+          if (!sectionInfo && product.similar_products_section) {
+            sectionInfo = product.similar_products_section;
+            logger.log('Found similar products section info in localStorage:', sectionInfo);
+          }
         } else {
           // Product doesn't have similar products stored or we're forcing refresh
           productsMissingSimilar.push(productId);
@@ -15611,99 +15630,99 @@ var RoomManager = /*#__PURE__*/function () {
         }
       });
 
-      // If we found all similar products in localStorage and not forcing refresh, render them immediately
-      if (productsMissingSimilar.length === 0 && allSimilarProducts.length > 0 && !forceRefresh) {
-        logger.log('All similar products found in localStorage, rendering immediately');
-
-        // Remove duplicates by product ID
-        var uniqueProducts = {};
-        allSimilarProducts.forEach(function (product) {
-          if (!uniqueProducts[product.id]) {
-            uniqueProducts[product.id] = product;
-          }
-        });
-        var similarProductsList = Object.values(uniqueProducts);
-        this.renderSimilarProductsList(similarProductsContainer, toggleButton, similarProductsList, estimateId, roomId, productIds, roomElement);
-        return;
-      }
-
-      // Show loading state only if we need to fetch some products
-      if (productsMissingSimilar.length > 0) {
-        similarProductsContainer.innerHTML = '<div class="loading">Loading similar products...</div>';
-      }
-
-      // Fetch only the products that don't have similar products in localStorage
-      var similarProductPromises = [];
-      productsMissingSimilar.forEach(function (productId) {
-        var promise = _this12.dataService.getSimilarProducts(productId, roomArea).then(function (similarProducts) {
-          logger.log("Received ".concat(similarProducts.length, " similar products for product ").concat(productId, " from server"));
-          // Add the source product ID to each similar product for replacement tracking
-          var enhancedSimilarProducts = similarProducts.map(function (sp) {
-            return _objectSpread(_objectSpread({}, sp), {}, {
-              sourceProductId: productId // The product these suggestions are for
-            });
-          });
-          allSimilarProducts.push.apply(allSimilarProducts, (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_0__["default"])(enhancedSimilarProducts));
-        })["catch"](function (error) {
-          logger.error("Error loading similar products for product ".concat(productId, ":"), error);
-        });
-        similarProductPromises.push(promise);
+      // Remove duplicates by product ID
+      var uniqueProducts = {};
+      allSimilarProducts.forEach(function (product) {
+        if (!uniqueProducts[product.id]) {
+          uniqueProducts[product.id] = product;
+        }
       });
+      var similarProductsData = Object.values(uniqueProducts);
 
-      // Wait for all requests to complete
-      Promise.all(similarProductPromises).then(function () {
-        // Remove duplicates by product ID
-        var uniqueProducts = {};
-        allSimilarProducts.forEach(function (product) {
-          if (!uniqueProducts[product.id]) {
-            uniqueProducts[product.id] = product;
-          }
-        });
-        var similarProductsList = Object.values(uniqueProducts);
+      // Always render what we have from localStorage, don't fetch missing ones
+      logger.log("Rendering ".concat(similarProductsData.length, " similar products from localStorage"));
 
-        // Use the extracted rendering method
-        _this12.renderSimilarProductsList(similarProductsContainer, toggleButton, similarProductsList, estimateId, roomId, productIds, roomElement);
-      })["catch"](function (error) {
-        logger.error('Error loading similar products:', error);
-        similarProductsContainer.innerHTML = '<div class="error">Failed to load similar products</div>';
-      });
+      // Use section info from localStorage if available
+      this.renderSimilarProductsList(similarProductsList, similarProductsContainer, toggleButton, similarProductsData, estimateId, roomId, productIds, roomElement, sectionInfo);
     }
 
     /**
      * Render similar products list
-     * @param {HTMLElement} similarProductsContainer - The container for similar products
+     * @param {HTMLElement} similarProductsList - The list container for similar products
+     * @param {HTMLElement} similarProductsContainer - The parent container
      * @param {HTMLElement} toggleButton - The toggle button element
-     * @param {Array} similarProductsList - The list of similar products to render
+     * @param {Array} similarProducts - The list of similar products to render
      * @param {string} estimateId - The estimate ID
      * @param {string} roomId - The room ID
      * @param {Array} productIds - Array of product IDs in the room
      * @param {HTMLElement} roomElement - The room element
+     * @param {Object|null} sectionInfo - Section info with title and description
      */
   }, {
     key: "renderSimilarProductsList",
-    value: function renderSimilarProductsList(similarProductsContainer, toggleButton, similarProductsList, estimateId, roomId, productIds, roomElement) {
-      var _this13 = this;
-      if (similarProductsList.length === 0) {
+    value: function renderSimilarProductsList(similarProductsList, similarProductsContainer, toggleButton, similarProducts, estimateId, roomId, productIds, roomElement) {
+      var _this12 = this;
+      var sectionInfo = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : null;
+      if (similarProducts.length === 0) {
         // No similar products found
-        similarProductsContainer.innerHTML = '<div class="no-similar-products">No similar products available</div>';
+        similarProductsList.innerHTML = '<div class="no-similar-products">No similar products available</div>';
 
         // Hide the toggle button and container
         if (toggleButton) {
           toggleButton.style.display = 'none';
         }
-        // Remove visible class from container
-        var container = roomElement.querySelector('.similar-products-container');
-        if (container) {
-          container.classList.remove('visible');
+        // Remove visible and has-similar-products classes
+        if (similarProductsContainer) {
+          similarProductsContainer.classList.remove('visible');
+          similarProductsContainer.classList.remove('has-similar-products');
         }
         return;
       }
 
-      // Clear loading state
-      similarProductsContainer.innerHTML = '';
+      // Add has-similar-products class to container
+      if (similarProductsContainer) {
+        similarProductsContainer.classList.add('has-similar-products');
+      }
+
+      // Clear loading state in the list
+      similarProductsList.innerHTML = '';
+
+      // Add section title and description inside the parent container, above the products list
+      if (sectionInfo) {
+        // Check if we already have a section header
+        var existingHeader = similarProductsContainer.querySelector('.similar-products-section-header');
+        if (existingHeader) {
+          existingHeader.remove();
+        }
+        var sectionHeader = document.createElement('div');
+        sectionHeader.className = 'similar-products-section-header';
+        if (sectionInfo.section_title) {
+          var title = document.createElement('h6');
+          title.className = 'similar-products-section-title';
+          title.textContent = sectionInfo.section_title;
+          sectionHeader.appendChild(title);
+        }
+        if (sectionInfo.section_description) {
+          var description = document.createElement('p');
+          description.className = 'similar-products-section-description';
+          description.textContent = sectionInfo.section_description;
+          sectionHeader.appendChild(description);
+        }
+
+        // Find the product-similar-products container which wraps the carousel
+        var productSimilarProducts = similarProductsContainer.querySelector('.product-similar-products');
+
+        // Insert it before the product-similar-products container
+        if (productSimilarProducts) {
+          similarProductsContainer.insertBefore(sectionHeader, productSimilarProducts);
+        } else {
+          // Fallback: insert at the beginning if structure is different
+          similarProductsContainer.insertBefore(sectionHeader, similarProductsContainer.firstChild);
+        }
+      }
 
       // Render each similar product
-      similarProductsList.forEach(function (product) {
+      similarProducts.forEach(function (product) {
         // Add room context to product data and ensure all required fields
         var productData = _objectSpread(_objectSpread({}, product), {}, {
           id: product.id || product.product_id,
@@ -15722,11 +15741,11 @@ var RoomManager = /*#__PURE__*/function () {
         });
         logger.log('Rendering similar product with data:', productData);
 
-        // Use TemplateEngine to insert the similar product template
-        _TemplateEngine__WEBPACK_IMPORTED_MODULE_7__["default"].insert('similar-product-item-template', productData, similarProductsContainer);
+        // Use TemplateEngine to insert the similar product template into the list container
+        _TemplateEngine__WEBPACK_IMPORTED_MODULE_7__["default"].insert('similar-product-item-template', productData, similarProductsList);
 
         // Bind replace button event for this product
-        var lastSimilarItem = similarProductsContainer.lastElementChild;
+        var lastSimilarItem = similarProductsList.lastElementChild;
         if (lastSimilarItem) {
           var replaceButton = lastSimilarItem.querySelector('.replace-product-in-room');
           if (replaceButton) {
@@ -15745,9 +15764,9 @@ var RoomManager = /*#__PURE__*/function () {
               });
 
               // Delegate to ProductManager to handle replacement with variation check
-              if (_this13.modalManager && _this13.modalManager.productManager) {
+              if (_this12.modalManager && _this12.modalManager.productManager) {
                 // Check if product has variations before replacing
-                _this13.modalManager.productManager.handleProductVariationSelection(productId, {
+                _this12.modalManager.productManager.handleProductVariationSelection(productId, {
                   action: 'replace',
                   estimateId: estimateId,
                   roomId: roomId,

@@ -88,6 +88,20 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
                 }
                 break;
 
+            case 'section_title':
+                $title = !empty($item['section_title']) ? $item['section_title'] : __('Similar Products', 'product-estimator');
+                echo esc_html($title);
+                break;
+                
+            case 'section_description':
+                $description = !empty($item['section_description']) ? $item['section_description'] : '';
+                if ($description) {
+                    echo esc_html(wp_trim_words($description, 10, '...'));
+                } else {
+                    echo '<em>' . esc_html__('No description', 'product-estimator') . '</em>';
+                }
+                break;
+                
             case 'item_actions':
                 echo $this->render_standard_item_actions($item);
                 break;
@@ -328,6 +342,8 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
         return [
             'source_categories' => __('Source Categories', 'product-estimator'),
             'attributes'        => __('Attributes to Compare', 'product-estimator'),
+            'section_title'     => __('Section Title', 'product-estimator'),
+            'section_description' => __('Section Description', 'product-estimator'),
             'item_actions'      => __('Actions', 'product-estimator'),
         ];
     }
@@ -383,6 +399,30 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
                 'render_callback' => 'render_attributes_selection_field',
                 'required'   => true,
                 'description' => __('Select which attributes should be used to determine product similarity.', 'product-estimator'),
+            ],
+            [
+                'id'         => 'section_title',
+                'label'      => __('Section Title', 'product-estimator'),
+                'type'       => 'text',
+                'required'   => false,
+                'attributes' => [
+                    'style'      => 'width:100%;',
+                    'class'      => 'pe-item-form-field regular-text',
+                    'placeholder' => __('Similar Products', 'product-estimator'),
+                ],
+                'description' => __('Title shown above similar products section. Defaults to "Similar Products" if left empty.', 'product-estimator'),
+            ],
+            [
+                'id'         => 'section_description',
+                'label'      => __('Section Description', 'product-estimator'),
+                'type'       => 'textarea',
+                'required'   => false,
+                'attributes' => [
+                    'style'      => 'width:100%; height: 80px;',
+                    'class'      => 'pe-item-form-field',
+                    'placeholder' => __('You might also be interested in these products', 'product-estimator'),
+                ],
+                'description' => __('Optional description shown below the section title.', 'product-estimator'),
             ]
         ];
         return $fields;
@@ -437,6 +477,20 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
             }
         } else {
             $validated_data['attributes'] = [];
+        }
+        
+        // Validate section title
+        if (isset($raw_item_data['section_title'])) {
+            $validated_data['section_title'] = sanitize_text_field($raw_item_data['section_title']);
+        } else {
+            $validated_data['section_title'] = '';
+        }
+        
+        // Validate section description
+        if (isset($raw_item_data['section_description'])) {
+            $validated_data['section_description'] = sanitize_textarea_field($raw_item_data['section_description']);
+        } else {
+            $validated_data['section_description'] = '';
         }
 
 
@@ -505,6 +559,15 @@ final class SimilarProductsSettingsModule extends SettingsModuleWithTableBase im
         // Debug information
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('SimilarProductsSettingsModule::prepare_item_for_form_population - Item data prepared: ' . print_r($item_data, true));
+        }
+        
+        // Ensure section fields exist
+        if (!isset($item_data['section_title'])) {
+            $item_data['section_title'] = '';
+        }
+        
+        if (!isset($item_data['section_description'])) {
+            $item_data['section_description'] = '';
         }
 
         return $item_data;

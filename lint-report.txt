@@ -97,6 +97,7 @@
     13:55  warning  'removeRoom' is defined but never used                                   no-unused-vars
   1047:7   warning  'sectionInfo' is assigned a value but never used                         no-unused-vars
   1265:69  warning  'index' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  2506:1   warning  Invalid JSDoc @param "sectionInfo" type "Object"; prefer: "object"       jsdoc/check-types
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/UIManager.js
    11:10  warning  'format' is defined but never used                                              no-unused-vars
@@ -126,7 +127,8 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-✖ 95 problems (0 errors, 95 warnings)
+✖ 96 problems (0 errors, 96 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
 
 
 > product-estimator@1.3.0 lint:scss

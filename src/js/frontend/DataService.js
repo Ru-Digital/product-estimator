@@ -847,13 +847,22 @@ class DataService {
       .then(data => {
         // Handle different response formats from the backend
         if (data && Array.isArray(data.products)) {
-          // Expected array format
+          // If we have section_info, return the full response
+          if (data.section_info) {
+            return data;
+          }
+          // Otherwise just return the products array for backward compatibility
           return data.products;
         } else if (data && typeof data.products === 'object' && !Array.isArray(data.products)) {
           // Backend returned an object with products as an object (keyed by ID)
           // Convert to array format
           logger.log('Converting products object to array format');
-          return Object.values(data.products);
+          const productsArray = Object.values(data.products);
+          // If we have section_info, return the full response with converted products
+          if (data.section_info) {
+            return { ...data, products: productsArray };
+          }
+          return productsArray;
         } else if (data && data.message && data.source_product_id) {
           // Fallback: empty products with just a message
           logger.log(data.message);

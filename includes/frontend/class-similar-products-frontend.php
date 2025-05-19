@@ -287,4 +287,67 @@ class SimilarProductsFrontend extends FrontendBase {
 
         return $values;
     }
+
+    /**
+     * Get section info (title and description) for a product's category
+     *
+     * @param int $product_id The product ID
+     * @return array|null Array with section_title and section_description or null if not found
+     * @since    1.0.7
+     */
+    public function get_section_info_for_product($product_id) {
+        // Get product
+        $product = wc_get_product($product_id);
+
+        if (!$product) {
+            return null;
+        }
+
+        $is_variation = false;
+        $parent_id = null;
+
+        if ($product instanceof \WC_Product_Variation) {
+            $parent_id = $product->get_parent_id();
+            $is_variation = true;
+            $product = wc_get_product($parent_id);
+        }
+
+        // Get product categories
+        $product_categories = wp_get_post_terms(($is_variation ? $parent_id : $product_id), 'product_cat', array('fields' => 'ids'));
+
+        if (empty($product_categories)) {
+            return null;
+        }
+
+        // Get similar products settings
+        $settings = get_option($this->option_name, array());
+
+        if (empty($settings)) {
+            return null;
+        }
+
+        // Find matching rule for this product's categories
+        foreach ($settings as $rule) {
+            if (empty($rule['source_categories'])) {
+                if (isset($rule['source_category']) && in_array($rule['source_category'], $product_categories)) {
+                    return array(
+                        'section_title' => isset($rule['section_title']) ? $rule['section_title'] : __('Similar Products', 'product-estimator'),
+                        'section_description' => isset($rule['section_description']) ? $rule['section_description'] : ''
+                    );
+                }
+                continue;
+            }
+
+            $intersect = array_intersect($product_categories, $rule['source_categories']);
+
+            if (!empty($intersect)) {
+                return array(
+                    'section_title' => isset($rule['section_title']) ? $rule['section_title'] : __('Similar Products', 'product-estimator'),
+                    'section_description' => isset($rule['section_description']) ? $rule['section_description'] : ''
+                );
+            }
+        }
+
+        return null;
+    }
 }

@@ -2415,11 +2415,12 @@ class RoomManager {
       return;
     }
 
-    const similarProductsContainer = roomElement.querySelector('.similar-products-list');
+    const similarProductsList = roomElement.querySelector('.similar-products-list');
+    const similarProductsContainer = roomElement.querySelector('.similar-products-container');
     const toggleButton = roomElement.querySelector('.similar-products-toggle');
 
-    if (!similarProductsContainer) {
-      logger.warn('Similar products container not found in room element');
+    if (!similarProductsList || !similarProductsContainer) {
+      logger.warn('Similar products list or container not found in room element');
       return;
     }
 
@@ -2430,6 +2431,7 @@ class RoomManager {
     // First try to collect similar products from localStorage
     const allSimilarProducts = [];
     const productsMissingSimilar = [];
+    let sectionInfo = null;
 
     productIds.forEach(productId => {
       const product = room?.products?.[productId];
@@ -2438,6 +2440,7 @@ class RoomManager {
         hasProduct: !!product,
         hasSimilarProducts: !!product?.similar_products,
         similarProductsType: Array.isArray(product?.similar_products) ? 'array' : typeof product?.similar_products,
+        hasSimilarProductsSection: !!product?.similar_products_section,
         forceRefresh: forceRefresh
       });
 
@@ -2454,6 +2457,12 @@ class RoomManager {
         }));
         allSimilarProducts.push(...enhancedSimilarProducts);
         logger.log(`Found ${similarProductsArray.length} similar products for product ${productId} in localStorage`);
+        
+        // Get section info from localStorage if available
+        if (!sectionInfo && product.similar_products_section) {
+          sectionInfo = product.similar_products_section;
+          logger.log('Found similar products section info in localStorage:', sectionInfo);
+        }
       } else {
         // Product doesn't have similar products stored or we're forcing refresh
         productsMissingSimilar.push(productId);
@@ -2467,103 +2476,99 @@ class RoomManager {
       }
     });
 
-    // If we found all similar products in localStorage and not forcing refresh, render them immediately
-    if (productsMissingSimilar.length === 0 && allSimilarProducts.length > 0 && !forceRefresh) {
-      logger.log('All similar products found in localStorage, rendering immediately');
-
-      // Remove duplicates by product ID
-      const uniqueProducts = {};
-      allSimilarProducts.forEach(product => {
-        if (!uniqueProducts[product.id]) {
-          uniqueProducts[product.id] = product;
-        }
-      });
-
-      const similarProductsList = Object.values(uniqueProducts);
-      this.renderSimilarProductsList(similarProductsContainer, toggleButton, similarProductsList, estimateId, roomId, productIds, roomElement);
-      return;
-    }
-
-    // Show loading state only if we need to fetch some products
-    if (productsMissingSimilar.length > 0) {
-      similarProductsContainer.innerHTML = '<div class="loading">Loading similar products...</div>';
-    }
-
-    // Fetch only the products that don't have similar products in localStorage
-    const similarProductPromises = [];
-
-    productsMissingSimilar.forEach(productId => {
-      const promise = this.dataService.getSimilarProducts(productId, roomArea)
-        .then(similarProducts => {
-          logger.log(`Received ${similarProducts.length} similar products for product ${productId} from server`);
-          // Add the source product ID to each similar product for replacement tracking
-          const enhancedSimilarProducts = similarProducts.map(sp => ({
-            ...sp,
-            sourceProductId: productId // The product these suggestions are for
-          }));
-          allSimilarProducts.push(...enhancedSimilarProducts);
-        })
-        .catch(error => {
-          logger.error(`Error loading similar products for product ${productId}:`, error);
-        });
-
-      similarProductPromises.push(promise);
+    // Remove duplicates by product ID
+    const uniqueProducts = {};
+    allSimilarProducts.forEach(product => {
+      if (!uniqueProducts[product.id]) {
+        uniqueProducts[product.id] = product;
+      }
     });
 
-    // Wait for all requests to complete
-    Promise.all(similarProductPromises)
-      .then(() => {
-        // Remove duplicates by product ID
-        const uniqueProducts = {};
-        allSimilarProducts.forEach(product => {
-          if (!uniqueProducts[product.id]) {
-            uniqueProducts[product.id] = product;
-          }
-        });
+    const similarProductsData = Object.values(uniqueProducts);
 
-        const similarProductsList = Object.values(uniqueProducts);
-
-        // Use the extracted rendering method
-        this.renderSimilarProductsList(similarProductsContainer, toggleButton, similarProductsList, estimateId, roomId, productIds, roomElement);
-      })
-      .catch(error => {
-        logger.error('Error loading similar products:', error);
-        similarProductsContainer.innerHTML = '<div class="error">Failed to load similar products</div>';
-      });
+    // Always render what we have from localStorage, don't fetch missing ones
+    logger.log(`Rendering ${similarProductsData.length} similar products from localStorage`);
+    
+    // Use section info from localStorage if available
+    this.renderSimilarProductsList(similarProductsList, similarProductsContainer, toggleButton, similarProductsData, estimateId, roomId, productIds, roomElement, sectionInfo);
   }
 
   /**
    * Render similar products list
-   * @param {HTMLElement} similarProductsContainer - The container for similar products
+   * @param {HTMLElement} similarProductsList - The list container for similar products
+   * @param {HTMLElement} similarProductsContainer - The parent container
    * @param {HTMLElement} toggleButton - The toggle button element
-   * @param {Array} similarProductsList - The list of similar products to render
+   * @param {Array} similarProducts - The list of similar products to render
    * @param {string} estimateId - The estimate ID
    * @param {string} roomId - The room ID
    * @param {Array} productIds - Array of product IDs in the room
    * @param {HTMLElement} roomElement - The room element
+   * @param {Object|null} sectionInfo - Section info with title and description
    */
-  renderSimilarProductsList(similarProductsContainer, toggleButton, similarProductsList, estimateId, roomId, productIds, roomElement) {
-    if (similarProductsList.length === 0) {
+  renderSimilarProductsList(similarProductsList, similarProductsContainer, toggleButton, similarProducts, estimateId, roomId, productIds, roomElement, sectionInfo = null) {
+    if (similarProducts.length === 0) {
       // No similar products found
-      similarProductsContainer.innerHTML = '<div class="no-similar-products">No similar products available</div>';
+      similarProductsList.innerHTML = '<div class="no-similar-products">No similar products available</div>';
 
       // Hide the toggle button and container
       if (toggleButton) {
         toggleButton.style.display = 'none';
       }
-      // Remove visible class from container
-      const container = roomElement.querySelector('.similar-products-container');
-      if (container) {
-        container.classList.remove('visible');
+      // Remove visible and has-similar-products classes
+      if (similarProductsContainer) {
+        similarProductsContainer.classList.remove('visible');
+        similarProductsContainer.classList.remove('has-similar-products');
       }
       return;
     }
+    
+    // Add has-similar-products class to container
+    if (similarProductsContainer) {
+      similarProductsContainer.classList.add('has-similar-products');
+    }
 
-    // Clear loading state
-    similarProductsContainer.innerHTML = '';
+    // Clear loading state in the list
+    similarProductsList.innerHTML = '';
+
+    // Add section title and description inside the parent container, above the products list
+    if (sectionInfo) {
+      // Check if we already have a section header
+      const existingHeader = similarProductsContainer.querySelector('.similar-products-section-header');
+      if (existingHeader) {
+        existingHeader.remove();
+      }
+      
+      const sectionHeader = document.createElement('div');
+      sectionHeader.className = 'similar-products-section-header';
+      
+      if (sectionInfo.section_title) {
+        const title = document.createElement('h6');
+        title.className = 'similar-products-section-title';
+        title.textContent = sectionInfo.section_title;
+        sectionHeader.appendChild(title);
+      }
+      
+      if (sectionInfo.section_description) {
+        const description = document.createElement('p');
+        description.className = 'similar-products-section-description';
+        description.textContent = sectionInfo.section_description;
+        sectionHeader.appendChild(description);
+      }
+      
+      // Find the product-similar-products container which wraps the carousel
+      const productSimilarProducts = similarProductsContainer.querySelector('.product-similar-products');
+      
+      // Insert it before the product-similar-products container
+      if (productSimilarProducts) {
+        similarProductsContainer.insertBefore(sectionHeader, productSimilarProducts);
+      } else {
+        // Fallback: insert at the beginning if structure is different
+        similarProductsContainer.insertBefore(sectionHeader, similarProductsContainer.firstChild);
+      }
+    }
 
     // Render each similar product
-    similarProductsList.forEach((product) => {
+    similarProducts.forEach((product) => {
       // Add room context to product data and ensure all required fields
       const productData = {
         ...product,
@@ -2584,11 +2589,11 @@ class RoomManager {
 
       logger.log('Rendering similar product with data:', productData);
 
-      // Use TemplateEngine to insert the similar product template
-      TemplateEngine.insert('similar-product-item-template', productData, similarProductsContainer);
+      // Use TemplateEngine to insert the similar product template into the list container
+      TemplateEngine.insert('similar-product-item-template', productData, similarProductsList);
 
       // Bind replace button event for this product
-      const lastSimilarItem = similarProductsContainer.lastElementChild;
+      const lastSimilarItem = similarProductsList.lastElementChild;
       if (lastSimilarItem) {
         const replaceButton = lastSimilarItem.querySelector('.replace-product-in-room');
         if (replaceButton) {

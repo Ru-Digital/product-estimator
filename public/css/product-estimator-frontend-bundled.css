@@ -3234,6 +3234,24 @@ body.modal-open {
   content: "↺";
 }
 
+/* Section header styling - match additional products exactly */
+.similar-products-section-header {
+  margin-bottom: 20px;
+}
+.similar-products-section-header .similar-products-section-title {
+  color: #00833F;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.similar-products-section-header .similar-products-section-description {
+  color: #333;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Container styling */
 /* Product item structure - legacy, no longer handles similar products */
 /* Similar products are now only displayed at the room level */
 /* Carousel container */

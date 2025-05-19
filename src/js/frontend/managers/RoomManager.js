@@ -753,17 +753,28 @@ class RoomManager {
                 
                 logger.log('Rendering additional product variation:', variationData);
                 
-                // Create variation element
-                const variationElement = document.createElement('div');
-                variationElement.className = 'additional-product-option-tile variation-tile';
+                // Create variation container
+                const variationContainer = document.createElement('div');
                 
                 // Use the template but modify button text and data
-                TemplateEngine.insert('additional-product-option-template', variationData, variationElement);
+                TemplateEngine.insert('additional-product-option-template', variationData, variationContainer);
+                
+                // Get the actual tile element from the container
+                const variationElement = variationContainer.querySelector('.additional-product-option-tile');
+                if (variationElement) {
+                  variationElement.classList.add('variation-tile');
+                  
+                  // Add selected class if this variation is selected
+                  if (variation.selected === true) {
+                    variationElement.classList.add('selected');
+                  }
+                }
                 
                 // Update button
                 const button = variationElement.querySelector('.replace-product-in-room');
                 if (button) {
-                  button.textContent = 'Select Variation';
+                  // Change button text based on selected state
+                  button.textContent = variation.selected === true ? 'Selected' : 'Select Variation';
                   button.dataset.productId = variation.id;
                   button.dataset.estimateId = estimateId;
                   button.dataset.roomId = roomId;
@@ -772,7 +783,8 @@ class RoomManager {
                   button.dataset.parentProductId = additionalProduct.id;
                 }
                 
-                variationsContainer.appendChild(variationElement);
+                // Append only the content of the container, not the wrapper
+                variationsContainer.appendChild(variationContainer.firstElementChild);
               });
               
               sectionContainer.appendChild(variationsContainer);
@@ -826,21 +838,81 @@ class RoomManager {
           parentProductId
         });
 
-        // Use the productManager to handle the replacement
-        if (this.modalManager.productManager) {
-          this.modalManager.productManager.replaceProductInRoom(
-            estimateId,
-            roomId,
-            replaceProductId,  // OLD product to replace
-            productId,         // NEW product (the variation)
-            replaceType,       // Type of replacement
-            parentProductId    // Parent product ID
-          );
-        }
+        // Handle variation selection
+        this.selectProductAdditionVariation(estimateId, roomId, parentProductId, productId);
       };
 
       button.addEventListener('click', button._clickHandler);
     });
+  }
+
+  /**
+   * Select a variation for a product addition
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   * @param {string} parentProductId - The parent additional product ID
+   * @param {string} variationId - The selected variation ID
+   */
+  selectProductAdditionVariation(estimateId, roomId, parentProductId, variationId) {
+    logger.log('Selecting product addition variation', { estimateId, roomId, parentProductId, variationId });
+    
+    // Use DataService to update the variation selection
+    this.dataService.updateProductAdditionVariation(estimateId, roomId, parentProductId, variationId)
+      .then(() => {
+        logger.log('Product addition variation updated successfully');
+        
+        // Update the UI to reflect the changes
+        this.updateProductAdditionVariationUI(estimateId, roomId);
+      })
+      .catch(error => {
+        logger.error('Error updating product addition variation', error);
+        
+        // Show error notification
+        if (this.modalManager.confirmationDialog) {
+          this.modalManager.confirmationDialog.show({
+            title: 'Error',
+            message: 'Failed to update the variation. Please try again.',
+            type: 'error',
+            showCancel: false,
+            confirmText: 'OK'
+          });
+        }
+      });
+  }
+
+  /**
+   * Update the product addition variation UI after selection
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   */
+  updateProductAdditionVariationUI(estimateId, roomId) {
+    // Find the room element
+    const roomElement = document.querySelector(`.room-item[data-estimate-id="${estimateId}"][data-room-id="${roomId}"]`);
+    
+    if (!roomElement) {
+      // If room element not found, try to refresh the room display
+      const roomContainer = document.querySelector(`.room-content[data-estimate-id="${estimateId}"][data-room-id="${roomId}"]`);
+      if (roomContainer) {
+        this.displayRoomProducts(estimateId, roomId, roomContainer);
+      }
+      return;
+    }
+    
+    // Refresh the additional products display
+    const estimatesData = loadEstimateData();
+    const estimate = estimatesData.estimates[estimateId];
+    if (estimate && estimate.rooms[roomId]) {
+      this.renderAdditionalProducts(estimate.rooms[roomId], roomElement);
+    }
+    
+    // Also update the main product display if needed
+    const roomContainer = roomElement.closest('.room-container');
+    if (roomContainer) {
+      const productsContainer = roomContainer.querySelector('.room-products');
+      if (productsContainer) {
+        this.displayRoomProducts(estimateId, roomId, productsContainer);
+      }
+    }
   }
 
   /**

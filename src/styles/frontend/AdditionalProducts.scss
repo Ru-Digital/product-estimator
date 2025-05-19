@@ -61,6 +61,22 @@
     position: relative;
   }
   
+  // Selected state
+
+  &.selected {
+    border-color: $primary-color;
+    border-width: 3px;
+    padding: 10px; // Adjust padding to compensate for thicker border
+    
+    .replace-product-in-room {
+      background-color: $primary-color;
+      
+      &:hover {
+        background-color: color.adjust($primary-color, $lightness: -10%);
+      }
+    }
+  }
+  
   .tile-image,
   .product-img {
     display: block;
@@ -131,6 +147,10 @@
   .additional-product-option-tile {
     flex: 0 0 calc(50% - 8px);
     padding: 10px;
+    
+    &.selected {
+      padding: 8px; // Adjust padding for mobile when selected
+    }
     
     .tile-image,
     .product-img {

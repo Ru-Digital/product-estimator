@@ -4138,6 +4138,17 @@ button.replace-product-in-room.loading {
 .additional-product-option-tile.variation-tile {
   position: relative;
 }
+.additional-product-option-tile.selected {
+  border-color: #00833F;
+  border-width: 3px;
+  padding: 10px;
+}
+.additional-product-option-tile.selected .replace-product-in-room {
+  background-color: #00833F;
+}
+.additional-product-option-tile.selected .replace-product-in-room:hover {
+  background-color: rgb(0, 80, 38.4732824427);
+}
 .additional-product-option-tile .tile-image,
 .additional-product-option-tile .product-img {
   display: block;
@@ -4197,6 +4208,9 @@ button.replace-product-in-room.loading {
   .additional-product-option-tile {
     flex: 0 0 calc(50% - 8px);
     padding: 10px;
+  }
+  .additional-product-option-tile.selected {
+    padding: 8px;
   }
   .additional-product-option-tile .tile-image,
   .additional-product-option-tile .product-img {

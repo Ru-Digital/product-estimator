@@ -7,7 +7,7 @@ import { format } from '@utils';
 export default class Tooltip {
   /**
    * Create a tooltip instance
-   * @param {Object} templateEngine - TemplateEngine instance
+   * @param {object} templateEngine - TemplateEngine instance
    */
   constructor(templateEngine) {
     this.templateEngine = templateEngine;
@@ -334,7 +334,7 @@ export default class Tooltip {
 
   /**
    * Create a rich tooltip element
-   * @param {Object} data - Tooltip data
+   * @param {object} data - Tooltip data
    * @param {string} position - Tooltip position
    * @returns {HTMLElement|null} Tooltip element
    */
@@ -420,7 +420,7 @@ export default class Tooltip {
   /**
    * Get rich tooltip data from trigger element
    * @param {HTMLElement} trigger - Trigger element
-   * @returns {Object} Tooltip data
+   * @returns {object} Tooltip data
    */
   getRichTooltipData(trigger) {
     const data = {
@@ -644,8 +644,8 @@ export default class Tooltip {
   /**
    * Add tooltip to an element dynamically
    * @param {HTMLElement} element - Element to add tooltip to
-   * @param {string|Object} content - Tooltip text or data object for rich tooltips
-   * @param {Object} options - Tooltip options
+   * @param {string | object} content - Tooltip text or data object for rich tooltips
+   * @param {object} options - Tooltip options
    */
   addTooltip(element, content, options = {}) {
     const {
@@ -686,7 +686,7 @@ export default class Tooltip {
   /**
    * Update tooltip content for an element
    * @param {HTMLElement} element - Element with tooltip
-   * @param {string|Object} content - New tooltip content
+   * @param {string | object} content - New tooltip content
    */
   updateTooltip(element, content) {
     if (typeof content === 'string') {

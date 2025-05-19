@@ -12,6 +12,7 @@ import AjaxService from './AjaxService';
 import {
   addEstimate, // Imports from EstimateStorage
   loadEstimateData, // Imports from EstimateStorage
+  saveEstimateData, // Imports from EstimateStorage
   addRoom, // Imports from EstimateStorage
   removeRoom as removeRoomFromStorage, // Imports from EstimateStorage
   removeEstimate as removeEstimateFromStorage, // Imports from EstimateStorage
@@ -1371,6 +1372,74 @@ class DataService {
 
     // Return the raw data
     return storageData;
+  }
+
+  /**
+   * Update the selected variation for a product addition
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   * @param {string} parentProductId - The parent additional product ID
+   * @param {string} variationId - The selected variation ID
+   * @returns {Promise<void>}
+   */
+  updateProductAdditionVariation(estimateId, roomId, parentProductId, variationId) {
+    logger.log('DataService: Updating product addition variation', { estimateId, roomId, parentProductId, variationId });
+    
+    return new Promise((resolve, reject) => {
+      try {
+        // Get the estimate data from localStorage
+        const estimatesData = loadEstimateData();
+        const estimate = estimatesData.estimates[estimateId];
+        
+        if (!estimate || !estimate.rooms[roomId]) {
+          logger.error('Estimate or room not found', { estimateId, roomId });
+          reject(new Error('Estimate or room not found'));
+          return;
+        }
+        
+        const room = estimate.rooms[roomId];
+        
+        // Find the parent product that has this additional product
+        let parentProduct = null;
+        let additionalProduct = null;
+        
+        if (room.products && typeof room.products === 'object') {
+          Object.values(room.products).forEach(product => {
+            if (product.additional_products && product.additional_products[parentProductId]) {
+              parentProduct = product;
+              additionalProduct = product.additional_products[parentProductId];
+            }
+          });
+        }
+        
+        if (!parentProduct || !additionalProduct) {
+          logger.error('Parent product or additional product not found', { parentProductId });
+          reject(new Error('Parent product or additional product not found'));
+          return;
+        }
+        
+        // Update the selected_option
+        additionalProduct.selected_option = parseInt(variationId);
+        
+        // Update the selected state for all variations
+        if (additionalProduct.variations) {
+          Object.values(additionalProduct.variations).forEach(variation => {
+            variation.selected = (variation.id === parseInt(variationId));
+          });
+        }
+        
+        // Save the updated data to localStorage
+        saveEstimateData(estimatesData);
+        
+        // Refresh the cache
+        this.refreshEstimatesCache();
+        
+        resolve();
+      } catch (error) {
+        logger.error('Error updating product addition variation', error);
+        reject(error);
+      }
+    });
   }
 }
 

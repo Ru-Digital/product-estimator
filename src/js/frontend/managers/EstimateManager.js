@@ -11,7 +11,6 @@
 import { format, createLogger, showSuccessDialog, showErrorDialog, showDeleteConfirmDialog } from '@utils';
 
 import { loadEstimateData, saveEstimateData, addEstimate, removeEstimate } from '../EstimateStorage';
-import { loadCustomerDetails, saveCustomerDetails } from '../CustomerStorage';
 import TemplateEngine from '../TemplateEngine';
 
 const logger = createLogger('EstimateManager');
@@ -682,6 +681,71 @@ class EstimateManager {
           formElement.dataset.productId = productId;
         } else {
           delete formElement.dataset.productId;
+        }
+
+        // Check if customer already has a postcode
+        const customerDetailsManager = window.productEstimator?.core?.customerDetailsManager;
+        
+        // Get the customer details display section
+        const customerDetailsDisplay = newEstimateForm.querySelector('.customer-details-display');
+        const customerDetailsContent = newEstimateForm.querySelector('.customer-details-content');
+        
+        if (customerDetailsManager) {
+          const customerData = customerDetailsManager.getCustomerDetails();
+          
+          // Check if we have any customer data to display
+          if (customerData && (customerData.name || customerData.email || customerData.phone || customerData.postcode)) {
+            logger.log('Customer data found, displaying details');
+            
+            // Build the customer details HTML
+            let detailsHtml = '';
+            
+            if (customerData.name) {
+              detailsHtml += `<p><strong>Name:</strong> ${customerData.name}</p>`;
+            }
+            
+            if (customerData.email) {
+              detailsHtml += `<p><strong>Email:</strong> ${customerData.email}</p>`;
+            }
+            
+            if (customerData.phone) {
+              detailsHtml += `<p><strong>Phone:</strong> ${customerData.phone}</p>`;
+            }
+            
+            if (customerData.postcode) {
+              detailsHtml += `<p><strong>Postcode:</strong> ${customerData.postcode}</p>`;
+            }
+            
+            // Insert the details and show the section
+            if (customerDetailsDisplay && customerDetailsContent) {
+              customerDetailsContent.innerHTML = detailsHtml;
+              customerDetailsDisplay.style.display = 'block';
+            }
+          }
+          
+          // Handle postcode field visibility
+          if (customerDetailsManager.hasPostcode()) {
+            logger.log('Customer postcode found, hiding postcode field');
+            
+            // Hide the entire customer details section since we have postcode
+            const customerDetailsSection = formElement.querySelector('.customer-details-section');
+            if (customerDetailsSection) {
+              customerDetailsSection.style.display = 'none';
+            }
+            
+            // Remove the required attribute from the postcode field to prevent validation errors
+            const postcodeField = formElement.querySelector('#customer-postcode');
+            if (postcodeField) {
+              postcodeField.removeAttribute('required');
+              logger.log('Removed required attribute from hidden postcode field');
+            }
+            
+            // Also set a data attribute to indicate we have customer data
+            formElement.dataset.hasPostcode = 'true';
+          } else {
+            logger.log('No customer postcode found, showing postcode field');
+            formElement.dataset.hasPostcode = 'false';
+          }
         }
 
         // Delegate form binding to the FormManager

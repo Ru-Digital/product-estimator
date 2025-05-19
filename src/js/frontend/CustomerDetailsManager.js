@@ -7,7 +7,7 @@
 
 import { createLogger } from '@utils';
 
-import { saveCustomerDetails, clearCustomerDetails } from './CustomerStorage'; // Import the new functions
+import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails } from './CustomerStorage'; // Import the new functions
 import DataService from "./DataService";
 
 const logger = createLogger('CustomerDetailsManager');
@@ -650,6 +650,71 @@ class CustomerDetailsManager {
         messageEl.remove();
       }, 5000);
     }
+  }
+
+  /**
+   * Get the current customer details from localStorage
+   * @returns {object} Customer details object
+   */
+  getCustomerDetails() {
+    return loadCustomerDetails();
+  }
+
+  /**
+   * Check if customer has a postcode
+   * @returns {boolean} True if customer has a postcode
+   */
+  hasPostcode() {
+    const details = this.getCustomerDetails();
+    return details.postcode && details.postcode.trim() !== '';
+  }
+
+  /**
+   * Update customer details with postcode if new
+   * @param {string} postcode - The postcode to add
+   * @returns {boolean} True if postcode was added/updated
+   */
+  updatePostcodeIfNew(postcode) {
+    if (!postcode || postcode.trim() === '') {
+      return false;
+    }
+
+    const currentDetails = this.getCustomerDetails();
+    
+    // Check if postcode is new or different
+    if (!currentDetails.postcode || currentDetails.postcode.trim() === '' || currentDetails.postcode !== postcode) {
+      logger.log('Updating customer postcode from:', currentDetails.postcode, 'to:', postcode);
+      
+      // Save updated details
+      const updatedDetails = { ...currentDetails, postcode: postcode };
+      saveCustomerDetails(updatedDetails);
+      
+      // Send to server asynchronously
+      if (this.dataService) {
+        this.dataService.request('update_customer_details', {
+          details: JSON.stringify(updatedDetails)
+        })
+          .then(data => {
+            logger.log('Customer postcode updated on server successfully:', data);
+          })
+          .catch(error => {
+            logger.error('Failed to update customer postcode on server:', error);
+          });
+      }
+      
+      // Dispatch event to notify other components
+      const event = new CustomEvent('customer_details_updated', {
+        bubbles: true,
+        detail: {
+          details: updatedDetails
+        }
+      });
+      document.dispatchEvent(event);
+      
+      return true;
+    }
+    
+    return false;
   }
 }
 

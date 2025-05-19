@@ -1,6 +1,3 @@
-/*!*********************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/frontend/Index.scss ***!
-  \*********************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main SCSS file for Product Estimator frontend styles
@@ -3573,6 +3570,26 @@ button.replace-product-in-room.loading {
     text-align: center;
     width: 100%;
   }
+  .customer-details-display {
+    padding: 15px;
+  }
+  .customer-details-display h4 {
+    padding-left: 20px;
+  }
+  .customer-details-display h4::before {
+    left: 0;
+  }
+  .customer-details-display .customer-details-content {
+    grid-template-columns: 1fr;
+  }
+  .customer-details-section {
+    margin: 15px 0;
+    padding: 15px;
+  }
+  .customer-details-section::after {
+    right: 15px;
+    top: 15px;
+  }
 }
 /* Adjust button styles when in modal */
 .product-estimator-modal .edit-customer-details,
@@ -3581,6 +3598,212 @@ button.replace-product-in-room.loading {
 }
 .product-estimator-modal .customer-details-edit-form {
   background-color: #fff;
+}
+
+/* Customer details display in estimate form */
+.customer-details-display {
+  background-color: rgb(254.1, 254.1, 254.1);
+  border: 1px solid #eee;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+  padding: 20px;
+  position: relative;
+  transition: all all 0.2s ease;
+}
+.customer-details-display::before {
+  background: linear-gradient(90deg, #00833F 0%, rgb(0, 182, 87.5267175573) 100%);
+  border-radius: 4px 4px 0 0;
+  content: "";
+  height: 3px;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.customer-details-display hr {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 0 0 15px;
+  opacity: 0.5;
+}
+.customer-details-display h4 {
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 15px;
+  position: relative;
+}
+.customer-details-display h4::before {
+  color: #00833F;
+  content: "\f147";
+  font-family: dashicons, sans-serif;
+  font-size: 16px;
+  left: -25px;
+  position: absolute;
+  top: 0;
+}
+.customer-details-display .customer-details-content {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+.customer-details-display .customer-details-content p {
+  background-color: #fff;
+  border: 1px solid rgb(250.75, 250.75, 250.75);
+  border-radius: 3px;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+  padding: 10px 15px;
+  transition: all all 0.2s ease;
+}
+.customer-details-display .customer-details-content p:hover {
+  background-color: rgb(249.9, 249.9, 249.9);
+  border-color: #00833F;
+}
+.customer-details-display .customer-details-content p strong {
+  color: #333;
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+
+/* Customer details form section */
+.customer-details-section {
+  background-color: hsl(0, 0%, 100.6470588235%);
+  border: 1px solid #eee;
+  border-radius: 4px;
+  margin: 20px 0;
+  padding: 20px;
+  position: relative;
+  transition: all all 0.2s ease;
+  /* Animated entry */
+}
+.customer-details-section::after {
+  background: #00833F;
+  border-radius: 50%;
+  color: white;
+  content: "\f348";
+  font-family: dashicons;
+  font-size: 14px;
+  font-weight: normal;
+  height: 20px;
+  line-height: 20px;
+  position: absolute;
+  right: 20px;
+  text-align: center;
+  top: 20px;
+  width: 20px;
+}
+.customer-details-section h4 {
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 15px;
+}
+.customer-details-section .form-group {
+  margin-bottom: 0;
+}
+.customer-details-section .form-group label {
+  color: #333;
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.customer-details-section .form-group input[type=text] {
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 3px;
+  font-size: 14px;
+  padding: 10px 15px;
+  transition: all all 0.2s ease;
+  width: 100%;
+}
+.customer-details-section .form-group input[type=text]:focus {
+  background-color: #fff;
+  border-color: #00833F;
+  box-shadow: 0 0 0 3px rgba(0, 131, 63, 0.1);
+  outline: none;
+}
+.customer-details-section .form-group input[type=text]::placeholder {
+  color: rgb(127.5, 127.5, 127.5);
+  font-style: italic;
+}
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.customer-details-section:not([style*="display: none"]) {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* Hide customer details section when postcode already exists */
+#new-estimate-form[data-has-postcode=true] .customer-details-section {
+  display: none;
+}
+
+/* Success animation for saved details */
+.customer-details-display.success {
+  animation: success-pulse 0.6s ease-out;
+}
+
+@keyframes success-pulse {
+  0% {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(0, 131, 63, 0.1);
+  }
+  100% {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+}
+/* Tooltip styling for info icon */
+.customer-details-section:hover::after {
+  background-color: rgb(0, 80, 38.4732824427);
+  cursor: help;
+  transform: scale(1.1);
+  transition: all all 0.2s ease;
+}
+.customer-details-section::after {
+  transition: all all 0.2s ease;
+}
+
+/* Transition state when switching between forms */
+.customer-details-display.transitioning,
+.customer-details-section.transitioning {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Enhanced form field styling */
+#new-estimate-form .form-group {
+  position: relative;
+}
+#new-estimate-form .form-group.has-error input[type=text] {
+  border-color: #d63638;
+}
+#new-estimate-form .form-group.has-error input[type=text]:focus {
+  box-shadow: 0 0 0 3px rgba(214, 54, 56, 0.1);
+}
+#new-estimate-form .form-group .field-helper {
+  color: #666666;
+  font-size: 12px;
+  margin-top: 5px;
+}
+#new-estimate-form .customer-details-section .form-group:last-child {
+  margin-bottom: 0;
 }
 
 /**

@@ -11,7 +11,6 @@
 import { format, createLogger, showSuccessDialog, showWarningDialog, showErrorDialog } from '@utils';
 
 import { loadEstimateData, saveEstimateData } from '../EstimateStorage';
-import { loadCustomerDetails, saveCustomerDetails } from '../CustomerStorage';
 import TemplateEngine from '../TemplateEngine';
 
 const logger = createLogger('FormManager');
@@ -99,11 +98,26 @@ class FormManager {
       // Get form data
       const formData = new FormData(formElement);
       const estimateName = formData.get('estimate_name');
+      const postcode = formData.get('customer_postcode');
+
+      // Check if we need to update customer data with postcode
+      const customerDetailsManager = window.productEstimator?.core?.customerDetailsManager;
+      if (customerDetailsManager && postcode && postcode.trim() !== '') {
+        // Update postcode in customer details if it's new or different
+        customerDetailsManager.updatePostcodeIfNew(postcode);
+      }
 
       // Create the estimate
-      this.dataService.addNewEstimate({
+      const estimateData = {
         estimate_name: estimateName
-      })
+      };
+      
+      // Include postcode if available
+      if (postcode) {
+        estimateData.customer_postcode = postcode;
+      }
+      
+      this.dataService.addNewEstimate(estimateData)
         .then(newEstimate => {
           logger.log('Estimate created successfully:', newEstimate);
 

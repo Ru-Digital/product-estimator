@@ -405,6 +405,14 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                                 'title' => $product_detail['section_title'],
                                 'description' => $product_detail['section_description']
                             ];
+                            
+                            // Add option colors if available
+                            for ($i = 1; $i <= 5; $i++) {
+                                $color_key = 'option_colour_' . $i;
+                                if (!empty($product_detail[$color_key])) {
+                                    $section_info[$color_key] = $product_detail[$color_key];
+                                }
+                            }
                         }
                     }
                 }

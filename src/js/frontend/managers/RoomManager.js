@@ -818,7 +818,7 @@ class RoomManager {
               const sortedVariations = Object.values(additionalProduct.variations)
                 .sort((a, b) => (a.menu_order || 0) - (b.menu_order || 0));
 
-              sortedVariations.forEach(variation => {
+              sortedVariations.forEach((variation, index) => {
                 const variationData = {
                   product_id: variation.id,
                   estimate_id: estimateId,
@@ -848,6 +848,12 @@ class RoomManager {
                   // Add selected class if this variation is selected
                   if (variation.selected === true) {
                     variationElement.classList.add('selected');
+                  }
+                  
+                  // Apply background color from section options
+                  const optionColorKey = `option_colour_${index + 1}`;
+                  if (product.additional_products_section && product.additional_products_section[optionColorKey]) {
+                    variationElement.style.backgroundColor = product.additional_products_section[optionColorKey];
                   }
                 }
 

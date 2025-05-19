@@ -4157,6 +4157,17 @@ button.replace-product-in-room.loading {
 .additional-product-option-tile.variation-tile {
   position: relative;
 }
+.additional-product-option-tile.variation-tile[style*=background-color] .product-name,
+.additional-product-option-tile.variation-tile[style*=background-color] .tile-label {
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+.additional-product-option-tile.variation-tile[style*=background-color] .product-price,
+.additional-product-option-tile.variation-tile[style*=background-color] .option-price {
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+}
+.additional-product-option-tile.variation-tile[style*=background-color] .product-img {
+  background-color: transparent;
+}
 .additional-product-option-tile.selected {
   border-color: #00833F;
   border-width: 3px;

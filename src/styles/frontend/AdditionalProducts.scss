@@ -81,6 +81,24 @@
 
   &.variation-tile {
     position: relative;
+    
+    // When background color is applied, ensure readability
+    &[style*="background-color"] {
+      .product-name,
+      .tile-label {
+        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+      }
+      
+      .product-price,
+      .option-price {
+        text-shadow: 0 1px 1px rgba(255, 255, 255, 0.8);
+      }
+      
+      // Ensure image container doesn't override background
+      .product-img {
+        background-color: transparent;
+      }
+    }
   }
   
   // Selected state

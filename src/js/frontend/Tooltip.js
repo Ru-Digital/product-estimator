@@ -490,7 +490,16 @@ export default class Tooltip {
                 // Check for additional_products information
                 if (product.additional_products) {
                   const additionalInfo = Object.values(product.additional_products)
-                    .map(prod => `${prod.name}${prod.min_price > 0 ? ` - ${format.currency(prod.min_price)}` : ' (included)'}`)
+                    .map(prod => {
+                      // If this is a variable product with a selected option, show the selected variation
+                      if (prod.is_variable && prod.selected_option && prod.variations && prod.variations[prod.selected_option]) {
+                        const selectedVariation = prod.variations[prod.selected_option];
+                        const variationPrice = selectedVariation.min_price_total || selectedVariation.min_price || 0;
+                        return `${selectedVariation.name}${variationPrice > 0 ? ` - ${format.currency(variationPrice)}` : ' (included)'}`;
+                      }
+                      // Otherwise show the parent product
+                      return `${prod.name}${prod.min_price > 0 ? ` - ${format.currency(prod.min_price)}` : ' (included)'}`;
+                    })
                     .filter(text => text && text.trim());
                   
                   console.log('[Tooltip] Found additional products:', additionalInfo);

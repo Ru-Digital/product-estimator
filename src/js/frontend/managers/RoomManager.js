@@ -984,6 +984,9 @@ class RoomManager {
     const estimate = estimatesData.estimates[estimateId];
     if (estimate && estimate.rooms[roomId]) {
       this.renderAdditionalProducts(estimate.rooms[roomId], roomElement);
+      
+      // Also update the includes to refresh tooltips with selected variation
+      this.updateRoomIncludes(estimateId, roomId);
     }
 
     // Also update the main product display if needed

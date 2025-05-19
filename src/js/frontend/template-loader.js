@@ -62,6 +62,11 @@ import modalMessagesTemplate from '@templates/ui/messages/modal-messages.html';
 import tooltipTemplate from '@templates/ui/tooltip.html';
 import tooltipRichTemplate from '@templates/ui/tooltip-rich.html';
 
+// Form Field Templates
+import dialogFormFieldsTemplate from '@templates/ui/dialog-form-fields.html';
+import dialogFormFieldTemplate from '@templates/ui/dialog-form-field.html';
+import dialogContentFormTemplate from '@templates/ui/dialog-content-form.html';
+
 import TemplateEngine from './TemplateEngine';
 const logger = createLogger('TemplateLoader');
 
@@ -99,7 +104,10 @@ const templates = {
   'toggle-button-hide-template': toggleButtonHideTemplate,
   'toggle-button-show-template': toggleButtonShowTemplate,
   'tooltip': tooltipTemplate,
-  'tooltip-rich': tooltipRichTemplate
+  'tooltip-rich': tooltipRichTemplate,
+  'dialog-form-fields-template': dialogFormFieldsTemplate,
+  'dialog-form-field-template': dialogFormFieldTemplate,
+  'dialog-content-form-template': dialogContentFormTemplate
 };
 
 /**

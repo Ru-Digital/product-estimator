@@ -1,0 +1,11 @@
+<template id="dialog-form-field-template">
+  <div class="pe-dialog-form-group">
+    <label for="customer-{{fieldName}}-input" class="pe-dialog-label">{{fieldLabel}}:</label>
+    <input type="{{fieldType}}" 
+           id="customer-{{fieldName}}-input" 
+           class="pe-dialog-input" 
+           value="{{fieldValue}}" 
+           placeholder="{{fieldLabel}}"
+           required>
+  </div>
+</template>

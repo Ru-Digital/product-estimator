@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Print Estimate Dialog</title>
+    <script>
+        // Simulate the required environment
+        window.productEstimatorVars = {
+            i18n: {
+                confirm: 'Confirm',
+                cancel: 'Cancel'
+            },
+            ajax_url: '/wp-admin/admin-ajax.php',
+            nonce: 'test123'
+        };
+        
+        // Setup console capture
+        const originalLog = console.log;
+        const logs = [];
+        console.log = function(...args) {
+            logs.push({type: 'log', args: args});
+            originalLog(...args);
+        };
+    </script>
+</head>
+<body>
+    <h1>Estimate Actions Dialog Test</h1>
+    
+    <!-- Test containers -->
+    <div id="test-container"></div>
+    
+    <!-- Test button to trigger print -->
+    <a href="#" class="print-estimate" data-estimate-id="test123">Print Estimate</a>
+    
+    <h2>Console Logs:</h2>
+    <pre id="logs" style="background: #f0f0f0; padding: 10px; max-height: 400px; overflow-y: auto;"></pre>
+    
+    <script type="module">
+        // Import the necessary modules
+        import { loadCustomerDetails, saveCustomerDetails } from './src/js/frontend/CustomerStorage.js';
+        import TemplateEngine from './src/js/frontend/TemplateEngine.js';
+        import ConfirmationDialog from './src/js/frontend/ConfirmationDialog.js';
+        import EstimateActions from './src/js/frontend/EstimateActions.js';
+        
+        // Initialize template loader
+        import { initializeTemplates } from './src/js/frontend/template-loader.js';
+        
+        async function runTest() {
+            // Initialize templates
+            await initializeTemplates();
+            
+            // Create and initialize ConfirmationDialog
+            const confirmationDialog = new ConfirmationDialog();
+            window.productEstimator = { dialog: confirmationDialog };
+            
+            // Clear localStorage to test fresh user flow
+            localStorage.removeItem('productEstimatorCustomerData');
+            console.log('Cleared localStorage');
+            
+            // Initialize EstimateActions with debug mode
+            const estimateActions = new EstimateActions({ debug: true });
+            console.log('EstimateActions initialized');
+            
+            // Simulate clicking the print button
+            setTimeout(() => {
+                const printButton = document.querySelector('.print-estimate');
+                console.log('Clicking print button...');
+                printButton.click();
+            }, 1000);
+            
+            // Update logs display
+            setInterval(() => {
+                document.getElementById('logs').textContent = JSON.stringify(logs, null, 2);
+            }, 500);
+        }
+        
+        // Run test when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', runTest);
+        } else {
+            runTest();
+        }
+    </script>
+</body>
+</html>

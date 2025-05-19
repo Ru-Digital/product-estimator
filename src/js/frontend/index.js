@@ -10,7 +10,7 @@ import { createLogger } from '@utils';
 import EstimatorCore from './EstimatorCore';
 import ConfirmationDialog from './ConfirmationDialog';
 // import { initSuggestionsCarousels } from './SuggestionsCarousel'; // Replaced with InfiniteCarousel in UIManager
-import PrintEstimate from './PrintEstimate';
+// EstimateActions import removed - will be handled by ModalManager
 import { initializeTemplates } from './template-loader';
 import detailsToggleInstance from './ProductDetailsToggle';
 
@@ -118,18 +118,7 @@ function initEstimator(debugMode) {
     window.productEstimator.core = EstimatorCore; // EstimatorCore instance is stored here
     window.productEstimator.dialog = new ConfirmationDialog(); // Initialize dialog
 
-    // Initialize PrintEstimate and make it available globally
-    // Get the dataService instance from the initialized EstimatorCore
-    const dataServiceInstance = window.productEstimator.core.dataService;
-
-    if (!dataServiceInstance) {
-      logger.error("[DataService] instance not found on EstimatorCore. Cannot initialize PrintEstimate.");
-      // Optionally return or handle this error case
-      return;
-    }
-
-    // Pass the dataService instance to the PrintEstimate constructor
-    window.productEstimator.printEstimate =  new PrintEstimate({ debug: debugMode }, dataServiceInstance);
+    // EstimateActions will be initialized by ModalManager to ensure proper access to confirmationDialog
 
     // Make ProductDetailsToggle available globally
     window.productEstimator.detailsToggle = detailsToggleInstance; // Add toggle module to global object

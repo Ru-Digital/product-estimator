@@ -15,6 +15,7 @@ import TemplateEngine from '../TemplateEngine';
 import ConfirmationDialog from '../ConfirmationDialog';
 import ProductSelectionDialog from '../ProductSelectionDialog';
 import Tooltip from '../Tooltip';
+import EstimateActions from '../EstimateActions';
 
 // Import specialized managers
 import EstimateManager from './EstimateManager';
@@ -92,6 +93,7 @@ class ModalManager {
     this.uiManager = null;
     this.confirmationDialog = null; // Will be assigned to the global instance or created new
     this.tooltip = null; // Tooltip component
+    this.estimateActions = null; // EstimateActions for handling print/email/contact actions
     
     // Bind methods to preserve 'this' context
     this._modalClickHandler = this._modalClickHandler.bind(this);
@@ -280,6 +282,22 @@ class ModalManager {
       logger.log('ConfirmationDialog instance created successfully and initialized');
     } catch (error) {
       logger.error('Error creating ConfirmationDialog:', error);
+    }
+    
+    // Initialize EstimateActions after confirmation dialog is ready
+    logger.log('Initializing EstimateActions');
+    try {
+      this.estimateActions = new EstimateActions({ 
+        debug: this.config.debug,
+        modalManager: this  // Pass reference to this ModalManager
+      });
+      
+      // Make it available globally
+      window.productEstimator.estimateActions = this.estimateActions;
+      
+      logger.log('EstimateActions initialized successfully');
+    } catch (error) {
+      logger.error('Error initializing EstimateActions:', error);
     }
     
     // Set up product selection dialog for variations

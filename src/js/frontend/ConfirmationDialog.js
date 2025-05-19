@@ -149,10 +149,34 @@ class ConfirmationDialog {
       confirmBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        this.hide();
+        
         if (typeof this.callbacks.confirm === 'function') {
-          this.callbacks.confirm();
+          // For form dialogs, check if the callback returns false to keep dialog open
+          const result = this.callbacks.confirm();
+          
+          // If callback explicitly returns false or a promise that resolves to false,
+          // keep the dialog open (for validation failures)
+          if (result === false) {
+            logger.log('Confirmation callback returned false, keeping dialog open');
+            return;
+          }
+          
+          // If it's a promise, wait for it
+          if (result && typeof result.then === 'function') {
+            result.then(shouldClose => {
+              if (shouldClose !== false) {
+                this.hide();
+              }
+            }).catch(error => {
+              logger.error('Error in confirmation callback:', error);
+              this.hide();
+            });
+            return;
+          }
         }
+        
+        // Default behavior: hide the dialog
+        this.hide();
       });
 
       // Hover effects are handled by CSS classes
@@ -264,11 +288,35 @@ class ConfirmationDialog {
     }
 
     if (messageEl) {
-      // Allow HTML content in the message for more complex formatting
-      if (settings.message.includes('<br') || settings.message.includes('<span') || settings.message.includes('<strong')) {
-        messageEl.innerHTML = settings.message;
+      // Clear existing content
+      messageEl.innerHTML = '';
+      
+      // Check if we have a form type dialog with template content
+      if (settings.type === 'form' && settings.formFields) {
+        // Create form container using template
+        const formContainer = TemplateEngine.create('dialog-content-form-template', {
+          instruction: settings.message || ''
+        });
+        
+        // Get the form fields container
+        const fieldsContainer = formContainer.querySelector('.pe-dialog-form-fields');
+        
+        // Add each form field
+        if (fieldsContainer && Array.isArray(settings.formFields)) {
+          settings.formFields.forEach(field => {
+            const fieldElement = TemplateEngine.create('dialog-form-field-template', field);
+            // Append the first child of the template (the actual form group)
+            if (fieldElement.firstElementChild) {
+              fieldsContainer.appendChild(fieldElement.firstElementChild);
+            }
+          });
+        }
+        
+        // Append the complete form to the message element
+        messageEl.appendChild(formContainer);
       } else {
-        messageEl.textContent = settings.message;
+        // For non-form dialogs, just set the text content
+        messageEl.textContent = settings.message || '';
       }
     }
 

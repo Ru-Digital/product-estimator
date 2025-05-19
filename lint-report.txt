@@ -24,6 +24,29 @@
   431:17  warning  Unexpected console statement  no-console
   436:11  warning  Unexpected console statement  no-console
 
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimateActions.js
+   10:1   warning  There should be at least one empty line between import groups                 import/order
+   12:8   warning  'TemplateEngine' is defined but never used                                    no-unused-vars
+   54:7   warning  Unexpected console statement                                                  no-console
+   62:5   warning  Unexpected console statement                                                  no-console
+   63:5   warning  Unexpected console statement                                                  no-console
+   71:5   warning  Unexpected console statement                                                  no-console
+   78:9   warning  Unexpected console statement                                                  no-console
+   88:11  warning  Unexpected console statement                                                  no-console
+  174:5   warning  Unexpected console statement                                                  no-console
+  249:9   warning  Unexpected console statement                                                  no-console
+  256:11  warning  Unexpected console statement                                                  no-console
+  261:11  warning  Unexpected console statement                                                  no-console
+  265:11  warning  Unexpected console statement                                                  no-console
+  266:11  warning  Unexpected console statement                                                  no-console
+  276:11  warning  Unexpected console statement                                                  no-console
+  294:13  warning  Unexpected console statement                                                  no-console
+  298:13  warning  Unexpected console statement                                                  no-console
+  307:15  warning  Unexpected console statement                                                  no-console
+  824:24  warning  'estimateId' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  830:9   warning  Unexpected console statement                                                  no-console
+  833:9   warning  Unexpected console statement                                                  no-console
+
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimateStorage.js
   389:5    warning  Unexpected console statement                          no-console
   391:5    warning  Unexpected console statement                          no-console
@@ -117,6 +140,7 @@
   51:1  warning  There should be no empty line within import group  import/order
   56:1  warning  There should be no empty line within import group  import/order
   59:1  warning  There should be no empty line within import group  import/order
+  63:1  warning  There should be no empty line within import group  import/order
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/format.js
   36:1  warning  Missing JSDoc @returns declaration                 jsdoc/require-returns
@@ -127,8 +151,8 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-✖ 94 problems (0 errors, 94 warnings)
-  0 errors and 1 warning potentially fixable with the `--fix` option.
+✖ 116 problems (0 errors, 116 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
 
 
 > product-estimator@1.3.0 lint:scss

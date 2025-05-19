@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dialog Timing</title>
+    <link rel="stylesheet" href="public/css/product-estimator-frontend-bundled.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .test-button {
+            padding: 10px 20px;
+            background: #007cba;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .info {
+            background: #e0e0ff;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #ffe0e0;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #e0ffe0;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Dialog Timing</h1>
+    
+    <div id="status" class="info">Loading...</div>
+    
+    <button class="test-button print-estimate" data-estimate-id="test-123">Print Estimate</button>
+    <button class="test-button" onclick="testDialog()">Test Dialog</button>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // Set debug mode
+        localStorage.setItem('product_estimator_debug', 'true');
+        
+        // Mock WordPress globals
+        window.productEstimatorVars = {
+            ajax_url: '/wp-admin/admin-ajax.php',
+            nonce: 'test-nonce',
+            i18n: {
+                errors: {
+                    generic: 'An error occurred'
+                }
+            }
+        };
+        
+        function updateStatus(msg, type = 'info') {
+            const status = document.getElementById('status');
+            status.className = type;
+            status.textContent = msg;
+            console.log(`[${type}] ${msg}`);
+        }
+        
+        function testDialog() {
+            if (window.productEstimator && window.productEstimator.dialog) {
+                updateStatus('Testing dialog...', 'info');
+                window.productEstimator.dialog.show({
+                    title: 'Test Dialog',
+                    message: 'This is a test dialog',
+                    confirmText: 'OK',
+                    onConfirm: () => {
+                        updateStatus('Dialog confirmed!', 'success');
+                    }
+                });
+            } else {
+                updateStatus('Dialog not available yet', 'error');
+            }
+        }
+        
+        // Wait for DOM ready
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStatus('DOM loaded, waiting to load script...', 'info');
+            
+            // Monitor when dialog becomes available
+            let checkCount = 0;
+            const maxChecks = 50; // Check for 5 seconds
+            
+            const checkDialog = setInterval(() => {
+                checkCount++;
+                
+                if (window.productEstimator && window.productEstimator.dialog) {
+                    clearInterval(checkDialog);
+                    updateStatus('Dialog is now available!', 'success');
+                    console.log('Dialog found at check #' + checkCount);
+                    console.log('window.productEstimator:', window.productEstimator);
+                } else if (checkCount >= maxChecks) {
+                    clearInterval(checkDialog);
+                    updateStatus('Dialog never became available', 'error');
+                } else {
+                    if (checkCount % 5 === 0) {
+                        updateStatus(`Still waiting for dialog... (check ${checkCount}/${maxChecks})`, 'info');
+                    }
+                }
+            }, 100);
+            
+            // Load the script after a delay
+            setTimeout(() => {
+                updateStatus('Loading product-estimator.bundle.js...', 'info');
+                const script = document.createElement('script');
+                script.src = 'public/js/product-estimator.bundle.js';
+                script.onload = () => {
+                    updateStatus('Script loaded successfully', 'success');
+                };
+                script.onerror = () => {
+                    updateStatus('Failed to load script', 'error');
+                };
+                document.body.appendChild(script);
+            }, 100);
+        });
+    </script>
+</body>
+</html>

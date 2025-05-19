@@ -298,7 +298,7 @@ Frontend Components (src/js/frontend/)
 ├── DataService.js - Data operations
 ├── EstimateStorage.js - Estimate data storage
 ├── EstimatorCore.js - Core estimator functionality
-├── PrintEstimate.js - Estimate printing
+├── EstimateActions.js - Estimate actions (PDF, email, printing)
 ├── ProductDetailsToggle.js - Product details UI
 ├── ProductUpgrades.js - Product upgrades UI
 ├── SuggestionsCarousel.js - Product suggestions carousel

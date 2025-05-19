@@ -2738,6 +2738,71 @@ body.modal-open {
   outline: none;
 }
 
+/* Styles for form dialogs */
+.pe-dialog-action-form .pe-dialog-form .pe-dialog-instruction,
+.pe-dialog-action-collect-details .pe-dialog-form .pe-dialog-instruction {
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+.pe-dialog-action-form .pe-dialog-form .pe-dialog-form-fields,
+.pe-dialog-action-collect-details .pe-dialog-form .pe-dialog-form-fields {
+  margin-bottom: 0.5rem;
+}
+.pe-dialog-action-form .pe-dialog-form-group,
+.pe-dialog-action-collect-details .pe-dialog-form-group {
+  margin-bottom: 1rem;
+}
+.pe-dialog-action-form .pe-dialog-form-group:last-child,
+.pe-dialog-action-collect-details .pe-dialog-form-group:last-child {
+  margin-bottom: 0;
+}
+.pe-dialog-action-form .pe-dialog-form-group .pe-dialog-label,
+.pe-dialog-action-collect-details .pe-dialog-form-group .pe-dialog-label {
+  color: #333;
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+.pe-dialog-action-form .pe-dialog-form-group .pe-dialog-input,
+.pe-dialog-action-collect-details .pe-dialog-form-group .pe-dialog-input {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.pe-dialog-action-form .pe-dialog-form-group .pe-dialog-input:focus,
+.pe-dialog-action-collect-details .pe-dialog-form-group .pe-dialog-input:focus {
+  border-color: #00833F;
+  box-shadow: 0 0 0 2px rgba(0, 131, 63, 0.2);
+  outline: none;
+}
+.pe-dialog-action-form .pe-dialog-form-group .pe-dialog-input:invalid,
+.pe-dialog-action-collect-details .pe-dialog-form-group .pe-dialog-input:invalid {
+  border-color: #d63638;
+}
+.pe-dialog-action-form .pe-dialog-form-group .pe-dialog-input::placeholder,
+.pe-dialog-action-collect-details .pe-dialog-form-group .pe-dialog-input::placeholder {
+  color: #666;
+  opacity: 0.7;
+}
+.pe-dialog-action-form .pe-dialog-validation-error,
+.pe-dialog-action-collect-details .pe-dialog-validation-error {
+  background: rgba(214, 54, 56, 0.05);
+  border: 1px solid rgba(214, 54, 56, 0.2);
+  border-radius: 4px;
+  color: #d63638;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+}
+
 /* Styles for replace dialogs */
 .pe-dialog-action-replace .pe-dialog-title {
   color: #ffb900;

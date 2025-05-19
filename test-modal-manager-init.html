@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test ModalManager Initialization</title>
+    <link rel="stylesheet" href="public/css/product-estimator-frontend-bundled.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .test-button {
+            padding: 10px 20px;
+            background: #007cba;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+        }
+        .console-output {
+            background: #f5f5f5;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .ready { background: #d4edda; color: #155724; }
+        .waiting { background: #cce5ff; color: #004085; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>Test ModalManager Initialization</h1>
+    
+    <div id="status" class="status waiting">Loading...</div>
+    
+    <button class="test-button print-estimate" data-estimate-id="test-123">Test Print</button>
+    <button class="test-button" onclick="checkComponents()">Check Components</button>
+    <button class="test-button" onclick="testDialog()">Test Dialog</button>
+    <button class="test-button" onclick="clearStorage()">Clear Storage</button>
+    
+    <h3>Console Output:</h3>
+    <div id="console" class="console-output"></div>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // Set debug mode
+        localStorage.setItem('product_estimator_debug', 'true');
+        localStorage.removeItem('productEstimatorCustomerData');
+        
+        // Mock WordPress globals
+        window.productEstimatorVars = {
+            ajax_url: '/wp-admin/admin-ajax.php',
+            nonce: 'test-nonce',
+            i18n: {
+                errors: {
+                    generic: 'An error occurred'
+                }
+            }
+        };
+        
+        // Override console.log to display in our div
+        const consoleDiv = document.getElementById('console');
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function logMessage(type, ...args) {
+            const timestamp = new Date().toLocaleTimeString();
+            const message = `[${timestamp}] [${type}] ` + args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ') + '\n';
+            
+            consoleDiv.textContent += message;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logMessage('LOG', ...args);
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logMessage('ERROR', ...args);
+        };
+        
+        function updateStatus(msg, type = 'waiting') {
+            const status = document.getElementById('status');
+            status.className = 'status ' + type;
+            status.textContent = msg;
+        }
+        
+        function checkComponents() {
+            console.log('=== CHECKING COMPONENTS ===');
+            const pe = window.productEstimator;
+            
+            if (!pe) {
+                console.log('window.productEstimator not found');
+                return;
+            }
+            
+            console.log('productEstimator:', pe);
+            console.log('- initialized:', pe.initialized);
+            console.log('- dialog:', pe.dialog);
+            console.log('- estimateActions:', pe.estimateActions);
+            console.log('- core:', pe.core);
+            
+            if (pe.core) {
+                console.log('core properties:');
+                console.log('- modalManager:', pe.core.modalManager);
+                
+                if (pe.core.modalManager) {
+                    console.log('modalManager properties:');
+                    console.log('- confirmationDialog:', pe.core.modalManager.confirmationDialog);
+                    console.log('- estimateActions:', pe.core.modalManager.estimateActions);
+                    
+                    if (pe.core.modalManager.estimateActions) {
+                        console.log('estimateActions properties:');
+                        console.log('- modalManager:', pe.core.modalManager.estimateActions.modalManager);
+                        console.log('- Has same modalManager:', pe.core.modalManager.estimateActions.modalManager === pe.core.modalManager);
+                    }
+                }
+            }
+            
+            console.log('=== END COMPONENTS CHECK ===');
+        }
+        
+        function testDialog() {
+            const pe = window.productEstimator;
+            
+            if (pe && pe.dialog) {
+                console.log('Testing dialog...');
+                pe.dialog.show({
+                    title: 'Test Dialog',
+                    message: 'This is a test dialog',
+                    confirmText: 'OK',
+                    onConfirm: () => {
+                        console.log('Dialog confirmed');
+                    }
+                });
+            } else {
+                console.error('Dialog not available');
+            }
+        }
+        
+        function clearStorage() {
+            localStorage.removeItem('productEstimatorCustomerData');
+            console.log('Storage cleared');
+        }
+        
+        // Monitor initialization
+        let checkCount = 0;
+        const maxChecks = 50;
+        
+        function monitorInit() {
+            const checkInterval = setInterval(() => {
+                checkCount++;
+                
+                const pe = window.productEstimator;
+                const hasActions = pe && pe.estimateActions;
+                const hasDialog = pe && pe.dialog;
+                const hasModalManager = pe && pe.core && pe.core.modalManager;
+                
+                if (hasActions && hasDialog && hasModalManager) {
+                    clearInterval(checkInterval);
+                    updateStatus('All components loaded', 'ready');
+                    console.log('✓ All components ready at check #' + checkCount);
+                    checkComponents();
+                } else if (checkCount >= maxChecks) {
+                    clearInterval(checkInterval);
+                    updateStatus('Timeout waiting for components', 'error');
+                    console.log('✗ Timeout at check #' + checkCount);
+                    checkComponents();
+                } else if (checkCount % 10 === 0) {
+                    console.log(`Still waiting... (check ${checkCount}/${maxChecks})`);
+                }
+            }, 100);
+        }
+        
+        // Start monitoring
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, starting monitor...');
+            updateStatus('Monitoring initialization...', 'waiting');
+            
+            monitorInit();
+            
+            // Load the script
+            setTimeout(() => {
+                console.log('Loading product-estimator.bundle.js...');
+                const script = document.createElement('script');
+                script.src = 'public/js/product-estimator.bundle.js';
+                script.onload = () => {
+                    console.log('Script loaded successfully');
+                };
+                script.onerror = () => {
+                    console.error('Failed to load script');
+                    updateStatus('Failed to load script', 'error');
+                };
+                document.body.appendChild(script);
+            }, 100);
+        });
+    </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /**
- * PrintEstimate.js
+ * EstimateActions.js
  *
  * Handles PDF generation and viewing for the Product Estimator plugin.
  * Manages customer detail verification, secure token generation, and PDF display.
@@ -8,13 +8,15 @@
  */
 
 import { createLogger } from '@utils';
-// ConfirmationDialog is used indirectly via window.productEstimator.dialog
+import { loadCustomerDetails, saveCustomerDetails } from './CustomerStorage';
+import TemplateEngine from './TemplateEngine';
+// ConfirmationDialog is used via window.productEstimator.dialog or modalManager
 
-const logger = createLogger('PrintEstimate');
+const logger = createLogger('EstimateActions');
 
-class PrintEstimate {
+class EstimateActions {
   /**
-   * Initialize the PrintEstimate module
+   * Initialize the EstimateActions module
    * @param {object} config - Configuration options
    */
   constructor(config = {}) {
@@ -30,6 +32,9 @@ class PrintEstimate {
       i18n: window.productEstimatorVars?.i18n || {}
     }, config);
 
+    // Store reference to modalManager if provided
+    this.modalManager = config.modalManager || null;
+
     // State
     this.initialized = false;
     this.processing = false;
@@ -42,11 +47,11 @@ class PrintEstimate {
 
   /**
    * Initialize the module
-   * @returns {PrintEstimate} This instance for chaining
+   * @returns {EstimateActions} This instance for chaining
    */
   init() {
     if (this.initialized) {
-      this.log('PrintEstimate already initialized');
+      console.log('[EstimateActions] Already initialized');
       return this;
     }
 
@@ -54,7 +59,8 @@ class PrintEstimate {
     this.bindEvents();
 
     this.initialized = true;
-    this.log('PrintEstimate initialized');
+    console.log('[EstimateActions] PrintEstimate initialized with debug mode:', this.config.debug);
+    console.log('[EstimateActions] Dialog availability at init:', window.productEstimator && window.productEstimator.dialog);
     return this;
   }
 
@@ -62,11 +68,14 @@ class PrintEstimate {
    * Bind events for printing estimates
    */
   bindEvents() {
+    console.log('[EstimateActions] Binding events...');
+    
     // Use event delegation for better performance and to handle dynamically added elements
     document.addEventListener('click', (e) => {
       // Handle print PDF buttons
       const printButton = e.target.closest(this.config.selectors.printButton);
       if (printButton && !this.processing) {
+        console.log('[EstimateActions] Print button clicked');
         e.preventDefault(); // Prevent default link behavior
 
         // Set processing state to prevent double-clicks
@@ -76,6 +85,7 @@ class PrintEstimate {
         if (printButton.classList.contains('print-estimate-pdf')) {
           // This is a direct PDF link - check customer details before proceeding
           const estimateId = printButton.dataset.estimateId;
+          console.log('[EstimateActions] PDF link clicked, estimate ID:', estimateId);
 
           this.checkCustomerDetails(estimateId)
             .then(customerInfo => {
@@ -161,7 +171,7 @@ class PrintEstimate {
       return;
     }
 
-    this.log(`Print estimate requested for estimate ID: ${estimateId}`);
+    console.log(`[EstimateActions] Print estimate requested for estimate ID: ${estimateId}`);
 
     // Check if customer has required details
     this.checkCustomerDetails(estimateId)
@@ -210,6 +220,8 @@ class PrintEstimate {
    * @param {string} action - The action type ('print', 'request_copy_email', 'request_copy_sms')
    */
   showCustomerDetailsPrompt(estimateId, button, action = 'print') {
+    this.log('showCustomerDetailsPrompt called with:', { estimateId, action });
+    
     // Required fields are determined in getMissingFields method
     // Field requirements by action type:
     // print: ['name', 'email']
@@ -221,8 +233,11 @@ class PrintEstimate {
     // First check which fields are already available in customer details
     this.checkCustomerDetails(estimateId)
       .then(customerInfo => {
+        this.log('Customer info in showCustomerDetailsPrompt:', customerInfo);
+        
         // Determine which fields are missing based on action type
         const missingFields = this.getMissingFields(customerInfo, action);
+        this.log('Missing fields:', missingFields);
 
         if (missingFields.length === 0) {
           // No missing fields, proceed with the action
@@ -230,108 +245,205 @@ class PrintEstimate {
           return;
         }
 
-        // Create modal HTML with dynamic fields based on what's missing
-        const modalHtml = this.createPromptModalHtml(missingFields, action, customerInfo);
+        // Get the confirmation dialog instance from modalManager
+        console.log('[EstimateActions] Looking for dialog...');
+        
+        let dialog = null;
+        
+        // First, try from modalManager reference (preferred)
+        if (this.modalManager && this.modalManager.confirmationDialog) {
+          dialog = this.modalManager.confirmationDialog;
+          console.log('[EstimateActions] Found dialog via modalManager reference');
+        }
+        // Fallback to window.productEstimator.dialog
+        else if (window.productEstimator && window.productEstimator.dialog) {
+          dialog = window.productEstimator.dialog;
+          console.log('[EstimateActions] Found dialog at window.productEstimator.dialog');
+        }
 
-        // Create container for the modal
-        const promptEl = document.createElement('div');
-        promptEl.className = 'email-prompt-modal';
-        promptEl.innerHTML = modalHtml;
-        document.body.appendChild(promptEl);
-
-        // Get elements
-        const cancelBtn = promptEl.querySelector('.cancel-email-btn');
-        const submitBtn = promptEl.querySelector('.submit-email-btn');
-        const validationMsg = promptEl.querySelector('.email-validation-message');
-
-        // Handle cancel
-        cancelBtn.addEventListener('click', () => {
-          promptEl.remove();
+        if (!dialog) {
+          console.error('[EstimateActions] Dialog not available');
+          console.log('[EstimateActions] Debug info:', {
+            hasModalManager: !!this.modalManager,
+            hasConfirmationDialog: this.modalManager && !!this.modalManager.confirmationDialog,
+            hasGlobalDialog: window.productEstimator && !!window.productEstimator.dialog
+          });
+          this.showError('Unable to show dialog. Please refresh the page and try again.');
           this.setButtonLoading(button, false);
           this.processing = false;
+          return;
+        } else {
+          console.log('[EstimateActions] Dialog found:', dialog);
+        }
+
+        // Create the form fields data
+        const formFields = this.createFormFieldsData(missingFields, action, customerInfo);
+        const instruction = this.getDialogInstruction(action, missingFields);
+        
+        // Show the dialog with form fields
+        dialog.show({
+          title: this.getDialogTitle(action),
+          message: instruction,
+          formFields: formFields,
+          confirmText: 'Continue',
+          cancelText: 'Cancel',
+          type: 'form',
+          action: 'collect-details',
+          showCancel: true,
+          onConfirm: () => {
+            console.log('[EstimateActions] Dialog onConfirm triggered');
+            
+            // Validate and collect form data
+            const validationResult = this.validateAndCollectFormData(missingFields, customerInfo);
+            console.log('[EstimateActions] Validation result:', validationResult);
+            
+            if (!validationResult.isValid) {
+              // Show validation error
+              const errorEl = document.querySelector('.pe-dialog-validation-error');
+              if (errorEl) {
+                errorEl.textContent = validationResult.errorMessage;
+                errorEl.style.display = 'block';
+              }
+              console.log('[EstimateActions] Validation failed, keeping dialog open');
+              return false; // Keep dialog open
+            }
+            
+            // Save to localStorage
+            saveCustomerDetails(validationResult.details);
+            this.log('Customer details saved to localStorage:', validationResult.details);
+            
+            // Update server (async)
+            this.updateCustomerDetails(estimateId, validationResult.details)
+              .then(() => {
+                this.setButtonLoading(button, true);
+                this.processing = true;
+                this.continueWithAction(action, estimateId, button, validationResult.details);
+              })
+              .catch(() => {
+                this.showError('Error saving details. Please try again.');
+              });
+          },
+          onCancel: () => {
+            this.setButtonLoading(button, false);
+            this.processing = false;
+          }
         });
-
-        // Handle submit
-        submitBtn.addEventListener('click', () => {
-          // Collect values from all input fields
-          const updatedDetails = {...customerInfo};
-          let isValid = true;
-
-          // Validate and collect all fields
-          missingFields.forEach(field => {
-            const input = promptEl.querySelector(`#customer-${field}-input`);
-            const value = input ? input.value.trim() : '';
-
-            if (!value) {
-              validationMsg.textContent = `${this.getFieldLabel(field)} is required`;
-              isValid = false;
-              return;
-            }
-
-            // Special validation for email and phone
-            if (field === 'email' && !this.validateEmail(value)) {
-              validationMsg.textContent = 'Please enter a valid email address';
-              isValid = false;
-              return;
-            }
-
-            if (field === 'phone' && !this.validatePhone(value)) {
-              validationMsg.textContent = 'Please enter a valid phone number';
-              isValid = false;
-              return;
-            }
-
-            updatedDetails[field] = value;
-          });
-
-          if (!isValid) return;
-
-          // Show loading state
-          submitBtn.disabled = true;
-          submitBtn.textContent = 'Saving...';
-
-          // Update customer details with the new values
-          this.updateCustomerDetails(estimateId, updatedDetails)
-            .then(() => {
-              // Remove prompt
-              promptEl.remove();
-              this.setButtonLoading(button, true);
-              this.processing = true;
-
-              // Continue with the original action
-              this.continueWithAction(action, estimateId, button, updatedDetails);
-            })
-            .catch(() => {
-              validationMsg.textContent = 'Error saving details. Please try again.';
-              submitBtn.disabled = false;
-              submitBtn.textContent = 'Continue';
-            });
-        });
-
-        // Set focus to the first input field
+        
+        // Add input focus after dialog is displayed
         setTimeout(() => {
-          const firstInput = promptEl.querySelector('input');
+          const firstInput = document.querySelector('.pe-dialog-body input');
           if (firstInput) {
             firstInput.focus();
-
-            // Add enter key handler to all inputs
-            const allInputs = promptEl.querySelectorAll('input');
-            allInputs.forEach(input => {
-              input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  submitBtn.click();
-                }
-              });
-            });
           }
         }, 100);
       })
-      .catch(() => {
-        this.showError('Error checking customer details. Please try again.');
+      .catch(error => {
+        this.log('Error in showCustomerDetailsPrompt:', error);
+        
+        // Since we're only using localStorage, errors are very unlikely
+        // but if they occur, we can still continue
         this.setButtonLoading(button, false);
         this.processing = false;
       });
+  }
+
+  /**
+   * Create form fields data for the dialog
+   * @param {Array} missingFields - List of missing field names
+   * @param {string} action - The action type
+   * @param {object} existingDetails - Existing customer details
+   * @returns {Array} Array of field objects for the template
+   */
+  createFormFieldsData(missingFields, action, existingDetails = {}) {
+    return missingFields.map(field => ({
+      fieldName: field,
+      fieldLabel: this.getFieldLabel(field),
+      fieldValue: existingDetails[field] || '',
+      fieldType: field === 'email' ? 'email' : (field === 'phone' ? 'tel' : 'text')
+    }));
+  }
+
+  /**
+   * Get dialog instruction based on action and missing fields
+   * @param {string} action - The action type
+   * @param {Array} missingFields - List of missing field names
+   * @returns {string} Instruction text
+   */
+  getDialogInstruction(action, missingFields) {
+    if (action === 'request_copy_email') {
+      return 'An email address is required to send your estimate copy.';
+    } else if (action === 'request_copy_sms') {
+      return 'A phone number is required to send your estimate via SMS.';
+    } else if (action === 'request_contact_email') {
+      return 'Your details are required for our store to contact you via email.';
+    } else if (action === 'request_contact_phone') {
+      return 'Your details are required for our store to contact you via phone.';
+    } else if (missingFields.includes('email') && !missingFields.includes('name')) {
+      return 'An email address is required to view your estimate.';
+    }
+    
+    return 'Additional information is required to continue.';
+  }
+
+  /**
+   * Validate and collect form data from dialog inputs
+   * @param {Array} missingFields - List of field names to validate
+   * @param {object} existingDetails - Existing customer details
+   * @returns {object} Validation result with details and error message
+   */
+  validateAndCollectFormData(missingFields, existingDetails) {
+    const updatedDetails = {...existingDetails};
+    let isValid = true;
+    let errorMessage = '';
+
+    for (const field of missingFields) {
+      const input = document.querySelector(`#customer-${field}-input`);
+      const value = input ? input.value.trim() : '';
+
+      if (!value) {
+        errorMessage = `${this.getFieldLabel(field)} is required`;
+        isValid = false;
+        break;
+      }
+
+      // Special validation for email and phone
+      if (field === 'email' && !this.validateEmail(value)) {
+        errorMessage = 'Please enter a valid email address';
+        isValid = false;
+        break;
+      }
+
+      if (field === 'phone' && !this.validatePhone(value)) {
+        errorMessage = 'Please enter a valid phone number';
+        isValid = false;
+        break;
+      }
+
+      updatedDetails[field] = value;
+    }
+
+    return {
+      isValid,
+      errorMessage,
+      details: updatedDetails
+    };
+  }
+
+  /**
+   * Get dialog title based on action
+   * @param {string} action - The action type
+   * @returns {string} Dialog title
+   */
+  getDialogTitle(action) {
+    const titles = {
+      'print': 'Complete Your Details',
+      'request_copy_email': 'Email Details Required',
+      'request_copy_sms': 'Phone Number Required',
+      'request_contact_email': 'Contact Information Required',
+      'request_contact_phone': 'Contact Information Required'
+    };
+
+    return titles[action] || 'Complete Your Details';
   }
 
   /**
@@ -705,41 +817,28 @@ class PrintEstimate {
 
   /**
    * Check customer details for a specific estimate
+   * Only checks localStorage as per new requirement
    * @param {string} estimateId - The estimate ID
    * @returns {Promise<object>} Customer details object
    */
   checkCustomerDetails(estimateId) {
-    return new Promise((resolve, reject) => {
-      fetch(productEstimatorVars.ajax_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'check_customer_details',
-          nonce: productEstimatorVars.nonce,
-          estimate_id: estimateId
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success) {
-            this.log('Customer details check result:', response.data);
-            resolve(response.data.customer_details || {});
-          } else {
-            reject(new Error(response.data?.message || 'Error checking customer details'));
-          }
-        })
-        .catch(error => {
-          this.log('Error checking customer details:', error);
-          reject(error);
-        });
+    return new Promise((resolve, _reject) => {
+      // Only check localStorage for customer details
+      const storedDetails = loadCustomerDetails();
+      
+      if (storedDetails && Object.keys(storedDetails).length > 0) {
+        console.log('[EstimateActions] Customer details found in localStorage:', storedDetails);
+        resolve(storedDetails);
+      } else {
+        console.log('[EstimateActions] No customer details in localStorage, returning empty object');
+        resolve({});
+      }
     });
   }
 
   /**
    * Update customer details with multiple fields
-   * This version dispatches an event to update all forms
+   * This version saves to localStorage and dispatches an event to update all forms
    * @param {string} estimateId - The estimate ID
    * @param {object} details - Updated customer details
    * @returns {Promise<object>} Promise that resolves when details are updated
@@ -750,8 +849,12 @@ class PrintEstimate {
       if (!details.postcode) {
         details.postcode = '0000'; // Default postcode if not set
       }
+      
+      // Save to localStorage immediately
+      saveCustomerDetails(details);
+      this.log('Customer details saved to localStorage from updateCustomerDetails:', details);
 
-      // Update customer details
+      // Update customer details on server
       fetch(productEstimatorVars.ajax_url, {
         method: 'POST',
         headers: {
@@ -1009,4 +1112,4 @@ class PrintEstimate {
 }
 
 // Export the class
-export default PrintEstimate;
+export default EstimateActions;

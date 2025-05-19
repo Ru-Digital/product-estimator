@@ -276,6 +276,9 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
     {
         // Enqueue Select2 JS
         wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), '4.1.0-rc.0', true);
+        
+        // Enqueue WordPress color picker if we're on this module's page
+        wp_enqueue_script('wp-color-picker');
 
         // This single call handles getting common data, module-specific data, merging, and localizing.
         // It relies on get_common_table_script_data() from SettingsModuleWithTableBase,
@@ -307,6 +310,9 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
             array(),
             '4.1.0-rc.0'
         );
+        
+        // Enqueue WordPress color picker style
+        wp_enqueue_style('wp-color-picker');
     }
 
     public function render_section_description()
@@ -656,6 +662,14 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 }
             }
         }
+        
+        // Ensure color fields have defaults if not set
+        for ($i = 1; $i <= 5; $i++) {
+            $colour_key = 'option_colour_' . $i;
+            if (!isset($item_data[$colour_key])) {
+                $item_data[$colour_key] = '#000000';
+            }
+        }
 
         return $item_data;
     }
@@ -746,6 +760,62 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 'description' => __('Search and select the product to automatically add.', 'product-estimator'),
             ],
             [
+                'id' => 'section_title',
+                'label' => __('Section Title', 'product-estimator'),
+                'type' => 'text',
+                'attributes' => ['class' => 'pe-item-form-field widefat'],
+                'row_class' => 'section-title-row',
+                'description' => __('Enter the title for this product section.', 'product-estimator'),
+            ],
+            [
+                'id' => 'section_description',
+                'label' => __('Section Description', 'product-estimator'),
+                'type' => 'textarea',
+                'attributes' => ['rows' => 4, 'cols' => 50, 'class' => 'pe-item-form-field widefat'],
+                'row_class' => 'section-description-row',
+                'description' => __('Enter the description for this product section.', 'product-estimator'),
+            ],
+            [
+                'id' => 'option_colour_1',
+                'label' => __('1st Option Colour', 'product-estimator'),
+                'type' => 'text',
+                'attributes' => ['class' => 'pe-item-form-field pe-color-picker', 'data-colorpicker' => 'true'],
+                'row_class' => 'option-color-row',
+                'default' => '#000000',
+            ],
+            [
+                'id' => 'option_colour_2',
+                'label' => __('2nd Option Colour', 'product-estimator'),
+                'type' => 'text',
+                'attributes' => ['class' => 'pe-item-form-field pe-color-picker', 'data-colorpicker' => 'true'],
+                'row_class' => 'option-color-row',
+                'default' => '#000000',
+            ],
+            [
+                'id' => 'option_colour_3',
+                'label' => __('3rd Option Colour', 'product-estimator'),
+                'type' => 'text',
+                'attributes' => ['class' => 'pe-item-form-field pe-color-picker', 'data-colorpicker' => 'true'],
+                'row_class' => 'option-color-row',
+                'default' => '#000000',
+            ],
+            [
+                'id' => 'option_colour_4',
+                'label' => __('4th Option Colour', 'product-estimator'),
+                'type' => 'text',
+                'attributes' => ['class' => 'pe-item-form-field pe-color-picker', 'data-colorpicker' => 'true'],
+                'row_class' => 'option-color-row',
+                'default' => '#000000',
+            ],
+            [
+                'id' => 'option_colour_5',
+                'label' => __('5th Option Colour', 'product-estimator'),
+                'type' => 'text',
+                'attributes' => ['class' => 'pe-item-form-field pe-color-picker', 'data-colorpicker' => 'true'],
+                'row_class' => 'option-color-row',
+                'default' => '#000000',
+            ],
+            [
                 'id' => 'note_text',
                 'label' => __('Note Text', 'product-estimator'),
                 'type' => 'textarea',
@@ -817,6 +887,9 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 'targetCategoryRow'      => '.target-category-row',
                 'productSearchRow'       => '.product-search-row',
                 'noteRow'                => '.note-row',
+                'sectionTitleRow'        => '.section-title-row',
+                'sectionDescriptionRow'  => '.section-description-row',
+                'optionColorRows'        => '.option-color-row',
             ],
             'i18n' => [
                 // Common item i18n (confirmDelete, itemSavedSuccess etc.) are inherited.
@@ -906,6 +979,16 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         $sanitized_data['product_id'] = isset($raw_item_data['product_id']) ? absint($raw_item_data['product_id']) : 0;
         // Note Text (string)
         $sanitized_data['note_text'] = isset($raw_item_data['note_text']) ? sanitize_textarea_field(trim($raw_item_data['note_text'])) : '';
+        
+        // New fields for auto-add product sections
+        $sanitized_data['section_title'] = isset($raw_item_data['section_title']) ? sanitize_text_field(trim($raw_item_data['section_title'])) : '';
+        $sanitized_data['section_description'] = isset($raw_item_data['section_description']) ? sanitize_textarea_field(trim($raw_item_data['section_description'])) : '';
+        
+        // Option colours
+        for ($i = 1; $i <= 5; $i++) {
+            $colour_key = 'option_colour_' . $i;
+            $sanitized_data[$colour_key] = isset($raw_item_data[$colour_key]) ? sanitize_hex_color($raw_item_data[$colour_key]) : '#000000';
+        }
 
         $features = $this->get_features_object();
 
@@ -973,6 +1056,19 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 $response_item['product_name_display'] = $product->get_formatted_name();
             }
         }
+        
+        // Include new fields if relation type is auto_add_by_category
+        if ($saved_item['relation_type'] === 'auto_add_by_category') {
+            $response_item['section_title'] = $saved_item['section_title'] ?? '';
+            $response_item['section_description'] = $saved_item['section_description'] ?? '';
+            
+            // Include color options
+            for ($i = 1; $i <= 5; $i++) {
+                $colour_key = 'option_colour_' . $i;
+                $response_item[$colour_key] = $saved_item[$colour_key] ?? '#000000';
+            }
+        }
+        
         return $response_item;
     }
 

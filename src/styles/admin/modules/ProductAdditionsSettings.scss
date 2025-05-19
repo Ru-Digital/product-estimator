@@ -1,3 +1,65 @@
 /**
  * Module styles for specific admin settings panel
  */
+
+// Product Additions Settings Module Styles
+
+.product-estimator-settings-page {
+
+  .product-additions-tab {
+    // Option color pickers layout
+
+    .option-color-row {
+      margin-bottom: 15px;
+      
+      .wp-picker-container {
+        display: inline-block;
+        margin-left: 10px;
+        
+        .wp-color-result {
+          margin: 0;
+          vertical-align: middle;
+        }
+      }
+    }
+    
+    // Section fields styling
+
+    .section-title-row,
+    .section-description-row {
+      margin-top: 15px;
+    }
+    
+    // Hidden by default (shown based on action type)
+
+    .section-title-row,
+    .section-description-row,
+    .option-color-row {
+      display: none;
+    }
+    
+    // Product search component adjustment
+
+    .product-search-row {
+      margin-top: 15px;
+    }
+  }
+  
+  // Table styling for color display
+
+  .pe-admin-list-table {
+
+    .option-colours-display {
+
+      .colour-swatch {
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        display: inline-block;
+        height: 20px;
+        margin-right: 5px;
+        vertical-align: middle;
+        width: 20px;
+      }
+    }
+  }
+}

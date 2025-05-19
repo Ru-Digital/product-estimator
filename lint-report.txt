@@ -96,7 +96,7 @@
     13:46  warning  'addRoom' is defined but never used                                      no-unused-vars
     13:55  warning  'removeRoom' is defined but never used                                   no-unused-vars
    510:11  warning  'aggregatedIncludes' is assigned a value but never used                  no-unused-vars
-  1121:69  warning  'index' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  1124:69  warning  'index' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/UIManager.js
    11:10  warning  'format' is defined but never used                                              no-unused-vars

@@ -736,8 +736,11 @@ class RoomManager {
               const variationsContainer = document.createElement('div');
               variationsContainer.className = 'additional-product-variations-grid';
               
-              // Render each variation
-              Object.values(additionalProduct.variations).forEach(variation => {
+              // Render each variation - sort by menu_order to match admin display order
+              const sortedVariations = Object.values(additionalProduct.variations)
+                .sort((a, b) => (a.menu_order || 0) - (b.menu_order || 0));
+              
+              sortedVariations.forEach(variation => {
                 const variationData = {
                   product_id: variation.id,
                   estimate_id: estimateId,

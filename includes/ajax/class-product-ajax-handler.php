@@ -413,29 +413,55 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                         if ($is_variable) {
                             $variations = [];
 
-
+                            // Get variations in the order they are sorted in the admin
+                            // This ensures variations are displayed in the same order as set in WooCommerce admin
                             $available_variation_ids = $auto_add_product_obj->get_children();
-                            $selected_option = true;
-                            $default_option_select = null;
+                            
+                            // Get the variation objects and their menu_order
+                            // The menu_order field determines the sorting position in WooCommerce admin
+                            $variations_with_order = [];
                             foreach ($available_variation_ids as $variation_id) {
                                 $variation_obj = wc_get_product($variation_id);
-                                if ($selected_option) $default_option_select = $variation_id;
                                 if ($variation_obj) {
-                                    $variation_pricing_data = product_estimator_get_product_price($variation_id, $room_area, false);
-
-                                    $variations[$variation_id] = [
+                                    $variations_with_order[] = [
                                         'id' => $variation_id,
-                                        'name' => $variation_obj->get_name(),
-                                        'image' => wp_get_attachment_image_url($variation_obj->get_image_id(), 'thumbnail'),
-                                        'min_price' => $variation_pricing_data['min_price'],
-                                        'max_price' => $variation_pricing_data['max_price'],
-                                        'pricing_method' => $variation_pricing_data['pricing_method'],
-                                        'min_price_total' => ($variation_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $variation_pricing_data['min_price'] * $room_area : $variation_pricing_data['min_price'],
-                                        'max_price_total' => ($variation_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $variation_pricing_data['max_price'] * $room_area : $variation_pricing_data['max_price'],
-                                        'is_primary_category' => $this->isProductInPrimaryCategories($variation_id),
-                                        'selected' => $selected_option,
+                                        'obj' => $variation_obj,
+                                        'menu_order' => $variation_obj->get_menu_order()
                                     ];
                                 }
+                            }
+                            
+                            // Sort by menu_order to match admin ordering
+                            // Lower menu_order values appear first
+                            usort($variations_with_order, function($a, $b) {
+                                return $a['menu_order'] - $b['menu_order'];
+                            });
+                            
+                            $selected_option = true;
+                            $default_option_select = null;
+                            
+                            // Build variations array with IDs as keys, maintaining insertion order
+                            foreach ($variations_with_order as $variation_data) {
+                                $variation_id = $variation_data['id'];
+                                $variation_obj = $variation_data['obj'];
+                                
+                                if ($selected_option) $default_option_select = $variation_id;
+                                
+                                $variation_pricing_data = product_estimator_get_product_price($variation_id, $room_area, false);
+
+                                $variations[$variation_id] = [
+                                    'id' => $variation_id,
+                                    'name' => $variation_obj->get_name(),
+                                    'image' => wp_get_attachment_image_url($variation_obj->get_image_id(), 'thumbnail'),
+                                    'min_price' => $variation_pricing_data['min_price'],
+                                    'max_price' => $variation_pricing_data['max_price'],
+                                    'pricing_method' => $variation_pricing_data['pricing_method'],
+                                    'min_price_total' => ($variation_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $variation_pricing_data['min_price'] * $room_area : $variation_pricing_data['min_price'],
+                                    'max_price_total' => ($variation_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $variation_pricing_data['max_price'] * $room_area : $variation_pricing_data['max_price'],
+                                    'is_primary_category' => $this->isProductInPrimaryCategories($variation_id),
+                                    'selected' => $selected_option,
+                                    'menu_order' => $variation_obj->get_menu_order()
+                                ];
 
                                 $selected_option = false;
                             }

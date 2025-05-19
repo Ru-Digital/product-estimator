@@ -2526,6 +2526,9 @@ body.modal-open {
 .pe-dialog-body {
   padding: 1.5rem;
 }
+.pe-dialog-body.form-body {
+  padding: 0;
+}
 
 .pe-dialog-message {
   color: #333;
@@ -2559,7 +2562,7 @@ body.modal-open {
   font-weight: 500;
   padding: 8px 16px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   font-size: 0.9rem;
 }
 .pe-dialog-btn:hover {
@@ -2585,7 +2588,7 @@ body.modal-open {
   font-weight: 500;
   padding: 8px 16px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   border: 1px solid #333;
 }
 .pe-dialog-cancel:hover {
@@ -2610,7 +2613,7 @@ body.modal-open {
   font-weight: 500;
   padding: 8px 16px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .pe-dialog-confirm:hover {
   background-color: #006630;
@@ -2639,7 +2642,7 @@ body.modal-open {
   font-weight: 500;
   padding: 8px 16px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .pe-dialog-action-default .pe-dialog-confirm:hover {
   background-color: #006630;
@@ -2664,7 +2667,7 @@ body.modal-open {
   font-weight: 500;
   padding: 8px 16px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .pe-dialog-action-delete .pe-dialog-confirm:hover {
   background-color: rgb(180.2355371901, 36.7644628099, 38.5578512397);
@@ -2689,7 +2692,7 @@ body.modal-open {
   font-weight: 500;
   padding: 8px 16px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .pe-dialog-action-error .pe-dialog-confirm:hover {
   background-color: rgb(180.2355371901, 36.7644628099, 38.5578512397);
@@ -2728,7 +2731,7 @@ body.modal-open {
   font-weight: 500;
   padding: 8px 16px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .pe-dialog-action-success .pe-dialog-confirm:hover {
   background-color: #006630;
@@ -2739,20 +2742,27 @@ body.modal-open {
 }
 
 /* Styles for form dialogs */
+.pe-dialog-action-form .pe-dialog-form,
+.pe-dialog-action-collect-details .pe-dialog-form {
+  background-color: hsl(0, 0%, 100.6470588235%);
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 1.5rem;
+}
 .pe-dialog-action-form .pe-dialog-form .pe-dialog-instruction,
 .pe-dialog-action-collect-details .pe-dialog-form .pe-dialog-instruction {
-  color: #666;
+  color: #333;
   font-size: 0.95rem;
   line-height: 1.5;
   margin-bottom: 1.5rem;
 }
 .pe-dialog-action-form .pe-dialog-form .pe-dialog-form-fields,
 .pe-dialog-action-collect-details .pe-dialog-form .pe-dialog-form-fields {
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 .pe-dialog-action-form .pe-dialog-form-group,
 .pe-dialog-action-collect-details .pe-dialog-form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 .pe-dialog-action-form .pe-dialog-form-group:last-child,
 .pe-dialog-action-collect-details .pe-dialog-form-group:last-child {
@@ -2762,25 +2772,26 @@ body.modal-open {
 .pe-dialog-action-collect-details .pe-dialog-form-group .pe-dialog-label {
   color: #333;
   display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
 }
 .pe-dialog-action-form .pe-dialog-form-group .pe-dialog-input,
 .pe-dialog-action-collect-details .pe-dialog-form-group .pe-dialog-input {
-  background: #fff;
+  background-color: #fff;
   border: 1px solid #eee;
   border-radius: 4px;
   box-sizing: border-box;
-  font-size: 1rem;
-  padding: 0.5rem 1rem;
-  transition: border-color 0.2s;
+  font-size: 14px;
+  padding: 10px 15px;
+  transition: all all 0.3s ease;
   width: 100%;
 }
 .pe-dialog-action-form .pe-dialog-form-group .pe-dialog-input:focus,
 .pe-dialog-action-collect-details .pe-dialog-form-group .pe-dialog-input:focus {
+  background-color: #fff;
   border-color: #00833F;
-  box-shadow: 0 0 0 2px rgba(0, 131, 63, 0.2);
+  box-shadow: 0 0 0 3px rgba(0, 131, 63, 0.1);
   outline: none;
 }
 .pe-dialog-action-form .pe-dialog-form-group .pe-dialog-input:invalid,
@@ -2789,8 +2800,8 @@ body.modal-open {
 }
 .pe-dialog-action-form .pe-dialog-form-group .pe-dialog-input::placeholder,
 .pe-dialog-action-collect-details .pe-dialog-form-group .pe-dialog-input::placeholder {
-  color: #666;
-  opacity: 0.7;
+  color: rgb(127.5, 127.5, 127.5);
+  font-style: italic;
 }
 .pe-dialog-action-form .pe-dialog-validation-error,
 .pe-dialog-action-collect-details .pe-dialog-validation-error {
@@ -2818,7 +2829,7 @@ body.modal-open {
   font-weight: 500;
   padding: 8px 16px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .pe-dialog-action-replace .pe-dialog-confirm:hover {
   background-color: #cc9400;
@@ -2840,7 +2851,7 @@ body.modal-open {
   font-weight: 500;
   padding: 8px 16px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   margin-left: 0.5rem;
 }
 .pe-dialog-additional:hover {
@@ -3084,7 +3095,7 @@ body.modal-open {
   font-weight: 500;
   padding: 8px 16px;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   flex: 1; /* Make buttons equal width */
   font-size: 1rem;
   justify-content: center;
@@ -3251,7 +3262,7 @@ body.modal-open {
   font-weight: 600;
   padding: 8px;
   text-transform: uppercase;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   width: 100%;
 }
 .add-suggestion-to-room:hover {
@@ -3276,7 +3287,7 @@ body.modal-open {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   width: 36px;
   z-index: 5; /* Ensure buttons are above content */
 }
@@ -3521,7 +3532,7 @@ button.replace-product-in-room {
   font-weight: 600;
   padding: 8px;
   text-transform: uppercase;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   width: 100%;
 }
 button.replace-product-in-room:hover {
@@ -3545,7 +3556,7 @@ button.replace-product-in-room.loading {
   justify-content: center;
   margin-top: 10px;
   padding: 8px 0;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   width: 100%;
 }
 .room-item .similar-products-toggle:hover {
@@ -3608,11 +3619,11 @@ button.replace-product-in-room.loading {
 .delete-customer-details {
   background: #f3f3f3;
   border: 1px solid #ddd;
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
   padding: 4px 10px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .edit-customer-details:hover {
@@ -3654,11 +3665,11 @@ button.replace-product-in-room.loading {
 .save-customer-details,
 .cancel-edit-customer-details {
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 13px;
   padding: 6px 12px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .save-customer-details {
@@ -3756,7 +3767,7 @@ button.replace-product-in-room.loading {
   margin-top: 20px;
   padding: 20px;
   position: relative;
-  transition: all all 0.2s ease;
+  transition: all all 0.3s ease;
 }
 .customer-details-display::before {
   background: linear-gradient(90deg, #00833F 0%, rgb(0, 182, 87.5267175573) 100%);
@@ -3788,13 +3799,13 @@ button.replace-product-in-room.loading {
 .customer-details-display .customer-details-content p {
   background-color: #fff;
   border: 1px solid rgb(250.75, 250.75, 250.75);
-  border-radius: 3px;
+  border-radius: 4px;
   color: #333;
   font-size: 14px;
   line-height: 1.6;
   margin: 0;
   padding: 10px 15px;
-  transition: all all 0.2s ease;
+  transition: all all 0.3s ease;
 }
 .customer-details-display .customer-details-content p:hover {
   background-color: rgb(249.9, 249.9, 249.9);
@@ -3817,7 +3828,7 @@ button.replace-product-in-room.loading {
   margin: 20px 0;
   padding: 20px;
   position: relative;
-  transition: all all 0.2s ease;
+  transition: all all 0.3s ease;
   /* Animated entry */
 }
 .customer-details-section::after {
@@ -3855,10 +3866,10 @@ button.replace-product-in-room.loading {
 .customer-details-section .form-group input[type=text] {
   background-color: #fff;
   border: 1px solid #eee;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 14px;
   padding: 10px 15px;
-  transition: all all 0.2s ease;
+  transition: all all 0.3s ease;
   width: 100%;
 }
 .customer-details-section .form-group input[type=text]:focus {
@@ -3911,10 +3922,10 @@ button.replace-product-in-room.loading {
   background-color: rgb(0, 80, 38.4732824427);
   cursor: help;
   transform: scale(1.1);
-  transition: all all 0.2s ease;
+  transition: all all 0.3s ease;
 }
 .customer-details-section::after {
-  transition: all all 0.2s ease;
+  transition: all all 0.3s ease;
 }
 
 /* Transition state when switching between forms */
@@ -3965,7 +3976,7 @@ button.replace-product-in-room.loading {
   justify-content: center;
   margin-top: 10px;
   padding: 8px 0;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   width: 100%;
 }
 .product-includes-toggle:hover, .product-notes-toggle:hover, .product-details-toggle:hover {
@@ -4336,7 +4347,7 @@ button.replace-product-in-room.loading {
   padding: 12px;
   position: relative;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .product-upgrade-tiles .upgrade-tile:hover {
   background-color: #f0f0f0;
@@ -4394,7 +4405,7 @@ button.replace-product-in-room.loading {
   margin-top: auto;
   padding: 8px 16px;
   text-transform: uppercase;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   width: 100%;
 }
 .product-upgrade-tiles .replace-product-in-room:hover {
@@ -4545,7 +4556,7 @@ button.replace-product-in-room.loading {
   padding: 12px;
   position: relative;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .additional-product-option-tile:hover {
   background-color: #f0f0f0;
@@ -4612,7 +4623,7 @@ button.replace-product-in-room.loading {
   margin-top: auto;
   padding: 8px 16px;
   text-transform: uppercase;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   width: 100%;
 }
 .additional-product-option-tile .replace-product-in-room:hover {
@@ -4755,7 +4766,7 @@ button.replace-product-in-room.loading {
   height: 18px;
   justify-content: center;
   line-height: 1;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   width: 18px;
 }
 .pe-info-button::before {
@@ -4814,12 +4825,12 @@ button.replace-product-in-room.loading {
   justify-content: center;
   line-height: 1;
   padding: 0;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   width: 24px;
 }
 .pe-tooltip-rich .pe-tooltip-close:hover, .pe-tooltip-rich .pe-tooltip-close:focus {
   background-color: #f3f3f3;
-  border-radius: 3px;
+  border-radius: 4px;
   color: #333;
 }
 .pe-tooltip-rich .pe-tooltip-close:focus {

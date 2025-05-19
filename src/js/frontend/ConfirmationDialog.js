@@ -287,6 +287,18 @@ class ConfirmationDialog {
       titleEl.textContent = settings.title;
     }
 
+    // Get the dialog body element
+    const bodyEl = this.dialog.querySelector('.pe-dialog-body');
+    
+    // Add or remove form-body class based on dialog type
+    if (bodyEl) {
+      if (settings.type === 'form' || settings.action === 'collect-details') {
+        bodyEl.classList.add('form-body');
+      } else {
+        bodyEl.classList.remove('form-body');
+      }
+    }
+
     if (messageEl) {
       // Clear existing content
       messageEl.innerHTML = '';

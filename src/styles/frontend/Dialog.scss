@@ -8,6 +8,10 @@
 
 @use 'mixins' as *;
 
+// Additional variables from CustomerDetails
+$border-radius-sm: 4px;
+$transition-base: all 0.3s ease;
+
 .pe-dialog-backdrop {
 
   @include overlay-backdrop($bg-overlay, $z-index-dialog - 1);
@@ -61,6 +65,10 @@
 
 .pe-dialog-body {
   padding: $spacing-lg;
+  
+  &.form-body {
+    padding: 0; // Remove padding when form is present, as form has its own padding
+  }
 }
 
 .pe-dialog-message {
@@ -185,20 +193,25 @@
 .pe-dialog-action-collect-details {
 
   .pe-dialog-form {
+    background-color: color.adjust($bg-light, $lightness: + 3%);
+    border: 1px solid $border-color;
+    border-radius: $border-radius;
+    padding: $spacing-lg;
+    
     .pe-dialog-instruction {
-      color: $text-light;
+      color: $text-color;
       font-size: 0.95rem;
       line-height: 1.5;
       margin-bottom: $spacing-lg;
     }
     
     .pe-dialog-form-fields {
-      margin-bottom: $spacing-sm;
+      margin-bottom: $spacing-md;
     }
   }
 
   .pe-dialog-form-group {
-    margin-bottom: $spacing-md;
+    margin-bottom: $spacing-lg;
     
     &:last-child {
       margin-bottom: 0;
@@ -207,24 +220,25 @@
     .pe-dialog-label {
       color: $text-color;
       display: block;
-      font-size: 0.9rem;
-      font-weight: 600;
-      margin-bottom: $spacing-xs;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
     }
     
     .pe-dialog-input {
-      background: $bg-color;
+      background-color: $bg-color;
       border: 1px solid $border-color;
-      border-radius: $border-radius;
+      border-radius: $border-radius-sm;
       box-sizing: border-box;
-      font-size: $font-size-base;
-      padding: $spacing-sm $spacing-md;
-      transition: border-color 0.2s;
+      font-size: 14px;
+      padding: 10px 15px;
+      transition: all $transition-base;
       width: 100%;
       
       &:focus {
+        background-color: $bg-color;
         border-color: $primary-color;
-        box-shadow: 0 0 0 2px color.adjust($primary-color, $alpha: -0.8);
+        box-shadow: 0 0 0 3px color.adjust($primary-color, $alpha: -0.9);
         outline: none;
       }
       
@@ -233,8 +247,8 @@
       }
       
       &::placeholder {
-        color: $text-light;
-        opacity: 0.7;
+        color: color.adjust($text-color, $lightness: + 30%);
+        font-style: italic;
       }
     }
   }

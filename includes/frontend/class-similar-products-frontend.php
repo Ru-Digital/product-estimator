@@ -83,10 +83,17 @@ class SimilarProductsFrontend extends FrontendBase {
      * @since    1.0.6
      */
     public function find_similar_products($product_id) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('find_similar_products called for product ID: ' . $product_id);
+        }
+        
         // Get product
         $product = wc_get_product($product_id);
 
         if (!$product) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Product not found for ID: ' . $product_id);
+            }
             return array();
         }
 
@@ -110,7 +117,14 @@ class SimilarProductsFrontend extends FrontendBase {
         $settings = get_option($this->option_name, array());
 
         if (empty($settings)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('No similar products settings found in database');
+            }
             return array();
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Found ' . count($settings) . ' similar product rules');
         }
 
         // Find matching rules for this product's categories
@@ -132,7 +146,14 @@ class SimilarProductsFrontend extends FrontendBase {
         }
 
         if (empty($matching_rules)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('No matching rules found for product categories');
+            }
             return array();
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Found ' . count($matching_rules) . ' matching rules for product');
         }
 
         // Get products in same categories (from all matching rules)
@@ -190,6 +211,11 @@ class SimilarProductsFrontend extends FrontendBase {
 
         // Sort by similarity score (descending)
         arsort($similarity_scores);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Found ' . count($similarity_scores) . ' products with similarity scores');
+            error_log('Top 10 similar product IDs: ' . implode(', ', array_slice(array_keys($similarity_scores), 0, 10)));
+        }
 
         // Limit to top 10 results
         return array_slice(array_keys($similarity_scores), 0, 10);

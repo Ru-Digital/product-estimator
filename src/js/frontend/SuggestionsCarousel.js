@@ -22,12 +22,20 @@ class SuggestionsCarousel {
     // Determine if this is a similar products carousel
     this.isSimilarProducts = container.classList.contains('similar-products-carousel');
 
-    // logger.log(`[${this.id}] Initializing carousel with ${this.items.length} items, isSimilarProducts: ${this.isSimilarProducts}`);
+    logger.log(`[${this.id}] Initializing carousel with ${this.items.length} items, isSimilarProducts: ${this.isSimilarProducts}`);
 
     // Only proceed if we have all necessary elements
     if (!this.itemsContainer || !this.items.length) {
       logger.warn(`[${this.id}] Carousel missing items container or has no items`);
       return;
+    }
+    
+    // Log navigation button existence
+    if (!this.prevBtn) {
+      logger.warn(`[${this.id}] Previous button not found`);
+    }
+    if (!this.nextBtn) {
+      logger.warn(`[${this.id}] Next button not found`);
     }
 
     // Store instance reference on the container
@@ -148,12 +156,14 @@ class SuggestionsCarousel {
     e.preventDefault();
     e.stopPropagation();
 
-    // logger.log(`[${this.id}] Prev button clicked, current position: ${this.currentPosition}`);
+    logger.log(`[${this.id}] Prev button clicked, current position: ${this.currentPosition}`);
 
     if (this.currentPosition > 0) {
       this.currentPosition--;
       this.updatePosition();
       this.updateButtons();
+    } else {
+      logger.log(`[${this.id}] Already at first position`);
     }
   }
 
@@ -161,12 +171,14 @@ class SuggestionsCarousel {
     e.preventDefault();
     e.stopPropagation();
 
-    // logger.log(`[${this.id}] Next button clicked, current position: ${this.currentPosition}, max: ${this.maxPosition}`);
+    logger.log(`[${this.id}] Next button clicked, current position: ${this.currentPosition}, max: ${this.maxPosition}`);
 
     if (this.currentPosition < this.maxPosition) {
       this.currentPosition++;
       this.updatePosition();
       this.updateButtons();
+    } else {
+      logger.log(`[${this.id}] Already at last position`);
     }
   }
 

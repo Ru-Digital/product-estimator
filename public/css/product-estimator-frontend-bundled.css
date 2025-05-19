@@ -1,6 +1,3 @@
-/*!*********************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/frontend/Index.scss ***!
-  \*********************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main SCSS file for Product Estimator frontend styles
@@ -3260,7 +3257,7 @@ body.modal-open {
   margin-bottom: 0;
   max-width: 100%;
   overflow: visible; /* Changed to allow buttons to be visible */
-  padding: 0 30px; /* Increased padding to make room for buttons */
+  padding: 0 35px; /* Increased padding to make room for buttons */
   position: relative;
   width: 100%;
   /* Legacy product-item carousel styling - no longer needed */
@@ -3270,30 +3267,41 @@ body.modal-open {
 }
 .similar-products-carousel .suggestions-nav {
   align-items: center;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   border: 1px solid #ddd;
   border-radius: 50%;
   cursor: pointer;
   display: flex;
-  height: 24px; /* Increased size for better visibility */
+  height: 30px; /* Increased size for better visibility */
   justify-content: center;
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 24px; /* Increased size for better visibility */
-  z-index: 10; /* Increased z-index to ensure visibility */
+  transition: all 0.2s ease;
+  width: 30px; /* Increased size for better visibility */
+  z-index: 20; /* Increased z-index to ensure visibility */
+}
+.similar-products-carousel .suggestions-nav:hover {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .similar-products-carousel .suggestions-nav.prev {
-  left: 3px;
+  left: 2px;
 }
 .similar-products-carousel .suggestions-nav.next {
-  right: 3px;
+  right: 2px;
+}
+.similar-products-carousel .suggestions-nav.disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+  pointer-events: none;
 }
 .similar-products-carousel .suggestions-nav .dashicons {
   align-items: center;
   display: flex;
   font-size: 20px;
   justify-content: center;
+  line-height: 1;
 }
 .similar-products-carousel .suggestions-container {
   box-sizing: border-box;

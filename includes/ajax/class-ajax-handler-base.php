@@ -141,6 +141,13 @@ abstract class AjaxHandlerBase {
             // If it's a variation, use parent product for finding similar products
             if ($product->is_type('variation')) {
                 $source_product_id = $product->get_parent_id();
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Product ' . $product_id . ' is a variation. Using parent ID: ' . $source_product_id);
+                }
+            } else {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Product ' . $product_id . ' is not a variation. Using original ID: ' . $source_product_id);
+                }
             }
             
             // Ensure SimilarProductsFrontend is available
@@ -162,7 +169,14 @@ abstract class AjaxHandlerBase {
             $similar_product_ids = $similar_products_module->find_similar_products($source_product_id);
 
             if (empty($similar_product_ids)) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('No similar products found for source product ID: ' . $source_product_id);
+                }
                 return [];
+            }
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('find_similar_products returned ' . count($similar_product_ids) . ' product IDs');
             }
 
             $similar_products_data = [];
@@ -177,12 +191,22 @@ abstract class AjaxHandlerBase {
             }
 
             foreach ($similar_product_ids as $similar_id_candidate) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Processing similar product ID: ' . $similar_id_candidate);
+                }
+                
                 if (intval($similar_id_candidate) === intval($product_id)) { // Skip the product itself
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Skipping product itself: ' . $similar_id_candidate);
+                    }
                     continue;
                 }
 
                 $product_obj = wc_get_product($similar_id_candidate);
                 if (!$product_obj) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Product object not found for ID: ' . $similar_id_candidate);
+                    }
                     continue;
                 }
 
@@ -214,6 +238,9 @@ abstract class AjaxHandlerBase {
                 }
 
                 if (!$is_estimator_enabled) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Estimator not enabled for product ID: ' . $similar_id_candidate);
+                    }
                     continue;
                 }
 
@@ -237,12 +264,22 @@ abstract class AjaxHandlerBase {
                 ];
 
                 $count++;
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Added similar product #' . $count . ' with ID: ' . $product_id);
+                }
+                
                 if ($count >= $limit) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Reached limit of ' . $limit . ' similar products');
+                    }
                     break;
                 }
             }
 
-
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Total similar products found: ' . count($similar_products_data));
+                error_log('Similar product IDs: ' . implode(', ', array_keys($similar_products_data)));
+            }
 
             return $similar_products_data;
 

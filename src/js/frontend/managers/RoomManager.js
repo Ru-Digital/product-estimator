@@ -12,6 +12,7 @@ import { format, createLogger } from '@utils';
 
 import { loadEstimateData, saveEstimateData, addRoom, removeRoom } from '../EstimateStorage';
 import TemplateEngine from '../TemplateEngine';
+import { SuggestionsCarousel } from '../SuggestionsCarousel';
 
 const logger = createLogger('RoomManager');
 
@@ -2628,12 +2629,22 @@ class RoomManager {
 
     // Initialize carousel if needed
     const carouselContainer = roomElement.querySelector('.similar-products-carousel');
-    if (carouselContainer && similarProductsList.length > 0) {
+    if (carouselContainer && similarProducts.length > 0) {
+      logger.log('Initializing similar products carousel manually');
       // The SuggestionsCarousel should automatically initialize when content is added
       // But we can trigger initialization manually if needed
-      if (this.modalManager.uiManager) {
-        this.modalManager.uiManager.initializeCarouselInContainer(carouselContainer);
-      }
+      setTimeout(() => {
+        if (this.modalManager.uiManager) {
+          this.modalManager.uiManager.initializeCarouselInContainer(carouselContainer);
+        } else {
+          // Fallback: create carousel directly
+          logger.log('UIManager not available, initializing carousel directly');
+          if (!carouselContainer.carouselInstance) {
+            // Import is already at the top of the file, so we can use it directly
+            new SuggestionsCarousel(carouselContainer);
+          }
+        }
+      }, 100);
     }
 
     // Make sure the toggle button is visible

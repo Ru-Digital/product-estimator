@@ -75,7 +75,7 @@
   margin-bottom: 0;
   max-width: 100%;
   overflow: visible; /* Changed to allow buttons to be visible */
-  padding: 0 30px; /* Increased padding to make room for buttons */
+  padding: 0 35px; /* Increased padding to make room for buttons */
   position: relative;
   width: 100%;
 
@@ -85,25 +85,37 @@
 
   .suggestions-nav {
     align-items: center;
-    background: rgb(255, 255, 255, 0.9);
+    background: rgb(255, 255, 255, 0.95);
     border: 1px solid $border-color-dark;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
-    height: 24px; /* Increased size for better visibility */
+    height: 30px; /* Increased size for better visibility */
     justify-content: center;
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 24px; /* Increased size for better visibility */
-    z-index: 10; /* Increased z-index to ensure visibility */
+    transition: all 0.2s ease;
+    width: 30px; /* Increased size for better visibility */
+    z-index: 20; /* Increased z-index to ensure visibility */
+
+    &:hover {
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
 
     &.prev {
-      left: 3px;
+      left: 2px;
     }
 
     &.next {
-      right: 3px;
+      right: 2px;
+    }
+
+    &.disabled {
+      cursor: not-allowed;
+      opacity: 0.3;
+      pointer-events: none;
     }
 
     .dashicons {
@@ -111,6 +123,7 @@
       display: flex;
       font-size: 20px;
       justify-content: center;
+      line-height: 1;
     }
   }
 

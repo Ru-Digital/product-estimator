@@ -534,16 +534,26 @@ class RoomManager {
             is_primary: true // Mark primary products
           });
         }
-        
+
         // Then add any additional products
         if (product.additional_products) {
           // Handle both array and object formats
           const additionalProducts = Array.isArray(product.additional_products)
             ? product.additional_products
             : Object.values(product.additional_products);
-            
+
           additionalProducts.forEach(include => {
             const additionalProductId = include.id || include.product_id;
+            
+            // Skip variable products - they'll be handled by renderAdditionalProducts()
+            if (include.is_variable && include.variations) {
+              logger.log('Skipping variable additional product from includes:', {
+                name: include.name,
+                productId: additionalProductId
+              });
+              return;
+            }
+            
             if (additionalProductId && !includesMap.has(additionalProductId)) {
               // Get the correct price - check for selected variation
               let price = include.price || include.total || 0;
@@ -551,7 +561,7 @@ class RoomManager {
                 const selectedVariation = include.variations[include.selected_option];
                 price = selectedVariation.min_price_total || selectedVariation.max_price_total || 0;
               }
-              
+
               includesMap.set(additionalProductId, {
                 id: additionalProductId,
                 product_id: additionalProductId,
@@ -561,12 +571,13 @@ class RoomManager {
                 sku: include.sku || '',
                 selected_option: include.selected_option,
                 variations: include.variations,
+                is_variable: include.is_variable, // Add is_variable flag
                 is_additional: true // Mark additional products
               });
             }
           });
         }
-        
+
         // Check for additional_products_section info
         if (product.additional_products_section && !sectionInfo) {
           sectionInfo = product.additional_products_section;
@@ -749,7 +760,7 @@ class RoomManager {
     // Find the additional products container
     const additionalProductsContainer = roomElement.querySelector('.additional-products-container');
     const additionalProductsList = roomElement.querySelector('.additional-products-list');
-    
+
     if (!additionalProductsList) {
       logger.warn('Additional products list container not found in room element');
       return;
@@ -760,7 +771,7 @@ class RoomManager {
 
     // Collect all additional products with variations
     let hasAdditionalProducts = false;
-    
+
     if (room.products && typeof room.products === 'object') {
       Object.values(room.products).forEach(product => {
         if (product.additional_products && typeof product.additional_products === 'object') {
@@ -768,26 +779,45 @@ class RoomManager {
             // Check if this additional product has variations
             if (additionalProduct.is_variable && additionalProduct.variations) {
               hasAdditionalProducts = true;
-              
+
               // Create a section for this additional product
               const sectionContainer = document.createElement('div');
               sectionContainer.className = 'additional-product-section';
               sectionContainer.setAttribute('data-parent-product-id', additionalProduct.id);
-              
+
               // Add section title
               const titleElement = document.createElement('h6');
               titleElement.className = 'additional-product-title';
-              titleElement.textContent = `${additionalProduct.name} Variations`;
+              
+              // Use section title from product's additional_products_section if available
+              let sectionTitle = `${additionalProduct.name} Variations`;
+              let sectionDescription = '';
+              
+              // Check if we have section info from the product
+              if (product.additional_products_section) {
+                sectionTitle = product.additional_products_section.title || sectionTitle;
+                sectionDescription = product.additional_products_section.description || '';
+              }
+              
+              titleElement.textContent = sectionTitle;
               sectionContainer.appendChild(titleElement);
               
+              // Add section description if available
+              if (sectionDescription) {
+                const descriptionElement = document.createElement('p');
+                descriptionElement.className = 'additional-product-description';
+                descriptionElement.textContent = sectionDescription;
+                sectionContainer.appendChild(descriptionElement);
+              }
+
               // Create variations container
               const variationsContainer = document.createElement('div');
               variationsContainer.className = 'additional-product-variations-grid';
-              
+
               // Render each variation - sort by menu_order to match admin display order
               const sortedVariations = Object.values(additionalProduct.variations)
                 .sort((a, b) => (a.menu_order || 0) - (b.menu_order || 0));
-              
+
               sortedVariations.forEach(variation => {
                 const variationData = {
                   product_id: variation.id,
@@ -801,31 +831,31 @@ class RoomManager {
                   image: variation.image || '',
                   attributes: variation.attributes || {}
                 };
-                
+
                 logger.log('Rendering additional product variation:', variationData);
-                
+
                 // Create variation container
                 const variationContainer = document.createElement('div');
-                
+
                 // Use the template but modify button text and data
                 TemplateEngine.insert('additional-product-option-template', variationData, variationContainer);
-                
+
                 // Get the actual tile element from the container
                 const variationElement = variationContainer.querySelector('.additional-product-option-tile');
                 if (variationElement) {
                   variationElement.classList.add('variation-tile');
-                  
+
                   // Add selected class if this variation is selected
                   if (variation.selected === true) {
                     variationElement.classList.add('selected');
                   }
                 }
-                
+
                 // Update button
                 const button = variationElement.querySelector('.replace-product-in-room');
                 if (button) {
                   // Change button text based on selected state
-                  button.textContent = variation.selected === true ? 'Selected' : 'Select Variation';
+                  button.textContent = variation.selected === true ? 'Selected' : 'Select';
                   button.dataset.productId = variation.id;
                   button.dataset.estimateId = estimateId;
                   button.dataset.roomId = roomId;
@@ -833,11 +863,11 @@ class RoomManager {
                   button.dataset.replaceType = 'additional_products';
                   button.dataset.parentProductId = additionalProduct.id;
                 }
-                
+
                 // Append only the content of the container, not the wrapper
                 variationsContainer.appendChild(variationContainer.firstElementChild);
               });
-              
+
               sectionContainer.appendChild(variationsContainer);
               additionalProductsList.appendChild(sectionContainer);
             }
@@ -845,25 +875,25 @@ class RoomManager {
         }
       });
     }
-    
+
     // Show/hide the container based on whether we have additional products
     if (additionalProductsContainer) {
       additionalProductsContainer.style.display = hasAdditionalProducts ? '' : 'none';
     }
-    
+
     // Bind events for variation buttons
     if (hasAdditionalProducts) {
       this.bindAdditionalProductButtons(additionalProductsList);
     }
   }
-  
+
   /**
    * Bind events for additional product variation buttons
    * @param {HTMLElement} container - The container with buttons
    */
   bindAdditionalProductButtons(container) {
     const buttons = container.querySelectorAll('.replace-product-in-room');
-    
+
     buttons.forEach(button => {
       if (button._clickHandler) {
         button.removeEventListener('click', button._clickHandler);
@@ -906,18 +936,18 @@ class RoomManager {
    */
   selectProductAdditionVariation(estimateId, roomId, parentProductId, variationId) {
     logger.log('Selecting product addition variation', { estimateId, roomId, parentProductId, variationId });
-    
+
     // Use DataService to update the variation selection
     this.dataService.updateProductAdditionVariation(estimateId, roomId, parentProductId, variationId)
       .then(() => {
         logger.log('Product addition variation updated successfully');
-        
+
         // Update the UI to reflect the changes
         this.updateProductAdditionVariationUI(estimateId, roomId);
       })
       .catch(error => {
         logger.error('Error updating product addition variation', error);
-        
+
         // Show error notification
         if (this.modalManager.confirmationDialog) {
           this.modalManager.confirmationDialog.show({
@@ -939,7 +969,7 @@ class RoomManager {
   updateProductAdditionVariationUI(estimateId, roomId) {
     // Find the room element
     const roomElement = document.querySelector(`.room-item[data-estimate-id="${estimateId}"][data-room-id="${roomId}"]`);
-    
+
     if (!roomElement) {
       // If room element not found, try to refresh the room display
       const roomContainer = document.querySelector(`.room-content[data-estimate-id="${estimateId}"][data-room-id="${roomId}"]`);
@@ -948,14 +978,14 @@ class RoomManager {
       }
       return;
     }
-    
+
     // Refresh the additional products display
     const estimatesData = loadEstimateData();
     const estimate = estimatesData.estimates[estimateId];
     if (estimate && estimate.rooms[roomId]) {
       this.renderAdditionalProducts(estimate.rooms[roomId], roomElement);
     }
-    
+
     // Also update the main product display if needed
     const roomContainer = roomElement.closest('.room-container');
     if (roomContainer) {
@@ -994,7 +1024,7 @@ class RoomManager {
     // Handle both includesData and room parameter formats for backwards compatibility
     let includesArray = [];
     let sectionInfo = null;
-    
+
     if (includesData.includes && Array.isArray(includesData.includes)) {
       // New format with includes and sectionInfo
       includesArray = includesData.includes;
@@ -1005,22 +1035,22 @@ class RoomManager {
       includesArray = aggregated.includes;
       sectionInfo = aggregated.sectionInfo;
     }
-    
+
     // Check if we have includes
     if (includesArray.length === 0) {
       logger.log('No includes to display, show empty state');
-      
+
       // Hide all product-related sections
       const includesSection = roomElement.querySelector('.includes-container');
       const includesToggle = roomElement.querySelector('.product-includes-toggle');
       const similarProductsSection = roomElement.querySelector('.similar-products-container');
       const similarProductsToggle = roomElement.querySelector('.similar-products-toggle');
-      
+
       if (includesSection) includesSection.style.display = 'none';
       if (includesToggle) includesToggle.style.display = 'none';
       if (similarProductsSection) similarProductsSection.style.display = 'none';
       if (similarProductsToggle) similarProductsToggle.style.display = 'none';
-      
+
       // Show empty state
       const emptyStateContainer = roomElement.querySelector('.room-empty-state');
       if (emptyStateContainer) {
@@ -1035,22 +1065,22 @@ class RoomManager {
     if (emptyStateContainer) {
       emptyStateContainer.style.display = 'none';
     }
-    
+
     // Show the includes section and toggle button
     const includesSection = roomElement.querySelector('.includes-container');
     const includesToggle = roomElement.querySelector('.product-includes-toggle');
-    
+
     if (includesSection) {
       includesSection.style.display = '';
     }
     if (includesToggle) {
       includesToggle.style.display = '';
     }
-    
+
     // Also show similar products section if it was hidden
     const similarProductsToggle = roomElement.querySelector('.similar-products-toggle');
     const similarProductsContainer = roomElement.querySelector('.similar-products-container');
-    
+
     if (similarProductsToggle) {
       similarProductsToggle.style.display = '';
     }
@@ -1061,7 +1091,7 @@ class RoomManager {
     // Separate primary products and additional products
     const primaryProducts = includesArray.filter(item => item.is_primary);
     const additionalProducts = includesArray.filter(item => item.is_additional);
-    
+
     // Render primary products first
     primaryProducts.forEach((include, index) => {
       const price = include.price || 0;
@@ -1081,50 +1111,17 @@ class RoomManager {
       logger.log('Rendering primary product as include:', productData);
       TemplateEngine.insert('include-item-template', productData, includesContainer);
     });
-    
-    // If we have additional products and section info, render them in a separate section
-    if (additionalProducts.length > 0 && sectionInfo && (sectionInfo.title || sectionInfo.description)) {
-      // Create section wrapper
-      const sectionData = {
-        'additional-product-title': sectionInfo.title || 'Additional Products',
-        'additional-product-description': sectionInfo.description || ''
-      };
-      
-      // Insert section template
-      const sectionContainer = includesContainer.parentElement;
-      if (sectionContainer) {
-        TemplateEngine.insert('additional-products-section-template', sectionData, sectionContainer);
-        
-        // Find the section's product list container
-        const newSection = sectionContainer.querySelector('.additional-products-section');
-        if (newSection) {
-          const productsList = newSection.querySelector('.additional-products-list');
-          if (productsList) {
-            // Render additional products in this section
-            additionalProducts.forEach((include, index) => {
-              const price = include.price || 0;
-              const productData = {
-                product_id: include.id || include.product_id,
-                estimate_id: estimateId,
-                room_id: roomId,
-                product_index: primaryProducts.length + index,
-                name: include.name || 'Product',
-                product_name: include.name || 'Product',
-                price: price,
-                product_price: format.currency(price),
-                image: include.image || '',
-                sku: include.sku || ''
-              };
 
-              logger.log('Rendering additional product:', productData);
-              TemplateEngine.insert('include-item-template', productData, productsList);
-            });
-          }
-        }
-      }
-    } else if (additionalProducts.length > 0) {
-      // If we have additional products but no section info, just render them normally
-      additionalProducts.forEach((include, index) => {
+    // Skip rendering additional products with variations here since they are already handled 
+    // by renderAdditionalProducts() method which displays them properly in variation grids
+    
+    // Only render additional products that don't have variations
+    const nonVariableAdditionalProducts = additionalProducts.filter(product => 
+      !product.is_variable || !product.variations
+    );
+    
+    if (nonVariableAdditionalProducts.length > 0) {
+      nonVariableAdditionalProducts.forEach((include, index) => {
         const price = include.price || 0;
         const productData = {
           product_id: include.id || include.product_id,
@@ -1139,7 +1136,7 @@ class RoomManager {
           sku: include.sku || ''
         };
 
-        logger.log('Rendering additional product without section:', productData);
+        logger.log('Rendering non-variable additional product:', productData);
         TemplateEngine.insert('include-item-template', productData, includesContainer);
       });
     }
@@ -1173,7 +1170,7 @@ class RoomManager {
       const productId = button.dataset.productId;
       const includeItem = button.closest('.include-item');
       const productName = includeItem ? includeItem.querySelector('.product-name').textContent : 'this product';
-      
+
       // Remove any existing handler
       if (button._clickHandler) {
         button.removeEventListener('click', button._clickHandler);
@@ -1182,7 +1179,7 @@ class RoomManager {
       button._clickHandler = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         // Show confirmation dialog before removing
         if (this.modalManager && this.modalManager.confirmationDialog) {
           this.modalManager.confirmationDialog.show({
@@ -1230,7 +1227,7 @@ class RoomManager {
     // Find the upgrades container in the room element
     const upgradesListContainer = roomElement.querySelector('.product-upgrades-list');
     const upgradesContainer = roomElement.querySelector('.product-upgrades-container');
-    
+
     if (!upgradesListContainer) {
       logger.warn('Product upgrades list container not found in room element');
       return;
@@ -1241,7 +1238,7 @@ class RoomManager {
 
     // Collect all upgrades from all products in the room
     let allUpgrades = [];
-    
+
     if (room.products && typeof room.products === 'object') {
       Object.values(room.products).forEach(product => {
         logger.log('Checking product for upgrades:', {
@@ -1250,7 +1247,7 @@ class RoomManager {
           hasAdditionalProducts: !!product.additional_products,
           additionalProductsCount: product.additional_products ? Object.keys(product.additional_products).length : 0
         });
-        
+
         // Check if additional_products is an object (as in the localStorage data)
         if (product.additional_products && typeof product.additional_products === 'object') {
           // Iterate through additional products object
@@ -1262,11 +1259,11 @@ class RoomManager {
               upgrades: item.upgrades,
               entire_item: item
             });
-            
+
             // Check if this additional product has upgrades
             if (item.has_upgrades && item.upgrades && item.upgrades.products && Array.isArray(item.upgrades.products)) {
               logger.log(`Found ${item.upgrades.products.length} upgrades for ${item.name}`);
-              
+
               // Create upgrade sections for each additional product with upgrades
               const upgradeSection = {
                 ...item.upgrades,
@@ -1281,7 +1278,7 @@ class RoomManager {
                   parent_product_name: item.name
                 }))
               };
-              
+
               allUpgrades.push(upgradeSection);
             }
           });
@@ -1310,12 +1307,12 @@ class RoomManager {
         const sectionContainer = document.createElement('div');
         sectionContainer.className = 'product-upgrades';
         sectionContainer.setAttribute('data-product-id', upgradeSection.parent_product_id);
-        
+
         // Create the upgrade option container
         const optionContainer = document.createElement('div');
         optionContainer.className = 'product-upgrade-option';
         optionContainer.setAttribute('data-upgrade-id', upgradeSection.parent_product_id);
-        
+
         // Add section title and description if available
         if (upgradeSection.title) {
           const titleElement = document.createElement('h6');
@@ -1323,23 +1320,23 @@ class RoomManager {
           titleElement.textContent = upgradeSection.title;
           optionContainer.appendChild(titleElement);
         }
-        
+
         if (upgradeSection.description) {
           const descElement = document.createElement('p');
           descElement.className = 'upgrade-description';
           descElement.textContent = upgradeSection.description;
           optionContainer.appendChild(descElement);
         }
-        
+
         // Create tiles container structure
         const tilesContainer = document.createElement('div');
         tilesContainer.className = 'product-upgrade-tiles';
         tilesContainer.setAttribute('data-upgrade-id', upgradeSection.parent_product_id);
-        
+
         // Create tiles wrapper
         const tilesWrapper = document.createElement('div');
         tilesWrapper.className = 'tiles-wrapper';
-        
+
         // Render each upgrade product in the section
         if (upgradeSection.products && Array.isArray(upgradeSection.products)) {
           upgradeSection.products.forEach(upgrade => {
@@ -1363,7 +1360,7 @@ class RoomManager {
             TemplateEngine.insert('product-upgrade-item-template', upgradeData, tilesWrapper);
           });
         }
-        
+
         // Assemble the structure: tiles wrapper -> tiles container -> option container -> section container
         tilesContainer.appendChild(tilesWrapper);
         optionContainer.appendChild(tilesContainer);
@@ -1387,7 +1384,7 @@ class RoomManager {
    */
   bindUpgradeButtons(upgradesContainer) {
     const upgradeButtons = upgradesContainer.querySelectorAll('.replace-product-in-room');
-    
+
     upgradeButtons.forEach(button => {
       if (button._clickHandler) {
         button.removeEventListener('click', button._clickHandler);
@@ -1437,28 +1434,28 @@ class RoomManager {
     logger.log('bindIncludesToggle called for room element');
     const toggleButton = roomElement.querySelector('.product-includes-toggle');
     const includesContainer = roomElement.querySelector('.includes-container');
-    
+
     logger.log('Found includes toggle button:', !!toggleButton);
     logger.log('Found includes container:', !!includesContainer);
-    
+
     if (toggleButton && includesContainer) {
       // Remove any existing click handler to prevent duplicates
       if (toggleButton._clickHandler) {
         logger.log('Removing existing includes toggle handler');
         toggleButton.removeEventListener('click', toggleButton._clickHandler);
       }
-      
+
       toggleButton._clickHandler = (e) => {
         e.preventDefault();
         e.stopPropagation();
         logger.log('Includes toggle clicked');
         const isExpanded = toggleButton.classList.contains('expanded');
         logger.log('Current expanded state:', isExpanded);
-        
+
         if (isExpanded) {
           toggleButton.classList.remove('expanded');
           includesContainer.classList.remove('visible');
-          
+
           // Update toggle icon
           const toggleIcon = toggleButton.querySelector('.toggle-icon');
           if (toggleIcon) {
@@ -1469,7 +1466,7 @@ class RoomManager {
         } else {
           toggleButton.classList.add('expanded');
           includesContainer.classList.add('visible');
-          
+
           // Update toggle icon
           const toggleIcon = toggleButton.querySelector('.toggle-icon');
           if (toggleIcon) {
@@ -1479,7 +1476,7 @@ class RoomManager {
           logger.log('Includes expanded');
         }
       };
-      
+
       toggleButton.addEventListener('click', toggleButton._clickHandler);
       logger.log('Includes toggle event handler attached');
     } else {
@@ -1495,28 +1492,28 @@ class RoomManager {
     logger.log('bindSimilarProductsToggle called for room element');
     const toggleButton = roomElement.querySelector('.similar-products-toggle');
     const similarProductsContainer = roomElement.querySelector('.similar-products-container');
-    
+
     logger.log('Found similar products toggle button:', !!toggleButton);
     logger.log('Found similar products container:', !!similarProductsContainer);
-    
+
     if (toggleButton && similarProductsContainer) {
       // Remove any existing click handler to prevent duplicates
       if (toggleButton._clickHandler) {
         logger.log('Removing existing similar products toggle handler');
         toggleButton.removeEventListener('click', toggleButton._clickHandler);
       }
-      
+
       toggleButton._clickHandler = (e) => {
         e.preventDefault();
         e.stopPropagation();
         logger.log('Similar products toggle clicked');
         const isExpanded = toggleButton.classList.contains('expanded');
         logger.log('Current expanded state:', isExpanded);
-        
+
         if (isExpanded) {
           toggleButton.classList.remove('expanded');
           similarProductsContainer.classList.remove('visible');
-          
+
           // Update toggle icon
           const toggleIcon = toggleButton.querySelector('.toggle-icon');
           if (toggleIcon) {
@@ -1527,7 +1524,7 @@ class RoomManager {
         } else {
           toggleButton.classList.add('expanded');
           similarProductsContainer.classList.add('visible');
-          
+
           // Update toggle icon
           const toggleIcon = toggleButton.querySelector('.toggle-icon');
           if (toggleIcon) {
@@ -1535,7 +1532,7 @@ class RoomManager {
             toggleIcon.classList.add('dashicons-arrow-up-alt2');
           }
           logger.log('Similar products expanded');
-          
+
           // Trigger carousel initialization if not already loaded
           const carouselContainer = similarProductsContainer.querySelector('.similar-products-carousel');
           if (carouselContainer && this.modalManager.uiManager) {
@@ -1543,7 +1540,7 @@ class RoomManager {
           }
         }
       };
-      
+
       toggleButton.addEventListener('click', toggleButton._clickHandler);
       logger.log('Similar products toggle event handler attached');
     } else {
@@ -1593,7 +1590,7 @@ class RoomManager {
           content.style.display = 'block';
 
           // Product loading removed - products now displayed as part of room-item template
-          
+
           // Initialize similar products for the room
           this.initializeSimilarProductsForRoom(estimateId, roomId);
         }
@@ -2189,36 +2186,36 @@ class RoomManager {
    */
   updateRoomPrimaryProduct(estimateId, roomId) {
     logger.log('Updating room primary product display', { estimateId, roomId });
-    
+
     // Get the room data from storage
     const estimateData = loadEstimateData();
     const estimate = estimateData.estimates?.[estimateId];
     const room = estimate?.rooms?.[roomId];
-    
+
     if (!room) {
       logger.warn('Room not found in storage for primary product update', { estimateId, roomId });
       return;
     }
-    
+
     // Find the room element in the DOM
     const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-    
+
     if (!roomElement) {
       logger.warn('Room element not found in DOM for primary product update', { estimateId, roomId });
       return;
     }
-    
+
     // Use the same logic as renderRoom to determine primary product
     let primaryProductImage = null;
     let primaryProductName = null;
-    
+
     logger.log('Looking for primary product in room:', {
       roomName: room.name,
       primaryCategoryProductId: room.primary_category_product_id,
       productsObject: room.products,
       productsKeys: room.products ? Object.keys(room.products) : []
     });
-    
+
     if (room.primary_category_product_id && room.products) {
       const primaryProduct = room.products[room.primary_category_product_id];
       if (primaryProduct) {
@@ -2231,7 +2228,7 @@ class RoomManager {
         });
       }
     }
-    
+
     // Update primary product image element
     const imageElement = roomElement.querySelector('.primary-product-image');
     if (imageElement) {
@@ -2244,7 +2241,7 @@ class RoomManager {
         imageElement.style.display = 'none';
       }
     }
-    
+
     // Update primary product name element
     const nameElement = roomElement.querySelector('.primary-product-name');
     if (nameElement) {
@@ -2253,7 +2250,7 @@ class RoomManager {
       // but we'll also set display for immediate effect
       nameElement.style.display = primaryProductName ? '' : 'none';
     }
-    
+
     logger.log('Room primary product display updated', {
       hasPrimaryProduct: !!primaryProductImage,
       primaryProductName: primaryProductName
@@ -2281,7 +2278,7 @@ class RoomManager {
 
     // Find the room element
     const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"][data-estimate-id="${estimateId}"]`);
-    
+
     if (!roomElement) {
       logger.warn('Room element not found for updating includes', { estimateId, roomId });
       return;
@@ -2291,7 +2288,7 @@ class RoomManager {
     const estimateData = loadEstimateData();
     const estimate = estimateData.estimates?.[estimateId];
     const room = estimate?.rooms?.[roomId];
-    
+
     if (!room) {
       logger.warn('Room not found in storage for includes update', { estimateId, roomId });
       return;
@@ -2300,15 +2297,15 @@ class RoomManager {
     // Re-render the includes with updated room data
     const includesData = this.aggregateProductIncludes(room);
     this.renderRoomIncludes(includesData, roomElement, roomId, estimateId);
-    
-    // Re-render the upgrades with updated room data  
+
+    // Re-render the upgrades with updated room data
     this.renderRoomUpgrades(room, roomElement);
-    
+
     // If the room has products now, make sure similar products section is visible
     if (room.products && Object.keys(room.products).length > 0) {
       const similarProductsToggle = roomElement.querySelector('.similar-products-toggle');
       const similarProductsContainer = roomElement.querySelector('.similar-products-container');
-      
+
       if (similarProductsToggle) {
         similarProductsToggle.style.display = '';
         // Make sure it's expanded by default
@@ -2325,13 +2322,13 @@ class RoomManager {
         similarProductsContainer.classList.add('visible');
       }
     }
-    
+
     // Also update similar products since product list changed
     // Force refresh if this is the first product in the room to ensure we get data from server
     const isFirstProduct = room.products && Object.keys(room.products).length === 1;
     this.initializeSimilarProductsForRoom(estimateId, roomId, isFirstProduct);
   }
-  
+
   /**
    * Initialize similar products for a room
    * @param {string} estimateId - The estimate ID
@@ -2340,19 +2337,19 @@ class RoomManager {
    */
   initializeSimilarProductsForRoom(estimateId, roomId, forceRefresh = false) {
     logger.log('Initializing similar products for room', { estimateId, roomId, forceRefresh });
-    
+
     // Load the room data from localStorage
     const estimateData = loadEstimateData();
     const room = estimateData.estimates?.[estimateId]?.rooms?.[roomId];
-    
+
     if (!room) {
       logger.warn('Room not found for similar products initialization');
       return;
     }
-    
+
     // Get all product IDs from the room
     const productIds = Object.keys(room.products || {});
-    
+
     if (productIds.length === 0) {
       logger.log('No products in room, skipping similar products initialization');
       // Hide the similar products section if no products
@@ -2360,7 +2357,7 @@ class RoomManager {
       if (roomElement) {
         const toggleButton = roomElement.querySelector('.similar-products-toggle');
         const container = roomElement.querySelector('.similar-products-container');
-        
+
         if (toggleButton) {
           toggleButton.style.display = 'none';
         }
@@ -2370,7 +2367,7 @@ class RoomManager {
       }
       return;
     }
-    
+
     // Check if room element is in DOM
     const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"]`);
     if (!roomElement) {
@@ -2381,14 +2378,14 @@ class RoomManager {
       }, 100);
       return;
     }
-    
+
     // Calculate room area for pricing calculations
     const roomArea = room.width * room.length;
-    
+
     // Load similar products for all products in the room
     this.loadSimilarProductsForRoom(estimateId, roomId, productIds, roomArea, forceRefresh);
   }
-  
+
   /**
    * Load similar products for all products in a room
    * @param {string} estimateId - The estimate ID
@@ -2399,46 +2396,46 @@ class RoomManager {
    */
   loadSimilarProductsForRoom(estimateId, roomId, productIds, roomArea, forceRefresh = false) {
     logger.log('Loading similar products for room', { estimateId, roomId, productIds, roomArea, forceRefresh });
-    
+
     // Get the room element
     const roomElement = document.querySelector(`.room-item[data-room-id="${roomId}"]`);
     if (!roomElement) {
       logger.warn('Room element not found in DOM');
       return;
     }
-    
+
     const similarProductsContainer = roomElement.querySelector('.similar-products-list');
     const toggleButton = roomElement.querySelector('.similar-products-toggle');
-    
+
     if (!similarProductsContainer) {
       logger.warn('Similar products container not found in room element');
       return;
     }
-    
+
     // Load the room data from localStorage to check if similar products are already available
     const estimateData = loadEstimateData();
     const room = estimateData.estimates?.[estimateId]?.rooms?.[roomId];
-    
+
     // First try to collect similar products from localStorage
     const allSimilarProducts = [];
     const productsMissingSimilar = [];
-    
+
     productIds.forEach(productId => {
       const product = room?.products?.[productId];
-      
+
       logger.log(`Processing product ${productId}:`, {
         hasProduct: !!product,
         hasSimilarProducts: !!product?.similar_products,
         similarProductsType: Array.isArray(product?.similar_products) ? 'array' : typeof product?.similar_products,
         forceRefresh: forceRefresh
       });
-      
+
       // Check if this product has similar products already stored and we're not forcing refresh
       if (product?.similar_products && !forceRefresh) {
-        const similarProductsArray = Array.isArray(product.similar_products) 
-          ? product.similar_products 
+        const similarProductsArray = Array.isArray(product.similar_products)
+          ? product.similar_products
           : Object.values(product.similar_products);
-          
+
         // Add the source product ID to each similar product for replacement tracking
         const enhancedSimilarProducts = similarProductsArray.map(sp => ({
           ...sp,
@@ -2458,11 +2455,11 @@ class RoomManager {
         }
       }
     });
-    
+
     // If we found all similar products in localStorage and not forcing refresh, render them immediately
     if (productsMissingSimilar.length === 0 && allSimilarProducts.length > 0 && !forceRefresh) {
       logger.log('All similar products found in localStorage, rendering immediately');
-      
+
       // Remove duplicates by product ID
       const uniqueProducts = {};
       allSimilarProducts.forEach(product => {
@@ -2470,20 +2467,20 @@ class RoomManager {
           uniqueProducts[product.id] = product;
         }
       });
-      
+
       const similarProductsList = Object.values(uniqueProducts);
       this.renderSimilarProductsList(similarProductsContainer, toggleButton, similarProductsList, estimateId, roomId, productIds, roomElement);
       return;
     }
-    
+
     // Show loading state only if we need to fetch some products
     if (productsMissingSimilar.length > 0) {
       similarProductsContainer.innerHTML = '<div class="loading">Loading similar products...</div>';
     }
-    
+
     // Fetch only the products that don't have similar products in localStorage
     const similarProductPromises = [];
-    
+
     productsMissingSimilar.forEach(productId => {
       const promise = this.dataService.getSimilarProducts(productId, roomArea)
         .then(similarProducts => {
@@ -2498,10 +2495,10 @@ class RoomManager {
         .catch(error => {
           logger.error(`Error loading similar products for product ${productId}:`, error);
         });
-      
+
       similarProductPromises.push(promise);
     });
-    
+
     // Wait for all requests to complete
     Promise.all(similarProductPromises)
       .then(() => {
@@ -2512,9 +2509,9 @@ class RoomManager {
             uniqueProducts[product.id] = product;
           }
         });
-        
+
         const similarProductsList = Object.values(uniqueProducts);
-        
+
         // Use the extracted rendering method
         this.renderSimilarProductsList(similarProductsContainer, toggleButton, similarProductsList, estimateId, roomId, productIds, roomElement);
       })
@@ -2538,7 +2535,7 @@ class RoomManager {
     if (similarProductsList.length === 0) {
       // No similar products found
       similarProductsContainer.innerHTML = '<div class="no-similar-products">No similar products available</div>';
-      
+
       // Hide the toggle button and container
       if (toggleButton) {
         toggleButton.style.display = 'none';
@@ -2550,10 +2547,10 @@ class RoomManager {
       }
       return;
     }
-    
+
     // Clear loading state
     similarProductsContainer.innerHTML = '';
-    
+
     // Render each similar product
     similarProductsList.forEach((product) => {
       // Add room context to product data and ensure all required fields
@@ -2573,12 +2570,12 @@ class RoomManager {
         pricing_method: product.pricing_method || 'sq_ft',
         replace_product_id: product.sourceProductId || productIds[0] || '', // Use source product ID or first product as fallback
       };
-      
+
       logger.log('Rendering similar product with data:', productData);
-      
+
       // Use TemplateEngine to insert the similar product template
       TemplateEngine.insert('similar-product-item-template', productData, similarProductsContainer);
-      
+
       // Bind replace button event for this product
       const lastSimilarItem = similarProductsContainer.lastElementChild;
       if (lastSimilarItem) {
@@ -2587,14 +2584,14 @@ class RoomManager {
           replaceButton.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             const productId = replaceButton.dataset.productId;
             const replaceProductId = replaceButton.dataset.replaceProductId;
             const roomId = replaceButton.dataset.roomId;
             const estimateId = replaceButton.dataset.estimateId;
-            
+
             logger.log('Replace button clicked', { productId, replaceProductId, roomId, estimateId });
-            
+
             // Delegate to ProductManager to handle replacement with variation check
             if (this.modalManager && this.modalManager.productManager) {
               // Check if product has variations before replacing
@@ -2612,7 +2609,7 @@ class RoomManager {
         }
       }
     });
-    
+
     // Initialize carousel if needed
     const carouselContainer = roomElement.querySelector('.similar-products-carousel');
     if (carouselContainer && similarProductsList.length > 0) {
@@ -2622,12 +2619,12 @@ class RoomManager {
         this.modalManager.uiManager.initializeCarouselInContainer(carouselContainer);
       }
     }
-    
+
     // Make sure the toggle button is visible
     if (toggleButton) {
       toggleButton.style.display = 'block';
     }
-    
+
     logger.log(`Rendered ${similarProductsList.length} similar products for room ${roomId}`);
   }
 }

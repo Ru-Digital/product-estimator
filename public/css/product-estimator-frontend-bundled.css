@@ -2033,10 +2033,12 @@ body.modal-open {
   justify-content: flex-end;
   margin-bottom: 15px;
   margin-top: 15px;
+  padding: 0 15px;
 }
 .estimate-actions ul {
   display: flex;
   gap: 1rem; /* Adjust spacing between items as needed */
+  justify-content: flex-end;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -2045,17 +2047,32 @@ body.modal-open {
   display: inline-block;
 }
 .estimate-actions ul li a {
-  align-items: center;
-  background: #00833F;
-  border-radius: 0;
+  background-color: #00833F;
+  border: 1px solid transparent;
+  border-radius: 4px;
   color: white;
   cursor: pointer;
+  display: inline-block;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 8px 16px;
+  text-align: center;
+  transition: all 0.2s ease;
+  align-items: center;
   display: inline-flex;
-  padding: 0.5rem 1rem;
+  font-size: 14px;
+  padding: 8px 15px;
   text-decoration: none;
 }
 .estimate-actions ul li a:hover {
-  background: #006630;
+  background-color: #006630;
+}
+.estimate-actions ul li a:focus {
+  box-shadow: 0 0 0 2px rgba(0, 131, 63, 0.3);
+  outline: none;
+}
+.estimate-actions ul li a:hover {
+  text-decoration: none;
 }
 .estimate-actions ul li a .dashicons {
   margin-right: 0.5rem;

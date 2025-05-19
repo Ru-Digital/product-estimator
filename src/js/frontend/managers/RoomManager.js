@@ -2184,6 +2184,17 @@ class RoomManager {
             estimateTotalElement.textContent = format.currency(estimate.total || 0);
           }
         }
+
+        // Update estimate actions visibility based on whether the estimate has products
+        const estimateSection = document.querySelector(`.estimate-section[data-estimate-id="${estimateId}"]`);
+        if (estimateSection) {
+          const estimateActionsSection = estimateSection.querySelector('.estimate-actions');
+          if (estimateActionsSection && this.modalManager.estimateManager) {
+            const hasProducts = this.modalManager.estimateManager.estimateHasProducts(estimate);
+            logger.log(`Updating estimate actions visibility for ${estimateId}: ${hasProducts}`);
+            estimateActionsSection.style.display = hasProducts ? 'block' : 'none';
+          }
+        }
       })
       .catch(error => {
         logger.error('Error updating estimate totals:', error);

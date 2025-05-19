@@ -6,6 +6,8 @@
 
 @use 'variables' as *;
 
+@use 'mixins' as *;
+
 @use 'animations' as *;
 
 /* Modal Base */
@@ -1188,10 +1190,12 @@ body.modal-open {
   justify-content: flex-end;
   margin-bottom: 15px;
   margin-top: 15px;
+  padding: 0 15px; // Add padding to match estimate-content
 
   ul {
     display: flex;
     gap: 1rem; /* Adjust spacing between items as needed */
+    justify-content: flex-end; // Ensure ul is also right-aligned
     list-style: none;
     margin: 0;
     padding: 0;
@@ -1200,17 +1204,15 @@ body.modal-open {
       display: inline-block;
 
       a {
+        @include button-primary;
         align-items: center;
-        background: $primary-color;
-        border-radius: 0;
-        color: white;
-        cursor: pointer;
         display: inline-flex;
-        padding: 0.5rem 1rem;
+        font-size: 14px;
+        padding: 8px 15px;
         text-decoration: none;
 
         &:hover {
-          background: $primary-hover;
+          text-decoration: none;
         }
 
         .dashicons {

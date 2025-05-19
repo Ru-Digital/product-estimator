@@ -44,6 +44,7 @@ class EstimateManager {
     this.updateEstimate = this.updateEstimate.bind(this);
     this.bindEstimateSelectionFormEvents = this.bindEstimateSelectionFormEvents.bind(this);
     this.onModalClosed = this.onModalClosed.bind(this);
+    this.estimateHasProducts = this.estimateHasProducts.bind(this);
   }
 
   /**
@@ -66,6 +67,33 @@ class EstimateManager {
   bindEvents() {
     // We'll implement this later when we move the estimate-specific bindings
     logger.log('EstimateManager events bound');
+  }
+
+  /**
+   * Check if an estimate has any rooms with products
+   * @param {object} estimate - The estimate data
+   * @returns {boolean} True if the estimate has at least one room with products
+   */
+  estimateHasProducts(estimate) {
+    if (!estimate || !estimate.rooms || typeof estimate.rooms !== 'object') {
+      return false;
+    }
+
+    // Check each room for products
+    for (const roomId in estimate.rooms) {
+      const room = estimate.rooms[roomId];
+      
+      // Check if room has products (object or array)
+      if (room.products) {
+        if (Array.isArray(room.products) && room.products.length > 0) {
+          return true;
+        } else if (typeof room.products === 'object' && Object.keys(room.products).length > 0) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -610,6 +638,14 @@ class EstimateManager {
             actionButtons.forEach(button => {
               button.setAttribute('data-estimate-id', estimate.id);
             });
+
+            // 6. Hide estimate actions if the estimate has no products
+            const estimateActionsSection = estimateElement.querySelector('.estimate-actions');
+            if (estimateActionsSection) {
+              const hasProducts = this.estimateHasProducts(estimate);
+              logger.log(`Estimate ${estimate.id} has products: ${hasProducts}`);
+              estimateActionsSection.style.display = hasProducts ? 'block' : 'none';
+            }
           }
         });
 

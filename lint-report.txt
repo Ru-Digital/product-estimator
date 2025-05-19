@@ -71,10 +71,10 @@
    13:28  warning  'saveEstimateData' is defined but never used           no-unused-vars
    13:46  warning  'addEstimate' is defined but never used                no-unused-vars
    13:59  warning  'removeEstimate' is defined but never used             no-unused-vars
-  144:13  warning  'contentContainer' is assigned a value but never used  no-unused-vars
-  410:9   warning  Unexpected console statement                           no-console
-  591:15  warning  Unexpected console statement                           no-console
-  593:15  warning  Unexpected console statement                           no-console
+  172:13  warning  'contentContainer' is assigned a value but never used  no-unused-vars
+  438:9   warning  Unexpected console statement                           no-console
+  619:15  warning  Unexpected console statement                           no-console
+  621:15  warning  Unexpected console statement                           no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/FormManager.js
   11:10  warning  'format' is defined but never used            no-unused-vars
@@ -97,7 +97,7 @@
     13:55  warning  'removeRoom' is defined but never used                                   no-unused-vars
   1048:7   warning  'sectionInfo' is assigned a value but never used                         no-unused-vars
   1266:69  warning  'index' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
-  2507:1   warning  Invalid JSDoc @param "sectionInfo" type "Object"; prefer: "object"       jsdoc/check-types
+  2518:1   warning  Invalid JSDoc @param "sectionInfo" type "Object"; prefer: "object"       jsdoc/check-types
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/UIManager.js
    11:10  warning  'format' is defined but never used                                              no-unused-vars

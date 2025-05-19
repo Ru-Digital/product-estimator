@@ -40,9 +40,9 @@ $spinner-accent: #3498db;
 
   .column-created_at { width: 12%; }
 
-  .column-actions { 
+  .column-actions {
     width: 15%;
-    
+
     button,
     a.button {
       margin: 2px 0;
@@ -82,7 +82,7 @@ $spinner-accent: #3498db;
 
 .estimate-details-container {
   margin-top: 20px;
-  
+
   .postbox {
     margin-bottom: 20px;
   }
@@ -92,16 +92,16 @@ $spinner-accent: #3498db;
   border-bottom: 1px solid $light-border-color;
   margin-bottom: 30px;
   padding-bottom: 20px;
-  
+
   &:last-child {
     border-bottom: none;
   }
-  
+
   h3 {
     font-size: 18px;
     margin: 0 0 15px;
   }
-  
+
   .wp-list-table {
     margin-top: 15px;
   }
@@ -128,7 +128,7 @@ $spinner-accent: #3498db;
   border-radius: 4px;
   margin-top: 30px;
   padding: 20px;
-  
+
   h3 {
     font-size: 20px;
     margin-top: 0;
@@ -143,9 +143,8 @@ $spinner-accent: #3498db;
 
 .estimate-actions {
   border-top: 1px solid $border-color;
-  margin-top: 20px;
-  padding: 15px 0;
-  
+  padding: 20px;
+
   .button {
     margin-right: 10px;
   }
@@ -208,37 +207,37 @@ $spinner-accent: #3498db;
 
   .wp-list-table {
     border: 0;
-    
+
     thead {
       display: none;
     }
-    
+
     tr {
       border-bottom: 2px solid $border-color;
       display: block;
       margin-bottom: 15px;
     }
-    
+
     td {
       border-bottom: 1px dotted $dotted-border-color;
       display: block;
       font-size: 13px;
       padding: 8px 10px;
       text-align: right;
-      
+
       &::before {
         content: attr(data-label);
         float: left;
         font-weight: bold;
         text-transform: uppercase;
       }
-      
+
       &:last-child {
         border-bottom: 0;
       }
     }
   }
-  
+
   .column-actions {
     text-align: left !important;
   }
@@ -253,30 +252,30 @@ $spinner-accent: #3498db;
     orphans: 3; /* Minimum lines at bottom of page before break */
     widows: 3;  /* Minimum lines at top of page after break */
   }
-  
+
   /* Avoid breaks inside these elements */
 
-  h1, h2, h3, h4, 
+  h1, h2, h3, h4,
   .room-details,
-  tr, 
+  tr,
   thead {
     page-break-inside: avoid;
   }
-  
+
   /* Force page breaks before these elements */
 
-  h1, h2, h3, 
+  h1, h2, h3,
   .room-details {
     page-break-after: avoid;
     page-break-before: auto;
   }
-  
+
   /* Ensure tables have header rows on each page */
 
   thead {
     display: table-header-group;
   }
-  
+
   /* Avoid breaks in the middle of images */
 
   img {
@@ -290,16 +289,16 @@ $spinner-accent: #3498db;
   .search-box {
     display: none !important;
   }
-  
+
   body {
     background: #fff;
   }
-  
+
   .estimate-details-container {
     margin: 0;
     padding: 0;
   }
-  
+
   .postbox {
     border: none;
     box-shadow: none;

@@ -499,3 +499,67 @@
     }
   }
 }
+
+/* Contact Selection Dialog */
+
+.pe-dialog-contact-selection {
+  padding: $spacing-md 0;
+  
+  .pe-dialog-instruction {
+    color: $text-color;
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: $spacing-lg;
+    text-align: center;
+  }
+  
+  .pe-dialog-button-group {
+    display: flex;
+    flex-direction: row;  /* Changed to row for inline layout */
+    gap: $spacing-md;
+    width: 100%;
+  }
+  
+  .pe-dialog-choice {
+    @include button-primary;
+    flex: 1;  /* Make buttons equal width */
+    font-size: 1rem;
+    justify-content: center;
+    padding: $spacing-md $spacing-lg;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+    
+    /* Add icons for email and phone choices */
+    &.pe-dialog-email-choice::before {
+      content: '✉';
+      font-size: 1.2em;
+      margin-right: $spacing-sm;
+    }
+    
+    &.pe-dialog-phone-choice::before {
+      content: '☎';
+      font-size: 1.2em;
+      margin-right: $spacing-sm;
+    }
+  }
+  
+  /* Mobile responsiveness */
+  @media screen and (max-width: $breakpoint-sm) {
+    .pe-dialog-button-group {
+      flex-direction: column;  /* Stack buttons on mobile */
+      gap: $spacing-sm;
+    }
+    
+    .pe-dialog-choice {
+      padding: $spacing-sm $spacing-md;
+      width: 100%;  /* Full width on mobile */
+    }
+  }
+}

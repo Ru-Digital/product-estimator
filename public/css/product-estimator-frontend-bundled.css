@@ -3055,6 +3055,77 @@ body.modal-open {
   width: 1.5em;
 }
 
+/* Contact Selection Dialog */
+.pe-dialog-contact-selection {
+  padding: 1rem 0;
+  /* Mobile responsiveness */
+}
+.pe-dialog-contact-selection .pe-dialog-instruction {
+  color: #333;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+.pe-dialog-contact-selection .pe-dialog-button-group {
+  display: flex;
+  flex-direction: row; /* Changed to row for inline layout */
+  gap: 1rem;
+  width: 100%;
+}
+.pe-dialog-contact-selection .pe-dialog-choice {
+  background-color: #00833F;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 8px 16px;
+  text-align: center;
+  transition: all 0.2s ease;
+  flex: 1; /* Make buttons equal width */
+  font-size: 1rem;
+  justify-content: center;
+  padding: 1rem 1.5rem;
+  /* Add icons for email and phone choices */
+}
+.pe-dialog-contact-selection .pe-dialog-choice:hover {
+  background-color: #006630;
+}
+.pe-dialog-contact-selection .pe-dialog-choice:focus {
+  box-shadow: 0 0 0 2px rgba(0, 131, 63, 0.3);
+  outline: none;
+}
+.pe-dialog-contact-selection .pe-dialog-choice:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.pe-dialog-contact-selection .pe-dialog-choice:active {
+  transform: translateY(0);
+}
+.pe-dialog-contact-selection .pe-dialog-choice.pe-dialog-email-choice::before {
+  content: "✉";
+  font-size: 1.2em;
+  margin-right: 0.5rem;
+}
+.pe-dialog-contact-selection .pe-dialog-choice.pe-dialog-phone-choice::before {
+  content: "☎";
+  font-size: 1.2em;
+  margin-right: 0.5rem;
+}
+@media screen and (max-width: 480px) {
+  .pe-dialog-contact-selection .pe-dialog-button-group {
+    flex-direction: column; /* Stack buttons on mobile */
+    gap: 0.5rem;
+  }
+  .pe-dialog-contact-selection .pe-dialog-choice {
+    padding: 0.5rem 1rem;
+    width: 100%; /* Full width on mobile */
+  }
+}
+
 /**
  * Main SCSS file for Product Estimator frontend styles
  *

@@ -66,6 +66,7 @@ import tooltipRichTemplate from '@templates/ui/tooltip-rich.html';
 import dialogFormFieldsTemplate from '@templates/ui/dialog-form-fields.html';
 import dialogFormFieldTemplate from '@templates/ui/dialog-form-field.html';
 import dialogContentFormTemplate from '@templates/ui/dialog-content-form.html';
+import dialogContactSelectionTemplate from '@templates/ui/dialog-contact-selection.html';
 
 import TemplateEngine from './TemplateEngine';
 const logger = createLogger('TemplateLoader');
@@ -107,7 +108,8 @@ const templates = {
   'tooltip-rich': tooltipRichTemplate,
   'dialog-form-fields-template': dialogFormFieldsTemplate,
   'dialog-form-field-template': dialogFormFieldTemplate,
-  'dialog-content-form-template': dialogContentFormTemplate
+  'dialog-content-form-template': dialogContentFormTemplate,
+  'dialog-contact-selection-template': dialogContactSelectionTemplate
 };
 
 /**

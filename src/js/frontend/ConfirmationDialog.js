@@ -314,6 +314,33 @@ class ConfirmationDialog {
         
         // Append the complete form to the message element
         messageEl.appendChild(formContainer);
+      } else if (settings.type === 'contact-selection') {
+        // Create contact selection dialog using template
+        const selectionContainer = TemplateEngine.create('dialog-contact-selection-template', {
+          message: settings.message || '',
+          emailButtonText: settings.emailButtonText || 'Email',
+          phoneButtonText: settings.phoneButtonText || 'Phone'
+        });
+        
+        messageEl.appendChild(selectionContainer);
+        
+        // Set up click handlers for the choice buttons
+        const emailBtn = messageEl.querySelector('.pe-dialog-email-choice');
+        const phoneBtn = messageEl.querySelector('.pe-dialog-phone-choice');
+        
+        if (emailBtn && settings.onEmailChoice) {
+          emailBtn.addEventListener('click', () => {
+            settings.onEmailChoice();
+            this.hide();
+          });
+        }
+        
+        if (phoneBtn && settings.onPhoneChoice) {
+          phoneBtn.addEventListener('click', () => {
+            settings.onPhoneChoice();
+            this.hide();
+          });
+        }
       } else {
         // For non-form dialogs, just set the text content
         messageEl.textContent = settings.message || '';
@@ -324,22 +351,32 @@ class ConfirmationDialog {
       confirmEl.textContent = settings.confirmText;
     }
 
-    // Handle cancel button visibility
-    if (cancelEl) {
-      if (settings.showCancel) {
-        cancelEl.classList.remove('hidden');
-        cancelEl.textContent = settings.cancelText;
+    // Hide standard buttons for contact selection dialog
+    const footerEl = this.dialog.querySelector('.pe-dialog-footer');
+    if (settings.type === 'contact-selection') {
+      // Hide footer entirely for contact selection
+      if (footerEl) footerEl.style.display = 'none';
+    } else {
+      // Show footer for other dialog types
+      if (footerEl) footerEl.style.display = '';
+      
+      // Handle cancel button visibility
+      if (cancelEl) {
+        if (settings.showCancel) {
+          cancelEl.classList.remove('hidden');
+          cancelEl.textContent = settings.cancelText;
 
-        // When cancel is visible, ensure confirm button isn't full width
-        if (confirmEl) {
-          confirmEl.classList.remove('full-width');
-        }
-      } else {
-        cancelEl.classList.add('hidden');
+          // When cancel is visible, ensure confirm button isn't full width
+          if (confirmEl) {
+            confirmEl.classList.remove('full-width');
+          }
+        } else {
+          cancelEl.classList.add('hidden');
 
-        // When cancel button is hidden, make confirm button full width
-        if (confirmEl) {
-          confirmEl.classList.add('full-width');
+          // When cancel button is hidden, make confirm button full width
+          if (confirmEl) {
+            confirmEl.classList.add('full-width');
+          }
         }
       }
     }

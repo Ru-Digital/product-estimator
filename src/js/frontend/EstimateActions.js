@@ -628,126 +628,121 @@ class EstimateActions {
     let title = 'How would you like to receive your estimate?';
     let prompt = 'Please choose how you\'d prefer to receive your estimate:';
     let emailBtnText = 'Email';
-    let smsBtnText = 'SMS';
+    let phoneBtnText = 'SMS';
 
     if (action === 'request_contact') {
       title = 'How would you like to be contacted?';
       prompt = 'Please choose how you\'d prefer our store to contact you:';
       emailBtnText = 'Email';
-      smsBtnText = 'Phone';
+      phoneBtnText = 'Phone';
     }
 
-    const modalHtml = `
-    <div class="email-prompt-overlay"></div>
-    <div class="email-prompt-container">
-      <div class="email-prompt-header">
-        <h3>${title}</h3>
-      </div>
-      <div class="email-prompt-body">
-        <p>${prompt}</p>
-      </div>
-      <div class="email-prompt-footer">
-        <button type="button" class="button cancel-email-btn">Cancel</button>
-        <button type="button" class="button submit-email-btn email-choice">${emailBtnText}</button>
-        <button type="button" class="button submit-email-btn sms-choice">${smsBtnText}</button>
-      </div>
-    </div>
-  `;
+    // Get the dialog instance
+    let dialog = null;
+    
+    // Try to get dialog from modalManager reference (preferred)
+    if (this.modalManager && this.modalManager.confirmationDialog) {
+      dialog = this.modalManager.confirmationDialog;
+    }
+    // Fallback to window.productEstimator.dialog
+    else if (window.productEstimator && window.productEstimator.dialog) {
+      dialog = window.productEstimator.dialog;
+    }
 
-    const promptEl = document.createElement('div');
-    promptEl.className = 'email-prompt-modal';
-    promptEl.innerHTML = modalHtml;
-    document.body.appendChild(promptEl);
-
-    const cancelBtn = promptEl.querySelector('.cancel-email-btn');
-    const emailBtn = promptEl.querySelector('.email-choice');
-    const smsBtn = promptEl.querySelector('.sms-choice');
-
-    cancelBtn.addEventListener('click', () => {
+    if (!dialog) {
+      this.showError('Dialog not available. Please refresh the page and try again.');
       this.setButtonLoading(button, false);
       this.processing = false;
-      promptEl.remove();
-    });
+      return;
+    }
 
-    emailBtn.addEventListener('click', () => {
-      promptEl.remove();
+    // Show the dialog with contact selection type
+    dialog.show({
+      title: title,
+      message: prompt,
+      type: 'contact-selection',
+      emailButtonText: emailBtnText,
+      phoneButtonText: phoneBtnText,
+      onEmailChoice: () => {
+        // Determine the specific action for email
+        const emailAction = action === 'request_contact' ? 'request_contact_email' : 'request_copy_email';
 
-      // Determine the specific action for email
-      const emailAction = action === 'request_contact' ? 'request_contact_email' : 'request_copy_email';
+        // Check customer details
+        this.checkCustomerDetails(estimateId)
+          .then(customerInfo => {
+            // Always check for name, plus email for email actions
+            const missingFields = [];
+            if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
+            if (!customerInfo.email || customerInfo.email.trim() === '') missingFields.push('email');
 
-      // Check customer details
-      this.checkCustomerDetails(estimateId)
-        .then(customerInfo => {
-          // Always check for name, plus email for email actions
-          const missingFields = [];
-          if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
-          if (!customerInfo.email || customerInfo.email.trim() === '') missingFields.push('email');
-
-          if (missingFields.length === 0) {
-            // All required details exist, proceed with the action
-            if (action === 'request_contact') {
-              this.requestStoreContact(estimateId, 'email', button, customerInfo);
-            } else {
-              // Original request_copy email flow
-              this.requestCopyEstimate(estimateId, button)
-                .then(() => {
-                  this.showMessage(`Estimate has been emailed to ${customerInfo.email}`, 'success', () => {
+            if (missingFields.length === 0) {
+              // All required details exist, proceed with the action
+              if (action === 'request_contact') {
+                this.requestStoreContact(estimateId, 'email', button, customerInfo);
+              } else {
+                // Original request_copy email flow
+                this.requestCopyEstimate(estimateId, button)
+                  .then(() => {
+                    this.showMessage(`Estimate has been emailed to ${customerInfo.email}`, 'success', () => {
+                      this.setButtonLoading(button, false);
+                      this.processing = false;
+                    });
+                  })
+                  .catch(() => {
+                    this.showError('Error sending estimate copy. Please try again.');
                     this.setButtonLoading(button, false);
                     this.processing = false;
                   });
-                })
-                .catch(() => {
-                  this.showError('Error sending estimate copy. Please try again.');
-                  this.setButtonLoading(button, false);
-                  this.processing = false;
-                });
-            }
-          } else {
-            // Missing details, show prompt
-            this.showCustomerDetailsPrompt(estimateId, button, emailAction);
-          }
-        })
-        .catch(() => {
-          this.showError('Error checking customer details. Please try again.');
-          this.setButtonLoading(button, false);
-          this.processing = false;
-        });
-    });
-
-    smsBtn.addEventListener('click', () => {
-      promptEl.remove();
-
-      // Determine the specific action for SMS/phone
-      const smsAction = action === 'request_contact' ? 'request_contact_phone' : 'request_copy_sms';
-
-      // Check customer details
-      this.checkCustomerDetails(estimateId)
-        .then(customerInfo => {
-          // Always check for name, plus phone for SMS/phone actions
-          const missingFields = [];
-          if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
-          if (!customerInfo.phone || customerInfo.phone.trim() === '') missingFields.push('phone');
-
-          if (missingFields.length === 0) {
-            // All required details exist, proceed with the action
-            if (action === 'request_contact') {
-              this.requestStoreContact(estimateId, 'phone', button, customerInfo);
+              }
             } else {
-              // Original request_copy SMS flow (coming soon)
-              this.showMessage('SMS option coming soon.', 'success');
-              this.setButtonLoading(button, false);
-              this.processing = false;
+              // Missing details, show prompt
+              this.showCustomerDetailsPrompt(estimateId, button, emailAction);
             }
-          } else {
-            // Missing details, show prompt
-            this.showCustomerDetailsPrompt(estimateId, button, smsAction);
-          }
-        })
-        .catch(() => {
-          this.showError('Error checking customer details. Please try again.');
-          this.setButtonLoading(button, false);
-          this.processing = false;
-        });
+          })
+          .catch(() => {
+            this.showError('Error checking customer details. Please try again.');
+            this.setButtonLoading(button, false);
+            this.processing = false;
+          });
+      },
+      onPhoneChoice: () => {
+        // Determine the specific action for SMS/phone
+        const smsAction = action === 'request_contact' ? 'request_contact_phone' : 'request_copy_sms';
+
+        // Check customer details
+        this.checkCustomerDetails(estimateId)
+          .then(customerInfo => {
+            // Always check for name, plus phone for SMS/phone actions
+            const missingFields = [];
+            if (!customerInfo.name || customerInfo.name.trim() === '') missingFields.push('name');
+            if (!customerInfo.phone || customerInfo.phone.trim() === '') missingFields.push('phone');
+
+            if (missingFields.length === 0) {
+              // All required details exist, proceed with the action
+              if (action === 'request_contact') {
+                this.requestStoreContact(estimateId, 'phone', button, customerInfo);
+              } else {
+                // Original request_copy SMS flow (coming soon)
+                this.showMessage('SMS option coming soon.', 'success');
+                this.setButtonLoading(button, false);
+                this.processing = false;
+              }
+            } else {
+              // Missing details, show prompt
+              this.showCustomerDetailsPrompt(estimateId, button, smsAction);
+            }
+          })
+          .catch(() => {
+            this.showError('Error checking customer details. Please try again.');
+            this.setButtonLoading(button, false);
+            this.processing = false;
+          });
+      },
+      showCancel: true,
+      onCancel: () => {
+        this.setButtonLoading(button, false);
+        this.processing = false;
+      }
     });
   }
 

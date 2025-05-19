@@ -43,9 +43,9 @@
   294:13  warning  Unexpected console statement                                                  no-console
   298:13  warning  Unexpected console statement                                                  no-console
   307:15  warning  Unexpected console statement                                                  no-console
-  824:24  warning  'estimateId' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
-  830:9   warning  Unexpected console statement                                                  no-console
-  833:9   warning  Unexpected console statement                                                  no-console
+  819:24  warning  'estimateId' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  825:9   warning  Unexpected console statement                                                  no-console
+  828:9   warning  Unexpected console statement                                                  no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimateStorage.js
   389:5    warning  Unexpected console statement                          no-console

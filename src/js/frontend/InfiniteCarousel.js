@@ -58,11 +58,6 @@ class InfiniteCarousel {
     // Update button states and ensure they're enabled
     this.updateButtons();
     
-    // Force check for buttons one more time after a delay
-    setTimeout(() => {
-      this.updateButtons();
-    }, 100);
-    
     logger.log(`Initialized continuous scroll carousel with ${this.itemCount} items`);
   }
   
@@ -107,25 +102,14 @@ class InfiniteCarousel {
     // Clone all original items
     this.originalItems.forEach((item) => {
       const clone = item.cloneNode(true);
-      clone.classList.add('duplicated', 'fade-in');
+      clone.classList.add('duplicated');
       clone.dataset.duplicateSet = this.duplicatedSets;
       clonedItems.push(clone);
     });
     
-    // Append to container with initial opacity 0
+    // Append to container
     clonedItems.forEach(clone => {
-      clone.style.opacity = '0';
       this.itemsContainer.appendChild(clone);
-    });
-    
-    // Fade in the cloned items after a short delay
-    requestAnimationFrame(() => {
-      clonedItems.forEach((clone, index) => {
-        setTimeout(() => {
-          clone.style.transition = 'opacity 0.3s ease';
-          clone.style.opacity = '1';
-        }, index * 50); // Stagger the fade-in effect
-      });
     });
     
     // Update counts
@@ -169,7 +153,6 @@ class InfiniteCarousel {
     if (this.isAnimating) return;
     
     this.isAnimating = true;
-    const itemTotalWidth = this.itemWidth + this.itemGap;
     this.currentPosition = Math.max(0, this.currentPosition - 1);
     
     this.setPosition(this.currentPosition, true);
@@ -182,9 +165,6 @@ class InfiniteCarousel {
     
     // Always increment position for continuous scrolling
     this.currentPosition++;
-    
-    // Check if we need more items immediately
-    this.checkInfiniteScroll();
     
     // Set the new position
     this.setPosition(this.currentPosition, true);
@@ -204,11 +184,6 @@ class InfiniteCarousel {
     
     if (animate) {
       this.updateButtons();
-    }
-    
-    // Check if we need to duplicate items immediately after positioning
-    if (!animate) {
-      this.checkInfiniteScroll();
     }
   }
   
@@ -235,7 +210,6 @@ class InfiniteCarousel {
       this.nextBtn.classList.remove('disabled');
       this.nextBtn.disabled = false; // Ensure it's not disabled at DOM level
       this.nextBtn.style.pointerEvents = 'auto'; // Ensure clicks are allowed
-      this.nextBtn.style.opacity = '1'; // Ensure it's visible
     }
     
     // Disable prev button at the beginning

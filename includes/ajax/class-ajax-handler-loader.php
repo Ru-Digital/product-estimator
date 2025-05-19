@@ -31,17 +31,15 @@ class AjaxHandlerLoader {
         $features = product_estimator_features();
         
         // Core handlers - always loaded
-        $this->handlers['estimate'] = new EstimateAjaxHandler();
-        $this->handlers['room'] = new RoomAjaxHandler();
+        $this->handlers['storage'] = new StorageAjaxHandler();
+        $this->handlers['validation'] = new ValidationAjaxHandler();
         $this->handlers['product'] = new ProductAjaxHandler();
-        $this->handlers['form'] = new FormAjaxHandler();
-        $this->handlers['customer'] = new CustomerAjaxHandler();
+        $this->handlers['ui'] = new UIAjaxHandler();
         
         // Feature-dependent handlers
         if ($features->suggested_products_enabled) {
             $this->handlers['suggestion'] = new SuggestionAjaxHandler();
         }
-        
         
         // Allow adding custom handlers via filter
         $this->handlers = apply_filters('product_estimator_ajax_handlers', $this->handlers);

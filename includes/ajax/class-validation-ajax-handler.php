@@ -1,16 +1,14 @@
 <?php
 namespace RuDigital\ProductEstimator\Includes\Ajax;
 
-use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
+use RuDigital\ProductEstimator\Includes\CustomerDetails;
 
 /**
- * Room-related AJAX handlers
+ * Validation-related AJAX handlers
  *
- * This class now only handles product data operations and pricing calculations.
- * All session storage functionality has been removed as the frontend uses localStorage.
+ * Handles all validation operations including primary category conflicts and customer details
  */
-class RoomAjaxHandler extends AjaxHandlerBase {
-    use EstimateDbHandler;
+class ValidationAjaxHandler extends AjaxHandlerBase {
 
     /**
      * Register WordPress hooks for AJAX endpoints
@@ -18,7 +16,6 @@ class RoomAjaxHandler extends AjaxHandlerBase {
      * @return void
      */
     protected function register_hooks() {
-        // These endpoints are still used by the frontend for product operations
         $this->register_ajax_endpoint('check_primary_category_conflict', 'checkPrimaryCategoryConflict');
     }
 
@@ -46,8 +43,6 @@ class RoomAjaxHandler extends AjaxHandlerBase {
 
         return $is_primary;
     }
-
-
 
     /**
      * Check for primary category conflicts

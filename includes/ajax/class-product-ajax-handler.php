@@ -16,8 +16,6 @@ class ProductAjaxHandler extends AjaxHandlerBase {
      */
     protected function register_hooks() {
         $this->register_ajax_endpoint('get_variation_estimator', 'getVariationEstimator');
-        $this->register_ajax_endpoint('search_category_products', 'ajaxSearchCategoryProducts');
-        $this->register_ajax_endpoint('get_category_products', 'get_category_products');
         $this->register_ajax_endpoint('get_product_data_for_storage', 'get_product_data_for_storage');
         $this->register_ajax_endpoint('product_estimator_get_product_variations', 'get_product_variations');
     }
@@ -77,142 +75,6 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 'message' => $e->getMessage()
             ]);
         }
-    }
-
-    /**
-     * AJAX handler for searching products within a category
-     */
-    public function ajaxSearchCategoryProducts()
-    {
-        // Check nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_product_additions_nonce')) {
-            wp_send_json_error(array('message' => __('Security check failed.', 'product-estimator')));
-            return;
-        }
-
-        // Check permissions
-        if (!current_user_can('manage_product_terms')) {
-            wp_send_json_error(array('message' => __('You do not have permission to perform this action.', 'product-estimator')));
-            return;
-        }
-
-        // Get search parameters
-        $search_term = isset($_POST['search']) ? sanitize_text_field($_POST['search']) : '';
-        $category_id = isset($_POST['category']) ? absint($_POST['category']) : 0;
-
-        if (empty($search_term) || empty($category_id)) {
-            wp_send_json_error(array('message' => __('Invalid search parameters.', 'product-estimator')));
-            return;
-        }
-
-        try {
-            // Query products
-            $args = array(
-                'post_type' => 'product',
-                'post_status' => 'publish',
-                'posts_per_page' => 20,
-                's' => $search_term,
-                'tax_query' => array(
-                    array(
-                        'taxonomy' => 'product_cat',
-                        'field' => 'term_id',
-                        'terms' => $category_id,
-                    ),
-                ),
-            );
-
-            $query = new \WP_Query($args);
-            $products = array();
-
-            if ($query->have_posts()) {
-                while ($query->have_posts()) {
-                    $query->the_post();
-                    $product_id = get_the_ID();
-                    $product = wc_get_product($product_id);
-
-                    if ($product) {
-                        $products[] = array(
-                            'id' => $product_id,
-                            'name' => $product->get_name(),
-                            'price' => $product->get_price(),
-                            'formatted_price' => wc_price($product->get_price()),
-                        );
-                    }
-                }
-                wp_reset_postdata();
-            }
-
-            wp_send_json_success(array(
-                'products' => $products,
-            ));
-        } catch (\Exception $e) {
-            wp_send_json_error(array(
-                'message' => __('Error searching products:', 'product-estimator') . ' ' . $e->getMessage()
-            ));
-        }
-    }
-
-    /**
-     * Get products from specified categories
-     */
-    public function get_category_products() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        // Get category IDs
-        $category_ids = isset($_POST['categories']) ? sanitize_text_field($_POST['categories']) : '';
-
-        if (empty($category_ids)) {
-            wp_send_json_error([
-                'message' => __('Category IDs are required', 'product-estimator')
-            ]);
-            return;
-        }
-
-        // Convert comma-separated string to array
-        $categories = explode(',', $category_ids);
-        $categories = array_map('intval', $categories);
-
-        // Query products in these categories
-        $args = [
-            'post_type' => 'product',
-            'post_status' => 'publish',
-            'posts_per_page' => 50, // Limit to 50 products for performance
-            'tax_query' => [
-                [
-                    'taxonomy' => 'product_cat',
-                    'field' => 'term_id',
-                    'terms' => $categories,
-                    'operator' => 'IN'
-                ]
-            ],
-            'fields' => 'ids' // Only get post IDs for efficiency
-        ];
-
-        $product_query = new \WP_Query($args);
-        $products = [];
-
-        if ($product_query->have_posts()) {
-            foreach ($product_query->posts as $product_id) {
-                $product = wc_get_product($product_id);
-
-                if ($product) {
-                    // Only include products with estimator enabled
-                    if (\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($product_id)) {
-                        $products[] = [
-                            'id' => $product_id,
-                            'name' => $product->get_name(),
-                            'price' => $product->get_price(),
-                            'image' => wp_get_attachment_image_url($product->get_image_id(), 'thumbnail')
-                        ];
-                    }
-                }
-            }
-        }
-
-        wp_send_json_success([
-            'products' => $products
-        ]);
     }
 
     /**
@@ -385,14 +247,14 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                                 }
                             }
                         }
-                        
+
                         $cat_auto_add_notes = $product_additions_manager->get_auto_add_notes_for_category($category_id);
                         if (!empty($cat_auto_add_notes)) {
                             $auto_add_notes_texts = array_merge($auto_add_notes_texts, $cat_auto_add_notes);
                         }
                     }
                 }
-                
+
                 // Remove duplicates and process
                 $processed_products = [];
                 foreach ($auto_add_products_with_details as $product_detail) {
@@ -405,7 +267,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                                 'title' => $product_detail['section_title'],
                                 'description' => $product_detail['section_description']
                             ];
-                            
+
                             // Add option colors if available
                             for ($i = 1; $i <= 5; $i++) {
                                 $color_key = 'option_colour_' . $i;
@@ -416,7 +278,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                         }
                     }
                 }
-                
+
                 $auto_add_notes_texts = array_values(array_unique($auto_add_notes_texts));
 
                 foreach ($processed_products as $product_detail) {
@@ -454,7 +316,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                             // Get variations in the order they are sorted in the admin
                             // This ensures variations are displayed in the same order as set in WooCommerce admin
                             $available_variation_ids = $auto_add_product_obj->get_children();
-                            
+
                             // Get the variation objects and their menu_order
                             // The menu_order field determines the sorting position in WooCommerce admin
                             $variations_with_order = [];
@@ -468,23 +330,23 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                                     ];
                                 }
                             }
-                            
+
                             // Sort by menu_order to match admin ordering
                             // Lower menu_order values appear first
                             usort($variations_with_order, function($a, $b) {
                                 return $a['menu_order'] - $b['menu_order'];
                             });
-                            
+
                             $selected_option = true;
                             $default_option_select = null;
-                            
+
                             // Build variations array with IDs as keys, maintaining insertion order
                             foreach ($variations_with_order as $variation_data) {
                                 $variation_id = $variation_data['id'];
                                 $variation_obj = $variation_data['obj'];
-                                
+
                                 if ($selected_option) $default_option_select = $variation_id;
-                                
+
                                 $variation_pricing_data = product_estimator_get_product_price($variation_id, $room_area, false);
 
                                 $variations[$variation_id] = [
@@ -521,7 +383,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 foreach ($auto_add_notes_texts as $note_text) {
                     $product_data['additional_notes']['note_' . uniqid()] = ['id' => 'note_' . uniqid(), 'type' => 'note', 'note_text' => $note_text];
                 }
-                
+
                 // Add section info to the product data
                 if (!empty($section_info)) {
                     $product_data['additional_products_section'] = $section_info;
@@ -589,7 +451,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             $similar_products_list = $this->fetch_and_format_similar_products($product_id, $room_area);
 
             $product_data['similar_products'] = $similar_products_list;
-            
+
             // Get section info for similar products
             $section_info = null;
             if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\SimilarProductsFrontend')) {
@@ -597,10 +459,10 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                     'product-estimator',
                     PRODUCT_ESTIMATOR_VERSION
                 );
-                
+
                 $section_info = $similar_products_module->get_section_info_for_product($product_id);
             }
-            
+
             if ($section_info) {
                 $product_data['similar_products_section'] = $section_info;
             }
@@ -944,12 +806,12 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                             break;
                         }
                     }
-                    
+
                     // Skip this option if no estimator-enabled variations use it
                     if (!$option_has_estimator_variation) {
                         continue;
                     }
-                    
+
                     $option_data = [
                         'value' => $option,
                         'label' => $option
@@ -1011,13 +873,13 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             $formatted_variations = [];
             foreach ($available_variations as $variation) {
                 $variation_obj = wc_get_product($variation['variation_id']);
-                
+
                 // Check if estimator is enabled for this variation
                 $estimator_enabled = get_post_meta($variation['variation_id'], '_enable_estimator', true);
                 if ($estimator_enabled !== 'yes') {
                     continue; // Skip variations without estimator enabled
                 }
-                
+
                 $image_id = $variation_obj ? $variation_obj->get_image_id() : 0;
                 $image_url = '';
 

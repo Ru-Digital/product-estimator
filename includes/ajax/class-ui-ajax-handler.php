@@ -2,9 +2,11 @@
 namespace RuDigital\ProductEstimator\Includes\Ajax;
 
 /**
- * Form-related AJAX handlers for template rendering
+ * UI-related AJAX handlers for template rendering
+ * 
+ * Handles all UI component requests including forms and modals
  */
-class FormAjaxHandler extends AjaxHandlerBase {
+class UIAjaxHandler extends AjaxHandlerBase {
 
     /**
      * Register WordPress hooks for AJAX endpoints

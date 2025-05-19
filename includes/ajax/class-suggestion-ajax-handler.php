@@ -3,7 +3,7 @@ namespace RuDigital\ProductEstimator\Includes\Ajax;
 
 /**
  * Product suggestion-related AJAX handlers
- * 
+ *
  * This class handles suggestion and similar product requests.
  * Session storage has been removed as the frontend uses localStorage.
  */
@@ -19,7 +19,6 @@ class SuggestionAjaxHandler extends AjaxHandlerBase {
 
         if ($features->suggested_products_enabled) {
             $this->register_ajax_endpoint('fetch_suggestions_for_modified_room', 'handle_fetch_suggestions_for_modified_room');
-            $this->register_ajax_endpoint('get_suggested_products', 'generateSuggestions');
         }
 
         $this->register_ajax_endpoint('get_similar_products', 'get_similar_products');
@@ -118,48 +117,6 @@ class SuggestionAjaxHandler extends AjaxHandlerBase {
         }
     }
 
-    /**
-     * Generate suggestions (deprecated method kept for backward compatibility)
-     * This uses room data directly from the request rather than session
-     */
-    public function generateSuggestions() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        // Instead of getting data from session, expect room data from the request
-        $room_products = isset($_POST['room_products']) ? $_POST['room_products'] : [];
-        $room_area = isset($_POST['room_area']) ? floatval($_POST['room_area']) : 0;
-        
-        try {
-            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\ProductAdditionsFrontend')) {
-                $pa_frontend_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-product-additions-frontend.php';
-                if (file_exists($pa_frontend_path)) {
-                    require_once $pa_frontend_path;
-                } else {
-                    throw new \Exception('ProductAdditionsFrontend class file not found.');
-                }
-            }
-            
-            $product_additions_manager = new \RuDigital\ProductEstimator\Includes\Frontend\ProductAdditionsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-            
-            // Generate suggestions using provided room data
-            $suggestions = $product_additions_manager->get_suggestions_for_room($room_products, $room_area);
-            
-            wp_send_json_success([
-                'suggestions' => $suggestions,
-                'message' => __('Suggestions generated successfully', 'product-estimator')
-            ]);
-            
-        } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('generateSuggestions: Error occurred: ' . $e->getMessage());
-            }
-            wp_send_json_error([
-                'message' => __('Error generating suggestions', 'product-estimator'),
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
 
     /**
      * AJAX handler for getting similar products for a specific product
@@ -194,7 +151,7 @@ class SuggestionAjaxHandler extends AjaxHandlerBase {
 
             // Get similar products using the frontend class
             $similar_products = $similar_products_frontend->get_similar_products_for_product($product_id, $room_area);
-            
+
             // Get section info for the product
             $section_info = $similar_products_frontend->get_section_info_for_product($product_id);
 
@@ -218,28 +175,4 @@ class SuggestionAjaxHandler extends AjaxHandlerBase {
         }
     }
 
-    /**
-     * Check if a product is in one of the primary product categories
-     *
-     * @param int $product_id The product ID to check
-     * @return bool True if the product is in a primary category
-     */
-    protected function isProductInPrimaryCategories($product_id) {
-        // Get the primary categories from settings
-        $general_settings = get_option('product_estimator_general', []);
-        $primary_category_ids = isset($general_settings['primary_product_categories']) ? $general_settings['primary_product_categories'] : [];
-        
-        // If no primary categories are configured, no product can be primary
-        if (empty($primary_category_ids)) {
-            return false;
-        }
-        
-        // Get the product's categories
-        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
-        
-        // Check if any of the product's categories are in the primary categories list
-        $is_primary = !empty(array_intersect($product_categories, $primary_category_ids));
-        
-        return $is_primary;
-    }
 }

@@ -77,12 +77,11 @@
             "includes/admin/settings/class-labels-settings-module.php",
             "includes/ajax/class-ajax-handler-base.php",
             "includes/ajax/class-ajax-handler-loader.php",
-            "includes/ajax/class-customer-ajax-handler.php",
-            "includes/ajax/class-estimate-ajax-handler.php",
-            "includes/ajax/class-form-ajax-handler.php",
             "includes/ajax/class-product-ajax-handler.php",
-            "includes/ajax/class-room-ajax-handler.php",
-            "includes/ajax/class-suggestion-ajax-handler.php"
+            "includes/ajax/class-storage-ajax-handler.php",
+            "includes/ajax/class-suggestion-ajax-handler.php",
+            "includes/ajax/class-ui-ajax-handler.php",
+            "includes/ajax/class-validation-ajax-handler.php"
         ],
         "files": []
     },

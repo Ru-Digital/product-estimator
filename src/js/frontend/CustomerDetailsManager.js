@@ -24,7 +24,6 @@ class CustomerDetailsManager {
       debug: false,
       selectors: {
         editButton: '#edit-customer-details-btn',
-        deleteButton: '#delete-customer-details-btn',
         saveButton: '#save-customer-details-btn',
         cancelButton: '#cancel-edit-customer-details-btn',
         detailsContainer: '.saved-customer-details',
@@ -78,14 +77,14 @@ class CustomerDetailsManager {
   onCustomerDetailsUpdated(event) {
     if (event.detail && event.detail.details) {
       logger.log('Received customer_details_updated event', event.detail);
-      
+
       // Update the customer details display UI elements
       this.updateDisplayedDetails(event.detail.details);
 
       // Only check and update email field in the customer details edit form,
       // not in the new estimate form - this prevents field value synchronization issues
       this.checkAndUpdateEmailField(event.detail.details);
-      
+
       // Important: we should never synchronize values between the customer details
       // form and the new estimate form as they serve different purposes
     }
@@ -105,7 +104,7 @@ class CustomerDetailsManager {
     customerEditForms.forEach(editForm => {
       // Skip if this is not a customer details edit form
       // (check for a customer-specific identifier to ensure we're only updating customer forms)
-      if (!editForm.classList.contains('customer-details-edit-form') && 
+      if (!editForm.classList.contains('customer-details-edit-form') &&
           !editForm.closest('.saved-customer-details') &&
           !editForm.querySelector('#edit-customer-name')) {
         logger.log('Skipping non-customer details form to prevent field synchronization issues');
@@ -178,19 +177,19 @@ class CustomerDetailsManager {
     newEstimateForms.forEach(form => {
       // Only update the data attribute, never the form fields directly
       form.setAttribute('data-has-email', hasEmail ? 'true' : 'false');
-      
+
       // Add explicit protection to prevent postcode-to-name field synchronization
       // Add a one-time event listener to prevent the first input to postcode field from affecting the name field
       if (!form._fieldProtectionAdded) {
         const postcodeField = form.querySelector('#customer-postcode');
         const nameField = form.querySelector('#estimate-name');
-        
+
         if (postcodeField && nameField) {
           logger.log('Adding protection to prevent field value synchronization in estimate form');
-          
+
           // Store the original values from fields when the form is first rendered
           let nameOriginal = nameField.value;
-          
+
           // Add an input event listener to detect when the postcode field changes
           postcodeField.addEventListener('input', function() {
             // If the name field now contains the postcode value (indicating unwanted sync),
@@ -200,14 +199,14 @@ class CustomerDetailsManager {
               nameField.value = nameOriginal;
             }
           });
-          
+
           // Add a change event listener to the name field to keep track of user-intended changes
           nameField.addEventListener('change', function() {
             // Update the stored original value when the user deliberately changes it
             nameOriginal = nameField.value;
             logger.log('Name field changed by user, new value stored:', nameOriginal);
           });
-          
+
           // Mark this form as protected
           form._fieldProtectionAdded = true;
         }
@@ -220,7 +219,6 @@ class CustomerDetailsManager {
   bindEvents() {
     // Find the buttons
     const editButton = document.querySelector(this.config.selectors.editButton);
-    const deleteButton = document.querySelector(this.config.selectors.deleteButton);
     const saveButton = document.querySelector(this.config.selectors.saveButton);
     const cancelButton = document.querySelector(this.config.selectors.cancelButton);
 
@@ -232,11 +230,6 @@ class CustomerDetailsManager {
 
     // Edit button - show edit form
     this.bindButtonWithHandler(editButton, 'click', this.handleEditClick.bind(this));
-
-    // Delete button - confirm then delete
-    if (deleteButton) {
-      this.bindButtonWithHandler(deleteButton, 'click', this.handleDeleteClick.bind(this));
-    }
 
     // Save button - save updated details
     if (saveButton) {
@@ -291,10 +284,10 @@ class CustomerDetailsManager {
     if (detailsHeader) detailsHeader.style.display = 'none';
     if (editForm) {
       editForm.style.display = 'block';
-      
+
       // Get current customer details
       const customerData = this.getCustomerDetails();
-      
+
       // Show/hide fields based on existing data and populate values
       const fields = [
         { id: 'edit-customer-name', key: 'name' },
@@ -302,7 +295,7 @@ class CustomerDetailsManager {
         { id: 'edit-customer-phone', key: 'phone' },
         { id: 'edit-customer-postcode', key: 'postcode' }
       ];
-      
+
       fields.forEach(field => {
         const fieldElement = editForm.querySelector(`#${field.id}`);
         if (fieldElement) {
@@ -318,14 +311,14 @@ class CustomerDetailsManager {
           }
         }
       });
-      
+
       // Always show at least postcode field for new entries
       const visibleFields = fields.filter(field => {
         const el = editForm.querySelector(`#${field.id}`);
         const group = el?.closest('.form-group');
         return group && group.style.display !== 'none';
       });
-      
+
       // If no fields are visible or only empty fields are visible, show postcode
       if (visibleFields.length === 0 || !Object.keys(customerData).some(key => customerData[key])) {
         const postcodeField = editForm.querySelector('#edit-customer-postcode');
@@ -375,14 +368,14 @@ class CustomerDetailsManager {
 
     // Get updated details - collect only visible fields
     const updatedDetails = {};
-    
+
     const fields = [
       { id: 'edit-customer-name', key: 'name' },
       { id: 'edit-customer-email', key: 'email' },
       { id: 'edit-customer-phone', key: 'phone' },
       { id: 'edit-customer-postcode', key: 'postcode' }
     ];
-    
+
     fields.forEach(field => {
       const fieldElement = document.getElementById(field.id);
       if (fieldElement) {
@@ -404,7 +397,7 @@ class CustomerDetailsManager {
 
       // Handle successful save - localStorage only
       this.handleSaveSuccess({ success: true }, updatedDetails);
-      
+
       // Reset button state after success
       saveButton.textContent = originalText;
       saveButton.disabled = false;
@@ -412,10 +405,10 @@ class CustomerDetailsManager {
     } catch (localStorageError) {
       // Handle local storage save error
       logger.error('Error saving to localStorage:', localStorageError);
-      this.handleSaveError({ 
-        message: 'Could not save details locally. Please check your browser storage settings.' 
+      this.handleSaveError({
+        message: 'Could not save details locally. Please check your browser storage settings.'
       });
-      
+
       // Reset button state after error
       saveButton.textContent = originalText;
       saveButton.disabled = false;
@@ -468,150 +461,6 @@ class CustomerDetailsManager {
     logger.log('Error saving customer details:', error);
   }
 
-  /**
-   * Handle delete button click
-   * @param {Event} e - Click event
-   */
-  handleDeleteClick(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Check if modalManager.confirmationDialog is available
-    if (this.modalManager && this.modalManager.confirmationDialog) {
-      this.modalManager.confirmationDialog.show({
-        title: (this.config.i18n && this.config.i18n.delete_customer_details) || 'Delete Customer Details',
-        message: (this.config.i18n && this.config.i18n.confirm_delete_details) || 'Are you sure you want to delete your saved details?',
-        confirmText: (this.config.i18n && this.config.i18n.delete) || 'Delete',
-        action: 'delete',
-        cancelText: this.config.i18n.cancel || 'Cancel',
-        onConfirm: () => {
-          this.deleteCustomerDetails();
-        }
-      });
-    } 
-    // Fallback to window.productEstimator.dialog if available
-    else if (window.productEstimator && window.productEstimator.dialog) {
-      window.productEstimator.dialog.show({
-        title: (this.config.i18n && this.config.i18n.delete_customer_details) || 'Delete Customer Details',
-        message: (this.config.i18n && this.config.i18n.confirm_delete_details) || 'Are you sure you want to delete your saved details?',
-        confirmText: (this.config.i18n && this.config.i18n.delete) || 'Delete',
-        action: 'delete',
-        cancelText: this.config.i18n.cancel || 'Cancel',
-        onConfirm: () => {
-          this.deleteCustomerDetails();
-        }
-      });
-    } else {
-      // Fallback to regular confirm
-      if (confirm(this.config.i18n.confirm_delete_details || 'Are you sure you want to delete your saved details?')) {
-        this.deleteCustomerDetails();
-      }
-    }
-  }
-
-  /**
-   * Delete customer details
-   */
-  deleteCustomerDetails() {
-    // Get the customer details confirmation container
-    const confirmationContainer = document.querySelector('.customer-details-confirmation');
-    if (confirmationContainer) {
-      confirmationContainer.classList.add('loading');
-    }
-
-    // Use the imported clearCustomerDetails function
-    try {
-      clearCustomerDetails(); // Clear using imported function
-      logger.log('Customer details removed from localStorage using imported function'); // Log the success
-      this.handleDeleteSuccess({message: "Details deleted successfully from local storage"}, confirmationContainer);
-    } catch (e) {
-      logger.log('localStorage error on delete using imported function', e); // Log any error
-    }
-
-
-    // Use the dataService to make the AJAX request if available
-    if (this.dataService && typeof this.dataService.request === 'function') {
-      this.dataService.request('delete_customer_details')
-        .then(data => {
-          this.handleDeleteSuccess(data, confirmationContainer);
-        })
-        .catch(error => {
-          this.handleDeleteError(error, confirmationContainer);
-        });
-    } else {
-      // Fallback to direct fetch
-      fetch(window.productEstimatorVars?.ajax_url || '/wp-admin/admin-ajax.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'delete_customer_details',
-          nonce: window.productEstimatorVars?.nonce || ''
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success) {
-            this.handleDeleteSuccess(response.data, confirmationContainer);
-          } else {
-            this.handleDeleteError(
-              new Error(response.data?.message || 'Error deleting details'),
-              confirmationContainer
-            );
-          }
-        })
-        .catch(error => {
-          this.handleDeleteError(error, confirmationContainer);
-        });
-    }
-  }
-
-  /**
-   * Handle successful delete response
-   * @param {object} data - Response data
-   * @param {HTMLElement} confirmationContainer - The container element
-   */
-  handleDeleteSuccess(data, confirmationContainer) {
-    // Replace the details container with the new form
-    if (confirmationContainer && data.html) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = data.html;
-      confirmationContainer.parentNode.replaceChild(tempDiv.firstElementChild, confirmationContainer);
-    }
-
-    // Show success message
-    this.showMessage('success', data.message || 'Details deleted successfully!');
-
-    // Update data-has-email attribute on the main form
-    const newEstimateForm = document.querySelector('#new-estimate-form');
-    if (newEstimateForm) {
-      newEstimateForm.setAttribute('data-has-email', 'false');
-    }
-
-    // Dispatch event to notify other components
-    const event = new CustomEvent('customer_details_deleted', {
-      bubbles: true
-    });
-    document.dispatchEvent(event);
-
-    logger.log('Customer details deleted');
-  }
-
-  /**
-   * Handle delete error
-   * @param {Error} error - The error that occurred
-   * @param {HTMLElement} confirmationContainer - The container element
-   */
-  handleDeleteError(error, confirmationContainer) {
-    this.showMessage('error', error.message || 'Error deleting details!');
-    logger.log('Error deleting details:', error);
-
-    // Remove loading class
-    if (confirmationContainer) {
-      confirmationContainer.classList.remove('loading');
-    }
-  }
 
   /**
    * Update the displayed customer details in the DOM
@@ -649,7 +498,7 @@ class CustomerDetailsManager {
 
       // Update container
       container.innerHTML = detailsHtml;
-      
+
       // Add success animation to parent display container
       const displayContainer = container.closest('.customer-details-display');
       if (displayContainer) {
@@ -717,14 +566,14 @@ class CustomerDetailsManager {
     }
 
     const currentDetails = this.getCustomerDetails();
-    
+
     // Check if postcode is new or different
     if (!currentDetails.postcode || currentDetails.postcode.trim() === '' || currentDetails.postcode !== postcode) {
       logger.log('Updating customer postcode from:', currentDetails.postcode, 'to:', postcode);
-      
+
       // Save updated details
       const updatedDetails = { ...currentDetails, postcode: postcode };
-      
+
       try {
         saveCustomerDetails(updatedDetails);
         logger.log('Customer postcode saved to localStorage:', updatedDetails);
@@ -732,7 +581,7 @@ class CustomerDetailsManager {
         logger.error('Failed to save customer postcode to localStorage:', error);
         return false;
       }
-      
+
       // Dispatch event to notify other components
       const event = new CustomEvent('customer_details_updated', {
         bubbles: true,
@@ -741,10 +590,10 @@ class CustomerDetailsManager {
         }
       });
       document.dispatchEvent(event);
-      
+
       return true;
     }
-    
+
     return false;
   }
 }

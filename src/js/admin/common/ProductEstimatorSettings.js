@@ -175,7 +175,13 @@ class ProductEstimatorSettings {
    * Bind event handlers for the main Settings Manager (orchestrator).
    */
   bindMainEvents() {
+    // Prevent default link behavior and handle tab switching via JS
     this.$('.nav-tab-wrapper').on('click', '.nav-tab', this.handleTabClick.bind(this));
+    
+    // Also prevent default on link elements themselves
+    this.$('.nav-tab-wrapper a.nav-tab').on('click', function(e) {
+      e.preventDefault();
+    });
 
     this.$(document).on('submit', 'form.product-estimator-form', (e) => {
       const $form = this.$(e.currentTarget);
@@ -575,13 +581,11 @@ class ProductEstimatorSettings {
   }
 }
 
-// Initialize the main orchestrator when document is ready
+// Initialize the main orchestrator immediately
 // This ensures ProductEstimatorSettings is available globally if needed by modules
 // before they might be instantiated.
-jQuery(document).ready(function() {
-  if (!window.ProductEstimatorSettingsInstance) { // Ensure single instance of orchestrator
-    window.ProductEstimatorSettingsInstance = new ProductEstimatorSettings();
-  }
-});
+if (!window.ProductEstimatorSettingsInstance) { // Ensure single instance of orchestrator
+  window.ProductEstimatorSettingsInstance = new ProductEstimatorSettings();
+}
 
 export default ProductEstimatorSettings;

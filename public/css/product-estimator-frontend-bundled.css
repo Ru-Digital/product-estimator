@@ -4091,6 +4091,25 @@ button.replace-product-in-room.loading {
   padding-top: 20px;
 }
 
+.additional-products-section {
+  margin-bottom: 20px;
+}
+.additional-products-section .additional-products-header {
+  margin-bottom: 16px;
+}
+.additional-products-section .additional-products-header .additional-product-title {
+  color: #00833F;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.additional-products-section .additional-products-header .additional-product-description {
+  color: #333;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
 .additional-products-list {
   display: flex;
   flex-direction: column;

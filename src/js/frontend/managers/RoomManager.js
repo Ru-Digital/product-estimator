@@ -504,34 +504,81 @@ class RoomManager {
   /**
    * Aggregate all product includes from all products in a room
    * @param {object} room - The room data
-   * @returns {Array} - Array of aggregated product includes
+   * @returns {object} - Object containing aggregated product includes and section info
    */
   aggregateProductIncludes(room) {
-    const aggregatedIncludes = [];
     const includesMap = new Map(); // To track unique includes by product ID
+    let sectionInfo = null;
+
+    // Handle null or undefined room
+    if (!room) {
+      logger.warn('aggregateProductIncludes called with null/undefined room');
+      return {
+        includes: [],
+        sectionInfo: null
+      };
+    }
 
     if (room.products) {
       Object.values(room.products).forEach(product => {
-        if (product.additional_products && Array.isArray(product.additional_products)) {
-          product.additional_products.forEach(include => {
-            const productId = include.id || include.product_id;
-            if (productId && !includesMap.has(productId)) {
-              includesMap.set(productId, {
-                id: productId,
-                product_id: productId,
+        // First, add the product itself to the includes
+        const productId = product.id || product.product_id;
+        if (productId && !includesMap.has(productId)) {
+          includesMap.set(productId, {
+            id: productId,
+            product_id: productId,
+            name: product.name || 'Product',
+            price: product.min_price_total || product.max_price_total || product.price || 0,
+            image: product.image || '',
+            sku: product.sku || '',
+            is_primary: true // Mark primary products
+          });
+        }
+        
+        // Then add any additional products
+        if (product.additional_products) {
+          // Handle both array and object formats
+          const additionalProducts = Array.isArray(product.additional_products)
+            ? product.additional_products
+            : Object.values(product.additional_products);
+            
+          additionalProducts.forEach(include => {
+            const additionalProductId = include.id || include.product_id;
+            if (additionalProductId && !includesMap.has(additionalProductId)) {
+              // Get the correct price - check for selected variation
+              let price = include.price || include.total || 0;
+              if (include.selected_option && include.variations && include.variations[include.selected_option]) {
+                const selectedVariation = include.variations[include.selected_option];
+                price = selectedVariation.min_price_total || selectedVariation.max_price_total || 0;
+              }
+              
+              includesMap.set(additionalProductId, {
+                id: additionalProductId,
+                product_id: additionalProductId,
                 name: include.name || include.product_name || 'Product',
-                price: include.price || include.total || 0,
+                price: price,
                 image: include.image || '',
-                sku: include.sku || ''
+                sku: include.sku || '',
+                selected_option: include.selected_option,
+                variations: include.variations,
+                is_additional: true // Mark additional products
               });
             }
           });
+        }
+        
+        // Check for additional_products_section info
+        if (product.additional_products_section && !sectionInfo) {
+          sectionInfo = product.additional_products_section;
         }
       });
     }
 
     // Convert map values to array
-    return Array.from(includesMap.values());
+    return {
+      includes: Array.from(includesMap.values()),
+      sectionInfo: sectionInfo
+    };
   }
 
   /**
@@ -659,7 +706,8 @@ class RoomManager {
       this.bindSimilarProductsToggle(roomElement);
 
       // Render aggregated product includes at the room level
-      this.renderRoomIncludes(room, roomElement);
+      const includesData = this.aggregateProductIncludes(room);
+      this.renderRoomIncludes(includesData, roomElement, room.id, estimateId);
 
       // Render additional products with variations
       this.renderAdditionalProducts(room, roomElement);
@@ -920,15 +968,13 @@ class RoomManager {
 
   /**
    * Render aggregated product includes for a room
-   * @param {object} room - The room data
+   * @param {object} includesData - Object containing includes array and sectionInfo
    * @param {HTMLElement} roomElement - The room element
+   * @param {string} roomId - The room ID
+   * @param {string} estimateId - The estimate ID
    */
-  renderRoomIncludes(room, roomElement) {
-    logger.log('Rendering room includes (products)', { roomName: room.name });
-
-    // Get estimate and room IDs from the room element
-    const estimateId = roomElement.dataset.estimateId;
-    const roomId = roomElement.dataset.roomId;
+  renderRoomIncludes(includesData, roomElement, roomId, estimateId) {
+    logger.log('Rendering room includes (products)', { roomId, includesData });
 
     if (!estimateId || !roomId) {
       logger.error('Missing estimate or room ID on room element');
@@ -945,9 +991,24 @@ class RoomManager {
     // Clear existing includes
     includesContainer.innerHTML = '';
 
-    // Check if room has products
-    if (!room.products || Object.keys(room.products).length === 0) {
-      logger.log('No products in room, show empty state');
+    // Handle both includesData and room parameter formats for backwards compatibility
+    let includesArray = [];
+    let sectionInfo = null;
+    
+    if (includesData.includes && Array.isArray(includesData.includes)) {
+      // New format with includes and sectionInfo
+      includesArray = includesData.includes;
+      sectionInfo = includesData.sectionInfo;
+    } else if (includesData.products) {
+      // Old format - room object
+      const aggregated = this.aggregateProductIncludes(includesData);
+      includesArray = aggregated.includes;
+      sectionInfo = aggregated.sectionInfo;
+    }
+    
+    // Check if we have includes
+    if (includesArray.length === 0) {
+      logger.log('No includes to display, show empty state');
       
       // Hide all product-related sections
       const includesSection = roomElement.querySelector('.includes-container');
@@ -997,33 +1058,105 @@ class RoomManager {
       similarProductsContainer.style.display = '';
     }
 
-    // Get products array from room
-    const products = Array.isArray(room.products) ? room.products : Object.values(room.products);
+    // Separate primary products and additional products
+    const primaryProducts = includesArray.filter(item => item.is_primary);
+    const additionalProducts = includesArray.filter(item => item.is_additional);
     
-    // Render each product as an include item
-    products.forEach((product, index) => {
-      const price = product.price || product.regular_price || 0;
+    // Render primary products first
+    primaryProducts.forEach((include, index) => {
+      const price = include.price || 0;
       const productData = {
-        product_id: product.id || product.product_id,
+        product_id: include.id || include.product_id,
         estimate_id: estimateId,
         room_id: roomId,
         product_index: index,
-        name: product.name || 'Product',
-        product_name: product.name || 'Product',
+        name: include.name || 'Product',
+        product_name: include.name || 'Product',
         price: price,
         product_price: format.currency(price),
-        image: product.image || '',
-        sku: product.sku || ''
+        image: include.image || '',
+        sku: include.sku || ''
       };
 
-      logger.log('Rendering product as include:', productData);
+      logger.log('Rendering primary product as include:', productData);
       TemplateEngine.insert('include-item-template', productData, includesContainer);
     });
+    
+    // If we have additional products and section info, render them in a separate section
+    if (additionalProducts.length > 0 && sectionInfo && (sectionInfo.title || sectionInfo.description)) {
+      // Create section wrapper
+      const sectionData = {
+        'additional-product-title': sectionInfo.title || 'Additional Products',
+        'additional-product-description': sectionInfo.description || ''
+      };
+      
+      // Insert section template
+      const sectionContainer = includesContainer.parentElement;
+      if (sectionContainer) {
+        TemplateEngine.insert('additional-products-section-template', sectionData, sectionContainer);
+        
+        // Find the section's product list container
+        const newSection = sectionContainer.querySelector('.additional-products-section');
+        if (newSection) {
+          const productsList = newSection.querySelector('.additional-products-list');
+          if (productsList) {
+            // Render additional products in this section
+            additionalProducts.forEach((include, index) => {
+              const price = include.price || 0;
+              const productData = {
+                product_id: include.id || include.product_id,
+                estimate_id: estimateId,
+                room_id: roomId,
+                product_index: primaryProducts.length + index,
+                name: include.name || 'Product',
+                product_name: include.name || 'Product',
+                price: price,
+                product_price: format.currency(price),
+                image: include.image || '',
+                sku: include.sku || ''
+              };
+
+              logger.log('Rendering additional product:', productData);
+              TemplateEngine.insert('include-item-template', productData, productsList);
+            });
+          }
+        }
+      }
+    } else if (additionalProducts.length > 0) {
+      // If we have additional products but no section info, just render them normally
+      additionalProducts.forEach((include, index) => {
+        const price = include.price || 0;
+        const productData = {
+          product_id: include.id || include.product_id,
+          estimate_id: estimateId,
+          room_id: roomId,
+          product_index: primaryProducts.length + index,
+          name: include.name || 'Product',
+          product_name: include.name || 'Product',
+          price: price,
+          product_price: format.currency(price),
+          image: include.image || '',
+          sku: include.sku || ''
+        };
+
+        logger.log('Rendering additional product without section:', productData);
+        TemplateEngine.insert('include-item-template', productData, includesContainer);
+      });
+    }
 
     // Bind remove buttons for all include items
     this.bindIncludeItemRemoveButtons(includesContainer, estimateId, roomId);
 
-    logger.log(`Rendered ${products.length} products in room includes`);
+    // Also bind remove buttons in the additional products section if it exists
+    const additionalSection = includesContainer.parentElement?.querySelector('.additional-products-section');
+    if (additionalSection) {
+      const additionalProductsList = additionalSection.querySelector('.additional-products-list');
+      if (additionalProductsList) {
+        this.bindIncludeItemRemoveButtons(additionalProductsList, estimateId, roomId);
+      }
+    }
+
+    logger.log(`Rendered ${includesArray.length} products in room includes (${primaryProducts.length} primary, ${additionalProducts.length} additional)`);
   }
 
   /**
@@ -2165,7 +2298,8 @@ class RoomManager {
     }
 
     // Re-render the includes with updated room data
-    this.renderRoomIncludes(room, roomElement);
+    const includesData = this.aggregateProductIncludes(room);
+    this.renderRoomIncludes(includesData, roomElement, roomId, estimateId);
     
     // Re-render the upgrades with updated room data  
     this.renderRoomUpgrades(room, roomElement);

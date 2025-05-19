@@ -364,25 +364,55 @@ class ProductAjaxHandler extends AjaxHandlerBase {
 
             if ($product_additions_manager instanceof $fqcn_pa) {
                 // Auto-add products and notes logic...
-                $auto_add_products_ids = [];
+                $auto_add_products_with_details = [];
                 $auto_add_notes_texts = [];
+                $section_info = [];
 
                 if (is_array($product_categories)) {
                     foreach ($product_categories as $category_id) {
-                        $cat_auto_add_prods = $product_additions_manager->get_auto_add_products_for_category($category_id);
-                        if (!empty($cat_auto_add_prods)) {
-                            $auto_add_products_ids = array_merge($auto_add_products_ids, $cat_auto_add_prods);
+                        // Use new method to get products with details
+                        if (method_exists($product_additions_manager, 'get_auto_add_products_with_details_for_category')) {
+                            $cat_auto_add_products_details = $product_additions_manager->get_auto_add_products_with_details_for_category($category_id);
+                            if (!empty($cat_auto_add_products_details)) {
+                                $auto_add_products_with_details = array_merge($auto_add_products_with_details, $cat_auto_add_products_details);
+                            }
+                        } else {
+                            // Fallback to old method
+                            $cat_auto_add_prods = $product_additions_manager->get_auto_add_products_for_category($category_id);
+                            if (!empty($cat_auto_add_prods)) {
+                                foreach ($cat_auto_add_prods as $prod_id) {
+                                    $auto_add_products_with_details[] = array('product_id' => $prod_id, 'section_title' => '', 'section_description' => '');
+                                }
+                            }
                         }
+                        
                         $cat_auto_add_notes = $product_additions_manager->get_auto_add_notes_for_category($category_id);
                         if (!empty($cat_auto_add_notes)) {
                             $auto_add_notes_texts = array_merge($auto_add_notes_texts, $cat_auto_add_notes);
                         }
                     }
                 }
-                $auto_add_products_ids = array_values(array_unique($auto_add_products_ids)); // Ensure unique and re-indexed
-                $auto_add_notes_texts = array_values(array_unique($auto_add_notes_texts));   // Ensure unique and re-indexed
+                
+                // Remove duplicates and process
+                $processed_products = [];
+                foreach ($auto_add_products_with_details as $product_detail) {
+                    $product_key = $product_detail['product_id'];
+                    if (!isset($processed_products[$product_key])) {
+                        $processed_products[$product_key] = $product_detail;
+                        // Store section info for the first product (they should all have the same section)
+                        if (empty($section_info) && (!empty($product_detail['section_title']) || !empty($product_detail['section_description']))) {
+                            $section_info = [
+                                'title' => $product_detail['section_title'],
+                                'description' => $product_detail['section_description']
+                            ];
+                        }
+                    }
+                }
+                
+                $auto_add_notes_texts = array_values(array_unique($auto_add_notes_texts));
 
-                foreach ($auto_add_products_ids as $auto_add_product_id) {
+                foreach ($processed_products as $product_detail) {
+                    $auto_add_product_id = $product_detail['product_id'];
                     if ($auto_add_product_id == $product_id) continue;
                     $auto_add_product_obj = wc_get_product($auto_add_product_id);
                     if ($auto_add_product_obj) {
@@ -548,6 +578,11 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 }
                 foreach ($auto_add_notes_texts as $note_text) {
                     $product_data['additional_notes']['note_' . uniqid()] = ['id' => 'note_' . uniqid(), 'type' => 'note', 'note_text' => $note_text];
+                }
+                
+                // Add section info to the product data
+                if (!empty($section_info)) {
+                    $product_data['additional_products_section'] = $section_info;
                 }
 
                 // Generate room suggestions.

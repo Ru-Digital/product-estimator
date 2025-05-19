@@ -12,6 +12,28 @@
   padding-top: 20px;
 }
 
+.additional-products-section {
+  margin-bottom: 20px;
+  
+  .additional-products-header {
+    margin-bottom: 16px;
+    
+    .additional-product-title {
+      color: $primary-color;
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 8px;
+    }
+    
+    .additional-product-description {
+      color: $text-color;
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 0;
+    }
+  }
+}
+
 .additional-products-list {
   display: flex;
   flex-direction: column;

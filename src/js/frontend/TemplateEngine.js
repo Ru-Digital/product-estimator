@@ -346,19 +346,26 @@ class TemplateEngine {
     });
 
     // Handle product removal buttons specifically to ensure they get ALL required attributes
-    if (data.product_index !== undefined) {
+    if (data.product_index !== undefined || data.product_id !== undefined) {
       // Find remove buttons
       const removeButtons = element.querySelectorAll('.remove-product');
       removeButtons.forEach(button => {
-        // Set product index directly (critical for deletion to work)
-        button.dataset.productIndex = data.product_index;
+        // Set product index if available
+        if (data.product_index !== undefined) {
+          button.dataset.productIndex = data.product_index;
+        }
+        
+        // Set product ID if available (critical for deletion to work)
+        if (data.product_id !== undefined) {
+          button.dataset.productId = data.product_id;
+        }
 
         // Ensure other needed attributes
         if (data.estimate_id !== undefined) button.dataset.estimateId = data.estimate_id;
         if (data.room_id !== undefined) button.dataset.roomId = data.room_id;
 
         // Debug log to verify attributes
-        logger.log(`Setting removal button data attributes: estimate=${data.estimate_id}, room=${data.room_id}, product=${data.product_index}`);
+        logger.log(`Setting removal button data attributes: estimate=${data.estimate_id}, room=${data.room_id}, product_index=${data.product_index}, product_id=${data.product_id}`);
       });
     }
 

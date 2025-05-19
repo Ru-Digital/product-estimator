@@ -163,45 +163,7 @@ class AjaxService {
       });
   }
 
-  /**
-   * Add a product to a room
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  addProductToRoom(data) {
-    return this._request('add_product_to_room', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('suggestions');
-        return response;
-      })
-      .catch(error => {
-        // Check if this is a primary_conflict or duplicate case - these are expected responses, not errors
-        if (error && error.data && (error.data.primary_conflict || error.data.duplicate)) {
-          // This is expected behavior, just pass it through
-          throw error;
-        }
-        
-        // For other errors, log them and rethrow
-        logger.error(`Request 'add_product_to_room' error:`, error);
-        throw error;
-      });
-  }
 
-  /**
-   * Replace a product in a room with another product
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  replaceProductInRoom(data) {
-    return this._request('replace_product_in_room', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('suggestions');
-        this.invalidateCache('productData');
-        return response;
-      });
-  }
 
   /**
    * Get similar products for a specific product
@@ -235,33 +197,6 @@ class AjaxService {
       });
   }
 
-  /**
-   * Create a new estimate
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  addNewEstimate(data) {
-    return this._request('add_new_estimate', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('estimatesData');
-        return response;
-      });
-  }
-
-  /**
-   * Create a new room (without adding products)
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data for the new room
-   */
-  addNewRoom(data) {
-    return this._request('add_new_room', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('rooms');
-        return response;
-      });
-  }
 
   /**
    * Fetch suggestions for a room after modifications
@@ -295,84 +230,7 @@ class AjaxService {
       });
   }
 
-  /**
-   * Remove a product from a room
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  removeProductFromRoom(data) {
-    return this._request('remove_product_from_room', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('suggestions');
-        return response;
-      });
-  }
 
-  /**
-   * Remove a room from an estimate
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  removeRoom(data) {
-    // Debug the data before making the request
-    logger.log('removeRoom data before request:', data);
-
-    // Ensure estimate_id and room_id are valid strings, not undefined or empty
-    if (!data.estimate_id || data.estimate_id === 'undefined' || data.estimate_id === '') {
-      logger.error('Invalid estimate_id in removeRoom request:', data.estimate_id);
-      return Promise.reject(new Error('Invalid estimate ID for room removal'));
-    }
-
-    if (!data.room_id || data.room_id === 'undefined' || data.room_id === '') {
-      logger.error('Invalid room_id in removeRoom request:', data.room_id);
-      return Promise.reject(new Error('Invalid room ID for room removal'));
-    }
-
-    // Force to string for consistency
-    const requestData = {
-      ...data,
-      estimate_id: String(data.estimate_id),
-      room_id: String(data.room_id)
-    };
-
-    return this._request('remove_room', requestData)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('rooms');
-        this.invalidateCache('suggestions');
-        return response;
-      });
-  }
-
-  /**
-   * Remove an entire estimate
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  removeEstimate(data) {
-    // Debug the data before making the request
-    logger.log('removeEstimate data before request:', data);
-
-    // Ensure estimate_id is a valid string, not undefined or empty
-    if (!data.estimate_id || data.estimate_id === 'undefined' || data.estimate_id === '') {
-      logger.error('Invalid estimate_id in removeEstimate request:', data.estimate_id);
-      return Promise.reject(new Error('Invalid estimate ID for estimate removal'));
-    }
-
-    // Force to string for consistency
-    const requestData = {
-      ...data,
-      estimate_id: String(data.estimate_id)
-    };
-
-    return this._request('remove_estimate', requestData)
-      .then(response => {
-        // Invalidate all caches since this is a major change
-        this.invalidateCache();
-        return response;
-      });
-  }
 
   /**
    * Get the variation estimator content

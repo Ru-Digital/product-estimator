@@ -10,7 +10,7 @@ namespace RuDigital\ProductEstimator\Includes;
 
 use RuDigital\ProductEstimator\Includes\Models\EstimateModel;
 use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
-use RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator; // Ensure PDFGenerator is imported
+use RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator;
 
 if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly
@@ -20,17 +20,11 @@ if (!defined('ABSPATH')) {
  * PDF Route Handler Class
  *
  * Handles custom route for PDF generation and display.
- * MODIFIED: Implements lazy session loading via SessionHandler.
+ * Works directly with database storage as frontend uses localStorage.
  */
 class PDFRouteHandler {
-    // Use the updated trait which internally uses SessionHandler
+    // Use the database handler trait
     use EstimateDbHandler;
-
-    // REMOVE: The session property is no longer needed here
-    // /**
-    //  * @var SessionHandler Session handler instance
-    //  */
-    // private $session;
 
     /**
      * @var EstimateModel|null Estimate model instance
@@ -46,11 +40,7 @@ class PDFRouteHandler {
      * Initialize the class and set up hooks
      */
     public function __construct() {
-        // REMOVE: Session handler is no longer initialized in the constructor
-        // $this->session = SessionHandler::getInstance();
-
         // Initialize EstimateHandler (if still needed for get_estimate_from_db)
-        // Consider if EstimateHandler also needs lazy session loading if it uses sessions.
         if (class_exists(EstimateHandler::class)) {
             $this->estimate_handler = new EstimateHandler();
         }
@@ -158,7 +148,7 @@ class PDFRouteHandler {
 
     /**
      * Generate and output the PDF directly to the browser.
-     * Handles potential updates from session to DB before generating PDF from DB data.
+     * Works directly with database data since frontend uses localStorage.
      *
      * @param int $db_id The database ID of the estimate.
      * @return void Outputs PDF or error page.
@@ -171,42 +161,12 @@ class PDFRouteHandler {
         }
 
         try {
-            // Get SessionHandler instance ONLY when needed for potential update
-            $session = SessionHandler::getInstance();
+            // TODO: Once the new localStorage-to-database storage mechanism is implemented,
+            // the frontend will be responsible for ensuring the database has the latest
+            // estimate data before generating PDFs. The PDF generation will then always
+            // work with database data only.
 
-            // Find if this estimate exists in the current session using its DB ID
-            // The trait method findSessionEstimateIdByDbId now uses SessionHandler internally.
-            $session_id = $this->findSessionEstimateIdByDbId($db_id);
-
-            // If found in session, update the database record with the latest session data
-            // before generating the PDF from the potentially updated DB record.
-            if ($session_id !== null) {
-                // Get the estimate data from session using the SessionHandler
-                $session_estimate = $session->getEstimate($session_id); // Uses SessionHandler
-
-                if ($session_estimate) {
-                    // Extract customer details and notes from the session data
-                    $customer_details = $session_estimate['customer_details'] ?? [];
-                    $notes = $session_estimate['notes'] ?? '';
-
-                    // Use the trait method to update the database record.
-                    // This method now handles getting the session data internally via SessionHandler.
-                    $updated_db_id = $this->storeOrUpdateEstimate($session_id, $customer_details, $notes);
-
-                    if ($updated_db_id === false) {
-                        // Log the error but proceed to try and generate PDF from existing DB data
-                        error_log("Product Estimator (PDFRouteHandler): Failed to update DB estimate ID {$db_id} from session ID {$session_id} before PDF generation.");
-                    } elseif (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log("Product Estimator (PDFRouteHandler): Updated DB estimate ID {$db_id} from session ID {$session_id} before PDF generation.");
-                    }
-                } else {
-                    error_log("Product Estimator (PDFRouteHandler): Found session ID {$session_id} for DB ID {$db_id}, but failed to retrieve estimate data from session.");
-                }
-            }
-
-            // --- Always load the estimate data from the DATABASE for PDF generation ---
-            // This ensures consistency, especially after a potential update from session.
-            // Use the trait's getEstimateFromDb method.
+            // Load the estimate data from the DATABASE for PDF generation
             $estimate_data_for_pdf = $this->getEstimateFromDb($db_id);
 
             // Check if data was successfully retrieved from the database

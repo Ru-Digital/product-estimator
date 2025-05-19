@@ -402,48 +402,23 @@ class CustomerDetailsManager {
       saveCustomerDetails(updatedDetails); // Use the imported function
       logger.log('Customer details saved to localStorage:', updatedDetails);
 
-      // 2. Now, send the update to the server asynchronously using DataService
-      this.dataService.request('update_customer_details', {
-        details: JSON.stringify(updatedDetails)
-      })
-        .then(data => {
-          // Handle successful server update
-          logger.log('Customer details updated on server successfully:', data);
-          this.handleSaveSuccess(data, updatedDetails); // Call success handler with server response data and updated details
-        })
-        .catch(error => {
-          // Handle server update error
-          this.handleSaveError(error); // Show error message
-          // Note: Details are already saved locally, so we don't revert local storage on server error.
-        })
-        .finally(() => {
-          // This block runs after both success or error of the AJAX request
-          saveButton.textContent = originalText;
-          saveButton.disabled = false;
-        });
+      // Handle successful save - localStorage only
+      this.handleSaveSuccess({ success: true }, updatedDetails);
+      
+      // Reset button state after success
+      saveButton.textContent = originalText;
+      saveButton.disabled = false;
 
     } catch (localStorageError) {
-      // Handle synchronous local storage save error
-      logger.log('Error saving to localStorage using imported function:', localStorageError);
-      this.showError('Could not save details locally.'); // Show local storage error
-      // We still attempt server save even if local save fails
-      this.dataService.request('update_customer_details', {
-        details: JSON.stringify(updatedDetails)
-      })
-        .then(data => {
-          // Handle successful server update even after local failure
-          logger.log('Customer details updated on server successfully (after local storage error):', data);
-          this.handleSaveSuccess(data, updatedDetails); // Call success handler
-        })
-        .catch(error => {
-          // Handle server update error after local failure
-          this.handleSaveError(error); // Show server error message
-        })
-        .finally(() => {
-          // This block runs after both success or error of the AJAX request
-          saveButton.textContent = originalText;
-          saveButton.disabled = false;
-        });
+      // Handle local storage save error
+      logger.error('Error saving to localStorage:', localStorageError);
+      this.handleSaveError({ 
+        message: 'Could not save details locally. Please check your browser storage settings.' 
+      });
+      
+      // Reset button state after error
+      saveButton.textContent = originalText;
+      saveButton.disabled = false;
     }
 
   }
@@ -749,19 +724,13 @@ class CustomerDetailsManager {
       
       // Save updated details
       const updatedDetails = { ...currentDetails, postcode: postcode };
-      saveCustomerDetails(updatedDetails);
       
-      // Send to server asynchronously
-      if (this.dataService) {
-        this.dataService.request('update_customer_details', {
-          details: JSON.stringify(updatedDetails)
-        })
-          .then(data => {
-            logger.log('Customer postcode updated on server successfully:', data);
-          })
-          .catch(error => {
-            logger.error('Failed to update customer postcode on server:', error);
-          });
+      try {
+        saveCustomerDetails(updatedDetails);
+        logger.log('Customer postcode saved to localStorage:', updatedDetails);
+      } catch (error) {
+        logger.error('Failed to save customer postcode to localStorage:', error);
+        return false;
       }
       
       // Dispatch event to notify other components

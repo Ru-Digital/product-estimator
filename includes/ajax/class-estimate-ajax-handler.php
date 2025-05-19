@@ -3,11 +3,13 @@ namespace RuDigital\ProductEstimator\Includes\Ajax;
 
 use RuDigital\ProductEstimator\Includes\CustomerDetails;
 use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
-use RuDigital\ProductEstimator\Includes\SessionHandler;
 use RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend;
 
 /**
  * Estimate-related AJAX handlers
+ * 
+ * This class now only handles database-related operations and PDF generation.
+ * All session storage functionality has been removed as the frontend uses localStorage.
  */
 class EstimateAjaxHandler extends AjaxHandlerBase {
     use EstimateDbHandler;
@@ -18,328 +20,23 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
      * @return void
      */
     protected function register_hooks() {
-        $this->register_ajax_endpoint('get_estimates_list', 'getEstimatesList');
-        $this->register_ajax_endpoint('get_estimates_data', 'getEstimatesData');
-        $this->register_ajax_endpoint('add_new_estimate', 'addNewEstimate');
-        $this->register_ajax_endpoint('remove_estimate', 'removeEstimate');
-        $this->register_ajax_endpoint('check_estimates_exist', 'checkEstimatesExist');
+        // These endpoints are used by localStorage-based operations
         $this->register_ajax_endpoint('store_single_estimate', 'store_single_estimate');
         $this->register_ajax_endpoint('check_estimate_stored', 'check_estimate_stored');
         $this->register_ajax_endpoint('get_secure_pdf_url', 'get_secure_pdf_url');
         $this->register_ajax_endpoint('request_copy_estimate', 'request_copy_estimate');
+        
+        // These endpoints used to interact with session but are now removed
+        // - get_estimates_list
+        // - get_estimates_data
+        // - add_new_estimate
+        // - remove_estimate
+        // - check_estimates_exist
     }
 
     /**
-     * Modified version of the getEstimatesList method
-     * Removes suggestion generation code
-     */
-    public function getEstimatesList() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        // Make sure the LabelsFrontend class is available
-        if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Frontend\\LabelsFrontend')) {
-            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-labels-frontend.php';
-        }
-
-        // Get the global labels_frontend instance or create a new one
-        global $product_estimator_labels_frontend;
-        if (!isset($product_estimator_labels_frontend) || is_null($product_estimator_labels_frontend)) {
-            $product_estimator_labels_frontend = new \RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-        }
-
-        // Start output buffer to capture HTML
-        ob_start();
-
-        // Get all estimates
-        $session = SessionHandler::getInstance();
-
-        $estimates = $session->getEstimates();
-
-        // We no longer need to generate suggestions here
-        // The template will handle this at render time
-
-        // Include the estimates portion of the modal template
-        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-estimates-list.php';
-
-        // Get the HTML
-        $html = ob_get_clean();
-
-        // Send success response with HTML
-        wp_send_json_success(array(
-            'html' => $html
-        ));
-    }
-
-    /**
-     * Get estimates data for dropdown
-     */
-    public function getEstimatesData() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        // Force session initialization
-        $session = SessionHandler::getInstance();
-
-        // Get all estimates
-        $estimates = $session->getEstimates();
-
-        // Format for the frontend
-        $formatted_estimates = [];
-        foreach ($estimates as $id => $estimate) {
-            $formatted_estimates[] = [
-                'id' => $id,
-                'name' => isset($estimate['name']) ? $estimate['name'] : __('Untitled Estimate', 'product-estimator'),
-                'rooms' => isset($estimate['rooms']) ? $estimate['rooms'] : []
-            ];
-        }
-
-        wp_send_json_success([
-            'estimates' => $formatted_estimates
-        ]);
-    }
-
-    /**
-     * Handle new estimate submission
-     * Modified to use the CustomerDetails class
-     */
-    public function addNewEstimate() {
-        // Verify nonce
-        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'product_estimator_nonce')) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Nonce verification failed');
-            }
-            wp_send_json_error(['message' => __('Security check failed.', 'product-estimator')]);
-            return;
-        }
-
-        if (!isset($_POST['form_data'])) {
-            wp_send_json_error(['message' => __('No form data provided', 'product-estimator')]);
-            return;
-        }
-
-        // Parse form data
-        parse_str($_POST['form_data'], $form_data);
-
-        // Validate estimate name
-        if (empty($form_data['estimate_name'])) {
-            wp_send_json_error(['message' => __('Estimate name is required', 'product-estimator')]);
-            return;
-        }
-
-        try {
-            // Force session initialization
-
-            // Check if CustomerDetails class exists and is accessible
-            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\CustomerDetails')) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('CustomerDetails class not found, including directly');
-                }
-                // Include it directly if needed
-                require_once dirname(__FILE__) . '/class-customer-details.php';
-            }
-
-            // Initialize CustomerDetails class with error handling
-            try {
-                $customer_details_manager = new CustomerDetails();
-            } catch (\Exception $e) {
-                error_log('Error initializing CustomerDetails: ' . $e->getMessage());
-                // Fallback to basic handling without CustomerDetails class
-                $customer_details = [
-                    'name' => isset($form_data['customer_name']) ? sanitize_text_field($form_data['customer_name']) : '',
-                    'email' => isset($form_data['customer_email']) ? sanitize_email($form_data['customer_email']) : '',
-                    'phone' => isset($form_data['customer_phone']) ? sanitize_text_field($form_data['customer_phone']) : '',
-                    'postcode' => isset($form_data['customer_postcode']) ? sanitize_text_field($form_data['customer_postcode']) : ''
-                ];
-
-                // Store in session directly using the standard key
-                if (!isset($_SESSION['product_estimator'])) {
-                    $_SESSION['product_estimator'] = [];
-                }
-                $_SESSION['product_estimator']['customer_details'] = $customer_details;
-
-                // Get default markup from pricing rules settings
-                $pricing_rules = get_option('product_estimator_pricing_rules');
-                $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
-
-                // Get client-provided UUID if available
-                $client_uuid = isset($_POST['estimate_uuid']) ? sanitize_text_field($_POST['estimate_uuid']) : null;
-                
-                if (empty($client_uuid)) {
-                    wp_send_json_error(['message' => __('Estimate UUID is required', 'product-estimator')]);
-                    return;
-                }
-
-                // Create new estimate data with the client UUID
-                $estimate_data = [
-                    'id' => $client_uuid, // Include the UUID from the client
-                    'name' => sanitize_text_field($form_data['estimate_name']),
-                    'created_at' => current_time('mysql'),
-                    'rooms' => [],
-                    'customer_details' => $customer_details,
-                    'plugin_version' => PRODUCT_ESTIMATOR_VERSION,
-                    'default_markup' => $default_markup
-                ];
-                $session = SessionHandler::getInstance();
-
-                $estimate_id = $session->addEstimate($estimate_data);
-                
-                if (!$estimate_id) {
-                    wp_send_json_error(['message' => __('Failed to create estimate', 'product-estimator')]);
-                    return;
-                }
-
-                wp_send_json_success([
-                    'message' => __('Estimate created successfully (fallback mode)', 'product-estimator'),
-                    'estimate_id' => $estimate_id,
-                    'has_customer_details' => true
-                ]);
-                return;
-            }
-
-            // Check if we need to save customer details
-            $save_customer_details = false;
-            $customer_details = [];
-
-            if (!$customer_details_manager->hasCompleteDetails()) {
-                // Validate and process customer details from form
-                $validated_details = $customer_details_manager->validateFormData($form_data);
-
-                if (is_wp_error($validated_details)) {
-                    wp_send_json_error(['message' => $validated_details->get_error_message()]);
-                    return;
-                }
-
-                // Save validated details
-                $customer_details_manager->setDetails($validated_details);
-                $customer_details = $validated_details;
-                $save_customer_details = true;
-            } else {
-                // Use existing details
-                $customer_details = $customer_details_manager->getDetails();
-            }
-
-            $pricing_rules = get_option('product_estimator_pricing_rules');
-            $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
-
-            // Get client-provided UUID if available
-            $client_uuid = isset($_POST['estimate_uuid']) ? sanitize_text_field($_POST['estimate_uuid']) : null;
-            
-            if (empty($client_uuid)) {
-                wp_send_json_error(['message' => __('Estimate UUID is required', 'product-estimator')]);
-                return;
-            }
-            
-            // Create new estimate data with the client UUID as the ID
-            $estimate_data = [
-                'id' => $client_uuid, // Include the UUID from the client
-                'name' => sanitize_text_field($form_data['estimate_name']),
-                'created_at' => current_time('mysql'),
-                'rooms' => [],
-                'customer_details' => $customer_details,
-                'plugin_version' => PRODUCT_ESTIMATOR_VERSION,
-                'default_markup' => $default_markup
-            ];
-
-            // Add estimate to session
-            $session = SessionHandler::getInstance();
-
-            $estimate_id = $session->addEstimate($estimate_data);
-
-            if (!$estimate_id) { // No need to check for '0' as we're using UUIDs now
-                wp_send_json_error(['message' => __('Failed to create estimate', 'product-estimator')]);
-                return;
-            }
-
-            wp_send_json_success([
-                'message' => __('Estimate created successfully', 'product-estimator'),
-                'estimate_id' => $estimate_id,
-                'has_customer_details' => true
-            ]);
-
-        } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Exception in addNewEstimate: ' . $e->getMessage());
-                error_log('Stack trace: ' . $e->getTraceAsString());
-            }
-            wp_send_json_error(['message' => $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Remove an entire estimate
-     */
-    public function removeEstimate() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        if (!isset($_POST['estimate_id'])) {
-            wp_send_json_error(['message' => __('Estimate ID is required', 'product-estimator')]);
-            return;
-        }
-
-        $estimate_id = sanitize_text_field($_POST['estimate_id']);
-
-        try {
-            // Get the estimate from session
-            $session = SessionHandler::getInstance();
-
-            $estimate = $session->getEstimate($estimate_id);
-
-            if (!$estimate) {
-                wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
-                return;
-            }
-
-            // Add debug logging
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Removing estimate ID: {$estimate_id}");
-            }
-
-            // Remove the estimate
-            $removed = $session->removeEstimate($estimate_id);
-
-            if (!$removed) {
-                wp_send_json_error(['message' => __('Failed to remove estimate', 'product-estimator')]);
-                return;
-            }
-
-            wp_send_json_success([
-                'message' => __('Estimate removed successfully', 'product-estimator'),
-                'estimate_id' => $estimate_id
-            ]);
-
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => __('An error occurred while processing your request', 'product-estimator'),
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
-
-    public function checkEstimatesExist() {
-        // Verify nonce
-        check_ajax_referer('product_estimator_nonce', 'nonce');
-
-        // Force session initialization
-        $session = SessionHandler::getInstance();
-
-        // Get all estimates and check if there are any
-        $estimates = $session->getEstimates();
-        $has_estimates = !empty($estimates);
-
-        wp_send_json_success([
-            'has_estimates' => $has_estimates,
-            'debug' => [
-                'session_id' => session_id(),
-                'estimate_count' => count($estimates)
-            ]
-        ]);
-    }
-
-    /**
-     * Store current session data in the database with proper error handling
-     * This is a fixed version that prevents empty estimate_id issues
+     * Store estimate data in the database
+     * This is called when the user wants to save their estimate permanently
      */
     public function store_single_estimate() {
         // Verify nonce
@@ -361,18 +58,25 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
             error_log('Processing store_single_estimate with estimate_id: ' . $estimate_id);
         }
 
+        // Get estimate data from POST request (sent from localStorage)
+        $estimate_data = isset($_POST['estimate_data']) ? $_POST['estimate_data'] : null;
+        
+        if (!$estimate_data) {
+            wp_send_json_error([
+                'message' => __('Estimate data is required', 'product-estimator')
+            ]);
+            return;
+        }
+
+        // Parse the estimate data if it's a JSON string
+        if (is_string($estimate_data)) {
+            $estimate_data = json_decode(stripslashes($estimate_data), true);
+        }
+
         try {
-            // Explicitly check if the estimate exists in session
-            $session = SessionHandler::getInstance();
-
-            $estimate = $session->getEstimate($estimate_id);
-            if (!$estimate) {
-                throw new \Exception(__('Estimate not found in session', 'product-estimator'));
-            }
-
-            // Get customer details from estimate
-            $customer_details = isset($estimate['customer_details']) ? $estimate['customer_details'] : [];
-            $notes = isset($estimate['notes']) ? $estimate['notes'] : '';
+            // Get customer details from estimate data
+            $customer_details = isset($estimate_data['customer_details']) ? $estimate_data['customer_details'] : [];
+            $notes = isset($estimate_data['notes']) ? $estimate_data['notes'] : '';
 
             // Store or update the estimate using our shared trait method
             if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -381,13 +85,13 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
                 error_log('Customer details: ' . print_r($customer_details, true));
                 error_log('Notes: ' . print_r($notes, true));
             }
-            $db_id = $this->storeOrUpdateEstimate($estimate_id, $customer_details, $notes);
+            
+            $db_id = $this->storeOrUpdateEstimate($estimate_id, $customer_details, $notes, $estimate_data);
 
             if (!$db_id) {
                 throw new \Exception(__('Error saving estimate to database', 'product-estimator'));
             }
 
-            // No need to manually update the session as storeOrUpdateEstimate already did this
             wp_send_json_success([
                 'message' => __('Estimate saved successfully', 'product-estimator'),
                 'estimate_id' => $db_id,
@@ -420,7 +124,6 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
         $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
 
         if (empty($estimate_id)) {
-
             wp_send_json_error([
                 'message' => __('Estimate ID is required', 'product-estimator')
             ]);
@@ -428,21 +131,9 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
         }
 
         try {
-            // Get the estimate from session
-            $session = SessionHandler::getInstance();
-
-            $estimate = $session->getEstimate($estimate_id);
-
-            if (empty($estimate)) {
-                wp_send_json_error([
-                    'message' => __('Estimate not found in session', 'product-estimator')
-                ]);
-                return;
-            }
-
-            // Use the trait method to check if it's stored
-            $is_stored = $this->isEstimateStored($estimate);
-            $db_id = $this->getEstimateDbId($estimate);
+            // Check if this estimate has a database ID stored
+            $db_id = $this->getEstimateDbId($estimate_id);
+            $is_stored = !empty($db_id);
 
             wp_send_json_success([
                 'is_stored' => $is_stored,
@@ -459,7 +150,6 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
 
     /**
      * Generate a secure PDF URL with token
-     * Add this to the AjaxHandler class in class-ajax-handler.php
      */
     public function get_secure_pdf_url() {
         // Verify nonce
@@ -499,8 +189,7 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
 
     /**
      * Handle AJAX request to email a copy of the estimate to the customer.
-     * Uses SessionHandler and the EstimateDbHandler trait methods.
-     * Calls the global product_estimator_get_customer_email() helper.
+     * Uses the EstimateDbHandler trait methods.
      */
     public function request_copy_estimate() {
         // Verify nonce security check
@@ -516,40 +205,25 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
             ]);
             return;
         }
-        $session_estimate_id = (string)$estimate_id; // Use this for session lookups
 
         try {
-            // Get SessionHandler instance
-            $session = SessionHandler::getInstance();
-
-            // Get the estimate data from the session
-            $estimate_session_data = $session->getEstimate($session_estimate_id);
-
-            if (!$estimate_session_data) {
-                // Maybe it's only in the DB? Try loading it.
-                // If estimate_id *is* the DB ID (e.g., from admin view)
-                if (ctype_digit($session_estimate_id)) {
-                    $db_id_to_load = intval($session_estimate_id);
-                    // Ensure it's loaded into session (returns session ID or null)
-                    $session_estimate_id = $this->ensureEstimateInSession($db_id_to_load);
-                    if ($session_estimate_id === null) {
-                        wp_send_json_error(['message' => __('Estimate not found', 'product-estimator')]);
-                        return;
-                    }
-                    $estimate_session_data = $session->getEstimate($session_estimate_id);
-                    if (!$estimate_session_data) { // Double check after loading attempt
-                        wp_send_json_error(['message' => __('Estimate could not be loaded into session', 'product-estimator')]);
-                        return;
-                    }
-                } else {
-                    wp_send_json_error(['message' => __('Estimate not found in session', 'product-estimator')]);
-                    return;
-                }
+            // Get estimate data from the database
+            $db_id = $this->getEstimateDbId($estimate_id);
+            
+            if (!$db_id) {
+                wp_send_json_error(['message' => __('Estimate not found in database', 'product-estimator')]);
+                return;
+            }
+            
+            $estimate_data = $this->getEstimateFromDb($db_id);
+            
+            if (!$estimate_data) {
+                wp_send_json_error(['message' => __('Failed to retrieve estimate data', 'product-estimator')]);
+                return;
             }
 
             // Use the globally defined helper function to get the email
-            // Pass both the estimate data and the session ID for flexibility
-            $customer_email = product_estimator_get_customer_email($estimate_session_data, $session_estimate_id);
+            $customer_email = product_estimator_get_customer_email($estimate_data, $estimate_id);
 
             // If no email found, return error code for frontend handling
             if (empty($customer_email)) {
@@ -568,38 +242,15 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
 
             $pdf_path = '';
             $tmp_file = null;
-            $estimate_data_for_pdf = $estimate_session_data; // Use session data by default
 
-            // If including PDF, ensure estimate is saved and get DB data for PDF generation
+            // If including PDF, generate it
             if ($include_pdf) {
-                $db_id = $this->getEstimateDbId($estimate_session_data); // Use trait method
-
-                // If not saved yet, save it now
-                if (!$db_id) {
-                    $customer_details_for_save = $estimate_session_data['customer_details'] ?? [];
-                    $notes_for_save = $estimate_session_data['notes'] ?? '';
-                    $db_id = $this->storeOrUpdateEstimate($session_estimate_id, $customer_details_for_save, $notes_for_save); // Use trait method
-                }
-
-                if (!$db_id) {
-                    wp_send_json_error(['message' => __('Failed to save estimate before generating PDF.', 'product-estimator')]);
-                    return;
-                }
-
-                // Fetch potentially updated data from DB for the PDF
-                $estimate_data_for_pdf = $this->getEstimateFromDb($db_id); // Use trait method
-                if (!$estimate_data_for_pdf) {
-                    wp_send_json_error(['message' => __('Failed to retrieve estimate data from database for PDF generation.', 'product-estimator')]);
-                    return;
-                }
-
                 // Generate PDF
-                if (!class_exists(PDFGenerator::class)) {
-                    wp_send_json_error(['message' => __('PDF Generation module not available.', 'product-estimator')]);
-                    return;
+                if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\Utilities\\PDFGenerator')) {
+                    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/utilities/class-pdf-generator.php';
                 }
-                $pdf_generator = new PDFGenerator();
-                $pdf_content = $pdf_generator->generate_pdf($estimate_data_for_pdf); // Use DB data for PDF
+                $pdf_generator = new \RuDigital\ProductEstimator\Includes\Utilities\PDFGenerator();
+                $pdf_content = $pdf_generator->generate_pdf($estimate_data);
 
                 if (empty($pdf_content)) {
                     wp_send_json_error(['message' => __('Failed to generate PDF content.', 'product-estimator')]);
@@ -616,9 +267,8 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
                 $pdf_path = $tmp_file;
             }
 
-            // Send email using the private helper method within this class
-            // Pass the data used for the PDF (from DB if generated) or session data if no PDF
-            $email_sent = $this->send_estimate_email($estimate_data_for_pdf, $customer_email, $pdf_path);
+            // Send email
+            $email_sent = $this->send_estimate_email($estimate_data, $customer_email, $pdf_path);
 
             // Clean up temporary PDF file if it was created
             if ($tmp_file && file_exists($tmp_file)) {
@@ -644,8 +294,6 @@ class EstimateAjaxHandler extends AjaxHandlerBase {
             // Send a generic error message to the client
             wp_send_json_error([
                 'message' => __('An error occurred while processing your request.', 'product-estimator'),
-                // Optionally include error details only if WP_DEBUG is on
-                // 'error_details' => (defined('WP_DEBUG') && WP_DEBUG) ? $e->getMessage() : ''
             ]);
         }
     }

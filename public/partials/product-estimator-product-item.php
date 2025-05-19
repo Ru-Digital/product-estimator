@@ -28,19 +28,9 @@ $product_class .= $has_similar_products ? ' has-similar-products' : '';
 $product_class .= $has_notes ? ' has-notes' : '';
 $product_class .= $has_includes ? ' has-includes' : '';
 
-// Get default markup from the parent estimate if available
-$default_markup = 0;
-if (isset($estimate_id)) {
-    $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
-    $estimate = $session_handler->getEstimate($estimate_id);
-    if ($estimate && isset($estimate['default_markup'])) {
-        $default_markup = floatval($estimate['default_markup']);
-    } else {
-        // If no markup found in the estimate, fall back to global settings
-        $pricing_rules = get_option('product_estimator_pricing_rules');
-        $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
-    }
-}
+// Get default markup from global settings
+$pricing_rules = get_option('product_estimator_pricing_rules');
+$default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
 ?>
 
 <div class="<?php echo esc_attr($product_class); ?>" data-product-index="<?php echo esc_attr($product_index); ?>">

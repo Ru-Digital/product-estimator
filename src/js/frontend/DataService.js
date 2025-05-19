@@ -557,41 +557,8 @@ class DataService {
           return;
         }
 
-        // If successful, proceed with server sync in the background - completely detached from UI flow
-        logger.log('DataService: Local storage update successful, sending asynchronous server request for adding product to session.');
-        const requestData = {
-          room_id: String(roomId),
-          product_id: String(productId),
-        };
-        if (estimateId !== null) {
-          requestData.estimate_id = String(estimateId);
-        }
-
-        // Fire and forget - completely detached from main flow
-        setTimeout(() => {
-          this.ajaxService.addProductToRoom(requestData)
-            .then(serverData => {
-              logger.log('DataService: Background server-side product add successful:', serverData);
-              this.invalidateCache();
-            })
-            .catch(error => {
-              // Check if this is a primary_conflict case - not an error, just expected behavior
-              if (error && error.data && error.data.primary_conflict) {
-                logger.log('DataService: Primary category conflict detected during background sync - this is expected');
-                return;
-              }
-              
-              // Check if this is a duplicate case - not an error, just expected behavior
-              if (error && error.data && error.data.duplicate) {
-                logger.log('DataService: Duplicate product detected during background sync - this is expected');
-                return;
-              }
-              
-              // For other errors, log them as actual errors
-              logger.error('Background server sync error:', error);
-              logger.warn('Product added to local storage only. Changes may not persist between sessions.');
-            });
-        }, 0);
+        // Local storage update successful - no server sync needed
+        logger.log('DataService: Local storage update successful. No server sync required.');
       })
       .catch(error => {
         // Just log any errors in the fire-and-forget path - they were already propagated
@@ -761,30 +728,13 @@ class DataService {
     // STEP 3: Asynchronous server request for session update.
     localStorageAndUpdateSuggestionsPromise
       .then(localResult => {
-        if (localResult.success) { // Ensure local operation was successful before calling server
-          logger.log('DataService: Local storage replacement successful, sending asynchronous server request for session update.');
-          const requestData = {
-            estimate_id: String(estimateId),
-            room_id: String(roomId),
-            product_id: String(newProductId), // The ID of the new product
-            replace_product_id: String(oldProductId), // The ID of the product being replaced
-            replace_type: replaceType
-          };
-          if (parentProductId !== null && parentProductId !== undefined) { // Check for null or undefined
-            requestData.parent_product_id = String(parentProductId);
-          }
-          return this.ajaxService.replaceProductInRoom(requestData);
+        if (localResult.success) {
+          logger.log('DataService: Local storage replacement successful. No server sync required.');
         }
         // If localResult was not success (e.g. promise was rejected and caught by caller), this part is skipped.
       })
-      .then(serverData => {
-        if (serverData) { // Check if serverData exists (meaning request was made and potentially succeeded)
-          logger.log('DataService: Asynchronous server-side product replacement (session) successful:', serverData);
-          this.invalidateCache();
-        }
-      })
-      .catch(serverError => {
-        logger.error('Asynchronous server-side product replacement (session) failed:', serverError);
+      .catch(error => {
+        logger.error('Error during local storage replacement:', error);
       });
 
     return localStorageAndUpdateSuggestionsPromise;
@@ -851,17 +801,8 @@ class DataService {
    * @param {FormData | object | string} formData - Form data
    * @param {number|null} productId - Optional product ID
    * @returns {Promise<object>} A promise that resolves immediately with the client-side estimate ID.
-   * The server-side creation is handled asynchronously.
    */
   addNewEstimate(formData, productId = null) {
-    let requestData = {
-      form_data: this.formatFormData(formData)
-    };
-
-    if (productId) {
-      requestData.product_id = productId;
-    }
-
     const estimateName = formData instanceof FormData ? formData.get('estimate_name') : (formData.estimate_name || 'Unnamed Estimate');
 
     // Create a basic estimate object for local storage
@@ -876,24 +817,6 @@ class DataService {
     const clientSideEstimateId = addEstimate(clientSideEstimateData);
     logger.log(`Client-side estimate saved to localStorage with unique ID: ${clientSideEstimateId}`);
 
-    // Update request data to include the client-side UUID
-    requestData.estimate_uuid = clientSideEstimateId;
-
-    // Make the AJAX request to the server asynchronously
-    this.ajaxService.addNewEstimate(requestData)
-      .then(serverData => {
-        logger.log('DataService: Server-side estimate creation successful using client UUID:', serverData);
-        // Invalidate caches since we modified data on the server
-        this.invalidateCache();
-      })
-      .catch(serverError => {
-        logger.error('Server-side estimate creation failed:', serverError);
-        // Handle server-side error asynchronously, e.g., show a notification to the user.
-        // You might also want to consider removing the locally created estimate if the server creation failed.
-        // Example: removeEstimateFromStorage(clientSideEstimateId);
-        // Example: ModalManager.showError('Failed to save estimate on server.');
-      });
-
     // Return a new Promise that resolves immediately with the client-side estimate ID.
     // The ModalManager will use the resolution of this promise to proceed with the next step
     // based on the locally added estimate.
@@ -902,7 +825,7 @@ class DataService {
 
   /**
    * Create a new room without adding products.
-   * The main promise resolves after local changes. Async calls update the server.
+   * The main promise resolves after local changes.
    * @param {FormData | object | string} formData - Form data for the new room
    * @param {string|number} estimateId - Estimate ID to add the room to
    * @returns {Promise<object>} A promise that resolves with the new room data.
@@ -920,14 +843,6 @@ class DataService {
       if (!estimate) {
         const errorMsg = `Estimate with ID ${estimateId} not found in local storage. Cannot add room.`;
         logger.error(`DataService: ${errorMsg}`);
-        // Attempt server request for room creation anyway for consistency, but reject local promise.
-        const requestDataOnLocalFailure = {
-          form_data: this.formatFormData(formData),
-          estimate_id: String(estimateId) // Ensure string
-        };
-        this.ajaxService.addNewRoom(requestDataOnLocalFailure)
-          .then(serverData => logger.log('DataService: Server add_new_room (after local estimate not found) response:', serverData))
-          .catch(serverError => logger.error('Server add_new_room (after local estimate not found) failed:', serverError));
         reject(new Error(errorMsg));
         return;
       }
@@ -949,22 +864,6 @@ class DataService {
       // Add the basic room structure to local storage (without products)
       const clientSideRoomId = addRoom(estimateId, newRoomData);
       logger.log(`Room ID ${clientSideRoomId} (empty) added to localStorage for estimate ${estimateId}`);
-
-      // Asynchronously send the request to the server to add the room
-      let serverRequestData = {
-        form_data: this.formatFormData(formData),
-        estimate_id: String(estimateId),
-        room_uuid: clientSideRoomId // Include the client-generated UUID
-      };
-
-      this.ajaxService.addNewRoom(serverRequestData)
-        .then(response => {
-          logger.log('DataService: Server-side room creation successful:', response);
-          this.invalidateCache();
-        })
-        .catch(serverError => {
-          logger.error('Server-side room creation failed:', serverError);
-        });
 
       // Resolve with the room data immediately - product addition is a separate concern
       logger.log(`Room ${clientSideRoomId} created. Resolving with basic room data.`);
@@ -1084,22 +983,9 @@ class DataService {
           room_totals: finalRoom?.totals || { min_total: 0, max_total: 0 }
         });
 
-        // Asynchronous server call to remove the product from the session
-        logger.log('[removeProductFromRoom] Initiating asynchronous server call to remove_product_from_room.');
-        this.ajaxService.removeProductFromRoom({
-          estimate_id: estimateId,
-          room_id: roomId,
-          product_index: productIndex, // Backend might still use this
-          product_id: productId      // Also send productId to backend
-        })
-          .then(serverResponse => {
-            logger.log('[removeProductFromRoom] Async server product removal successful:', serverResponse);
-            this.invalidateCache();
-          })
-          .catch(serverError => {
-            logger.log('[removeProductFromRoom] Async server product removal failed:', serverError);
-            // Non-blocking error, local changes are already reflected.
-          });
+        // No server sync needed - local storage is the source of truth
+        logger.log('[removeProductFromRoom] Product removed from localStorage. No server sync required.');
+        this.invalidateCache();
       };
 
       if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
@@ -1167,30 +1053,8 @@ class DataService {
       logger.error(`Error removing room ID ${roomId} from localStorage:`, e);
     }
 
-
-    // Force string conversion for consistency
-    const requestData = {
-      estimate_id: String(estimateId),
-      room_id: String(roomId)
-    };
-
-    // Make the AJAX request to the server asynchronously
-    this.ajaxService.removeRoom(requestData)
-      .then(serverData => {
-        logger.log('DataService: Server-side room removal successful:', serverData);
-        // Invalidate caches since we modified data on the server
-        this.invalidateCache();
-        // You might update local state further based on server response if needed
-      })
-      .catch(serverError => {
-        logger.error('Server-side room removal failed:', serverError);
-        // Handle server error asynchronously, e.g., notify user.
-        // You might need to add the room back to local storage if the server removal failed.
-      });
-
     // Return a promise that resolves immediately after the local removal attempt.
     // ModalManager will use this to update the UI based on the local change.
-    // Note: This promise does NOT wait for the server response.
     return Promise.resolve({ success: true }); // Assuming local removal attempt was made
   }
 
@@ -1214,25 +1078,8 @@ class DataService {
       logger.error(`Error removing estimate ID ${estimateId} from localStorage:`, e);
     }
 
-    // Make the AJAX request to the server asynchronously
-    this.ajaxService.removeEstimate({
-      estimate_id: estimateId
-    })
-      .then(serverData => {
-        logger.log(`DataService: Server-side estimate removal successful: ${estimateId}`, serverData);
-        // Invalidate caches since we modified data
-        this.invalidateCache();
-        // You might update local state further based on server response if needed
-      })
-      .catch(serverError => {
-        logger.error(`DataService: Server-side estimate removal failed: ${estimateId}`, serverError);
-        // Handle server error asynchronously, e.g., notify user.
-        // Even if server removal fails, we want to keep the estimate removed from localStorage.
-      });
-
     // Return a promise that resolves immediately after the local removal attempt.
     // ModalManager will use this to update the UI based on the local change.
-    // Note: This promise does NOT wait for the server response.
     return Promise.resolve({ success: true }); // Assuming local removal attempt was made
   }
 

@@ -2,10 +2,12 @@
 namespace RuDigital\ProductEstimator\Includes\Ajax;
 
 use RuDigital\ProductEstimator\Includes\CustomerDetails;
-use RuDigital\ProductEstimator\Includes\SessionHandler;
 
 /**
  * Customer-related AJAX handlers
+ * 
+ * This class handles customer-related AJAX requests.
+ * Session storage has been removed as the frontend uses localStorage.
  */
 class CustomerAjaxHandler extends AjaxHandlerBase {
 
@@ -23,6 +25,9 @@ class CustomerAjaxHandler extends AjaxHandlerBase {
 
     /**
      * Update customer details via AJAX
+     * 
+     * Validates customer details without storing in PHP session
+     * Storage is handled by frontend localStorage
      */
     public function updateCustomerDetails() {
         // Verify nonce
@@ -34,7 +39,6 @@ class CustomerAjaxHandler extends AjaxHandlerBase {
         }
 
         $details_data = $_POST['details'];
-
 
         if (is_string($details_data)) {
             $details_data = json_decode(stripslashes($details_data), true);
@@ -80,29 +84,17 @@ class CustomerAjaxHandler extends AjaxHandlerBase {
         }
 
         try {
-            // Initialize CustomerDetails
+            // Initialize CustomerDetails for validation
             $customer_details = new \RuDigital\ProductEstimator\Includes\CustomerDetails();
 
-            // Get existing details to preserve any fields not in the form
-            $existing_details = $customer_details->getDetails();
-
-            // Merge new details with existing details
-            // This preserves fields that weren't in the form but were in the session
-            $merged_details = array_merge($existing_details, $details);
-
-            // Update the details
-            $success = $customer_details->setDetails($merged_details);
-
-            if ($success) {
-                // Get the updated details to confirm they were set correctly
-                $updated_details = $customer_details->getDetails();
-
+            // Validate the details
+            if ($customer_details->validateDetails($details)) {
                 wp_send_json_success([
                     'message' => __('Customer details updated successfully', 'product-estimator'),
-                    'details' => $updated_details
+                    'details' => $details
                 ]);
             } else {
-                wp_send_json_error(['message' => __('Failed to update customer details', 'product-estimator')]);
+                wp_send_json_error(['message' => __('Failed to validate customer details', 'product-estimator')]);
             }
         } catch (\Exception $e) {
             wp_send_json_error([
@@ -114,46 +106,33 @@ class CustomerAjaxHandler extends AjaxHandlerBase {
 
     /**
      * Delete customer details via AJAX
+     * 
+     * Returns success since frontend handles localStorage deletion
      */
     public function deleteCustomerDetails() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
         try {
-            // Initialize CustomerDetails
-            $customer_details = new \RuDigital\ProductEstimator\Includes\CustomerDetails();
+            // Get the HTML for the empty form
+            ob_start();
+            ?>
+            <!-- New empty customer details form -->
+            <div class="customer-details-section">
+                <h4><?php esc_html_e('Your Details', 'product-estimator'); ?></h4>
 
-            // Delete the details
-            $success = $customer_details->clearDetails();
-
-            if ($success) {
-                // Get the HTML for the empty form
-                ob_start();
-                ?>
-                <!-- New empty customer details form -->
-                <div class="customer-details-section">
-                    <h4><?php esc_html_e('Your Details', 'product-estimator'); ?></h4>
-
-                    <!--                    <div class="form-group">-->
-                    <!--                        <label for="customer-name">--><?php //esc_html_e('Full Name', 'product-estimator'); ?><!--</label>-->
-                    <!--                        <input type="text" id="customer-name" name="customer_name" placeholder="--><?php //esc_attr_e('Your full name', 'product-estimator'); ?><!--" required>-->
-                    <!--                    </div>-->
-
-                    <div class="form-group">
-                        <label for="customer-postcode"><?php esc_html_e('Postcode', 'product-estimator'); ?></label>
-                        <input type="text" id="customer-postcode" name="customer_postcode" placeholder="<?php esc_attr_e('Your postcode', 'product-estimator'); ?>" required>
-                    </div>
+                <div class="form-group">
+                    <label for="customer-postcode"><?php esc_html_e('Postcode', 'product-estimator'); ?></label>
+                    <input type="text" id="customer-postcode" name="customer_postcode" placeholder="<?php esc_attr_e('Your postcode', 'product-estimator'); ?>" required>
                 </div>
-                <?php
-                $html = ob_get_clean();
+            </div>
+            <?php
+            $html = ob_get_clean();
 
-                wp_send_json_success([
-                    'message' => __('Customer details deleted successfully', 'product-estimator'),
-                    'html' => $html
-                ]);
-            } else {
-                wp_send_json_error(['message' => __('Failed to delete customer details', 'product-estimator')]);
-            }
+            wp_send_json_success([
+                'message' => __('Customer details deleted successfully', 'product-estimator'),
+                'html' => $html
+            ]);
         } catch (\Exception $e) {
             wp_send_json_error([
                 'message' => __('An error occurred while deleting details', 'product-estimator'),
@@ -163,69 +142,52 @@ class CustomerAjaxHandler extends AjaxHandlerBase {
     }
 
     /**
-     * Check if customer has valid details set in session.
-     * MODIFIED: Uses CustomerDetails class which handles lazy session loading.
-     * Removed explicit session start.
+     * Check if customer has valid details
+     * 
+     * Customer details should be passed in the request from localStorage
      */
     public function check_customer_details() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
 
-        // Get estimate ID if provided (optional, used for fallback check)
-        $estimate_id = array_key_exists('estimate_id', $_POST) ? sanitize_text_field($_POST['estimate_id']) : null;
+        // Get customer details from request
+        $customer_details = array();
+        
+        if (isset($_POST['customer_details'])) {
+            $details_data = $_POST['customer_details'];
+            
+            if (is_string($details_data)) {
+                $details_data = json_decode(stripslashes($details_data), true);
+            }
+            
+            if (is_array($details_data)) {
+                $customer_details = $details_data;
+            }
+        }
 
         try {
-            // Initialize customer details manager.
-            // The constructor no longer starts the session.
-            // Session will only be started if getDetails() needs to load data.
-            if (!class_exists('\\RuDigital\\ProductEstimator\\Includes\\CustomerDetails')) {
-                require_once dirname(__FILE__) . '/class-customer-details.php';
-            }
-            $customer_details_manager = new CustomerDetails(); // Instantiate
-
-            // Get details - this will trigger ensureDetailsLoaded() inside CustomerDetails if needed
-            $customer_details = $customer_details_manager->getDetails(); // Returns [] if none or session fails
+            // Initialize CustomerDetails for validation
+            $customer_details_manager = new CustomerDetails();
 
             // Check specific fields
-            $has_email = $customer_details_manager->hasEmail(); // Checks loaded details
+            $has_email = !empty($customer_details['email']);
             $has_name = !empty($customer_details['name']);
             $has_phone = !empty($customer_details['phone']);
-            $has_postcode = !empty($customer_details['postcode']); // Assuming postcode is essential
-
-            // Fallback: If global details lack email, check the specific estimate's details
-            // This requires getting the SessionHandler instance directly here.
-            if (!$has_email && $estimate_id !== null) {
-                $session = SessionHandler::getInstance();
-                $estimate = $session->getEstimate($estimate_id); // This ensures session is started if needed
-
-                if ($estimate && isset($estimate['customer_details']) && is_array($estimate['customer_details'])) {
-                    $estimate_customer_details = $estimate['customer_details'];
-                    if (!empty($estimate_customer_details['email'])) {
-                        // If estimate has email, update flags based on estimate's data
-                        $has_email = true;
-                        $has_name = !empty($estimate_customer_details['name']);
-                        $has_phone = !empty($estimate_customer_details['phone']);
-                        $has_postcode = !empty($estimate_customer_details['postcode']);
-                        // Optionally update the main $customer_details variable to return the estimate-specific ones
-                        // $customer_details = $estimate_customer_details;
-                    }
-                }
-            }
+            $has_postcode = !empty($customer_details['postcode']);
 
             wp_send_json_success([
                 'has_email' => $has_email,
                 'has_name' => $has_name,
                 'has_phone' => $has_phone,
-                'has_postcode' => $has_postcode, // Added postcode check flag
-                'customer_details' => $customer_details // Return the details found (global or potentially estimate-specific if logic was added)
+                'has_postcode' => $has_postcode,
+                'customer_details' => $customer_details
             ]);
 
         } catch (\Exception $e) {
-            // Catch potential errors during CustomerDetails instantiation or session handling
             error_log('Error checking customer details: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => __('An error occurred while checking customer details.', 'product-estimator'),
-                'error_details' => $e->getMessage() // Optionally include details in debug mode
+                'error_details' => $e->getMessage()
             ]);
         }
     }
@@ -264,42 +226,15 @@ class CustomerAjaxHandler extends AjaxHandlerBase {
         }
 
         try {
-            // Get the estimate from session or database
-            $session = SessionHandler::getInstance();
+            // Try to get the estimate directly from the database using the ID
+            $db_id = intval($estimate_id);
+            $estimate = $this->get_estimate_from_db($db_id);
 
-            $estimate = $session->getEstimate($estimate_id);
-            $db_id = null;
-
-            // If estimate exists in session, check if it's stored in DB
-            if ($estimate) {
-                $db_id = $this->getEstimateDbId($estimate);
-
-                // If not in DB, store it
-                if (!$db_id) {
-                    // Get customer details from estimate or custom details
-                    $customer_details = $custom_customer_details ?: ($estimate['customer_details'] ?? []);
-                    $notes = isset($estimate['notes']) ? $estimate['notes'] : '';
-
-                    // Store the estimate
-                    $db_id = $this->storeOrUpdateEstimate($estimate_id, $customer_details, $notes);
-
-                    if (!$db_id) {
-                        throw new \Exception('Failed to store estimate in database');
-                    }
-                }
-            } else {
-                // Try to get the estimate directly from the database using the ID
-                $db_id = intval($estimate_id);
-                $estimate_data = $this->get_estimate_from_db($db_id);
-
-                if (!$estimate_data) {
-                    wp_send_json_error([
-                        'message' => __('Estimate not found', 'product-estimator')
-                    ]);
-                    return;
-                }
-
-                $estimate = $estimate_data;
+            if (!$estimate) {
+                wp_send_json_error([
+                    'message' => __('Estimate not found', 'product-estimator')
+                ]);
+                return;
             }
 
             // Get customer details - prefer custom passed details over stored ones
@@ -486,7 +421,7 @@ class CustomerAjaxHandler extends AjaxHandlerBase {
 
         error_log("store email: " . $store_email);
         // Send email
-//        $sent = wp_mail($store_email, $subject, $body, $headers, $attachments);
+        $sent = wp_mail($store_email, $subject, $body, $headers, $attachments);
 
         // Delete temporary files
         foreach ($attachments as $file) {

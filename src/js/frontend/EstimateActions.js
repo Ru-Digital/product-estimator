@@ -849,46 +849,27 @@ class EstimateActions {
       saveCustomerDetails(details);
       this.log('Customer details saved to localStorage from updateCustomerDetails:', details);
 
-      // Update customer details on server
+      // Dispatch an event to notify other components of updated details
+      const event = new CustomEvent('customer_details_updated', {
+        bubbles: true,
+        detail: {
+          details: details
+        }
+      });
+      document.dispatchEvent(event);
+
+      // Now store the estimate to the database, passing ONLY the estimate_id
       fetch(productEstimatorVars.ajax_url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: new URLSearchParams({
-          action: 'update_customer_details',
+          action: 'store_single_estimate',
           nonce: productEstimatorVars.nonce,
-          details: JSON.stringify(details)
+          estimate_id: estimateId
         })
       })
-        .then(response => response.json())
-        .then(response => {
-          if (!response.success) {
-            throw new Error(response.data?.message || 'Error updating customer details');
-          }
-
-          // Dispatch an event to notify other components of updated details
-          const event = new CustomEvent('customer_details_updated', {
-            bubbles: true,
-            detail: {
-              details: details
-            }
-          });
-          document.dispatchEvent(event);
-
-          // Now store the estimate to the database, passing ONLY the estimate_id
-          return fetch(productEstimatorVars.ajax_url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-              action: 'store_single_estimate',
-              nonce: productEstimatorVars.nonce,
-              estimate_id: estimateId
-            })
-          });
-        })
         .then(response => response.json())
         .then(response => {
           if (response.success) {

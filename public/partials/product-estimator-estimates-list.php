@@ -11,14 +11,9 @@ if (!defined('WPINC')) {
     exit;
 }
 
-// Get session handler
-$session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
-$estimates = $session_handler->getEstimates();
-//
-//echo "<pre>";
-//unset($_SESSION['product_estimator']);
-//print_r($_SESSION['product_estimator']);
-//echo "</pre>";
+// TODO: This needs to be updated to work with the new localStorage mechanism
+// Estimates data should be passed from JavaScript instead of being retrieved from PHP session
+$estimates = isset($estimates) ? $estimates : [];
 
 // Get default markup from settings
 $options = get_option('product_estimator_settings');

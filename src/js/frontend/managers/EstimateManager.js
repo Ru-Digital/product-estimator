@@ -733,29 +733,29 @@ class EstimateManager {
           if (customerData && (customerData.name || customerData.email || customerData.phone || customerData.postcode)) {
             logger.log('Customer data found, displaying details');
             
-            // Build the customer details HTML
+            // Build the customer details HTML in grid format
             let detailsHtml = '';
             
             if (customerData.name) {
-              detailsHtml += `<p><strong>Name:</strong> ${customerData.name}</p>`;
+              detailsHtml += `<p><strong>NAME:</strong><br>${customerData.name}</p>`;
             }
             
             if (customerData.email) {
-              detailsHtml += `<p><strong>Email:</strong> ${customerData.email}</p>`;
+              detailsHtml += `<p><strong>EMAIL:</strong><br>${customerData.email}</p>`;
             }
             
             if (customerData.phone) {
-              detailsHtml += `<p><strong>Phone:</strong> ${customerData.phone}</p>`;
+              detailsHtml += `<p><strong>PHONE:</strong><br>${customerData.phone}</p>`;
             }
             
             if (customerData.postcode) {
-              detailsHtml += `<p><strong>Postcode:</strong> ${customerData.postcode}</p>`;
+              detailsHtml += `<p><strong>POSTCODE:</strong><br>${customerData.postcode}</p>`;
             }
             
             // Insert the details and show the section
             if (customerDetailsDisplay && customerDetailsContent) {
               customerDetailsContent.innerHTML = detailsHtml;
-              customerDetailsDisplay.style.display = 'block';
+              customerDetailsDisplay.style.display = '';  // Remove inline style to use CSS
             }
           }
           

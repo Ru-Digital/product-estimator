@@ -352,7 +352,7 @@ class CustomerDetailsManager {
     const editForm = document.querySelector(this.config.selectors.editForm);
 
     if (editForm) editForm.style.display = 'none';
-    if (detailsContainer) detailsContainer.style.display = 'block';
+    if (detailsContainer) detailsContainer.style.display = '';  // Remove inline display style
     if (detailsHeader) detailsHeader.style.display = 'flex';
 
     logger.log('Edit form hidden');
@@ -469,7 +469,7 @@ class CustomerDetailsManager {
     const editForm = document.querySelector(this.config.selectors.editForm);
 
     if (editForm) editForm.style.display = 'none';
-    if (detailsContainer) detailsContainer.style.display = 'block';
+    if (detailsContainer) detailsContainer.style.display = '';  // Remove inline display style
     if (detailsHeader) detailsHeader.style.display = 'flex';
 
     // Dispatch event to notify other components of the update
@@ -653,23 +653,23 @@ class CustomerDetailsManager {
     logger.log(`Updating ${detailsContainers.length} customer details containers`);
 
     detailsContainers.forEach(container => {
-      // Build HTML with new details as separate paragraphs
+      // Build HTML with new details in grid layout format
       let detailsHtml = '';
 
       if (details.name && details.name.trim() !== '') {
-        detailsHtml += `<p><strong>Name:</strong> ${details.name}</p>`;
+        detailsHtml += `<p><strong>NAME:</strong><br>${details.name}</p>`;
       }
 
       if (details.email && details.email.trim() !== '') {
-        detailsHtml += `<p><strong>Email:</strong> ${details.email}</p>`;
+        detailsHtml += `<p><strong>EMAIL:</strong><br>${details.email}</p>`;
       }
 
       if (details.phone && details.phone.trim() !== '') {
-        detailsHtml += `<p><strong>Phone:</strong> ${details.phone}</p>`;
+        detailsHtml += `<p><strong>PHONE:</strong><br>${details.phone}</p>`;
       }
 
       if (details.postcode && details.postcode.trim() !== '') {
-        detailsHtml += `<p><strong>Postcode:</strong> ${details.postcode}</p>`;
+        detailsHtml += `<p><strong>POSTCODE:</strong><br>${details.postcode}</p>`;
       }
 
       // Update container

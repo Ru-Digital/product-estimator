@@ -1032,12 +1032,10 @@ class EstimateActions {
   setButtonLoading(button, isLoading) {
     if (!button) return;
 
-    const originalText = button.dataset.originalText || button.textContent;
-
     if (isLoading) {
-      // Store original text if not already stored
-      if (!button.dataset.originalText) {
-        button.dataset.originalText = button.textContent;
+      // Store original HTML content if not already stored
+      if (!button.dataset.originalHtml) {
+        button.dataset.originalHtml = button.innerHTML;
       }
 
       button.classList.add('loading');
@@ -1045,7 +1043,13 @@ class EstimateActions {
       button.disabled = true;
     } else {
       button.classList.remove('loading');
-      button.textContent = originalText;
+      // Restore original HTML (includes icons)
+      if (button.dataset.originalHtml) {
+        button.innerHTML = button.dataset.originalHtml;
+      } else {
+        // Fallback to text content if HTML was not stored
+        button.textContent = button.dataset.originalText || button.textContent;
+      }
       button.disabled = false;
     }
   }

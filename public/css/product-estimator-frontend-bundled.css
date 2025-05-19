@@ -3794,7 +3794,12 @@ button.replace-product-in-room.loading {
 .customer-details-display .customer-details-content {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
+}
+@media screen and (min-width: 992px) {
+  .customer-details-display .customer-details-content {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 .customer-details-display .customer-details-content p {
   background-color: #fff;
@@ -3924,9 +3929,6 @@ button.replace-product-in-room.loading {
   transform: scale(1.1);
   transition: all all 0.3s ease;
 }
-.customer-details-section::after {
-  transition: all all 0.3s ease;
-}
 
 /* Transition state when switching between forms */
 .customer-details-display.transitioning,
@@ -3950,6 +3952,7 @@ button.replace-product-in-room.loading {
   font-size: 12px;
   margin-top: 5px;
 }
+
 #new-estimate-form .customer-details-section .form-group:last-child {
   margin-bottom: 0;
 }

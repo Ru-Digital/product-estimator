@@ -234,7 +234,11 @@
   .customer-details-content {
     display: grid;
     gap: 12px;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, 1fr);  // Fixed 2-column layout on desktop
+    
+    @media screen and (min-width: #{$breakpoint-lg}) {
+      grid-template-columns: repeat(4, 1fr);  // 4 columns on larger screens
+    }
     
     p {
       background-color: $bg-color;
@@ -365,10 +369,8 @@
 
 /* Success animation for saved details */
 
-.customer-details-display {
-  &.success {
-    animation: success-pulse 0.6s ease-out;
-  }
+.customer-details-display.success {
+  animation: success-pulse 0.6s ease-out;
 }
 
 
@@ -386,17 +388,11 @@
 
 /* Tooltip styling for info icon */
 
-.customer-details-section {
-  &:hover::after {
-    background-color: color.adjust($primary-color, $lightness: -10%);
-    cursor: help;
-    transform: scale(1.1);
-    transition: all $transition-base;
-  }
-  
-  &::after {
-    transition: all $transition-base;
-  }
+.customer-details-section:hover::after {
+  background-color: color.adjust($primary-color, $lightness: -10%);
+  cursor: help;
+  transform: scale(1.1);
+  transition: all $transition-base;
 }
 
 /* Transition state when switching between forms */
@@ -411,30 +407,26 @@
 
 /* Enhanced form field styling */
 
-#new-estimate-form {
-  .form-group {
-    position: relative;
-    
-    &.has-error {
-      input[type="text"] {
-        border-color: $error-color;
-        
-        &:focus {
-          box-shadow: 0 0 0 3px color.adjust($error-color, $alpha: -0.9);
-        }
+#new-estimate-form .form-group {
+  position: relative;
+  
+  &.has-error {
+    input[type="text"] {
+      border-color: $error-color;
+      
+      &:focus {
+        box-shadow: 0 0 0 3px color.adjust($error-color, $alpha: -0.9);
       }
-    }
-    
-    .field-helper {
-      color: color.adjust($text-color, $lightness: + 20%);
-      font-size: 12px;
-      margin-top: 5px;
     }
   }
   
-  .customer-details-section {
-    .form-group:last-child {
-      margin-bottom: 0;
-    }
+  .field-helper {
+    color: color.adjust($text-color, $lightness: + 20%);
+    font-size: 12px;
+    margin-top: 5px;
   }
+}
+
+#new-estimate-form .customer-details-section .form-group:last-child {
+  margin-bottom: 0;
 }

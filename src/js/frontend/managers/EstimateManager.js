@@ -755,6 +755,12 @@ class EstimateManager {
           logger.error('FormManager not available for bindNewEstimateFormEvents');
         }
 
+        // Initialize customer details edit functionality if manager is available
+        if (customerDetailsManager && customerDetailsManager.bindEvents) {
+          customerDetailsManager.bindEvents();
+          logger.log('Customer details edit functionality initialized');
+        }
+
         this.modalManager.hideLoading();
       } else {
         logger.error('Form element not found inside the template after insertion!');

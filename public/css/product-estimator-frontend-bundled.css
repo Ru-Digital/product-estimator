@@ -3573,12 +3573,6 @@ button.replace-product-in-room.loading {
   .customer-details-display {
     padding: 15px;
   }
-  .customer-details-display h4 {
-    padding-left: 20px;
-  }
-  .customer-details-display h4::before {
-    left: 0;
-  }
   .customer-details-display .customer-details-content {
     grid-template-columns: 1fr;
   }
@@ -3632,16 +3626,6 @@ button.replace-product-in-room.loading {
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 15px;
-  position: relative;
-}
-.customer-details-display h4::before {
-  color: #00833F;
-  content: "\f147";
-  font-family: dashicons, sans-serif;
-  font-size: 16px;
-  left: -25px;
-  position: absolute;
-  top: 0;
 }
 .customer-details-display .customer-details-content {
   display: grid;

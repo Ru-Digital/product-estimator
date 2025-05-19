@@ -164,14 +164,6 @@
   .customer-details-display {
     padding: 15px;
 
-    h4 {
-      padding-left: 20px;
-      
-      &::before {
-        left: 0;
-      }
-    }
-
     .customer-details-content {
       grid-template-columns: 1fr;
     }
@@ -237,17 +229,6 @@
     font-size: 16px;
     font-weight: 600;
     margin: 0 0 15px;
-    position: relative;
-    
-    &::before {
-      color: $primary-color;
-      content: '\f147'; // Dashicons checkmark icon
-      font-family: dashicons, sans-serif;
-      font-size: 16px;
-      left: -25px;
-      position: absolute;
-      top: 0;
-    }
   }
 
   .customer-details-content {

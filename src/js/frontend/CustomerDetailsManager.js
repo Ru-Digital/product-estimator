@@ -289,9 +289,54 @@ class CustomerDetailsManager {
 
     if (detailsContainer) detailsContainer.style.display = 'none';
     if (detailsHeader) detailsHeader.style.display = 'none';
-    if (editForm) editForm.style.display = 'block';
+    if (editForm) {
+      editForm.style.display = 'block';
+      
+      // Get current customer details
+      const customerData = this.getCustomerDetails();
+      
+      // Show/hide fields based on existing data and populate values
+      const fields = [
+        { id: 'edit-customer-name', key: 'name' },
+        { id: 'edit-customer-email', key: 'email' },
+        { id: 'edit-customer-phone', key: 'phone' },
+        { id: 'edit-customer-postcode', key: 'postcode' }
+      ];
+      
+      fields.forEach(field => {
+        const fieldElement = editForm.querySelector(`#${field.id}`);
+        if (fieldElement) {
+          const formGroup = fieldElement.closest('.form-group');
+          if (formGroup) {
+            // Show field if data exists or if it's postcode (always show postcode)
+            if (customerData[field.key] || field.key === 'postcode') {
+              formGroup.style.display = 'block';
+              fieldElement.value = customerData[field.key] || '';
+            } else {
+              formGroup.style.display = 'none';
+            }
+          }
+        }
+      });
+      
+      // Always show at least postcode field for new entries
+      const visibleFields = fields.filter(field => {
+        const el = editForm.querySelector(`#${field.id}`);
+        const group = el?.closest('.form-group');
+        return group && group.style.display !== 'none';
+      });
+      
+      // If no fields are visible or only empty fields are visible, show postcode
+      if (visibleFields.length === 0 || !Object.keys(customerData).some(key => customerData[key])) {
+        const postcodeField = editForm.querySelector('#edit-customer-postcode');
+        if (postcodeField) {
+          const postcodeGroup = postcodeField.closest('.form-group');
+          if (postcodeGroup) postcodeGroup.style.display = 'block';
+        }
+      }
+    }
 
-    logger.log('Edit form displayed');
+    logger.log('Edit form displayed with populated values');
   }
 
   /**
@@ -328,22 +373,29 @@ class CustomerDetailsManager {
     saveButton.textContent = (this.config.i18n && this.config.i18n.saving) || 'Saving...';
     saveButton.disabled = true;
 
-    // Get updated details - collect all available fields
-    const updatedDetails = {
-      name: document.getElementById('edit-customer-name')?.value || '',
-      postcode: document.getElementById('edit-customer-postcode')?.value || ''
-    };
-
-    // Add email and phone if they exist in the form
-    const emailField = document.getElementById('edit-customer-email');
-    if (emailField) {
-      updatedDetails.email = emailField.value || '';
-    }
-
-    const phoneField = document.getElementById('edit-customer-phone');
-    if (phoneField) {
-      updatedDetails.phone = phoneField.value || '';
-    }
+    // Get updated details - collect only visible fields
+    const updatedDetails = {};
+    
+    const fields = [
+      { id: 'edit-customer-name', key: 'name' },
+      { id: 'edit-customer-email', key: 'email' },
+      { id: 'edit-customer-phone', key: 'phone' },
+      { id: 'edit-customer-postcode', key: 'postcode' }
+    ];
+    
+    fields.forEach(field => {
+      const fieldElement = document.getElementById(field.id);
+      if (fieldElement) {
+        const formGroup = fieldElement.closest('.form-group');
+        // Only collect values from visible fields
+        if (formGroup && formGroup.style.display !== 'none') {
+          const value = fieldElement.value.trim();
+          if (value) {
+            updatedDetails[field.key] = value;
+          }
+        }
+      }
+    });
 
     // Use the imported saveCustomerDetails function
     try {
@@ -601,26 +653,36 @@ class CustomerDetailsManager {
     logger.log(`Updating ${detailsContainers.length} customer details containers`);
 
     detailsContainers.forEach(container => {
-      // Build HTML with new details
-      let detailsHtml = '<p>';
+      // Build HTML with new details as separate paragraphs
+      let detailsHtml = '';
 
       if (details.name && details.name.trim() !== '') {
-        detailsHtml += `<strong>${details.name}</strong><br>`;
+        detailsHtml += `<p><strong>Name:</strong> ${details.name}</p>`;
       }
 
       if (details.email && details.email.trim() !== '') {
-        detailsHtml += `${details.email}<br>`;
+        detailsHtml += `<p><strong>Email:</strong> ${details.email}</p>`;
       }
 
       if (details.phone && details.phone.trim() !== '') {
-        detailsHtml += `${details.phone}<br>`;
+        detailsHtml += `<p><strong>Phone:</strong> ${details.phone}</p>`;
       }
 
-      detailsHtml += details.postcode || '';
-      detailsHtml += '</p>';
+      if (details.postcode && details.postcode.trim() !== '') {
+        detailsHtml += `<p><strong>Postcode:</strong> ${details.postcode}</p>`;
+      }
 
       // Update container
       container.innerHTML = detailsHtml;
+      
+      // Add success animation to parent display container
+      const displayContainer = container.closest('.customer-details-display');
+      if (displayContainer) {
+        displayContainer.classList.add('success');
+        setTimeout(() => {
+          displayContainer.classList.remove('success');
+        }, 600);
+      }
     });
   }
 

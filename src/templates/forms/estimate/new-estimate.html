@@ -22,10 +22,41 @@
     </form>
     
     <div class="customer-details-display" style="display: none;">
-      <hr>
-      <h4>Your Saved Details</h4>
-      <div class="customer-details-content">
+      <div class="customer-details-header">
+        <h4>Your Saved Details</h4>
+        <div class="customer-details-actions">
+          <button type="button" class="edit-customer-details" id="edit-customer-details-btn">Edit</button>
+        </div>
+      </div>
+      <div class="customer-details-content saved-customer-details">
         <!-- Customer details will be inserted here -->
+      </div>
+      
+      <!-- Edit form (hidden by default) -->
+      <div class="customer-details-edit-form" style="display: none;">
+        <h4>Edit Your Details</h4>
+        <form id="customer-details-edit-form">
+          <div class="form-group">
+            <label for="edit-customer-name">Name</label>
+            <input type="text" id="edit-customer-name" name="customer_name" placeholder="Your name">
+          </div>
+          <div class="form-group">
+            <label for="edit-customer-email">Email</label>
+            <input type="email" id="edit-customer-email" name="customer_email" placeholder="Your email">
+          </div>
+          <div class="form-group">
+            <label for="edit-customer-phone">Phone</label>
+            <input type="tel" id="edit-customer-phone" name="customer_phone" placeholder="Your phone">
+          </div>
+          <div class="form-group">
+            <label for="edit-customer-postcode">Postcode</label>
+            <input type="text" id="edit-customer-postcode" name="customer_postcode" placeholder="Your postcode">
+          </div>
+          <div class="customer-details-edit-actions">
+            <button type="button" class="save-customer-details" id="save-customer-details-btn">Save Changes</button>
+            <button type="button" class="cancel-edit-customer-details" id="cancel-edit-customer-details-btn">Cancel</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

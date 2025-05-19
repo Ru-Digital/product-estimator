@@ -981,7 +981,16 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             $available_variations = $product->get_available_variations();
             $attributes = $product->get_variation_attributes();
 
-            // Format attributes for frontend
+            // First, get all variations with estimator enabled
+            $estimator_enabled_variation_ids = [];
+            foreach ($available_variations as $variation) {
+                $estimator_enabled = get_post_meta($variation['variation_id'], '_enable_estimator', true);
+                if ($estimator_enabled === 'yes') {
+                    $estimator_enabled_variation_ids[] = $variation['variation_id'];
+                }
+            }
+
+            // Format attributes for frontend - only include options that have estimator-enabled variations
             $formatted_attributes = [];
             foreach ($attributes as $attribute_name => $options) {
                 $formatted_options = [];
@@ -991,6 +1000,22 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 $is_taxonomy = taxonomy_exists($attribute_taxonomy);
 
                 foreach ($options as $option) {
+                    // Check if this option is used in any estimator-enabled variation
+                    $option_has_estimator_variation = false;
+                    foreach ($available_variations as $variation) {
+                        if (in_array($variation['variation_id'], $estimator_enabled_variation_ids) &&
+                            isset($variation['attributes']["attribute_$attribute_name"]) &&
+                            $variation['attributes']["attribute_$attribute_name"] === $option) {
+                            $option_has_estimator_variation = true;
+                            break;
+                        }
+                    }
+                    
+                    // Skip this option if no estimator-enabled variations use it
+                    if (!$option_has_estimator_variation) {
+                        continue;
+                    }
+                    
                     $option_data = [
                         'value' => $option,
                         'label' => $option
@@ -1048,10 +1073,17 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 ];
             }
 
-            // Format variations for frontend
+            // Format variations for frontend - only include those with estimator enabled
             $formatted_variations = [];
             foreach ($available_variations as $variation) {
                 $variation_obj = wc_get_product($variation['variation_id']);
+                
+                // Check if estimator is enabled for this variation
+                $estimator_enabled = get_post_meta($variation['variation_id'], '_enable_estimator', true);
+                if ($estimator_enabled !== 'yes') {
+                    continue; // Skip variations without estimator enabled
+                }
+                
                 $image_id = $variation_obj ? $variation_obj->get_image_id() : 0;
                 $image_url = '';
 

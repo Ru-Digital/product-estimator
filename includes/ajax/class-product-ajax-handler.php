@@ -382,35 +382,83 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 $auto_add_products_ids = array_values(array_unique($auto_add_products_ids)); // Ensure unique and re-indexed
                 $auto_add_notes_texts = array_values(array_unique($auto_add_notes_texts));   // Ensure unique and re-indexed
 
-                foreach ($auto_add_products_ids as $related_product_id) {
-                    if ($related_product_id == $product_id) continue;
-                    $related_product_obj = wc_get_product($related_product_id);
-                    if ($related_product_obj) {
-                        $related_pricing_data = product_estimator_get_product_price($related_product_id, $room_area, false);
+                foreach ($auto_add_products_ids as $auto_add_product_id) {
+                    if ($auto_add_product_id == $product_id) continue;
+                    $auto_add_product_obj = wc_get_product($auto_add_product_id);
+                    if ($auto_add_product_obj) {
+                        $auto_add_pricing_data = product_estimator_get_product_price($auto_add_product_id, $room_area, false);
                         $additional_product_entry = [
-                            'id' => $related_product_id,
-                            'name' => $related_product_obj->get_name(),
-                            'image' => wp_get_attachment_image_url($related_product_obj->get_image_id(), 'thumbnail'),
-                            'min_price' => $related_pricing_data['min_price'],
-                            'max_price' => $related_pricing_data['max_price'],
-                            'pricing_method' => $related_pricing_data['pricing_method'],
-                            'min_price_total' => ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $related_pricing_data['min_price'] * $room_area : $related_pricing_data['min_price'],
-                            'max_price_total' => ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $related_pricing_data['max_price'] * $room_area : $related_pricing_data['max_price'],
-                            'is_primary_category' => $this->isProductInPrimaryCategories($related_product_id),
+                            'id' => $auto_add_product_id,
+                            'name' => $auto_add_product_obj->get_name(),
+                            'image' => wp_get_attachment_image_url($auto_add_product_obj->get_image_id(), 'thumbnail'),
+                            'min_price' => $auto_add_pricing_data['min_price'],
+                            'max_price' => $auto_add_pricing_data['max_price'],
+                            'pricing_method' => $auto_add_pricing_data['pricing_method'],
+                            'min_price_total' => ($auto_add_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $auto_add_pricing_data['min_price'] * $room_area : $auto_add_pricing_data['min_price'],
+                            'max_price_total' => ($auto_add_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $auto_add_pricing_data['max_price'] * $room_area : $auto_add_pricing_data['max_price'],
+                            'is_primary_category' => $this->isProductInPrimaryCategories($auto_add_product_id),
+                            'selected_option' => null
                         ];
-                        
-                        // Check if this additional product has upgrades available
-                        error_log('PRODUCT UPGRADES CHECK: Starting for additional product ID ' . $related_product_id);
-                        
+
+                        // Let's also manually check for variations
+                        // Enhanced variation detection with multiple fallbacks
+                        $is_variable = false;
+                        $variations_found = [];
+
+                        // Method 1: Standard WooCommerce check
+                        if ($auto_add_product_obj->is_type('variable')) {
+                            $is_variable = true;
+                        }
+                        // Check if this is a variable product and add variations
+                        if ($is_variable) {
+                            $variations = [];
+
+
+                            $available_variation_ids = $auto_add_product_obj->get_children();
+                            $selected_option = true;
+                            $default_option_select = null;
+                            foreach ($available_variation_ids as $variation_id) {
+                                $variation_obj = wc_get_product($variation_id);
+                                if ($selected_option) $default_option_select = $variation_id;
+                                if ($variation_obj) {
+                                    $variation_pricing_data = product_estimator_get_product_price($variation_id, $room_area, false);
+
+                                    $variations[$variation_id] = [
+                                        'id' => $variation_id,
+                                        'name' => $variation_obj->get_name(),
+                                        'image' => wp_get_attachment_image_url($variation_obj->get_image_id(), 'thumbnail'),
+                                        'min_price' => $variation_pricing_data['min_price'],
+                                        'max_price' => $variation_pricing_data['max_price'],
+                                        'pricing_method' => $variation_pricing_data['pricing_method'],
+                                        'min_price_total' => ($variation_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $variation_pricing_data['min_price'] * $room_area : $variation_pricing_data['min_price'],
+                                        'max_price_total' => ($variation_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $variation_pricing_data['max_price'] * $room_area : $variation_pricing_data['max_price'],
+                                        'is_primary_category' => $this->isProductInPrimaryCategories($variation_id),
+                                        'selected' => $selected_option,
+                                    ];
+                                }
+
+                                $selected_option = false;
+                            }
+
+                            if (!empty($variations)) {
+                                $additional_product_entry['variations'] = $variations;
+                                $additional_product_entry['is_variable'] = true;
+                                $additional_product_entry['selected_option'] = $default_option_select;
+                            } else {
+                                $additional_product_entry['is_variable'] = false;
+                                $additional_product_entry['variations'] = [];
+                            }
+                        }
+
                         // Always check for upgrades (no feature switch required)
                             $product_upgrades_frontend = null;
                             $upgrades_frontend_class = '\\RuDigital\\ProductEstimator\\Includes\\Frontend\\ProductUpgradesFrontend';
-                            
+
                             // Check if class exists and instantiate if needed
                             if (!class_exists($upgrades_frontend_class)) {
                                 $upgrades_frontend_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/frontend/class-product-upgrades-frontend.php';
                                 error_log('PRODUCT UPGRADES CHECK: Class not found, attempting to load from: ' . $upgrades_frontend_path);
-                                
+
                                 if (file_exists($upgrades_frontend_path)) {
                                     require_once $upgrades_frontend_path;
                                     error_log('PRODUCT UPGRADES CHECK: Successfully loaded ProductUpgradesFrontend class');
@@ -420,35 +468,35 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                             } else {
                                 error_log('PRODUCT UPGRADES CHECK: ProductUpgradesFrontend class already exists');
                             }
-                            
+
                             if (class_exists($upgrades_frontend_class)) {
                                 try {
                                     // Get existing estimate ID if available (usually passed in the AJAX request)
                                     $estimate_id = isset($_POST['estimate_id']) ? sanitize_text_field($_POST['estimate_id']) : '';
                                     $room_id = isset($_POST['room_id']) ? sanitize_text_field($_POST['room_id']) : '';
-                                    
+
                                     error_log('PRODUCT UPGRADES CHECK: Creating instance with estimate_id=' . $estimate_id . ', room_id=' . $room_id);
-                                    
+
                                     $product_upgrades_frontend = new $upgrades_frontend_class('product-estimator', PRODUCT_ESTIMATOR_VERSION);
-                                    
+
                                     error_log('PRODUCT UPGRADES CHECK: Calling get_upgrades_for_product with:');
-                                    error_log('  - product_id: ' . $related_product_id);
+                                    error_log('  - product_id: ' . $auto_add_product_id);
                                     error_log('  - type: room_product');
                                     error_log('  - estimate_id: ' . $estimate_id);
                                     error_log('  - room_id: ' . $room_id);
                                     error_log('  - room_area: ' . $room_area);
-                                    
+
                                     $upgrades_data = $product_upgrades_frontend->get_upgrades_for_product(
-                                        $related_product_id, 
-                                        'room_product', 
-                                        $estimate_id, 
-                                        $room_id, 
+                                        $auto_add_product_id,
+                                        'room_product',
+                                        $estimate_id,
+                                        $room_id,
                                         $room_area
                                     );
-                                    
+
                                     error_log('PRODUCT UPGRADES CHECK: Response from get_upgrades_for_product:');
                                     error_log(print_r($upgrades_data, true));
-                                    
+
                                     // Add upgrades data if available
                                     if (!empty($upgrades_data) && isset($upgrades_data['products'])) {
                                         $additional_product_entry['has_upgrades'] = true;
@@ -459,7 +507,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                                         error_log('PRODUCT UPGRADES CHECK: No upgrade products found');
                                     }
                                 } catch (\Throwable $e) {
-                                    error_log('PRODUCT UPGRADES CHECK ERROR: Failed to get upgrades for additional product ' . $related_product_id);
+                                    error_log('PRODUCT UPGRADES CHECK ERROR: Failed to get upgrades for additional product ' . $auto_add_product_id);
                                     error_log('PRODUCT UPGRADES CHECK ERROR: ' . $e->getMessage());
                                     error_log('PRODUCT UPGRADES CHECK ERROR: Stack trace: ' . $e->getTraceAsString());
                                     $additional_product_entry['has_upgrades'] = false;
@@ -468,8 +516,8 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                                 error_log('PRODUCT UPGRADES CHECK: ProductUpgradesFrontend class not available after load attempt');
                                 $additional_product_entry['has_upgrades'] = false;
                             }
-                        
-                        $product_data['additional_products'][$related_product_id] = $additional_product_entry;
+
+                        $product_data['additional_products'][$auto_add_product_id] = $additional_product_entry;
                     }
                 }
                 foreach ($auto_add_notes_texts as $note_text) {
@@ -506,7 +554,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                                 $raw_suggestions[$key]['is_primary_category'] = $this->isProductInPrimaryCategories($suggestion['id']);
                             }
                         }
-                        
+
                         // Ensure the suggestions are a numerically indexed array for JSON
                         $product_data['room_suggested_products'] = array_values($raw_suggestions);
                         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -538,38 +586,38 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             $similar_products_list = $this->fetch_and_format_similar_products($product_id, $room_area);
 
             $product_data['similar_products'] = $similar_products_list;
-            
+
             // Check if this is a variable product and add variations data
             if ($product->is_type('variable')) {
                 // Get variations data
                 $available_variations = $product->get_available_variations();
                 $attributes = $product->get_variation_attributes();
-                
+
                 // Format attributes for frontend
                 $formatted_attributes = [];
                 foreach ($attributes as $attribute_name => $options) {
                     $formatted_options = [];
-                    
+
                     // Check if this is a taxonomy attribute
                     $attribute_taxonomy = wc_attribute_taxonomy_name($attribute_name);
                     $is_taxonomy = taxonomy_exists($attribute_taxonomy);
-                    
+
                     foreach ($options as $option) {
                         $option_data = [
                             'value' => $option,
                             'label' => $option
                         ];
-                        
+
                         // If this is a taxonomy attribute, get the term details
                         if ($is_taxonomy) {
                             $term = get_term_by('slug', $option, $attribute_taxonomy);
                             if ($term) {
                                 $option_data['label'] = $term->name;
-                                
+
                                 // Check for color or image meta
                                 $color = get_term_meta($term->term_id, 'product_attribute_color', true);
                                 $image = get_term_meta($term->term_id, 'product_attribute_image', true);
-                                
+
                                 if ($color) {
                                     $option_data['color'] = $color;
                                     $option_data['type'] = 'color';
@@ -579,30 +627,30 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                                 }
                             }
                         }
-                        
+
                         $formatted_options[] = $option_data;
                     }
-                    
+
                     $formatted_attributes[$attribute_name] = [
                         'label' => wc_attribute_label($attribute_name, $product),
                         'options' => $formatted_options,
                         'type' => isset($formatted_options[0]['type']) ? $formatted_options[0]['type'] : 'label'
                     ];
                 }
-                
+
                 // Format variations for frontend
                 $formatted_variations = [];
                 foreach ($available_variations as $variation) {
                     $variation_obj = wc_get_product($variation['variation_id']);
                     $image_id = $variation_obj ? $variation_obj->get_image_id() : 0;
                     $image_url = '';
-                    
+
                     if ($image_id) {
                         $image_url = wp_get_attachment_image_url($image_id, 'woocommerce_thumbnail');
                     } elseif (isset($variation['image']['url'])) {
                         $image_url = $variation['image']['url'];
                     }
-                    
+
                     $formatted_variations[] = [
                         'variation_id' => $variation['variation_id'],
                         'attributes' => $variation['attributes'],
@@ -614,7 +662,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                         'variation_description' => $variation['variation_description']
                     ];
                 }
-                
+
                 // Add variations data to product data
                 $product_data['is_variable'] = true;
                 $product_data['variations'] = $formatted_variations;
@@ -624,6 +672,8 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 $product_data['variations'] = [];
                 $product_data['attributes'] = [];
             }
+
+            error_log('FINAL PRODUCT DATA: ' . print_r($product_data, true));
 
             wp_send_json_success([
                 'message' => __('Product data retrieved successfully', 'product-estimator'),
@@ -816,23 +866,23 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             return false;
         }
     }
-    
+
     /**
      * Get product variations including attributes and available variations
      */
     public function get_product_variations() {
         check_ajax_referer('product_estimator_nonce', 'nonce');
-        
+
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
-        
+
         if (!$product_id) {
             wp_send_json_error(['message' => __('Product ID is required', 'product-estimator')]);
             return;
         }
-        
+
         try {
             $product = wc_get_product($product_id);
-            
+
             if (!$product || !$product->is_type('variable')) {
                 wp_send_json_success([
                     'is_variable' => false,
@@ -842,36 +892,36 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 ]);
                 return;
             }
-            
+
             // Get available variations
             $available_variations = $product->get_available_variations();
             $attributes = $product->get_variation_attributes();
-            
+
             // Format attributes for frontend
             $formatted_attributes = [];
             foreach ($attributes as $attribute_name => $options) {
                 $formatted_options = [];
-                
+
                 // Check if this is a taxonomy attribute
                 $attribute_taxonomy = wc_attribute_taxonomy_name($attribute_name);
                 $is_taxonomy = taxonomy_exists($attribute_taxonomy);
-                
+
                 foreach ($options as $option) {
                     $option_data = [
                         'value' => $option,
                         'label' => $option
                     ];
-                    
+
                     // If this is a taxonomy attribute, get the term details
                     if ($is_taxonomy) {
                         $term = get_term_by('slug', $option, $attribute_taxonomy);
                         if ($term) {
                             $option_data['label'] = $term->name;
-                            
+
                             // Check for color or image meta
                             $color = get_term_meta($term->term_id, 'product_attribute_color', true);
                             $image = get_term_meta($term->term_id, 'product_attribute_image', true);
-                            
+
                             if ($color) {
                                 $option_data['color'] = $color;
                                 $option_data['type'] = 'color';
@@ -881,11 +931,11 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                             }
                         }
                     }
-                    
+
                     // For each option, try to find a matching variation image
                     $option_image = null;
                     foreach ($available_variations as $variation) {
-                        if (isset($variation['attributes']["attribute_$attribute_name"]) && 
+                        if (isset($variation['attributes']["attribute_$attribute_name"]) &&
                             $variation['attributes']["attribute_$attribute_name"] === $option) {
                             $variation_obj = wc_get_product($variation['variation_id']);
                             if ($variation_obj) {
@@ -897,37 +947,37 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                             }
                         }
                     }
-                    
+
                     // Use variation image if no attribute image is set
                     if ($option_image && empty($option_data['image'])) {
                         $option_data['image'] = $option_image;
                         $option_data['type'] = 'image';
                     }
-                    
+
                     $formatted_options[] = $option_data;
                 }
-                
+
                 $formatted_attributes[$attribute_name] = [
                     'label' => wc_attribute_label($attribute_name, $product),
                     'options' => $formatted_options,
                     'type' => isset($formatted_options[0]['type']) ? $formatted_options[0]['type'] : 'label'
                 ];
             }
-            
+
             // Format variations for frontend
             $formatted_variations = [];
             foreach ($available_variations as $variation) {
                 $variation_obj = wc_get_product($variation['variation_id']);
                 $image_id = $variation_obj ? $variation_obj->get_image_id() : 0;
                 $image_url = '';
-                
+
                 // Get the variation image URL if it exists
                 if ($image_id) {
                     $image_url = wp_get_attachment_image_url($image_id, 'woocommerce_thumbnail');
                 } elseif (isset($variation['image']['url'])) {
                     $image_url = $variation['image']['url'];
                 }
-                
+
                 $formatted_variations[] = [
                     'variation_id' => $variation['variation_id'],
                     'attributes' => $variation['attributes'],
@@ -939,14 +989,14 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                     'variation_description' => $variation['variation_description']
                 ];
             }
-            
+
             wp_send_json_success([
                 'is_variable' => true,
                 'product_name' => $product->get_name(),
                 'variations' => $formatted_variations,
                 'attributes' => $formatted_attributes
             ]);
-            
+
         } catch (\Exception $e) {
             wp_send_json_error([
                 'message' => $e->getMessage()

@@ -1,6 +1,3 @@
-/*!*********************************************************************************************************************************************************************************!*\
-  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/frontend/Index.scss ***!
-  \*********************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main SCSS file for Product Estimator frontend styles
@@ -4079,6 +4076,137 @@ button.replace-product-in-room.loading {
   padding-left: 8px;
 }
 
+/**
+ * Main SCSS file for Product Estimator frontend styles
+ *
+ * This file imports all frontend stylesheets for the Product Estimator plugin,
+ * including shared utilities, variables, mixins, and component-specific styles.
+ */
+/**
+ * Additional Products styling for Product Estimator
+ */
+.additional-products-container {
+  border-top: 1px solid #eee;
+  margin-top: 20px;
+  padding-top: 20px;
+}
+
+.additional-products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.additional-product-section {
+  background-color: #f3f3f3;
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.additional-product-title {
+  color: #00833F;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.additional-product-variations-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.additional-product-option-tile {
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex: 0 0 calc(33.333% - 12px);
+  flex-direction: column;
+  max-width: 180px;
+  min-width: 120px;
+  padding: 12px;
+  position: relative;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.additional-product-option-tile:hover {
+  background-color: #f0f0f0;
+  border-color: #00833F;
+}
+.additional-product-option-tile.variation-tile {
+  position: relative;
+}
+.additional-product-option-tile .tile-image,
+.additional-product-option-tile .product-img {
+  display: block;
+  height: 80px;
+  margin-bottom: 8px;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+.additional-product-option-tile .tile-label,
+.additional-product-option-tile .product-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.additional-product-option-tile .option-price,
+.additional-product-option-tile .product-price {
+  color: #666;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.additional-product-option-tile .replace-product-in-room {
+  background-color: #33373d;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: auto;
+  padding: 8px 16px;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+.additional-product-option-tile .replace-product-in-room:hover {
+  background-color: rgb(74.2232142857, 80.0446428571, 88.7767857143);
+}
+.additional-product-option-tile .replace-product-in-room:active {
+  transform: translateY(1px);
+}
+
+@media screen and (max-width: 768px) {
+  .additional-product-option-tile {
+    flex: 0 0 calc(50% - 12px);
+    max-width: none;
+  }
+}
+@media screen and (max-width: 480px) {
+  .additional-product-variations-grid {
+    gap: 8px;
+  }
+  .additional-product-option-tile {
+    flex: 0 0 calc(50% - 8px);
+    padding: 10px;
+  }
+  .additional-product-option-tile .tile-image,
+  .additional-product-option-tile .product-img {
+    height: 60px;
+  }
+  .additional-product-option-tile .tile-label,
+  .additional-product-option-tile .product-name {
+    font-size: 12px;
+  }
+}
 /**
  * Main SCSS file for Product Estimator frontend styles
  *

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Variations Frontend</title>
+    <script>
+        // Check localStorage for estimate data with product 14994
+        function checkLocalStorage() {
+            const estimates = JSON.parse(localStorage.getItem('product_estimator_estimates') || '{}');
+            console.log('All estimates:', estimates);
+            
+            // Look for product 14994 in any room
+            Object.values(estimates).forEach(estimate => {
+                if (estimate.rooms) {
+                    Object.values(estimate.rooms).forEach(room => {
+                        if (room.products) {
+                            Object.values(room.products).forEach(product => {
+                                if (product.id === 14994 || product.id === '14994') {
+                                    console.log('Found product 14994:', product);
+                                    document.getElementById('output').innerHTML += `
+                                        <h3>Product 14994 found in room ${room.name}</h3>
+                                        <pre>${JSON.stringify(product, null, 2)}</pre>
+                                    `;
+                                }
+                                // Check product_additions
+                                if (product.product_additions) {
+                                    Object.values(product.product_additions).forEach(addition => {
+                                        if (addition.id === 14994 || addition.id === '14994') {
+                                            console.log('Found product 14994 as addition:', addition);
+                                            document.getElementById('output').innerHTML += `
+                                                <h3>Product 14994 found as addition in room ${room.name}</h3>
+                                                <pre>${JSON.stringify(addition, null, 2)}</pre>
+                                            `;
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+        
+        window.onload = checkLocalStorage;
+    </script>
+</head>
+<body>
+    <h1>Product 14994 Variation Check</h1>
+    <div id="output"></div>
+</body>
+</html>

@@ -661,6 +661,9 @@ class RoomManager {
       // Render aggregated product includes at the room level
       this.renderRoomIncludes(room, roomElement);
 
+      // Render additional products with variations
+      this.renderAdditionalProducts(room, roomElement);
+
       // Render product upgrades for the room
       this.renderRoomUpgrades(room, roomElement);
 
@@ -676,6 +679,168 @@ class RoomManager {
     }
 
     return Promise.resolve(roomElement);
+  }
+
+  /**
+   * Render additional products with variations for a room
+   * @param {object} room - The room data
+   * @param {HTMLElement} roomElement - The room element
+   */
+  renderAdditionalProducts(room, roomElement) {
+    logger.log('Rendering additional products', { roomName: room.name });
+
+    // Get estimate and room IDs from the room element
+    const estimateId = roomElement.dataset.estimateId;
+    const roomId = roomElement.dataset.roomId;
+
+    if (!estimateId || !roomId) {
+      logger.error('Missing estimate or room ID on room element');
+      return;
+    }
+
+    // Find the additional products container
+    const additionalProductsContainer = roomElement.querySelector('.additional-products-container');
+    const additionalProductsList = roomElement.querySelector('.additional-products-list');
+    
+    if (!additionalProductsList) {
+      logger.warn('Additional products list container not found in room element');
+      return;
+    }
+
+    // Clear existing content
+    additionalProductsList.innerHTML = '';
+
+    // Collect all additional products with variations
+    let hasAdditionalProducts = false;
+    
+    if (room.products && typeof room.products === 'object') {
+      Object.values(room.products).forEach(product => {
+        if (product.additional_products && typeof product.additional_products === 'object') {
+          Object.values(product.additional_products).forEach(additionalProduct => {
+            // Check if this additional product has variations
+            if (additionalProduct.is_variable && additionalProduct.variations) {
+              hasAdditionalProducts = true;
+              
+              // Create a section for this additional product
+              const sectionContainer = document.createElement('div');
+              sectionContainer.className = 'additional-product-section';
+              sectionContainer.setAttribute('data-parent-product-id', additionalProduct.id);
+              
+              // Add section title
+              const titleElement = document.createElement('h6');
+              titleElement.className = 'additional-product-title';
+              titleElement.textContent = `${additionalProduct.name} Variations`;
+              sectionContainer.appendChild(titleElement);
+              
+              // Create variations container
+              const variationsContainer = document.createElement('div');
+              variationsContainer.className = 'additional-product-variations-grid';
+              
+              // Render each variation
+              Object.values(additionalProduct.variations).forEach(variation => {
+                const variationData = {
+                  product_id: variation.id,
+                  estimate_id: estimateId,
+                  room_id: roomId,
+                  parent_product_id: additionalProduct.id,
+                  name: variation.name,
+                  product_name: variation.name,
+                  price: variation.min_price_total || variation.min_price || 0,
+                  product_price: format.currency(variation.min_price_total || variation.min_price || 0),
+                  image: variation.image || '',
+                  attributes: variation.attributes || {}
+                };
+                
+                logger.log('Rendering additional product variation:', variationData);
+                
+                // Create variation element
+                const variationElement = document.createElement('div');
+                variationElement.className = 'additional-product-option-tile variation-tile';
+                
+                // Use the template but modify button text and data
+                TemplateEngine.insert('additional-product-option-template', variationData, variationElement);
+                
+                // Update button
+                const button = variationElement.querySelector('.replace-product-in-room');
+                if (button) {
+                  button.textContent = 'Select Variation';
+                  button.dataset.productId = variation.id;
+                  button.dataset.estimateId = estimateId;
+                  button.dataset.roomId = roomId;
+                  button.dataset.replaceProductId = additionalProduct.id;
+                  button.dataset.replaceType = 'additional_products';
+                  button.dataset.parentProductId = additionalProduct.id;
+                }
+                
+                variationsContainer.appendChild(variationElement);
+              });
+              
+              sectionContainer.appendChild(variationsContainer);
+              additionalProductsList.appendChild(sectionContainer);
+            }
+          });
+        }
+      });
+    }
+    
+    // Show/hide the container based on whether we have additional products
+    if (additionalProductsContainer) {
+      additionalProductsContainer.style.display = hasAdditionalProducts ? '' : 'none';
+    }
+    
+    // Bind events for variation buttons
+    if (hasAdditionalProducts) {
+      this.bindAdditionalProductButtons(additionalProductsList);
+    }
+  }
+  
+  /**
+   * Bind events for additional product variation buttons
+   * @param {HTMLElement} container - The container with buttons
+   */
+  bindAdditionalProductButtons(container) {
+    const buttons = container.querySelectorAll('.replace-product-in-room');
+    
+    buttons.forEach(button => {
+      if (button._clickHandler) {
+        button.removeEventListener('click', button._clickHandler);
+      }
+
+      button._clickHandler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const productId = button.dataset.productId;
+        const estimateId = button.dataset.estimateId;
+        const roomId = button.dataset.roomId;
+        const replaceProductId = button.dataset.replaceProductId;
+        const replaceType = button.dataset.replaceType;
+        const parentProductId = button.dataset.parentProductId;
+
+        logger.log('Additional product variation button clicked', {
+          productId,
+          estimateId,
+          roomId,
+          replaceProductId,
+          replaceType,
+          parentProductId
+        });
+
+        // Use the productManager to handle the replacement
+        if (this.modalManager.productManager) {
+          this.modalManager.productManager.replaceProductInRoom(
+            estimateId,
+            roomId,
+            replaceProductId,  // OLD product to replace
+            productId,         // NEW product (the variation)
+            replaceType,       // Type of replacement
+            parentProductId    // Parent product ID
+          );
+        }
+      };
+
+      button.addEventListener('click', button._clickHandler);
+    });
   }
 
   /**

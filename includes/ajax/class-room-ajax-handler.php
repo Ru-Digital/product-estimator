@@ -1197,6 +1197,42 @@ class RoomAjaxHandler extends AjaxHandlerBase {
                         'max_price' => $related_pricing_data['max_price'],
                         'is_primary_category' => false, // Additional products are never primary
                     ];
+                    
+                    // Check if this is a variable product and add variations
+                    if ($related_product->is_type('variable')) {
+                        $variations = [];
+                        $available_variations = $related_product->get_available_variations();
+                        
+                        foreach ($available_variations as $variation_data) {
+                            $variation_id = $variation_data['variation_id'];
+                            $variation_obj = wc_get_product($variation_id);
+                            
+                            if ($variation_obj) {
+                                $variation_pricing_data = product_estimator_get_product_price($variation_id, $room_area, false);
+                                
+                                $variations[$variation_id] = [
+                                    'id' => $variation_id,
+                                    'name' => $variation_obj->get_name(),
+                                    'image' => wp_get_attachment_image_url($variation_obj->get_image_id(), 'thumbnail'),
+                                    'min_price' => $variation_pricing_data['min_price'],
+                                    'max_price' => $variation_pricing_data['max_price'],
+                                    'pricing_method' => $variation_pricing_data['pricing_method'],
+                                    'min_price_total' => ($variation_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $variation_pricing_data['min_price'] * $room_area : $variation_pricing_data['min_price'],
+                                    'max_price_total' => ($variation_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) ? $variation_pricing_data['max_price'] * $room_area : $variation_pricing_data['max_price'],
+                                    'is_primary_category' => false,
+                                    'attributes' => $variation_data['attributes']
+                                ];
+                            }
+                        }
+                        
+                        if (!empty($variations)) {
+                            $related_product_data['variations'] = $variations;
+                            $related_product_data['is_variable'] = true;
+                            error_log('AUTO-ADD VARIATIONS: Found ' . count($variations) . ' variations for product ' . $related_product_id);
+                        }
+                    } else {
+                        $related_product_data['is_variable'] = false;
+                    }
 
                     // Calculate totals based on pricing method
                     if ($related_pricing_data['pricing_method'] === 'sqm' && $room_area > 0) {

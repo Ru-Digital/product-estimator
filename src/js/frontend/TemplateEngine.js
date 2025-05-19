@@ -58,21 +58,7 @@ class TemplateEngine {
 
           logger.log(`[init] TemplateElement for "${id}" created. Inner HTML starts with:`, (contentToCheck?.innerHTML || 'No innerHTML or content').substring(0, 200) + '...'); // Added context
 
-          // Specifically check if the room template contains .product-list
-          if (id === 'room-item-template') {
-            // Use a temporary div to query the content/innerHTML safely
-            const queryTempDiv = document.createElement('div');
-            if (contentToCheck?.innerHTML) {
-              queryTempDiv.innerHTML = contentToCheck.innerHTML;
-            } else {
-              // If no innerHTML (e.g., just text nodes or complex structure), append children
-              Array.from(contentToCheck?.childNodes || []).forEach(node => queryTempDiv.appendChild(node.cloneNode(true)));
-            }
-            logger.log(`[init] Checking "${id}" content for .product-list:`, queryTempDiv.querySelector('.product-list') ? 'Found' : 'Not Found'); // Added context
-            if (!queryTempDiv.querySelector('.product-list')) {
-              logger.error(`[init] CRITICAL: .product-list not found in "${id}" template element content after creation.`); // Critical error if missing
-            }
-          }
+          // Product list check removed - products are now displayed directly in room template
         } else {
           logger.error(`[init] Failed to assign template element for ID: "${id}"`); // Added context
         }
@@ -212,29 +198,88 @@ class TemplateEngine {
     }
 
 
-    // *** Logging block to check the fragment content before returning (from your existing code) ***
-    if (templateId === 'room-item-template') {
-      // Query selector on a DocumentFragment works as expected
-      const productListCheck = clone.querySelector('.product-list');
-      logger.log(`[create] Created fragment for "${templateId}". Checking for .product-list before returning:`, productListCheck ? 'Found' : 'Not Found'); // Add this log
-      if (!productListCheck) {
-        logger.error(`[create] CRITICAL: .product-list not found in "${templateId}" fragment before returning. This fragment will not render products correctly.`); // Critical error if missing
-        // Optionally log the fragment's innerHTML for inspection (can be verbose)
-        // const tempDivForCheck = document.createElement('div'); tempDivForCheck.appendChild(clone.cloneNode(true)); logger.log('Fragment innerHTML for check:', tempDivForCheck.innerHTML);
-      }
-    }
-    // *** End logging block ***
+    // Product list check removed - products are now displayed directly in room template
 
 
     return clone; // Return the populated DocumentFragment
   }
 
   /**
+   * Process a string with handlebars-style placeholders
+   * @param {string} str - The string containing {{placeholders}}
+   * @param {object} data - Data object with values to replace placeholders
+   * @returns {string} - The processed string with placeholders replaced
+   */
+  processHandlebars(str, data) {
+    if (!str || typeof str !== 'string') {
+      return str;
+    }
+    
+    return str.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+      return data[key] !== undefined ? data[key] : match;
+    });
+  }
+  
+  /**
+   * Process all handlebars placeholders in an element and its children
+   * @param {Element|DocumentFragment} element - The element to process
+   * @param {object} data - Data object with values to replace placeholders
+   * @private
+   */
+  _processElementHandlebars(element, data) {
+    // Process all elements in the fragment
+    const processNode = (node) => {
+      // Skip non-element nodes (text nodes, comments, etc.)
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return;
+      }
+      
+      // Process attributes
+      if (node.hasAttributes()) {
+        Array.from(node.attributes).forEach(attr => {
+          if (attr.value.includes('{{')) {
+            attr.value = this.processHandlebars(attr.value, data);
+          }
+        });
+      }
+      
+      // Process text content for elements without children
+      if (node.childNodes.length === 1 && node.firstChild.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent;
+        if (text.includes('{{')) {
+          node.textContent = this.processHandlebars(text, data);
+        }
+      }
+      
+      // Process child elements recursively
+      Array.from(node.childNodes).forEach(child => {
+        processNode(child);
+      });
+    };
+    
+    // Start processing from the root element
+    if (element.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+      // For document fragments, process all child nodes
+      Array.from(element.childNodes).forEach(child => {
+        processNode(child);
+      });
+    } else {
+      // For regular elements, process the element itself
+      processNode(element);
+    }
+    
+    logger.log('[_processElementHandlebars] Processed handlebars placeholders in element');
+  }
+  
+  /**
    * Populate an element with data
    * @param {Element|DocumentFragment} element - Element to populate
    * @param {object} data - Data to populate with
    */
   populateElement(element, data) {
+    // Process handlebars placeholders in element attributes and text
+    this._processElementHandlebars(element, data);
+    
     // Process simple data attributes first
     Object.entries(data).forEach(([key, value]) => {
       // Skip complex objects and arrays
@@ -279,6 +324,17 @@ class TemplateEngine {
           });
         }
         // --- END ADDED ---
+        
+        // Handle primary product image for room items
+        if (key === 'primary_product_image') {
+          const primaryImgElements = element.querySelectorAll('img.primary-product-image');
+          logger.log('Found primary-product-image elements:', primaryImgElements.length, 'with value:', value);
+          primaryImgElements.forEach(img => {
+            img.src = value || 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+            img.alt = 'Primary product';
+            logger.log('Set image src to:', img.src);
+          });
+        }
 
 
         // Also set data attributes
@@ -290,19 +346,26 @@ class TemplateEngine {
     });
 
     // Handle product removal buttons specifically to ensure they get ALL required attributes
-    if (data.product_index !== undefined) {
+    if (data.product_index !== undefined || data.product_id !== undefined) {
       // Find remove buttons
       const removeButtons = element.querySelectorAll('.remove-product');
       removeButtons.forEach(button => {
-        // Set product index directly (critical for deletion to work)
-        button.dataset.productIndex = data.product_index;
+        // Set product index if available
+        if (data.product_index !== undefined) {
+          button.dataset.productIndex = data.product_index;
+        }
+        
+        // Set product ID if available (critical for deletion to work)
+        if (data.product_id !== undefined) {
+          button.dataset.productId = data.product_id;
+        }
 
         // Ensure other needed attributes
         if (data.estimate_id !== undefined) button.dataset.estimateId = data.estimate_id;
         if (data.room_id !== undefined) button.dataset.roomId = data.room_id;
 
         // Debug log to verify attributes
-        logger.log(`Setting removal button data attributes: estimate=${data.estimate_id}, room=${data.room_id}, product=${data.product_index}`);
+        logger.log(`Setting removal button data attributes: estimate=${data.estimate_id}, room=${data.room_id}, product_index=${data.product_index}, product_id=${data.product_id}`);
       });
     }
 
@@ -328,23 +391,29 @@ class TemplateEngine {
       });
     }
 
-    // Enhance product ID handling
-    if (data.id) {
-      // For products, the ID is often stored in data.id
+    // Enhanced product ID handling
+    if (data.id || data.product_id) {
+      // Use either product_id or id (prefer product_id if both exist)
+      const idToUse = data.product_id || data.id;
+      
+      // Find elements with data-product-id attribute
       const elementsWithProductId = element.querySelectorAll('[data-product-id]');
       elementsWithProductId.forEach(el => {
-        el.setAttribute('data-product-id', data.id);
+        el.setAttribute('data-product-id', idToUse);
       });
 
-      // Also set on the main element if it's a product item
-      if (element.classList && element.classList.contains('product-item')) {
-        element.setAttribute('data-product-id', data.id);
+      // Also set on the main element if it's a product-related element
+      if (element.classList) {
+        const productRelatedClasses = ['product-item', 'similar-item', 'suggestion-item', 'include-item'];
+        const isProductElement = productRelatedClasses.some(className => element.classList.contains(className));
+        
+        if (isProductElement) {
+          element.setAttribute('data-product-id', idToUse);
+        }
       }
-    } else if (data.product_id) {
-      const elementsWithProductId = element.querySelectorAll('[data-product-id]');
-      elementsWithProductId.forEach(el => {
-        el.setAttribute('data-product-id', data.product_id);
-      });
+      
+      // Log successful product ID assignment for debugging
+      logger.log(`Set data-product-id=${idToUse} on product element(s) in template`);
     }
 
     if (data.product_index !== undefined) {
@@ -424,86 +493,9 @@ class TemplateEngine {
       }
     });
 
-    // Handle common product data patterns - UPDATED FOR PRODUCT INCLUDES
-    if (data.additional_products) {
-      const includesContainer = element.querySelector('.includes-container');
-      const includesItems = element.querySelector('.product-includes-items');
 
-      if (includesContainer && includesItems) {
-        // Clear any previous items first
-        includesItems.innerHTML = '';
-
-        // Filter for valid additional products
-        const validProducts = Array.isArray(data.additional_products) ?
-          data.additional_products.filter(product => product && product.id) :
-          [];
-
-
-
-        if (validProducts.length > 0) {
-          // Ensure includes container is visible
-          includesContainer.style.display = 'block';
-          includesContainer.classList.add('visible');
-
-          // Render each additional product
-          validProducts.forEach(product => {
-
-
-            // Use template to create include item
-            if (this.getTemplate('include-item-template')) {
-              // Create data object for the include item
-              const includeItemData = {
-                product_id: product.id,
-                include_item_name: product.name || 'Additional Product'
-              };
-
-              // Add price information if available
-              if (product.min_price_total !== undefined && product.max_price_total !== undefined) {
-                includeItemData.include_item_total_price =
-                  format.formatPrice(product.min_price_total) + ' - ' + format.formatPrice(product.max_price_total);
-                product.total_price =  format.formatPrice(product.min_price_total) + ' - ' + format.formatPrice(product.max_price_total);
-
-              }
-
-              logger.log("include item product:: ", product);
-              // Create the item from template
-              const includeFragment = this.create('include-item-template', includeItemData);
-
-              const includeNameElement = includeFragment.querySelector('.include-item-name');
-              if (includeNameElement) {
-                includeNameElement.textContent = product.name || '';
-              }
-
-              const includePriceElement = includeFragment.querySelector('.include-item-total-price');
-              if (includePriceElement) {
-                includePriceElement.textContent = product.total_price || '';
-              }
-
-              includesItems.appendChild(includeFragment);
-            }
-          });
-
-          // Show the toggle button if it exists
-          const toggleButton = element.querySelector('.product-includes-toggle');
-          if (toggleButton) {
-            toggleButton.style.display = '';
-          }
-        } else {
-          // Hide the includes container if no valid products
-          includesContainer.style.display = 'none';
-          includesContainer.classList.remove('visible');
-
-          // Also hide the toggle button if it exists
-          const toggleButton = element.querySelector('.product-includes-toggle');
-          if (toggleButton) {
-            toggleButton.style.display = 'none';
-          }
-        }
-      }
-    }
-
-    // Handle additional notes - THIS IS YOUR EXISTING CODE
-    if (data.additional_notes && Array.isArray(data.additional_notes)) {
+    // Handle additional notes
+    if (data.additional_notes) {
       const notesContainer = element.querySelector('.notes-container');
       const notesItems = element.querySelector('.product-notes-items');
 
@@ -511,8 +503,19 @@ class TemplateEngine {
         // Clear any previous notes first
         notesItems.innerHTML = '';
 
+        // Handle both array and object formats of additional_notes
+        let notesArray = [];
+        
+        if (Array.isArray(data.additional_notes)) {
+          // Format is already an array
+          notesArray = data.additional_notes;
+        } else if (typeof data.additional_notes === 'object') {
+          // Format is an object with keys, convert to array
+          notesArray = Object.values(data.additional_notes);
+        }
+
         // Filter out empty notes
-        const validNotes = data.additional_notes.filter(note => {
+        const validNotes = notesArray.filter(note => {
           // Check if the note has text content
           return note && (note.note_text || note.text) &&
             (note.note_text || note.text).trim() !== '';
@@ -553,6 +556,76 @@ class TemplateEngine {
         }
       }
     }
+    
+    // Handle similar products
+    if (data.similar_products) {
+      const similarProductsContainer = element.querySelector('.similar-products-container');
+      const similarProductsList = element.querySelector('.similar-products-list');
+      
+      if (similarProductsContainer && similarProductsList) {
+        // Clear any previous similar products first
+        similarProductsList.innerHTML = '';
+        
+        // Handle both array and object formats of similar_products
+        let productsArray = [];
+        
+        if (Array.isArray(data.similar_products)) {
+          // Format is already an array
+          productsArray = data.similar_products;
+        } else if (typeof data.similar_products === 'object') {
+          // Format is an object with keys, convert to array
+          productsArray = Object.values(data.similar_products);
+        }
+        
+        // Filter for valid similar products
+        const validProducts = productsArray.filter(product => product && product.id);
+        
+        if (validProducts.length > 0) {
+          // Add product ID to container for reference
+          similarProductsContainer.dataset.productId = data.id || data.product_id || '';
+          
+          // Show toggle button if it exists
+          const toggleButton = element.querySelector('.similar-products-toggle');
+          if (toggleButton) {
+            toggleButton.style.display = 'block';
+          }
+          
+          // Render each similar product
+          validProducts.forEach(product => {
+            if (this.getTemplate('similar-product-item-template')) {
+              // Create template data for the similar product
+              const similarProductData = {
+                id: product.id,
+                product_id: product.id,
+                name: product.name || 'Similar Product',
+                image: product.image || '',
+                min_price_total: product.min_price_total,
+                max_price_total: product.max_price_total,
+                pricing_method: product.pricing_method || 'sqm',
+                // Data attributes for the replace button
+                estimate_id: data.estimate_id || '',
+                room_id: data.room_id || '',
+                replace_product_id: data.id || data.product_id || ''
+              };
+              
+              logger.log('Rendering similar product with data:', similarProductData);
+              
+              // Create the similar product element from template
+              const similarFragment = this.create('similar-product-item-template', similarProductData);
+              
+              // Append the fragment to the similar products container
+              similarProductsList.appendChild(similarFragment);
+            }
+          });
+        } else {
+          // Hide the container and toggle if no valid similar products
+          const toggleButton = element.querySelector('.similar-products-toggle');
+          if (toggleButton) {
+            toggleButton.style.display = 'none';
+          }
+        }
+      }
+    }
 
     // --- ADDED: Explicitly set data-replace-product-id on the replace button ---
     if (data.replace_product_id !== undefined) {
@@ -573,6 +646,22 @@ class TemplateEngine {
       }
     }
     // --- END ADDED ---
+    
+    // Handle visibility conditions based on data-visible-if attribute
+    const visibleElements = element.querySelectorAll('[data-visible-if]');
+    visibleElements.forEach(el => {
+      const condition = el.getAttribute('data-visible-if');
+      if (condition) {
+        // Check if the condition is truthy in the data
+        const isVisible = !!data[condition];
+        if (!isVisible) {
+          el.style.display = 'none';
+        } else {
+          // Make sure it's visible if condition is true
+          el.style.display = '';
+        }
+      }
+    });
   }
 
 
@@ -721,6 +810,131 @@ class TemplateEngine {
   }
 
   // Add this method to TemplateEngine class
+  /**
+   * Creates the modal container in the document body
+   * @returns {HTMLElement|null} The created modal element or null if creation failed
+   */
+  createModalContainer() {
+    logger.log('Creating modal container from template');
+    
+    try {
+      // Check if modal container already exists
+      const existingModal = document.querySelector('#product-estimator-modal');
+      if (existingModal) {
+        logger.log('Modal container already exists in DOM');
+        return existingModal;
+      }
+      
+      // Get the modal container template
+      const modalTemplate = this.getTemplate('modal-container-template');
+      if (!modalTemplate) {
+        logger.error('Modal container template not found');
+        return null;
+      }
+      
+      // Add detailed debug logging for template creation
+      logger.group('Debug: Template Creation');
+      logger.log('Template id:', 'modal-container-template');
+      logger.log('Template found:', !!modalTemplate);
+      
+      // Log template source
+      logger.log('Template outerHTML:', modalTemplate.outerHTML);
+      
+      if (modalTemplate.content) {
+        logger.log('Template has content property with:', modalTemplate.content.childNodes.length, 'child nodes');
+        // Log the first few nodes
+        Array.from(modalTemplate.content.childNodes).slice(0, 3).forEach((node, i) => {
+          logger.log(`Node[${i}]:`, node.nodeType, node.nodeName);
+        });
+        
+        // Check for specific elements in template content before creation
+        const tempDiv = document.createElement('div');
+        tempDiv.appendChild(modalTemplate.content.cloneNode(true));
+        logger.log('Template content inner HTML:', tempDiv.innerHTML.substring(0, 500) + '...');
+        
+        // Check for specific elements
+        logger.log('Template contains #estimates:', !!tempDiv.querySelector('#estimates'));
+        logger.log('Template contains #estimate-selection-wrapper:', !!tempDiv.querySelector('#estimate-selection-wrapper'));
+        logger.log('Template contains #room-selection-form-wrapper:', !!tempDiv.querySelector('#room-selection-form-wrapper'));
+      }
+      logger.groupEnd();
+      
+      // Create a fragment from the template
+      const modalFragment = this.create('modal-container-template', {
+        // Add i18n texts if needed
+        title: window.productEstimatorVars?.i18n?.productEstimator || 'Product Estimator',
+        close: window.productEstimatorVars?.i18n?.close || 'Close',
+        loading: window.productEstimatorVars?.i18n?.loading || 'Loading...'
+      });
+      
+      // Log the fragment content before adding to DOM
+      if (modalFragment) {
+        logger.log('Created fragment structure for modal:', modalFragment.childNodes.length, 'child nodes at root level');
+        
+        // Create temporary div to examine fragment content
+        const tempFragDiv = document.createElement('div');
+        tempFragDiv.appendChild(modalFragment.cloneNode(true));
+        logger.log('Fragment content before appending to DOM:', tempFragDiv.innerHTML.substring(0, 300) + '...');
+        
+        // Check for specific elements in the fragment
+        logger.log('Fragment contains #estimates:', !!tempFragDiv.querySelector('#estimates'));
+        logger.log('Fragment contains form-container:', !!tempFragDiv.querySelector('.product-estimator-modal-form-container'));
+      }
+      
+      // Append the fragment to the body
+      document.body.appendChild(modalFragment);
+      logger.log('Modal fragment appended to document body');
+      
+      // Get the modal element after it's been added to the DOM
+      const modalElement = document.querySelector('#product-estimator-modal');
+      
+      // Add detailed logging about DOM after append
+      logger.log('DOM after fragment append - modal found:', !!modalElement);
+      
+      // Add logging to verify all critical elements exist
+      if (modalElement) {
+        const elementsStatus = {
+          modal: !!modalElement,
+          container: !!modalElement.querySelector('.product-estimator-modal-container'),
+          formContainer: !!modalElement.querySelector('.product-estimator-modal-form-container'),
+          estimates: !!modalElement.querySelector('#estimates'),
+          estimateSelection: !!modalElement.querySelector('#estimate-selection-wrapper'),
+          roomSelection: !!modalElement.querySelector('#room-selection-form-wrapper'),
+          newEstimate: !!modalElement.querySelector('#new-estimate-form-wrapper'),
+          newRoom: !!modalElement.querySelector('#new-room-form-wrapper')
+        };
+        
+        logger.log('Modal element created with child elements status:', elementsStatus);
+        
+        // Log element structure regardless
+        logger.log('Modal HTML structure:', modalElement.outerHTML.substring(0, 500) + '...');
+        
+        // If any critical element is missing, log more details
+        if (!elementsStatus.estimates) {
+          logger.error('Critical element #estimates missing in created modal!');
+          
+          // Check if there's a content container
+          const formContainer = modalElement.querySelector('.product-estimator-modal-form-container');
+          if (formContainer) {
+            logger.log('Form container exists but missing #estimates. Form container HTML:', 
+                       formContainer.innerHTML);
+          }
+        }
+      }
+      
+      if (!modalElement) {
+        logger.error('Failed to find modal element after creating it');
+        return null;
+      }
+      
+      logger.log('Modal container created and added to DOM');
+      return modalElement;
+    } catch (error) {
+      logger.error('Error creating modal container:', error);
+      return null;
+    }
+  }
+  
   debugTemplates() {
     logger.group('TemplateEngine Debug');
     logger.log('Registered template IDs:', Object.keys(this.templates));

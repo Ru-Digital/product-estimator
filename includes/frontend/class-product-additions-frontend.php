@@ -58,6 +58,59 @@ class ProductAdditionsFrontend extends FrontendBase
 
         return array_unique($product_ids);
     }
+    
+    /**
+     * Get auto-add products with section details for specific categories
+     *
+     * Returns products along with section title and description
+     *
+     * @param int $category_id Category ID
+     * @return   array Array of product data with section details
+     * @since    1.1.0
+     * @access   public
+     */
+    public function get_auto_add_products_with_details_for_category($category_id)
+    {
+        // Get all relations
+        $relations = get_option('product_estimator_product_additions', array());
+        $products_with_details = array();
+
+        foreach ($relations as $relation) {
+            // Skip relations that are not auto_add_by_category
+            if (!isset($relation['relation_type']) || $relation['relation_type'] !== 'auto_add_by_category') {
+                continue;
+            }
+
+            // Skip relations without product_id
+            if (!isset($relation['product_id']) || empty($relation['product_id'])) {
+                continue;
+            }
+
+            // Handle source_category as array
+            $source_categories = isset($relation['source_category']) ? (array)$relation['source_category'] : array();
+
+            // If this category is in the source categories, add the product with its details
+            if (in_array($category_id, $source_categories)) {
+                $product_entry = array(
+                    'product_id' => (int)$relation['product_id'],
+                    'section_title' => isset($relation['section_title']) ? $relation['section_title'] : '',
+                    'section_description' => isset($relation['section_description']) ? $relation['section_description'] : ''
+                );
+                
+                // Add option colors if available
+                for ($i = 1; $i <= 5; $i++) {
+                    $color_key = 'option_colour_' . $i;
+                    if (isset($relation[$color_key])) {
+                        $product_entry[$color_key] = $relation[$color_key];
+                    }
+                }
+                
+                $products_with_details[] = $product_entry;
+            }
+        }
+
+        return $products_with_details;
+    }
 
     /**
      * Get auto-add notes for specific categories

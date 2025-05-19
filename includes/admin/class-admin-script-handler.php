@@ -142,8 +142,8 @@ class AdminScriptHandler {
         do_action('product_estimator_before_localize_scripts', $this, $hook_suffix);
         $common_bundle_dir_path = defined('PRODUCT_ESTIMATOR_PLUGIN_DIR') ? PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/js/common.bundle.js' : '';
         $common_bundle_url_path = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/common.bundle.js' : '';
-        $admin_bundle_dir_path = defined('PRODUCT_ESTIMATOR_PLUGIN_DIR') ? PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/js/admin/product-estimator-admin.bundle.js' : '';
-        $admin_bundle_url_path = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/admin/product-estimator-admin.bundle.js' : '';
+        $admin_bundle_dir_path = defined('PRODUCT_ESTIMATOR_PLUGIN_DIR') ? PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/js/product-estimator-admin.bundle.js' : '';
+        $admin_bundle_url_path = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/js/product-estimator-admin.bundle.js' : '';
 
         // Enqueue common bundle if it exists
         if ($common_bundle_dir_path && file_exists($common_bundle_dir_path)) {
@@ -193,17 +193,19 @@ class AdminScriptHandler {
         }
 
         // Ensure PRODUCT_ESTIMATOR_PLUGIN_URL is defined
-        $admin_styles_url = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'admin/css/product-estimator-admin-bundled.css' : '';
-        
+        $admin_styles_url = defined('PRODUCT_ESTIMATOR_PLUGIN_URL') ? PRODUCT_ESTIMATOR_PLUGIN_URL . 'public/css/product-estimator-admin-bundled.css' : '';
+
         // Enqueue the compiled admin styles
         if ($admin_styles_url) {
-            wp_enqueue_style(
+            wp_register_style(
                 $this->plugin_name . '-admin-styles',
                 $admin_styles_url,
                 array(),
                 $this->version,
                 'all'
             );
+
+            wp_enqueue_style($this->plugin_name . '-admin-styles');
         }
     }
 

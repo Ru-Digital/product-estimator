@@ -2,10 +2,20 @@
  * ConfirmationDialog.js
  *
  * Custom confirmation dialog component for Product Estimator plugin.
- * Replaces browser's built-in confirm() with a styled dialog.
+ * Uses TemplateEngine with HTML templates for proper styling and UI consistency.
+ * 
+ * Supports multiple dialog types through the 'action' parameter:
+ * - default: Standard confirmation dialog (blue/primary styling)
+ * - success: Success message dialog (green styling)
+ * - warning: Warning message dialog (amber/orange styling)
+ * - error: Error message dialog (red styling)
+ * - delete: Deletion confirmation dialog (red styling)
  */
 
 import { createLogger } from '@utils';
+
+import TemplateEngine from './TemplateEngine';
+
 const logger = createLogger('ConfirmationDialog');
 
 class ConfirmationDialog {
@@ -13,6 +23,7 @@ class ConfirmationDialog {
    * Initialize the confirmation dialog
    */
   constructor() {
+    this.dialogContainer = null;
     this.dialog = null;
     this.backdropElement = null;
     this.initialized = false;
@@ -21,136 +32,179 @@ class ConfirmationDialog {
       cancel: null
     };
 
-    // Initialize the dialog elements
-    this.init();
+    // Don't create dialog elements immediately
+    // Only mark as initialized
+    this.initialized = true;
+    logger.log('ConfirmationDialog constructor completed');
   }
 
   /**
-   * Initialize and create dialog DOM elements
+   * Convenience method for simple confirmation dialogs
+   * For backwards compatibility with window.productEstimator.dialog.confirm()
+   * @param {string} title - The dialog title
+   * @param {string} message - The confirmation message
+   * @param {Function} onConfirm - Callback for confirmation
+   * @param {Function} onCancel - Callback for cancellation
+   */
+  confirm(title, message, onConfirm, onCancel) {
+    this.show({
+      title: title,
+      message: message,
+      confirmText: 'Confirm',
+      cancelText: 'Cancel',
+      action: 'default',
+      onConfirm: onConfirm,
+      onCancel: onCancel
+    });
+  }
+
+  /**
+   * Initialize the dialog component
+   * Note: createDialogElements is now called on demand in show()
    */
   init() {
     // Don't initialize more than once
     if (this.initialized) return;
 
-    // Create dialog elements
-    this.createDialogElements();
-
-    // Bind events
-    this.bindEvents();
-
     this.initialized = true;
-
-    if (productEstimatorVars && productEstimatorVars.debug) {
-      logger.log('Initialized');
-    }
+    logger.log('ConfirmationDialog initialized');
   }
 
   /**
-   * Updates to ConfirmationDialog.js to fix the z-index issue
-   * Replace the relevant sections in your ConfirmationDialog.js file
+   * Create dialog DOM elements using the TemplateEngine
    */
-
-// In the createDialogElements method, add this code:
   createDialogElements() {
-    // Create backdrop with higher z-index
-    this.backdropElement = document.createElement('div');
-    this.backdropElement.className = 'pe-dialog-backdrop';
+    logger.log('Creating dialog elements');
 
-    // Create dialog container with higher z-index
-    this.dialog = document.createElement('div');
-    this.dialog.className = 'pe-confirmation-dialog';
-    this.dialog.setAttribute('role', 'dialog');
-    this.dialog.setAttribute('aria-modal', 'true');
+    // Remove any existing dialog elements to avoid duplicates
+    const existingContainer = document.getElementById('confirmation-dialog-container');
+    if (existingContainer) {
+      existingContainer.remove();
+    }
 
-    // Create dialog content
-    this.dialog.innerHTML = `
-    <div class="dialog-content">
-      <div class="pe-dialog-header">
-        <h3 class="pe-dialog-title">Confirm Action</h3>
-        <button type="button" class="pe-dialog-close" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="pe-dialog-body">
-        <p class="pe-dialog-message">Are you sure you want to proceed?</p>
-      </div>
-      <div class="pe-dialog-footer">
-        <button type="button" class="pe-dialog-btn pe-dialog-cancel">Cancel</button>
-        <button type="button" class="pe-dialog-btn pe-dialog-confirm">Confirm</button>
-      </div>
-    </div>
-  `;
+    // Create the dialog container using TemplateEngine
+    this.dialogContainer = document.createElement('div');
+    this.dialogContainer.id = 'confirmation-dialog-container';
+    
+    // Insert the dialog template into the container
+    TemplateEngine.insert('confirmation-dialog-template', {}, this.dialogContainer);
 
-    // Important: Append to document.body AFTER removing any existing elements
-    const existingBackdrop = document.querySelector('.pe-dialog-backdrop');
-    const existingDialog = document.querySelector('.pe-confirmation-dialog');
+    // Get references to the backdrop and dialog elements
+    this.backdropElement = this.dialogContainer.querySelector('.pe-dialog-backdrop');
+    this.dialog = this.dialogContainer.querySelector('.pe-confirmation-dialog');
 
-    if (existingBackdrop) existingBackdrop.remove();
-    if (existingDialog) existingDialog.remove();
+    // Append the container to the body
+    document.body.appendChild(this.dialogContainer);
 
-    // Append fresh elements to body
-    document.body.appendChild(this.backdropElement);
-    document.body.appendChild(this.dialog);
+    // Bind events now that elements are in the DOM
+    this.bindEvents();
+
+    logger.log('Dialog elements created and appended to body');
   }
 
   /**
    * Bind events to dialog elements
    */
   bindEvents() {
+    if (!this.dialog) {
+      logger.error('Cannot bind events: dialog element not found');
+      return;
+    }
+
+    logger.log('Binding events to dialog elements');
+
     // Get elements
     const closeBtn = this.dialog.querySelector('.pe-dialog-close');
     const cancelBtn = this.dialog.querySelector('.pe-dialog-cancel');
     const confirmBtn = this.dialog.querySelector('.pe-dialog-confirm');
 
-    // Close button - prevent event propagation
-    closeBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.hide();
-      if (typeof this.callbacks.cancel === 'function') {
-        this.callbacks.cancel();
-      }
-    });
-
-    // Cancel button - prevent event propagation
-    cancelBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.hide();
-      if (typeof this.callbacks.cancel === 'function') {
-        this.callbacks.cancel();
-      }
-    });
-
-    // Confirm button - prevent event propagation
-    confirmBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.hide();
-      if (typeof this.callbacks.confirm === 'function') {
-        this.callbacks.confirm();
-      }
-    });
-
-    // Backdrop click - with better event handling
-    this.backdropElement.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (e.target === this.backdropElement) {
+    // Close button
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         this.hide();
         if (typeof this.callbacks.cancel === 'function') {
           this.callbacks.cancel();
         }
-      }
-    });
+      });
+    }
 
-    // Prevent clicks inside dialog from propagating to modal
-    this.dialog.addEventListener('click', (e) => {
-      e.stopPropagation();
-    });
+    // Cancel button
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.hide();
+        if (typeof this.callbacks.cancel === 'function') {
+          this.callbacks.cancel();
+        }
+      });
 
-    // Escape key
-    document.addEventListener('keydown', (e) => {
+      // Hover effects are handled by CSS classes
+    }
+
+    // Confirm button
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (typeof this.callbacks.confirm === 'function') {
+          // For form dialogs, check if the callback returns false to keep dialog open
+          const result = this.callbacks.confirm();
+          
+          // If callback explicitly returns false or a promise that resolves to false,
+          // keep the dialog open (for validation failures)
+          if (result === false) {
+            logger.log('Confirmation callback returned false, keeping dialog open');
+            return;
+          }
+          
+          // If it's a promise, wait for it
+          if (result && typeof result.then === 'function') {
+            result.then(shouldClose => {
+              if (shouldClose !== false) {
+                this.hide();
+              }
+            }).catch(error => {
+              logger.error('Error in confirmation callback:', error);
+              this.hide();
+            });
+            return;
+          }
+        }
+        
+        // Default behavior: hide the dialog
+        this.hide();
+      });
+
+      // Hover effects are handled by CSS classes
+    }
+
+    // Backdrop click
+    if (this.backdropElement) {
+      this.backdropElement.addEventListener('click', (e) => {
+        if (e.target === this.backdropElement) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.hide();
+          if (typeof this.callbacks.cancel === 'function') {
+            this.callbacks.cancel();
+          }
+        }
+      });
+    }
+
+    // Prevent clicks inside dialog from propagating
+    if (this.dialog) {
+      this.dialog.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    // Escape key handler
+    this.escKeyHandler = (e) => {
       if (e.key === 'Escape' && this.isVisible()) {
         e.preventDefault();
         e.stopPropagation();
@@ -159,23 +213,54 @@ class ConfirmationDialog {
           this.callbacks.cancel();
         }
       }
-    });
+    };
+
+    // Add ESC key listener
+    document.addEventListener('keydown', this.escKeyHandler);
+
+    logger.log('Events bound to dialog elements');
   }
 
+  /**
+   * Show the dialog with the specified options
+   * @param {object} options - Configuration options for the dialog
+   */
   show(options = {}) {
+    // Always recreate the dialog to ensure it's fresh and properly configured
+    this.hide();
+
+    // Create new dialog elements
+    this.createDialogElements();
+
+    // If creation failed, use fallback
+    if (!this.dialog || !this.backdropElement) {
+      logger.error('Failed to create dialog elements');
+      const message = options.message || 'Are you sure?';
+      if (confirm(message)) {
+        if (typeof options.onConfirm === 'function') {
+          options.onConfirm();
+        }
+      } else {
+        if (typeof options.onCancel === 'function') {
+          options.onCancel();
+        }
+      }
+      return;
+    }
+
     // Get text from localized strings if available
     const i18n = window.productEstimatorVars?.i18n || {};
 
     const defaults = {
       title: 'Confirm Action',
       message: 'Are you sure you want to proceed?',
-      type: '', // product, room, estimate
+      type: '', // product, room, estimate - entity type for context
       confirmText: i18n.confirm || 'Confirm',
       cancelText: i18n.cancel || 'Cancel',
       onConfirm: null,
       onCancel: null,
-      action: 'delete',
-      showCancel: true  // New option to control cancel button visibility
+      action: 'default', // dialog type: 'default', 'success', 'warning', 'error', 'delete'
+      showCancel: true  // Option to control cancel button visibility
     };
 
     // Merge options with defaults
@@ -195,63 +280,191 @@ class ConfirmationDialog {
     const messageEl = this.dialog.querySelector('.pe-dialog-message');
     const confirmEl = this.dialog.querySelector('.pe-dialog-confirm');
     const cancelEl = this.dialog.querySelector('.pe-dialog-cancel');
+    const buttonsContainer = this.dialog.querySelector('.pe-dialog-buttons');
 
-    if (titleEl) titleEl.textContent = settings.title;
-    if (messageEl) messageEl.textContent = settings.message;
-    if (confirmEl) confirmEl.textContent = settings.confirmText;
+    // Update text content with settings
+    if (titleEl) {
+      titleEl.textContent = settings.title;
+    }
 
-    // Handle cancel button visibility
-    if (cancelEl) {
-      if (settings.showCancel) {
-        cancelEl.style.display = '';
-        cancelEl.textContent = settings.cancelText;
+    // Get the dialog body element
+    const bodyEl = this.dialog.querySelector('.pe-dialog-body');
+    
+    // Add or remove form-body class based on dialog type
+    if (bodyEl) {
+      if (settings.type === 'form' || settings.action === 'collect-details') {
+        bodyEl.classList.add('form-body');
       } else {
-        cancelEl.style.display = 'none';
+        bodyEl.classList.remove('form-body');
+      }
+    }
 
-        // When cancel button is hidden, make confirm button full width
-        if (confirmEl) {
-          confirmEl.style.width = '100%';
+    if (messageEl) {
+      // Clear existing content
+      messageEl.innerHTML = '';
+      
+      // Check if we have a form type dialog with template content
+      if (settings.type === 'form' && settings.formFields) {
+        // Create form container using template
+        const formContainer = TemplateEngine.create('dialog-content-form-template', {
+          instruction: settings.message || ''
+        });
+        
+        // Get the form fields container
+        const fieldsContainer = formContainer.querySelector('.pe-dialog-form-fields');
+        
+        // Add each form field
+        if (fieldsContainer && Array.isArray(settings.formFields)) {
+          settings.formFields.forEach(field => {
+            const fieldElement = TemplateEngine.create('dialog-form-field-template', field);
+            // Append the first child of the template (the actual form group)
+            if (fieldElement.firstElementChild) {
+              fieldsContainer.appendChild(fieldElement.firstElementChild);
+            }
+          });
+        }
+        
+        // Append the complete form to the message element
+        messageEl.appendChild(formContainer);
+      } else if (settings.type === 'contact-selection') {
+        // Create contact selection dialog using template
+        const selectionContainer = TemplateEngine.create('dialog-contact-selection-template', {
+          message: settings.message || '',
+          emailButtonText: settings.emailButtonText || 'Email',
+          phoneButtonText: settings.phoneButtonText || 'Phone'
+        });
+        
+        messageEl.appendChild(selectionContainer);
+        
+        // Set up click handlers for the choice buttons
+        const emailBtn = messageEl.querySelector('.pe-dialog-email-choice');
+        const phoneBtn = messageEl.querySelector('.pe-dialog-phone-choice');
+        
+        if (emailBtn && settings.onEmailChoice) {
+          emailBtn.addEventListener('click', () => {
+            settings.onEmailChoice();
+            this.hide();
+          });
+        }
+        
+        if (phoneBtn && settings.onPhoneChoice) {
+          phoneBtn.addEventListener('click', () => {
+            settings.onPhoneChoice();
+            this.hide();
+          });
+        }
+      } else {
+        // For non-form dialogs, just set the text content
+        messageEl.textContent = settings.message || '';
+      }
+    }
+
+    if (confirmEl) {
+      confirmEl.textContent = settings.confirmText;
+    }
+
+    // Hide standard buttons for contact selection dialog
+    const footerEl = this.dialog.querySelector('.pe-dialog-footer');
+    if (settings.type === 'contact-selection') {
+      // Hide footer entirely for contact selection
+      if (footerEl) footerEl.style.display = 'none';
+    } else {
+      // Show footer for other dialog types
+      if (footerEl) footerEl.style.display = '';
+      
+      // Handle cancel button visibility
+      if (cancelEl) {
+        if (settings.showCancel) {
+          cancelEl.classList.remove('hidden');
+          cancelEl.textContent = settings.cancelText;
+
+          // When cancel is visible, ensure confirm button isn't full width
+          if (confirmEl) {
+            confirmEl.classList.remove('full-width');
+          }
+        } else {
+          cancelEl.classList.add('hidden');
+
+          // When cancel button is hidden, make confirm button full width
+          if (confirmEl) {
+            confirmEl.classList.add('full-width');
+          }
         }
       }
     }
-
-    // Remove all type classes
-    this.dialog.classList.remove('pe-dialog-type-product', 'pe-dialog-type-room', 'pe-dialog-type-estimate', 'pe-dialog-notification');
-
-    [...this.dialog.classList].forEach(className => {
-      if (/^pe-dialog-action-/.test(className)) {
-        this.dialog.classList.remove(className);
-      }
-    });
-
-    // Add type class if specified
-    if (settings.type) {
-      this.dialog.classList.add (`pe-dialog-type-${settings.type}`);
+    
+    // Handle additional buttons if provided
+    if (settings.additionalButtons && buttonsContainer) {
+      // Clear any existing additional buttons
+      const existingAdditionalButtons = buttonsContainer.querySelectorAll('.pe-dialog-additional');
+      existingAdditionalButtons.forEach(btn => btn.remove());
+      
+      // Add new additional buttons
+      settings.additionalButtons.forEach((buttonConfig, index) => {
+        const button = document.createElement('button');
+        button.className = 'pe-button pe-button-secondary pe-dialog-additional';
+        button.textContent = buttonConfig.text || `Button ${index + 1}`;
+        
+        // Set up click handler
+        button.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.hide();
+          if (typeof buttonConfig.callback === 'function') {
+            buttonConfig.callback();
+          }
+        });
+        
+        // Insert the button after the cancel button or before confirm if no cancel
+        if (cancelEl && settings.showCancel) {
+          buttonsContainer.insertBefore(button, confirmEl);
+        } else {
+          buttonsContainer.insertBefore(button, confirmEl);
+        }
+      });
     }
 
-    if(settings.action) {
-      this.dialog.classList.add (`pe-dialog-action-${settings.action}`);
+    // Prevent scrolling on the body while modal is active
+    document.body.style.overflow = 'hidden';
+
+    // Make backdrop visible with CSS classes
+    if (this.backdropElement) {
+      this.backdropElement.classList.add('visible');
     }
 
-    // Add notification class if it's a success notification
-    if (!settings.showCancel && settings.type === 'estimate') {
-      this.dialog.classList.add('pe-dialog-notification');
+    if (this.dialog) {
+      // Add the visible class for transitions
+      this.dialog.classList.add('visible');
+
+      // Always apply an action-specific class for styling
+      // Remove any existing action classes first
+      this.dialog.classList.remove(
+        'pe-dialog-action-default',
+        'pe-dialog-action-delete',
+        'pe-dialog-action-error',
+        'pe-dialog-action-warning',
+        'pe-dialog-action-success'
+      );
+      
+      // Map certain actions to standard types for consistency
+      let actionClass = settings.action || 'default';
+      
+      // Normalize action types for consistent styling
+      if (actionClass === 'add') actionClass = 'success';
+      if (actionClass === 'remove') actionClass = 'delete';
+      
+      // Add the specific action class
+      this.dialog.classList.add(`pe-dialog-action-${actionClass}`);
     }
 
-    // Show the dialog - force it to the front
-    if (this.backdropElement) this.backdropElement.style.display = 'block';
-    if (this.dialog) this.dialog.style.display = 'block';
-
-    // Add active class for animation
-    if (this.dialog) this.dialog.classList.add('active');
-
-    // Focus the appropriate button
+    // Focus the appropriate button after a short delay
     setTimeout(() => {
-      const buttonToFocus = settings.showCancel ?
-        this.dialog.querySelector('.pe-dialog-cancel') :
-        this.dialog.querySelector('.pe-dialog-confirm');
+      const buttonToFocus = settings.showCancel && cancelEl ?
+        cancelEl : confirmEl;
 
-      if (buttonToFocus) buttonToFocus.focus();
+      if (buttonToFocus) {
+        buttonToFocus.focus();
+      }
     }, 100);
   }
 
@@ -259,22 +472,44 @@ class ConfirmationDialog {
    * Hide the dialog
    */
   hide() {
-    if (this.backdropElement) this.backdropElement.style.display = 'none';
+    // Restore body scrolling
+    document.body.style.overflow = '';
+
+    // Check if dialog elements exist
+    if (!this.dialogContainer) {
+      return;
+    }
+
+    // Hide dialog by removing visible class
+    if (this.backdropElement) {
+      this.backdropElement.classList.remove('visible');
+    }
+
     if (this.dialog) {
-      this.dialog.classList.remove('active');
-      this.dialog.style.display = 'none';
+      this.dialog.classList.remove('visible');
+    }
+
+    // Remove the dialog container from DOM immediately
+    // Don't delay as we're recreating on each show() call
+    if (this.dialogContainer) {
+      this.dialogContainer.remove();
+
+      // Reset references
+      this.dialogContainer = null;
+      this.backdropElement = null;
+      this.dialog = null;
     }
   }
-
 
   /**
    * Check if dialog is visible
    * @returns {boolean} Whether dialog is visible
    */
   isVisible() {
-    return this.dialog && this.dialog.style.display === 'block';
+    return this.dialog &&
+           this.backdropElement &&
+           this.backdropElement.classList.contains('visible');
   }
 }
 
-// Export a singleton instance
 export default ConfirmationDialog;

@@ -7,7 +7,7 @@
 
 import { createLogger } from '@utils';
 
-import { saveCustomerDetails, clearCustomerDetails } from './CustomerStorage'; // Import the new functions
+import { loadCustomerDetails, saveCustomerDetails, clearCustomerDetails } from './CustomerStorage'; // Import the new functions
 import DataService from "./DataService";
 
 const logger = createLogger('CustomerDetailsManager');
@@ -16,14 +16,14 @@ class CustomerDetailsManager {
    * Initialize the CustomerDetailsManager
    * @param {object} config - Configuration options
    * @param {DataService} dataService - The data service instance
+   * @param {object} modalManager - Reference to the modal manager (optional)
    */
-  constructor(config = {}, dataService) {
+  constructor(config = {}, dataService, modalManager = null) {
     // Default configuration
     this.config = Object.assign({
       debug: false,
       selectors: {
         editButton: '#edit-customer-details-btn',
-        deleteButton: '#delete-customer-details-btn',
         saveButton: '#save-customer-details-btn',
         cancelButton: '#cancel-edit-customer-details-btn',
         detailsContainer: '.saved-customer-details',
@@ -35,8 +35,9 @@ class CustomerDetailsManager {
     }, config);
 
 
-    // Store reference to data service
+    // Store reference to data service and modal manager
     this.dataService = dataService;
+    this.modalManager = modalManager;
 
     // State
     this.initialized = false;
@@ -76,11 +77,16 @@ class CustomerDetailsManager {
   onCustomerDetailsUpdated(event) {
     if (event.detail && event.detail.details) {
       logger.log('Received customer_details_updated event', event.detail);
-      // Update the display with the new details
+
+      // Update the customer details display UI elements
       this.updateDisplayedDetails(event.detail.details);
 
-      // Check if email was added and update forms
+      // Only check and update email field in the customer details edit form,
+      // not in the new estimate form - this prevents field value synchronization issues
       this.checkAndUpdateEmailField(event.detail.details);
+
+      // Important: we should never synchronize values between the customer details
+      // form and the new estimate form as they serve different purposes
     }
   }
 
@@ -92,9 +98,18 @@ class CustomerDetailsManager {
     const hasEmail = details && details.email && details.email.trim() !== '';
     logger.log(`Checking for email field updates: hasEmail=${hasEmail}`);
 
-    // If the edit form is already visible, update it
-    const editForms = document.querySelectorAll(this.config.selectors.editForm);
-    editForms.forEach(editForm => {
+    // If the customer details edit form is already visible, update ONLY that form
+    // NOT any other forms like the new estimate form
+    const customerEditForms = document.querySelectorAll(this.config.selectors.editForm);
+    customerEditForms.forEach(editForm => {
+      // Skip if this is not a customer details edit form
+      // (check for a customer-specific identifier to ensure we're only updating customer forms)
+      if (!editForm.classList.contains('customer-details-edit-form') &&
+          !editForm.closest('.saved-customer-details') &&
+          !editForm.querySelector('#edit-customer-name')) {
+        logger.log('Skipping non-customer details form to prevent field synchronization issues');
+        return;
+      }
       // Check if email field already exists
       let emailField = editForm.querySelector('#edit-customer-email');
 
@@ -138,7 +153,8 @@ class CustomerDetailsManager {
         emailField.value = details.email;
       }
 
-      // Update other fields if they exist
+      // Update other fields if they exist - but ONLY in the customer details edit form
+      // NOT in the estimate creation form, which has its own separate fields
       const nameField = editForm.querySelector('#edit-customer-name');
       if (nameField && details.name) {
         nameField.value = details.name;
@@ -155,10 +171,46 @@ class CustomerDetailsManager {
       }
     });
 
-    // Update data-has-email attribute on any new estimate forms
+    // Update ONLY the data-has-email attribute on new estimate forms,
+    // but DO NOT update any actual form field values in the new estimate form
     const newEstimateForms = document.querySelectorAll('#new-estimate-form');
     newEstimateForms.forEach(form => {
+      // Only update the data attribute, never the form fields directly
       form.setAttribute('data-has-email', hasEmail ? 'true' : 'false');
+
+      // Add explicit protection to prevent postcode-to-name field synchronization
+      // Add a one-time event listener to prevent the first input to postcode field from affecting the name field
+      if (!form._fieldProtectionAdded) {
+        const postcodeField = form.querySelector('#customer-postcode');
+        const nameField = form.querySelector('#estimate-name');
+
+        if (postcodeField && nameField) {
+          logger.log('Adding protection to prevent field value synchronization in estimate form');
+
+          // Store the original values from fields when the form is first rendered
+          let nameOriginal = nameField.value;
+
+          // Add an input event listener to detect when the postcode field changes
+          postcodeField.addEventListener('input', function() {
+            // If the name field now contains the postcode value (indicating unwanted sync),
+            // restore it to its proper value
+            if (nameField.value === postcodeField.value && nameOriginal !== postcodeField.value) {
+              logger.log('Preventing postcode-to-name field sync - restoring name field value');
+              nameField.value = nameOriginal;
+            }
+          });
+
+          // Add a change event listener to the name field to keep track of user-intended changes
+          nameField.addEventListener('change', function() {
+            // Update the stored original value when the user deliberately changes it
+            nameOriginal = nameField.value;
+            logger.log('Name field changed by user, new value stored:', nameOriginal);
+          });
+
+          // Mark this form as protected
+          form._fieldProtectionAdded = true;
+        }
+      }
     });
   }
   /**
@@ -167,7 +219,6 @@ class CustomerDetailsManager {
   bindEvents() {
     // Find the buttons
     const editButton = document.querySelector(this.config.selectors.editButton);
-    const deleteButton = document.querySelector(this.config.selectors.deleteButton);
     const saveButton = document.querySelector(this.config.selectors.saveButton);
     const cancelButton = document.querySelector(this.config.selectors.cancelButton);
 
@@ -179,11 +230,6 @@ class CustomerDetailsManager {
 
     // Edit button - show edit form
     this.bindButtonWithHandler(editButton, 'click', this.handleEditClick.bind(this));
-
-    // Delete button - confirm then delete
-    if (deleteButton) {
-      this.bindButtonWithHandler(deleteButton, 'click', this.handleDeleteClick.bind(this));
-    }
 
     // Save button - save updated details
     if (saveButton) {
@@ -236,9 +282,54 @@ class CustomerDetailsManager {
 
     if (detailsContainer) detailsContainer.style.display = 'none';
     if (detailsHeader) detailsHeader.style.display = 'none';
-    if (editForm) editForm.style.display = 'block';
+    if (editForm) {
+      editForm.style.display = 'block';
 
-    logger.log('Edit form displayed');
+      // Get current customer details
+      const customerData = this.getCustomerDetails();
+
+      // Show/hide fields based on existing data and populate values
+      const fields = [
+        { id: 'edit-customer-name', key: 'name' },
+        { id: 'edit-customer-email', key: 'email' },
+        { id: 'edit-customer-phone', key: 'phone' },
+        { id: 'edit-customer-postcode', key: 'postcode' }
+      ];
+
+      fields.forEach(field => {
+        const fieldElement = editForm.querySelector(`#${field.id}`);
+        if (fieldElement) {
+          const formGroup = fieldElement.closest('.form-group');
+          if (formGroup) {
+            // Show field if data exists or if it's postcode (always show postcode)
+            if (customerData[field.key] || field.key === 'postcode') {
+              formGroup.style.display = 'block';
+              fieldElement.value = customerData[field.key] || '';
+            } else {
+              formGroup.style.display = 'none';
+            }
+          }
+        }
+      });
+
+      // Always show at least postcode field for new entries
+      const visibleFields = fields.filter(field => {
+        const el = editForm.querySelector(`#${field.id}`);
+        const group = el?.closest('.form-group');
+        return group && group.style.display !== 'none';
+      });
+
+      // If no fields are visible or only empty fields are visible, show postcode
+      if (visibleFields.length === 0 || !Object.keys(customerData).some(key => customerData[key])) {
+        const postcodeField = editForm.querySelector('#edit-customer-postcode');
+        if (postcodeField) {
+          const postcodeGroup = postcodeField.closest('.form-group');
+          if (postcodeGroup) postcodeGroup.style.display = 'block';
+        }
+      }
+    }
+
+    logger.log('Edit form displayed with populated values');
   }
 
   /**
@@ -254,7 +345,7 @@ class CustomerDetailsManager {
     const editForm = document.querySelector(this.config.selectors.editForm);
 
     if (editForm) editForm.style.display = 'none';
-    if (detailsContainer) detailsContainer.style.display = 'block';
+    if (detailsContainer) detailsContainer.style.display = '';  // Remove inline display style
     if (detailsHeader) detailsHeader.style.display = 'flex';
 
     logger.log('Edit form hidden');
@@ -275,70 +366,52 @@ class CustomerDetailsManager {
     saveButton.textContent = (this.config.i18n && this.config.i18n.saving) || 'Saving...';
     saveButton.disabled = true;
 
-    // Get updated details - collect all available fields
-    const updatedDetails = {
-      name: document.getElementById('edit-customer-name')?.value || '',
-      postcode: document.getElementById('edit-customer-postcode')?.value || ''
-    };
+    // Get updated details - collect only visible fields
+    const updatedDetails = {};
 
-    // Add email and phone if they exist in the form
-    const emailField = document.getElementById('edit-customer-email');
-    if (emailField) {
-      updatedDetails.email = emailField.value || '';
-    }
+    const fields = [
+      { id: 'edit-customer-name', key: 'name' },
+      { id: 'edit-customer-email', key: 'email' },
+      { id: 'edit-customer-phone', key: 'phone' },
+      { id: 'edit-customer-postcode', key: 'postcode' }
+    ];
 
-    const phoneField = document.getElementById('edit-customer-phone');
-    if (phoneField) {
-      updatedDetails.phone = phoneField.value || '';
-    }
+    fields.forEach(field => {
+      const fieldElement = document.getElementById(field.id);
+      if (fieldElement) {
+        const formGroup = fieldElement.closest('.form-group');
+        // Only collect values from visible fields
+        if (formGroup && formGroup.style.display !== 'none') {
+          const value = fieldElement.value.trim();
+          if (value) {
+            updatedDetails[field.key] = value;
+          }
+        }
+      }
+    });
 
     // Use the imported saveCustomerDetails function
     try {
       saveCustomerDetails(updatedDetails); // Use the imported function
       logger.log('Customer details saved to localStorage:', updatedDetails);
 
-      // 2. Now, send the update to the server asynchronously using DataService
-      this.dataService.request('update_customer_details', {
-        details: JSON.stringify(updatedDetails)
-      })
-        .then(data => {
-          // Handle successful server update
-          logger.log('Customer details updated on server successfully:', data);
-          this.handleSaveSuccess(data, updatedDetails); // Call success handler with server response data and updated details
-        })
-        .catch(error => {
-          // Handle server update error
-          this.handleSaveError(error); // Show error message
-          // Note: Details are already saved locally, so we don't revert local storage on server error.
-        })
-        .finally(() => {
-          // This block runs after both success or error of the AJAX request
-          saveButton.textContent = originalText;
-          saveButton.disabled = false;
-        });
+      // Handle successful save - localStorage only
+      this.handleSaveSuccess({ success: true }, updatedDetails);
+
+      // Reset button state after success
+      saveButton.textContent = originalText;
+      saveButton.disabled = false;
 
     } catch (localStorageError) {
-      // Handle synchronous local storage save error
-      logger.log('Error saving to localStorage using imported function:', localStorageError);
-      this.showError('Could not save details locally.'); // Show local storage error
-      // We still attempt server save even if local save fails
-      this.dataService.request('update_customer_details', {
-        details: JSON.stringify(updatedDetails)
-      })
-        .then(data => {
-          // Handle successful server update even after local failure
-          logger.log('Customer details updated on server successfully (after local storage error):', data);
-          this.handleSaveSuccess(data, updatedDetails); // Call success handler
-        })
-        .catch(error => {
-          // Handle server update error after local failure
-          this.handleSaveError(error); // Show server error message
-        })
-        .finally(() => {
-          // This block runs after both success or error of the AJAX request
-          saveButton.textContent = originalText;
-          saveButton.disabled = false;
-        });
+      // Handle local storage save error
+      logger.error('Error saving to localStorage:', localStorageError);
+      this.handleSaveError({
+        message: 'Could not save details locally. Please check your browser storage settings.'
+      });
+
+      // Reset button state after error
+      saveButton.textContent = originalText;
+      saveButton.disabled = false;
     }
 
   }
@@ -364,7 +437,7 @@ class CustomerDetailsManager {
     const editForm = document.querySelector(this.config.selectors.editForm);
 
     if (editForm) editForm.style.display = 'none';
-    if (detailsContainer) detailsContainer.style.display = 'block';
+    if (detailsContainer) detailsContainer.style.display = '';  // Remove inline display style
     if (detailsHeader) detailsHeader.style.display = 'flex';
 
     // Dispatch event to notify other components of the update
@@ -388,137 +461,6 @@ class CustomerDetailsManager {
     logger.log('Error saving customer details:', error);
   }
 
-  /**
-   * Handle delete button click
-   * @param {Event} e - Click event
-   */
-  handleDeleteClick(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Use the confirmation dialog if available
-    if (window.productEstimator && window.productEstimator.dialog) {
-      window.productEstimator.dialog.show({
-        title: (this.config.i18n && this.config.i18n.delete_customer_details) || 'Delete Customer Details',
-        message: (this.config.i18n && this.config.i18n.confirm_delete_details) || 'Are you sure you want to delete your saved details?',
-        confirmText: (this.config.i18n && this.config.i18n.delete) || 'Delete',
-        action: 'delete',
-        cancelText: this.config.i18n.cancel || 'Cancel',
-        onConfirm: () => {
-          this.deleteCustomerDetails();
-        }
-      });
-    } else {
-      // Fallback to regular confirm
-      if (confirm(this.config.i18n.confirm_delete_details || 'Are you sure you want to delete your saved details?')) {
-        this.deleteCustomerDetails();
-      }
-    }
-  }
-
-  /**
-   * Delete customer details
-   */
-  deleteCustomerDetails() {
-    // Get the customer details confirmation container
-    const confirmationContainer = document.querySelector('.customer-details-confirmation');
-    if (confirmationContainer) {
-      confirmationContainer.classList.add('loading');
-    }
-
-    // Use the imported clearCustomerDetails function
-    try {
-      clearCustomerDetails(); // Clear using imported function
-      logger.log('Customer details removed from localStorage using imported function'); // Log the success
-      this.handleDeleteSuccess({message: "Details deleted successfully from local storage"}, confirmationContainer);
-    } catch (e) {
-      logger.log('localStorage error on delete using imported function', e); // Log any error
-    }
-
-
-    // Use the dataService to make the AJAX request if available
-    if (this.dataService && typeof this.dataService.request === 'function') {
-      this.dataService.request('delete_customer_details')
-        .then(data => {
-          this.handleDeleteSuccess(data, confirmationContainer);
-        })
-        .catch(error => {
-          this.handleDeleteError(error, confirmationContainer);
-        });
-    } else {
-      // Fallback to direct fetch
-      fetch(window.productEstimatorVars?.ajax_url || '/wp-admin/admin-ajax.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams({
-          action: 'delete_customer_details',
-          nonce: window.productEstimatorVars?.nonce || ''
-        })
-      })
-        .then(response => response.json())
-        .then(response => {
-          if (response.success) {
-            this.handleDeleteSuccess(response.data, confirmationContainer);
-          } else {
-            this.handleDeleteError(
-              new Error(response.data?.message || 'Error deleting details'),
-              confirmationContainer
-            );
-          }
-        })
-        .catch(error => {
-          this.handleDeleteError(error, confirmationContainer);
-        });
-    }
-  }
-
-  /**
-   * Handle successful delete response
-   * @param {object} data - Response data
-   * @param {HTMLElement} confirmationContainer - The container element
-   */
-  handleDeleteSuccess(data, confirmationContainer) {
-    // Replace the details container with the new form
-    if (confirmationContainer && data.html) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = data.html;
-      confirmationContainer.parentNode.replaceChild(tempDiv.firstElementChild, confirmationContainer);
-    }
-
-    // Show success message
-    this.showMessage('success', data.message || 'Details deleted successfully!');
-
-    // Update data-has-email attribute on the main form
-    const newEstimateForm = document.querySelector('#new-estimate-form');
-    if (newEstimateForm) {
-      newEstimateForm.setAttribute('data-has-email', 'false');
-    }
-
-    // Dispatch event to notify other components
-    const event = new CustomEvent('customer_details_deleted', {
-      bubbles: true
-    });
-    document.dispatchEvent(event);
-
-    logger.log('Customer details deleted');
-  }
-
-  /**
-   * Handle delete error
-   * @param {Error} error - The error that occurred
-   * @param {HTMLElement} confirmationContainer - The container element
-   */
-  handleDeleteError(error, confirmationContainer) {
-    this.showMessage('error', error.message || 'Error deleting details!');
-    logger.log('Error deleting details:', error);
-
-    // Remove loading class
-    if (confirmationContainer) {
-      confirmationContainer.classList.remove('loading');
-    }
-  }
 
   /**
    * Update the displayed customer details in the DOM
@@ -535,26 +477,36 @@ class CustomerDetailsManager {
     logger.log(`Updating ${detailsContainers.length} customer details containers`);
 
     detailsContainers.forEach(container => {
-      // Build HTML with new details
-      let detailsHtml = '<p>';
+      // Build HTML with new details in grid layout format
+      let detailsHtml = '';
 
       if (details.name && details.name.trim() !== '') {
-        detailsHtml += `<strong>${details.name}</strong><br>`;
+        detailsHtml += `<p><strong>NAME:</strong><br>${details.name}</p>`;
       }
 
       if (details.email && details.email.trim() !== '') {
-        detailsHtml += `${details.email}<br>`;
+        detailsHtml += `<p><strong>EMAIL:</strong><br>${details.email}</p>`;
       }
 
       if (details.phone && details.phone.trim() !== '') {
-        detailsHtml += `${details.phone}<br>`;
+        detailsHtml += `<p><strong>PHONE:</strong><br>${details.phone}</p>`;
       }
 
-      detailsHtml += details.postcode || '';
-      detailsHtml += '</p>';
+      if (details.postcode && details.postcode.trim() !== '') {
+        detailsHtml += `<p><strong>POSTCODE:</strong><br>${details.postcode}</p>`;
+      }
 
       // Update container
       container.innerHTML = detailsHtml;
+
+      // Add success animation to parent display container
+      const displayContainer = container.closest('.customer-details-display');
+      if (displayContainer) {
+        displayContainer.classList.add('success');
+        setTimeout(() => {
+          displayContainer.classList.remove('success');
+        }, 600);
+      }
     });
   }
 
@@ -584,6 +536,65 @@ class CustomerDetailsManager {
         messageEl.remove();
       }, 5000);
     }
+  }
+
+  /**
+   * Get the current customer details from localStorage
+   * @returns {object} Customer details object
+   */
+  getCustomerDetails() {
+    return loadCustomerDetails();
+  }
+
+  /**
+   * Check if customer has a postcode
+   * @returns {boolean} True if customer has a postcode
+   */
+  hasPostcode() {
+    const details = this.getCustomerDetails();
+    return details.postcode && details.postcode.trim() !== '';
+  }
+
+  /**
+   * Update customer details with postcode if new
+   * @param {string} postcode - The postcode to add
+   * @returns {boolean} True if postcode was added/updated
+   */
+  updatePostcodeIfNew(postcode) {
+    if (!postcode || postcode.trim() === '') {
+      return false;
+    }
+
+    const currentDetails = this.getCustomerDetails();
+
+    // Check if postcode is new or different
+    if (!currentDetails.postcode || currentDetails.postcode.trim() === '' || currentDetails.postcode !== postcode) {
+      logger.log('Updating customer postcode from:', currentDetails.postcode, 'to:', postcode);
+
+      // Save updated details
+      const updatedDetails = { ...currentDetails, postcode: postcode };
+
+      try {
+        saveCustomerDetails(updatedDetails);
+        logger.log('Customer postcode saved to localStorage:', updatedDetails);
+      } catch (error) {
+        logger.error('Failed to save customer postcode to localStorage:', error);
+        return false;
+      }
+
+      // Dispatch event to notify other components
+      const event = new CustomEvent('customer_details_updated', {
+        bubbles: true,
+        detail: {
+          details: updatedDetails
+        }
+      });
+      document.dispatchEvent(event);
+
+      return true;
+    }
+
+    return false;
   }
 }
 

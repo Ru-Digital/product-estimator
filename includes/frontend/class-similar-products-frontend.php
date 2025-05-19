@@ -83,10 +83,17 @@ class SimilarProductsFrontend extends FrontendBase {
      * @since    1.0.6
      */
     public function find_similar_products($product_id) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('find_similar_products called for product ID: ' . $product_id);
+        }
+        
         // Get product
         $product = wc_get_product($product_id);
 
         if (!$product) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Product not found for ID: ' . $product_id);
+            }
             return array();
         }
 
@@ -110,7 +117,14 @@ class SimilarProductsFrontend extends FrontendBase {
         $settings = get_option($this->option_name, array());
 
         if (empty($settings)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('No similar products settings found in database');
+            }
             return array();
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Found ' . count($settings) . ' similar product rules');
         }
 
         // Find matching rules for this product's categories
@@ -132,7 +146,14 @@ class SimilarProductsFrontend extends FrontendBase {
         }
 
         if (empty($matching_rules)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('No matching rules found for product categories');
+            }
             return array();
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Found ' . count($matching_rules) . ' matching rules for product');
         }
 
         // Get products in same categories (from all matching rules)
@@ -164,6 +185,11 @@ class SimilarProductsFrontend extends FrontendBase {
         $similarity_scores = array();
 
         foreach ($category_products as $candidate_id => $candidate_product) {
+            // Skip variations - we only want parent products or simple products
+            if ($candidate_product->is_type('variation')) {
+                continue;
+            }
+            
             $max_score = 0;
 
             foreach ($matching_rules as $rule) {
@@ -185,6 +211,11 @@ class SimilarProductsFrontend extends FrontendBase {
 
         // Sort by similarity score (descending)
         arsort($similarity_scores);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Found ' . count($similarity_scores) . ' products with similarity scores');
+            error_log('Top 10 similar product IDs: ' . implode(', ', array_slice(array_keys($similarity_scores), 0, 10)));
+        }
 
         // Limit to top 10 results
         return array_slice(array_keys($similarity_scores), 0, 10);
@@ -281,5 +312,68 @@ class SimilarProductsFrontend extends FrontendBase {
         $values = array_map('trim', explode(',', $attribute));
 
         return $values;
+    }
+
+    /**
+     * Get section info (title and description) for a product's category
+     *
+     * @param int $product_id The product ID
+     * @return array|null Array with section_title and section_description or null if not found
+     * @since    1.0.7
+     */
+    public function get_section_info_for_product($product_id) {
+        // Get product
+        $product = wc_get_product($product_id);
+
+        if (!$product) {
+            return null;
+        }
+
+        $is_variation = false;
+        $parent_id = null;
+
+        if ($product instanceof \WC_Product_Variation) {
+            $parent_id = $product->get_parent_id();
+            $is_variation = true;
+            $product = wc_get_product($parent_id);
+        }
+
+        // Get product categories
+        $product_categories = wp_get_post_terms(($is_variation ? $parent_id : $product_id), 'product_cat', array('fields' => 'ids'));
+
+        if (empty($product_categories)) {
+            return null;
+        }
+
+        // Get similar products settings
+        $settings = get_option($this->option_name, array());
+
+        if (empty($settings)) {
+            return null;
+        }
+
+        // Find matching rule for this product's categories
+        foreach ($settings as $rule) {
+            if (empty($rule['source_categories'])) {
+                if (isset($rule['source_category']) && in_array($rule['source_category'], $product_categories)) {
+                    return array(
+                        'section_title' => isset($rule['section_title']) ? $rule['section_title'] : __('Similar Products', 'product-estimator'),
+                        'section_description' => isset($rule['section_description']) ? $rule['section_description'] : ''
+                    );
+                }
+                continue;
+            }
+
+            $intersect = array_intersect($product_categories, $rule['source_categories']);
+
+            if (!empty($intersect)) {
+                return array(
+                    'section_title' => isset($rule['section_title']) ? $rule['section_title'] : __('Similar Products', 'product-estimator'),
+                    'section_description' => isset($rule['section_description']) ? $rule['section_description'] : ''
+                );
+            }
+        }
+
+        return null;
     }
 }

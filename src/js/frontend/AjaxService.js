@@ -34,7 +34,6 @@ class AjaxService {
 
     // Initialize cache for server-side data
     this.cache = {
-      productUpgrades: {},
       productData: {},
       similarProducts: {},
       suggestions: {},
@@ -76,12 +75,20 @@ class AjaxService {
     // Use the wpAjax utility from ajax.js
     return wpAjax(action, data, this.config.nonce)
       .catch(error => {
+        // Check if this is a primary_conflict or duplicate case - these are expected responses, not errors
+        if (error && error.data && (error.data.primary_conflict || error.data.duplicate)) {
+          // This is expected behavior, don't log as error
+          logger.log(`Request '${action}' returned expected response:`, error.data.primary_conflict ? 'primary conflict' : 'duplicate');
+          throw error; // Still throw it so the calling code can handle it
+        }
+
         logger.error(`Request '${action}' error:`, error);
 
         // Create a more informative error
         const enhancedError = new Error(`AJAX request failed: ${error.message}`);
         enhancedError.originalError = error;
         enhancedError.action = action;
+        enhancedError.data = error.data; // Make sure to preserve the data
 
         // If we're allowed to fail, return a fallback empty response
         if (allowFailure) {
@@ -105,37 +112,6 @@ class AjaxService {
     return formatFormData(formData);
   }
 
-  /**
-   * Get product upgrades
-   * @param {object} data - Request data object
-   * @param {boolean} bypassCache - Whether to bypass the cache
-   * @returns {Promise<Array>} - A promise resolving to an array of upgrade options
-   */
-  getProductUpgrades(data, bypassCache = false) {
-    // Create a cache key from the request data
-    const cacheKey = `${data.product_id}_${data.estimate_id}_${data.room_id}_${data.upgrade_type}`;
-
-    // Check if we have cached data
-    if (!bypassCache && this.cache.productUpgrades[cacheKey]) {
-      logger.log(`Returning cached product upgrades for key ${cacheKey}`);
-      return Promise.resolve(this.cache.productUpgrades[cacheKey]);
-    }
-
-    // Make the request if no cache hit
-    return this._request('get_product_upgrades', data)
-      .then(responseData => {
-        // Cache the response
-        if (responseData && responseData.upgrades) {
-          this.cache.productUpgrades[cacheKey] = responseData;
-        }
-        return responseData;
-      })
-      .catch(error => {
-        // Clear cache on error
-        delete this.cache.productUpgrades[cacheKey];
-        throw error;
-      });
-  }
 
   /**
    * Get product data for storage
@@ -144,9 +120,26 @@ class AjaxService {
    * @returns {Promise<object>} - A promise resolving to product data and suggestions
    */
   getProductDataForStorage(data, bypassCache = false) {
+    // Validate product_id is present and valid
+    if (!data.product_id || data.product_id === 'null' || data.product_id === 'undefined' || data.product_id === '0') {
+      return Promise.reject(new Error('Product ID is required'));
+    }
+
+    // Ensure product_id is a string
+    const productId = String(data.product_id);
+    if (productId.trim() === '') {
+      return Promise.reject(new Error('Product ID cannot be empty'));
+    }
+
+    // Create a modified data object with validated product_id
+    const validatedData = {
+      ...data,
+      product_id: productId
+    };
+
     // Create a cache key from the request data - use a simplified key based on product_id
     // We can't use the entire room_products array as part of the key as it's too complex
-    const cacheKey = `data_${data.product_id}_${data.room_width || 0}_${data.room_length || 0}`;
+    const cacheKey = `data_${productId}_${validatedData.room_width || 0}_${validatedData.room_length || 0}`;
 
     // Check if we have cached data
     if (!bypassCache && this.cache.productData[cacheKey]) {
@@ -155,7 +148,7 @@ class AjaxService {
     }
 
     // Make the request if no cache hit
-    return this._request('get_product_data_for_storage', data)
+    return this._request('get_product_data_for_storage', validatedData)
       .then(responseData => {
         // Cache the response
         if (responseData && responseData.product_data) {
@@ -170,34 +163,7 @@ class AjaxService {
       });
   }
 
-  /**
-   * Add a product to a room
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  addProductToRoom(data) {
-    return this._request('add_product_to_room', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('suggestions');
-        return response;
-      });
-  }
 
-  /**
-   * Replace a product in a room with another product
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  replaceProductInRoom(data) {
-    return this._request('replace_product_in_room', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('suggestions');
-        this.invalidateCache('productData');
-        return response;
-      });
-  }
 
   /**
    * Get similar products for a specific product
@@ -231,33 +197,6 @@ class AjaxService {
       });
   }
 
-  /**
-   * Create a new estimate
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  addNewEstimate(data) {
-    return this._request('add_new_estimate', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('estimatesData');
-        return response;
-      });
-  }
-
-  /**
-   * Create a new room
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  addNewRoom(data) {
-    return this._request('add_new_room', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('rooms');
-        return response;
-      });
-  }
 
   /**
    * Fetch suggestions for a room after modifications
@@ -291,48 +230,7 @@ class AjaxService {
       });
   }
 
-  /**
-   * Remove a product from a room
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  removeProductFromRoom(data) {
-    return this._request('remove_product_from_room', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('suggestions');
-        return response;
-      });
-  }
 
-  /**
-   * Remove a room from an estimate
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  removeRoom(data) {
-    return this._request('remove_room', data)
-      .then(response => {
-        // Invalidate relevant caches since we've modified data
-        this.invalidateCache('rooms');
-        this.invalidateCache('suggestions');
-        return response;
-      });
-  }
-
-  /**
-   * Remove an entire estimate
-   * @param {object} data - Request data object
-   * @returns {Promise<object>} - Promise resolving to result data
-   */
-  removeEstimate(data) {
-    return this._request('remove_estimate', data)
-      .then(response => {
-        // Invalidate all caches since this is a major change
-        this.invalidateCache();
-        return response;
-      });
-  }
 
   /**
    * Get the variation estimator content
@@ -359,7 +257,6 @@ class AjaxService {
       logger.log('Invalidating all caches');
       // Reset all caches
       this.cache = {
-        productUpgrades: {},
         productData: {},
         similarProducts: {},
         suggestions: {},

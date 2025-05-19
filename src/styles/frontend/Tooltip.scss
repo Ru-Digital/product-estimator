@@ -1,0 +1,360 @@
+/**
+ * Tooltip styles for Product Estimator
+ */
+
+@use 'variables' as *;
+@use 'mixins' as *;
+@use 'sass:color';
+
+.pe-tooltip {
+  background-color: $bg-dark;
+  border-radius: $border-radius;
+  color: $bg-color;
+  font-size: $font-size-small;
+  line-height: 1.4;
+  max-width: 250px;
+  padding: $spacing-sm $spacing-md;
+  position: absolute;
+  word-wrap: break-word;
+  z-index: $z-index-dialog;
+
+  &-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  &-arrow {
+    position: absolute;
+  }
+
+  // Position variations
+
+  &-top {
+
+    .pe-tooltip-arrow {
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+  }
+
+  &-bottom {
+
+    .pe-tooltip-arrow {
+      left: 50%;
+      top: -8px;
+      transform: translateX(-50%);
+    }
+  }
+
+  &-left {
+
+    .pe-tooltip-arrow {
+      right: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+  }
+
+  &-right {
+
+    .pe-tooltip-arrow {
+      left: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+  }
+}
+
+// Tooltip trigger styles
+
+[data-tooltip] {
+  cursor: help;
+  position: relative;
+
+  // Add subtle underline for keyboard users
+
+  &:focus {
+    outline: 2px solid $primary-color;
+    outline-offset: 2px;
+  }
+
+  // Add info icon if element is empty
+
+  &:empty::before {
+    color: $info-color;
+    content: "\f348"; // Dashicons info
+    font-family: dashicons, sans-serif;
+    font-size: 16px;
+    line-height: 1;
+    vertical-align: middle;
+  }
+}
+
+// Tooltip helper icon style (optional use)
+
+.pe-tooltip-icon {
+  align-items: center;
+  color: $info-color;
+  cursor: help;
+  display: inline-flex;
+  font-size: 14px;
+  height: 16px;
+  justify-content: center;
+  line-height: 1;
+  margin-left: $spacing-xs;
+  width: 16px;
+
+  &::before {
+    content: "\f348"; // Dashicons info
+    font-family: dashicons, sans-serif;
+  }
+
+  &:hover {
+    color: color.adjust($info-color, $lightness: -10%);
+  }
+}
+
+// Info icon button style (for clickable help)
+
+.pe-info-button {
+  @include button-reset;
+  align-items: center;
+  background-color: $primary-color;
+  border: none;
+  border-radius: 50%;
+  color: $bg-color;
+  cursor: help;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 12px;
+  height: 18px;
+  justify-content: center;
+  line-height: 1;
+  transition: $transition-base;
+  width: 18px;
+
+  &::before {
+    content: "?";
+    font-size: 11px;
+    font-weight: bold;
+  }
+
+  &:hover,
+  &:focus {
+    background-color: $primary-hover;
+    color: $bg-color;
+  }
+
+  &:focus {
+    outline: 2px solid $primary-color;
+    outline-offset: 2px;
+  }
+}
+
+// Rich tooltip styles
+
+.pe-tooltip-rich {
+  background-color: $bg-color;
+  border: 1px solid $border-color-dark;
+  box-shadow: $shadow-lg;
+  color: $text-color;
+  max-width: 400px;
+  min-width: 300px;
+  padding: 0;
+
+  .pe-tooltip-header {
+    align-items: center;
+    background-color: $bg-light;
+    border-bottom: 1px solid $border-color;
+    display: flex;
+    justify-content: space-between;
+    padding: $spacing-md;
+  }
+
+  .pe-tooltip-title {
+    font-size: $font-size-base;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .pe-tooltip-close {
+    @include button-reset;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: $text-lighter;
+    cursor: pointer;
+    display: flex;
+    font-size: 18px;
+    height: 24px;
+    justify-content: center;
+    line-height: 1;
+    padding: 0;
+    transition: $transition-base;
+    width: 24px;
+
+    &:hover,
+    &:focus {
+      background-color: $bg-lighter;
+      border-radius: $border-radius-sm;
+      color: $text-color;
+    }
+
+    &:focus {
+      outline: 2px solid $primary-color;
+      outline-offset: 2px;
+    }
+  }
+
+  .pe-tooltip-content {
+    padding: $spacing-md;
+  }
+
+  .pe-tooltip-section-title {
+    color: $text-color;
+    font-size: $font-size-small;
+    font-weight: 600;
+    margin: 0 0 $spacing-sm;
+    text-transform: uppercase;
+  }
+
+  .pe-tooltip-notes-content,
+  .pe-tooltip-details-content {
+    color: $text-color;
+    font-size: $font-size-base;
+    line-height: 1.5;
+    margin-bottom: $spacing-md;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    p {
+      margin: 0 0 $spacing-sm;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    ul,
+    ol {
+      margin: $spacing-sm 0;
+      padding-left: $spacing-lg;
+    }
+  }
+  
+  // Style note items inside tooltip
+
+  .pe-tooltip-notes-content .note-item {
+    align-items: center;
+    background: transparent;
+    border: none;
+    display: flex;
+    margin: 0;
+    padding: $spacing-sm 0;
+    
+    &:first-child {
+      padding-top: 0;
+    }
+    
+    &:last-child {
+      padding-bottom: 0;
+    }
+    
+    .product-includes-icon {
+      align-items: center;
+      background-color: $primary-color;
+      display: flex;
+      flex-shrink: 0;
+      height: 20px;
+      justify-content: center;
+      margin-right: $spacing-sm;
+      width: 20px;
+      
+      .dashicons {
+        color: $bg-color;
+        font-size: 12px;
+        height: 12px;
+        line-height: 12px;
+        width: 12px;
+      }
+    }
+    
+    .include-item-note {
+      align-items: center;
+      display: flex;
+      flex: 1;
+      
+      .note-text {
+        color: $text-color;
+        font-size: $font-size-small;
+        line-height: 20px;
+        margin: 0;
+      }
+    }
+  }
+
+  // Rich tooltip arrow styles
+
+  .pe-tooltip-arrow {
+    border-width: 10px;
+  }
+
+  &.pe-tooltip-top .pe-tooltip-arrow {
+    border-top-color: $border-color-dark;
+
+    &::after {
+      border-style: solid;
+      border-top-color: $bg-color;
+      border-width: 9px;
+      bottom: -9px;
+      content: "";
+      left: -9px;
+      position: absolute;
+    }
+  }
+
+  &.pe-tooltip-bottom .pe-tooltip-arrow {
+    border-bottom-color: $border-color-dark;
+
+    &::after {
+      border-bottom-color: $bg-light;
+      border-style: solid;
+      border-width: 9px;
+      content: "";
+      left: -9px;
+      position: absolute;
+      top: -9px;
+    }
+  }
+
+  &.pe-tooltip-left .pe-tooltip-arrow {
+    border-left-color: $border-color-dark;
+
+    &::after {
+      border-left-color: $bg-color;
+      border-style: solid;
+      border-width: 9px;
+      content: "";
+      position: absolute;
+      right: -9px;
+      top: -9px;
+    }
+  }
+
+  &.pe-tooltip-right .pe-tooltip-arrow {
+    border-right-color: $border-color-dark;
+
+    &::after {
+      border-right-color: $bg-color;
+      border-style: solid;
+      border-width: 9px;
+      content: "";
+      left: -9px;
+      position: absolute;
+      top: -9px;
+    }
+  }
+}

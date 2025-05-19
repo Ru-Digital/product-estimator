@@ -160,6 +160,24 @@
     text-align: center;
     width: 100%;
   }
+
+  .customer-details-display {
+    padding: 15px;
+
+    .customer-details-content {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .customer-details-section {
+    margin: 15px 0;
+    padding: 15px;
+
+    &::after {
+      right: 15px;
+      top: 15px;
+    }
+  }
 }
 
 /* Adjust button styles when in modal */
@@ -174,4 +192,241 @@
   .customer-details-edit-form {
     background-color: $bg-color;
   }
+}
+
+/* Customer details display in estimate form */
+
+.customer-details-display {
+  background-color: color.adjust($bg-light, $lightness: + 2%);
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  box-shadow: $shadow-sm;
+  margin-top: 20px;
+  padding: 20px;
+  position: relative;
+  transition: all $transition-base;
+
+  &::before {
+    background: linear-gradient(90deg, $primary-color 0%, color.adjust($primary-color, $lightness: + 10%) 100%);
+    border-radius: $border-radius $border-radius 0 0;
+    content: '';
+    height: 3px;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid $border-color;
+    margin: 0 0 15px;
+    opacity: 0.5;
+  }
+
+  h4 {
+    color: $text-color;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 15px;
+  }
+
+  .customer-details-content {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, 1fr);  // Fixed 2-column layout on desktop
+    
+    @media screen and (min-width: #{$breakpoint-lg}) {
+      grid-template-columns: repeat(4, 1fr);  // 4 columns on larger screens
+    }
+    
+    p {
+      background-color: $bg-color;
+      border: 1px solid color.adjust($border-color, $lightness: + 5%);
+      border-radius: $border-radius-sm;
+      color: $text-color;
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 0;
+      padding: 10px 15px;
+      transition: all $transition-base;
+
+      &:hover {
+        background-color: color.adjust($bg-color, $lightness: -2%);
+        border-color: $primary-color;
+      }
+
+      strong {
+        color: $text-color;
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+      }
+    }
+  }
+}
+
+/* Customer details form section */
+
+.customer-details-section {
+  background-color: color.adjust($bg-light, $lightness: + 3%);
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  margin: 20px 0;
+  padding: 20px;
+  position: relative;
+  transition: all $transition-base;
+
+  &::after {
+    background: $primary-color;
+    border-radius: 50%;
+    color: white;
+    content: '\f348'; // Dashicons info icon
+    font-family: dashicons;
+    font-size: 14px;
+    font-weight: normal;
+    height: 20px;
+    line-height: 20px;
+    position: absolute;
+    right: 20px;
+    text-align: center;
+    top: 20px;
+    width: 20px;
+  }
+
+  h4 {
+    color: $text-color;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 15px;
+  }
+
+  .form-group {
+    margin-bottom: 0;
+
+    label {
+      color: $text-color;
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"] {
+      background-color: $bg-color;
+      border: 1px solid $border-color;
+      border-radius: $border-radius-sm;
+      font-size: 14px;
+      padding: 10px 15px;
+      transition: all $transition-base;
+      width: 100%;
+
+      &:focus {
+        background-color: $bg-color;
+        border-color: $primary-color;
+        box-shadow: 0 0 0 3px color.adjust($primary-color, $alpha: -0.9);
+        outline: none;
+      }
+
+      &::placeholder {
+        color: color.adjust($text-color, $lightness: + 30%);
+        font-style: italic;
+      }
+    }
+  }
+
+  /* Animated entry */
+  
+  @keyframes slide-in {
+    
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &:not([style*="display: none"]) {
+    animation: slide-in 0.3s ease-out;
+  }
+}
+
+/* Hide customer details section when postcode already exists */
+
+#new-estimate-form {
+  &[data-has-postcode="true"] {
+    .customer-details-section {
+      display: none;
+    }
+  }
+}
+
+/* Success animation for saved details */
+
+.customer-details-display.success {
+  animation: success-pulse 0.6s ease-out;
+}
+
+
+@keyframes success-pulse {
+  0% {
+    box-shadow: $shadow-sm;
+  }
+  50% {
+    box-shadow: 0 0 0 10px color.adjust($primary-color, $alpha: -0.9);
+  }
+  100% {
+    box-shadow: $shadow-sm;
+  }
+}
+
+/* Tooltip styling for info icon */
+
+.customer-details-section:hover::after {
+  background-color: color.adjust($primary-color, $lightness: -10%);
+  cursor: help;
+  transform: scale(1.1);
+  transition: all $transition-base;
+}
+
+/* Transition state when switching between forms */
+
+.customer-details-display,
+.customer-details-section {
+  &.transitioning {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+/* Enhanced form field styling */
+
+#new-estimate-form .form-group {
+  position: relative;
+  
+  &.has-error {
+    input[type="text"] {
+      border-color: $error-color;
+      
+      &:focus {
+        box-shadow: 0 0 0 3px color.adjust($error-color, $alpha: -0.9);
+      }
+    }
+  }
+  
+  .field-helper {
+    color: color.adjust($text-color, $lightness: + 20%);
+    font-size: 12px;
+    margin-top: 5px;
+  }
+}
+
+#new-estimate-form .customer-details-section .form-group:last-child {
+  margin-bottom: 0;
 }

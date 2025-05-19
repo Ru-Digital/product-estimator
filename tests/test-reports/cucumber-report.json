@@ -1,0 +1,131 @@
+[
+  {
+    "description": "  As a customer using the Product Estimator\n  I want to create and review estimates\n  So that I can group rooms and products under a single quote",
+    "elements": [
+      {
+        "description": "",
+        "id": "estimate-management;validate-postcode-on-estimate-creation",
+        "keyword": "Scenario",
+        "line": 16,
+        "name": "Validate postcode on estimate creation",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 757632791
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 17,
+            "name": "no estimates exist in local storage or the PHP session",
+            "match": {
+              "location": "e2e/step-definitions/frontend/estimate-creation.steps.js:7"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 19455869541
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "When ",
+            "line": 18,
+            "name": "I open the site header and click the \"Estimate\" link",
+            "match": {
+              "location": "e2e/step-definitions/frontend/estimate-creation.steps.js:109"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3092856334
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 19,
+            "name": "I enter \"Kitchen Reno\" as the estimate name",
+            "match": {
+              "location": "e2e/step-definitions/frontend/estimate-creation.steps.js:302"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 4251447124
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 20,
+            "name": "I enter \"\" as the postcode",
+            "match": {
+              "location": "e2e/step-definitions/frontend/estimate-creation.steps.js:434"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5016541
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 21,
+            "name": "I press the estimate \"Create Estimate\" button",
+            "match": {
+              "location": "e2e/step-definitions/frontend/estimate-creation.steps.js:694"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 3014250749
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Then ",
+            "line": 22,
+            "name": "a validation message \"Please fill out this field\" should appear for \"postcode\"",
+            "match": {
+              "location": "e2e/step-definitions/frontend/estimate-creation.steps.js:985"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 5424458
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "And ",
+            "line": 23,
+            "name": "no estimate should be stored in local storage",
+            "match": {
+              "location": "e2e/step-definitions/frontend/estimate-creation.steps.js:1136"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 2006537292
+            }
+          },
+          {
+            "keyword": "After",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1112974542
+            }
+          }
+        ],
+        "tags": [],
+        "type": "scenario"
+      }
+    ],
+    "id": "estimate-management",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "Estimate management",
+    "tags": [],
+    "uri": "e2e/features/frontend/estimate-creation.feature"
+  }
+]

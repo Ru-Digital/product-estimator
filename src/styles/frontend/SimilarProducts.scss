@@ -4,7 +4,6 @@
  */
 
 @use 'sass:color';
-
 @use 'variables' as *;
 
 /* Container styling */
@@ -15,24 +14,19 @@
   margin-top: 20px;
   max-width: 100%;
   overflow: visible; /* Changed from hidden to allow nav buttons to show */
-  padding-top: 15px;
   position: relative;
 
   /* border-top: 1px dashed #e5e5e5; */
   width: 100%;
-  
-  /* When inside a product item, use different border styling */
 
-  .product-item & {
-    /* border-top: 1px dashed #ffcca3; */
-    align-self: flex-start;
-    flex-shrink: 0;
-    margin-left: 0;
-    margin-right: 0;
-    padding-left: 0;
-    padding-right: 0;
+  /* Legacy product item styling - no longer needed since similar products are only in room items */
+
+  /* When inside a room item, use different styling */
+
+  .room-item & {
+    margin-bottom: 20px;
   }
-  
+
   /* Visual cues for similar products */
 
   h5 {
@@ -40,31 +34,39 @@
     &::before {
       background-color: #ff6b00;
     }
-    
+
     &::after {
       content: "↺";
     }
   }
 }
 
-/* Product item and wrapper structure */
+/* Section header styling - match additional products exactly */
 
-.product-item {
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  max-width: 100%;
-  overflow: hidden;
-  position: relative;
-  width: 100%;
+.similar-products-section-header {
+
+  margin-bottom: 20px;
+
+  .similar-products-section-title {
+    color: $primary-color;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 12px;
+  }
+
+  .similar-products-section-description {
+    color: $text-color;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+  }
 }
 
-.product-wrapper {
-  flex-shrink: 0;
-  max-width: 100%;
-  overflow: hidden;
-  width: 100%;
-}
+/* Container styling */
+
+/* Product item structure - legacy, no longer handles similar products */
+
+/* Similar products are now only displayed at the room level */
 
 /* Carousel container */
 
@@ -72,62 +74,70 @@
   box-sizing: border-box;
   margin-bottom: 0;
   max-width: 100%;
-  overflow: visible; /* Changed to allow buttons to be visible */
-  padding: 0 30px; /* Increased padding to make room for buttons */
+  overflow: hidden; /* Hide overflow for infinite scroll */
+  padding: 0 35px; /* Make room for navigation buttons */
   position: relative;
   width: 100%;
-  
-  /* Make sure carousel container has proper width */
 
-  .product-item & {
-    display: block;
-    max-width: 100%;
-    width: 100%;
-  }
-  
+  /* Legacy product-item carousel styling - no longer needed */
+
   /* Navigation arrows */
 
   .suggestions-nav {
     align-items: center;
-    background: rgb(255, 255, 255, 0.9);
+    background: rgb(255, 255, 255, 0.95);
     border: 1px solid $border-color-dark;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
-    height: 24px; /* Increased size for better visibility */
+    height: 30px; /* Increased size for better visibility */
     justify-content: center;
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 24px; /* Increased size for better visibility */
-    z-index: 10; /* Increased z-index to ensure visibility */
-    
+    transition: all 0.2s ease;
+    width: 30px; /* Increased size for better visibility */
+    z-index: 20; /* Increased z-index to ensure visibility */
+
+    &:hover {
+      background: white;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
     &.prev {
-      left: 3px;
+      left: 2px;
     }
-    
+
     &.next {
-      right: 3px;
+      right: 2px;
     }
-    
+
+    &.disabled {
+      cursor: not-allowed;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
     .dashicons {
       align-items: center;
       display: flex;
       font-size: 20px;
       justify-content: center;
+      line-height: 1;
     }
   }
-  
+
   /* Suggestions container */
 
   .suggestions-container {
     box-sizing: border-box;
     display: flex;
     gap: 5px;
-    margin: 0 auto;
-    max-width: 100%;
+    margin: 0;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
   }
-  
+
   /* Suggestion items */
 
   .suggestion-item {
@@ -136,25 +146,34 @@
     padding: 8px;
     width: 170px;
   }
-  
+
   .suggestion-image {
     height: 80px;
   }
-  
+
   .suggestion-name {
     font-size: 12px;
     line-height: 1.2;
     max-height: 2.4em;
     overflow: hidden;
   }
-  
+
   .suggestion-price {
     font-size: 12px;
   }
-  
+
   .add-suggestion-to-room {
     font-size: 11px;
     padding: 4px 8px;
+  }
+  
+  /* Clone items for infinite scroll */
+  .suggestion-item.duplicated {
+    // Clones should look exactly like regular items
+    
+    &.fade-in {
+      transition: opacity 0.3s ease;
+    }
   }
 }
 
@@ -164,6 +183,17 @@
   color: $text-light;
   font-size: 0.8em;
   margin-left: 2px;
+}
+
+/* Animation for loading dots */
+
+@keyframes loading-dots {
+
+  0% { content: "."; }
+
+  33% { content: ".."; }
+
+  66% { content: "..."; }
 }
 
 /* Replace button */
@@ -180,13 +210,64 @@ button.replace-product-in-room {
   text-transform: uppercase;
   transition: $transition-base;
   width: 100%;
-  
+
   &:hover {
     background-color: $primary-color;
   }
-  
+
   &.loading {
     cursor: not-allowed;
     opacity: 0.7;
+  }
+}
+
+/* Toggle button in room context - matching Product Includes styles */
+
+.room-item .similar-products-toggle {
+  align-items: center;
+  background-color: $bg-lighter;
+  border: none;
+  border-top: 1px dashed $border-color;
+  color: $text-light;
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 8px 0;
+  transition: $transition-base;
+  width: 100%;
+
+  &:hover {
+    background-color: color.adjust($bg-lighter, $lightness: -5%);
+  }
+
+  .toggle-icon {
+    margin-left: 5px;
+    transition: transform 0.3s ease;
+  }
+
+  &.expanded .toggle-icon {
+    /* transform: rotate(180deg); */
+  }
+
+  &.loading {
+    opacity: 0.7;
+    pointer-events: none;
+
+    &::after {
+      animation: loading-dots 1.5s infinite;
+      content: "...";
+    }
+  }
+}
+
+/* Mobile responsiveness - matching Product Includes styles */
+
+@media screen and (max-width: $breakpoint-md) {
+
+  .room-item .similar-products-toggle {
+    font-size: 11px;
+    padding: 6px 0;
   }
 }

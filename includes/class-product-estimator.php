@@ -127,10 +127,6 @@ class ProductEstimator {
         add_action('init', array($this, 'initialize'), 20);
 
         $this->load_templates();
-
-
-        // Move footer content to the wp_footer hook
-        add_action('wp_footer', array($this, 'addModalToFooter'), 30);
     }
 
     private function initialize_feature_switches_and_set_global() { // Or your chosen method name
@@ -339,17 +335,6 @@ class ProductEstimator {
         add_action('wp', array($this, 'setupConditionalFeatures'));
     }
 
-    /**
-     * Add the modal HTML to the footer
-     */
-    public function addModalToFooter() {
-        global $product_estimator_labels_frontend;
-        $product_estimator_labels_frontend = $this->labels_frontend;
-
-        // Always add the modal to the footer on all pages
-//        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal.php';
-        include_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-modal-template.php';
-    }
 
     /**
      * Check if plugin shortcode is present on current page

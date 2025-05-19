@@ -7,7 +7,6 @@
  */
 
 use RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration;
-use RuDigital\ProductEstimator\Includes\SessionHandler;
 
 if (!defined('ABSPATH')) {
     exit;
@@ -936,30 +935,14 @@ function product_estimator_pdf_button($estimate_id, $text = '', $type = 'button'
 /**
  * Check if an estimate has been stored in the database
  *
- * @param mixed $estimate_id The session estimate ID or estimate array
+ * @param mixed $estimate_id The estimate array or database ID
  * @return int|false The database ID if stored, false otherwise
  */
 function product_estimator_get_db_id($estimate_id)
 {
-    // If we have the EstimateDbHandler trait directly available in this scope
-    if (function_exists('getEstimateDbId')) {
-        return getEstimateDbId($estimate_id);
-    }
-
-    // Otherwise use the session to check
-    $session = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
-
-    // If we got an ID, get the estimate from session
-    if (is_string($estimate_id) || is_numeric($estimate_id)) {
-        $estimate = $session->getEstimate($estimate_id);
-
-        // If not found in session, return false
-        if (!$estimate) {
-            return false;
-        }
-
-        // Return the db_id if set
-        return isset($estimate['db_id']) ? (int)$estimate['db_id'] : false;
+    // If we got a numeric ID directly, return it
+    if (is_numeric($estimate_id)) {
+        return (int)$estimate_id;
     }
 
     // If we got an estimate array directly
@@ -971,37 +954,17 @@ function product_estimator_get_db_id($estimate_id)
 }
 
 /**
- * Get customer email from estimate data or session.
+ * Get customer email from estimate data.
  *
- * Prioritizes email within the specific estimate data, then falls back
- * to the globally stored customer details in the session.
- *
- * @param array|null $estimate The estimate data array (optional).
- * @param string|int|null $session_estimate_id The session estimate ID (used if $estimate is null to fetch from session).
+ * @param array|null $estimate The estimate data array.
  * @return string The customer email or empty string if not found.
  */
-function product_estimator_get_customer_email(?array $estimate = null, $session_estimate_id = null): string {
+function product_estimator_get_customer_email(?array $estimate = null): string {
     $customer_email = '';
-    $session = SessionHandler::getInstance(); // Get session handler instance
 
-    // 1. Check provided estimate data first
+    // Check provided estimate data
     if ($estimate !== null && isset($estimate['customer_details']['email']) && !empty($estimate['customer_details']['email'])) {
         $customer_email = sanitize_email($estimate['customer_details']['email']);
-    }
-    // 2. If not found in provided data OR data wasn't provided, try fetching estimate from session
-    elseif ($session_estimate_id !== null) {
-        $session_estimate = $session->getEstimate($session_estimate_id); // Fetches via SessionHandler
-        if ($session_estimate && isset($session_estimate['customer_details']['email']) && !empty($session_estimate['customer_details']['email'])) {
-            $customer_email = sanitize_email($session_estimate['customer_details']['email']);
-        }
-    }
-
-    // 3. If still not found, check the global customer details stored in session
-    if (empty($customer_email)) {
-        $global_customer_details = $session->getCustomerDetails(); // Uses SessionHandler method
-        if ($global_customer_details && isset($global_customer_details['email']) && !empty($global_customer_details['email'])) {
-            $customer_email = sanitize_email($global_customer_details['email']);
-        }
     }
 
     return $customer_email;

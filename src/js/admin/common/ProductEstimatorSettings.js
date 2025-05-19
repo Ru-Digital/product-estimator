@@ -136,7 +136,6 @@ class ProductEstimatorSettings {
     window.notificationSettings = window.notificationSettings || { tab_id: 'notifications', i18n: {} };
     window.pricingRulesSettings = window.pricingRulesSettings || { tab_id: 'pricing_rules', i18n: {} };
     window.productAdditionsSettings = window.productAdditionsSettings || { tab_id: 'product_additions', i18n: {} };
-    window.productUpgradesSettings = window.productUpgradesSettings || { tab_id: 'product_upgrades', i18n: {} };
     window.similarProductsSettings = window.similarProductsSettings || { tab_id: 'similar_products', i18n: {} };
     window.labelSettings = window.labelSettings || { tab_id: 'labels', i18n: {} };
 
@@ -176,7 +175,13 @@ class ProductEstimatorSettings {
    * Bind event handlers for the main Settings Manager (orchestrator).
    */
   bindMainEvents() {
+    // Prevent default link behavior and handle tab switching via JS
     this.$('.nav-tab-wrapper').on('click', '.nav-tab', this.handleTabClick.bind(this));
+    
+    // Also prevent default on link elements themselves
+    this.$('.nav-tab-wrapper a.nav-tab').on('click', function(e) {
+      e.preventDefault();
+    });
 
     this.$(document).on('submit', 'form.product-estimator-form', (e) => {
       const $form = this.$(e.currentTarget);
@@ -487,6 +492,28 @@ class ProductEstimatorSettings {
   }
 
   /**
+   * Create a template renderer function for Select2 dropdown options
+   * that applies a hover-like style to selected items
+   * @returns {Function} Template renderer function for Select2
+   */
+  createSelect2TemplateRenderer() {
+    return (data) => {
+      // Skip custom formatting for the search field
+      if (data.loading || !data.id) {
+        return data.text;
+      }
+      
+      // Determine if this option is selected in the dropdown
+      // This works for both single and multiple select
+      if (data.element && data.element.selected) {
+        return this.$(`<span style="color: #fff; background-color: #2271b1; padding: 3px 6px; border-radius: 3px; display: block;">${data.text}</span>`);
+      }
+
+      return data.text;
+    };
+  }
+
+  /**
    * Initializes multiple Select2 dropdowns in batch
    * @param {object} options - Configuration options
    * @param {Array} options.elements - Array of elements to initialize
@@ -517,7 +544,14 @@ class ProductEstimatorSettings {
         }
 
         const placeholder = (i18n[el.placeholderKey] || el.fallbackText || `Select ${el.name}`);
-        this.initSelect2(el.element, placeholder, el.config || {});
+        
+        // Apply consistent styling for selected items in dropdown
+        const config = el.config || {};
+        if (!config.templateResult) {
+          config.templateResult = this.createSelect2TemplateRenderer();
+        }
+        
+        this.initSelect2(el.element, placeholder, config);
       });
 
     }, delay);
@@ -547,13 +581,11 @@ class ProductEstimatorSettings {
   }
 }
 
-// Initialize the main orchestrator when document is ready
+// Initialize the main orchestrator immediately
 // This ensures ProductEstimatorSettings is available globally if needed by modules
 // before they might be instantiated.
-jQuery(document).ready(function() {
-  if (!window.ProductEstimatorSettingsInstance) { // Ensure single instance of orchestrator
-    window.ProductEstimatorSettingsInstance = new ProductEstimatorSettings();
-  }
-});
+if (!window.ProductEstimatorSettingsInstance) { // Ensure single instance of orchestrator
+  window.ProductEstimatorSettingsInstance = new ProductEstimatorSettings();
+}
 
 export default ProductEstimatorSettings;

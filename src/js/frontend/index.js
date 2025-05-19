@@ -9,8 +9,8 @@ import { createLogger } from '@utils';
 
 import EstimatorCore from './EstimatorCore';
 import ConfirmationDialog from './ConfirmationDialog';
-import { initSuggestionsCarousels } from './SuggestionsCarousel';
-import PrintEstimate from './PrintEstimate';
+// import { initSuggestionsCarousels } from './SuggestionsCarousel'; // Replaced with InfiniteCarousel in UIManager
+// EstimateActions import removed - will be handled by ModalManager
 import { initializeTemplates } from './template-loader';
 import detailsToggleInstance from './ProductDetailsToggle';
 
@@ -116,26 +116,14 @@ function initEstimator(debugMode) {
     window.productEstimator = window.productEstimator || {};
     window.productEstimator.initialized = true;
     window.productEstimator.core = EstimatorCore; // EstimatorCore instance is stored here
-    window.productEstimator.dialog = new ConfirmationDialog(); // <--- ADD 'new' HERE
+    window.productEstimator.dialog = new ConfirmationDialog(); // Initialize dialog
 
-    // Initialize PrintEstimate and make it available globally
-    // Get the dataService instance from the initialized EstimatorCore
-    const dataServiceInstance = window.productEstimator.core.dataService;
-
-    if (!dataServiceInstance) {
-      logger.error("[DataService] instance not found on EstimatorCore. Cannot initialize PrintEstimate.");
-      // Optionally return or handle this error case
-      return;
-    }
-
-    // Pass the dataService instance to the PrintEstimate constructor
-    window.productEstimator.printEstimate =  new PrintEstimate({ debug: debugMode }, dataServiceInstance);
+    // EstimateActions will be initialized by ModalManager to ensure proper access to confirmationDialog
 
     // Make ProductDetailsToggle available globally
     window.productEstimator.detailsToggle = detailsToggleInstance; // Add toggle module to global object
 
-    // Make initSuggestionsCarousels available globally for the toggle functionality
-    window.initSuggestionsCarousels = initSuggestionsCarousels;
+    // Removed: initSuggestionsCarousels is replaced with InfiniteCarousel initialization in UIManager
 
     // Initialize toggle functionality explicitly
     initializeProductDetailsToggle();
@@ -165,10 +153,7 @@ function initializeProductDetailsToggle() {
             detailsToggleInstance.setup();
           }
 
-          // Also initialize carousels
-          if (typeof initSuggestionsCarousels === 'function') {
-            initSuggestionsCarousels();
-          }
+          // Carousel initialization is now handled by UIManager with InfiniteCarousel
         }, 300);
       }
     });
@@ -209,10 +194,7 @@ function initializeProductDetailsToggle() {
             icon.classList.add('dashicons-arrow-up-alt2');
           }
 
-          // Initialize carousels when shown
-          if (typeof initSuggestionsCarousels === 'function') {
-            initSuggestionsCarousels();
-          }
+          // Carousel initialization handled by UIManager/RoomManager with InfiniteCarousel
         }
 
         e.preventDefault();
@@ -331,10 +313,7 @@ function initializeProductDetailsToggle() {
             icon.classList.add('dashicons-arrow-up-alt2');
           }
 
-          // Initialize carousels when shown
-          if (typeof initSuggestionsCarousels === 'function') {
-            initSuggestionsCarousels();
-          }
+          // Carousel initialization handled by UIManager/RoomManager with InfiniteCarousel
         }
 
         e.preventDefault();

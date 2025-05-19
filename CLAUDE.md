@@ -2,9 +2,99 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ HIGHEST PRIORITY TASK ⚠️
+
+**IMPORTANT: Continue implementing the modal restructuring plan as outlined in `ModalManager-Restructuring-Plan.md`. This is the highest priority task for the project.**
+
+The modal system is being refactored to use proper HTML templates via the TemplateEngine instead of hardcoded HTML strings. Always use the TemplateEngine.insert() method with the appropriate templates when rendering UI components.
+
 ## Project Overview
 
 This repository contains the Product Estimator plugin for WordPress/WooCommerce - a tool that allows customers to create product estimates. The plugin provides an interface for users to select products, add them to rooms in an estimate, and save/share the estimate.
+
+## ID Management Architecture
+
+The Product Estimator uses a UUID-based ID system for consistency across client storage, server sessions, and database persistence:
+
+### UUID Architecture
+
+- **UUID Generation**: Uses the `uuid` NPM package to generate RFC4122 version 4 UUIDs
+- **Consistent Identifiers**: Same UUID used throughout the entire lifecycle of an entity
+- **ID Format**: `entity_type_uuid` (e.g., `estimate_123e4567-e89b-12d3-a456-426614174000`)
+- **Benefits**: 
+  - No ID translation/mapping between client and server
+  - IDs can be generated client-side with guaranteed uniqueness
+  - Enhanced security (non-sequential, non-predictable)
+  - Support for offline functionality and later synchronization
+
+### ID Types and Usages
+
+- **Estimates**: Uses UUIDs prefixed with `estimate_` 
+  - Generated in EstimateStorage.js when creating new estimates
+  - Same ID persists from initial creation through database storage
+  
+- **Rooms**: Uses UUIDs prefixed with `room_`
+  - Generated in EstimateStorage.js when creating new rooms
+  - Consistent identifier across client-server communication
+
+- **Products**: Uses database integer IDs directly
+  - Product IDs come from WooCommerce/database and are preserved as-is
+  - No UUID transformation for products to maintain database referential integrity
+  - Product IDs are used as keys in object-based storage (see below)
+
+### Product Storage Architecture
+
+Products within rooms are stored using an object-based structure with product IDs as keys:
+
+- **Object-Based Storage**: `{ "6147": {...product data...}, "6148": {...product data...} }`
+- **Benefits**:
+  - O(1) lookup performance by product ID (vs. O(n) with array indices)
+  - Direct access to products without traversing arrays
+  - Avoids issues with array reindexing when removing products
+  - Simpler product removal logic using product IDs
+
+- **Legacy Array Format**: `[{id: 6147, ...}, {id: 6148, ...}]` 
+  - Supported for backward compatibility
+  - Convert to object structure on first modification
+  - Helper method `isSequentialArray()` to detect array format
+
+- **Implementation**:
+  - Both JavaScript and PHP implementations maintain object-based storage
+  - Conversion routines ensure consistent format during transition
+  - `SessionHandler.removeProductFromRoom()` supports both ID and index parameters
+
+### Client-Server ID Synchronization
+
+The client (JavaScript) is the source of truth for IDs:
+
+1. **UUID Generation**: UUIDs are always generated on the client-side in JavaScript.
+2. **Client to Server Flow**: 
+   - When creating an estimate/room in browser, a UUID is generated first
+   - This UUID is sent to the server via AJAX with `estimate_uuid` parameter
+   - Server requires this ID and uses it as the key in the PHP session data
+3. **Storage Consistency**:
+   - PHP `SessionHandler` class requires estimate data to include the `id` field
+   - Same ID is used as the array key and within the estimate data object
+   - This ensures consistent ID handling across client and server
+
+### Implementation Details
+
+- **ID Generation**: 
+  ```javascript
+  import { v4 as uuidv4 } from 'uuid';
+  
+  function generateUniqueId(prefix) {
+    const uuid = uuidv4();
+    return prefix ? `${prefix}_${uuid}` : uuid;
+  }
+  
+  // Example usage
+  const estimateId = generateUniqueId('estimate');
+  ```
+
+- **Storage Strategy**: IDs are generated once on creation and never change
+- **Database Storage**: Same UUIDs used as primary keys in database tables
+- **Client-Server Sync**: No translation mechanism needed; IDs are consistent
 
 ## Development Commands
 
@@ -75,6 +165,56 @@ The project uses Stylelint with the following important configurations:
   - Instead use `color.adjust()` function with alpha parameter: `color.adjust($color, $alpha: -0.8)`
 
 ## Project Structure
+
+### Template System
+
+The plugin uses a JavaScript-based template system for rendering UI components. Templates are defined as HTML files and processed by the TemplateEngine class.
+
+```
+TemplateEngine (src/js/frontend/TemplateEngine.js)
+├── Core template rendering engine
+├── Loads and registers HTML templates
+├── Provides methods to create DOM elements from templates
+├── Handles data binding and dynamic content population
+└── Manages modal creation and UI components
+
+Available Templates:
+1. Component Templates (src/templates/components/)
+   ├── product-item.html - Individual product in a room
+   ├── room-item.html - Room container with products
+   ├── estimate-item.html - Estimate in the list view
+   ├── include-item.html - Product inclusion item
+   ├── note-item.html - Product note display
+   ├── similar-item.html - Similar product suggestion
+   ├── suggestion-item.html - Product suggestion
+   └── product-upgrade-item.html - Product upgrade option
+
+2. Form Templates (src/templates/forms/)
+   ├── estimate-selection.html - Estimate selection interface
+   ├── new-estimate-form.html - Create new estimate form
+   ├── new-room-form.html - Add new room form
+   └── room-selection-form.html - Room selection interface
+
+3. UI Templates (src/templates/ui/)
+   ├── modal-container.html - Main modal container structure
+   ├── modal-messages.html - Message display in modal
+   ├── estimates-empty.html - Empty state for estimates
+   ├── rooms-empty.html - Empty state for rooms
+   └── products-empty.html - Empty state for products
+```
+
+Template Usage Flow:
+1. Templates are loaded by template-loader.js during initialization
+2. TemplateEngine registers templates with their IDs
+3. Manager classes request templates when needed using:
+   - `TemplateEngine.create(templateId, data)` - Creates populated fragment
+   - `TemplateEngine.insert(templateId, data, container)` - Creates and inserts into DOM
+
+Template Data Binding:
+- Templates use class names as data binding targets
+- Data properties are mapped to elements with matching class names
+- Special handling for images, inputs, and nested components
+- Supports dynamic content like product lists, notes, and inclusions
 
 ### PHP Files and Classes
 
@@ -158,12 +298,21 @@ Frontend Components (src/js/frontend/)
 ├── DataService.js - Data operations
 ├── EstimateStorage.js - Estimate data storage
 ├── EstimatorCore.js - Core estimator functionality
-├── ModalManager.js - Modal dialog management
-├── PrintEstimate.js - Estimate printing
+├── EstimateActions.js - Estimate actions (PDF, email, printing)
 ├── ProductDetailsToggle.js - Product details UI
 ├── ProductUpgrades.js - Product upgrades UI
 ├── SuggestionsCarousel.js - Product suggestions carousel
-└── TemplateEngine.js - HTML template rendering
+├── TemplateEngine.js - HTML template rendering
+├── template-loader.js - Template initialization system
+└── ModalManagerOLD.js - Deprecated modal manager implementation
+
+Frontend Managers (src/js/frontend/managers/)
+├── ModalManager.js - Modal management and coordination
+├── EstimateManager.js - Estimate operations
+├── RoomManager.js - Room creation and management
+├── ProductManager.js - Product handling
+├── FormManager.js - Form processing and validation
+└── UIManager.js - UI components and carousels
 
 Admin Components (src/js/admin/)
 ├── CustomerEstimatesAdmin.js - Customer estimates admin
@@ -243,7 +392,256 @@ Frontend Styles (src/styles/frontend/)
    - Order: builtin → external → internal → parent → sibling → index
 5. Ensure JSDoc blocks are properly aligned
 6. Use path aliases for cleaner imports
-7. Always run `npm run lint:fix` before submitting code changes
+7. Always run `npm run lint:fix` before submitting code changes 
+
+## Critical Template Guidelines
+
+1. **NEVER CREATE DOM ELEMENTS DIRECTLY IN JAVASCRIPT**
+   - This is a strict rule with no exceptions
+   - All HTML must come from template files
+   - Fix template files if elements are missing, don't create elements on the fly
+   - If you need UI elements, add them to the appropriate template file
+
+2. Use the template system for rendering all UI components
+   - Every UI component must have a corresponding HTML template file
+   - Templates should be in `/src/templates/` directory
+   - Use TemplateEngine to load and render templates
+
+3. **ALWAYS USE THE CONFIRMATIONDIALOG COMPONENT FOR DIALOGS**
+   - Never create custom dialog implementations
+   - Use `modalManager.confirmationDialog.show()` for all confirmation dialogs
+   - The `ConfirmationDialog` component (src/js/frontend/ConfirmationDialog.js) 
+     should be used for all confirmation, alert, and notification dialogs
+   - This ensures UI consistency and simplifies future updates to dialog styling
+   - The ConfirmationDialog component uses CSS classes for styling and visibility
+   - Avoid adding inline styles to dialog elements
+
+4. Focus on proper initialization timing with the WordPress lifecycle
+   - Use event listeners and callbacks rather than direct DOM creation
+   - Ensure templates are loaded before accessing elements
+
+5. Template integrity is more important than quick fixes
+   - If a template is missing an element, fix the template file
+   - Don't use fallback DOM creation even if it seems easier
+
+6. **ALWAYS REGISTER NEW TEMPLATES IN TEMPLATE-LOADER.JS**
+   - Every new template file MUST be registered in `src/js/frontend/template-loader.js`
+   - This requires two steps:
+     1. Import the template file at the top of template-loader.js
+        ```javascript
+        import myNewTemplate from '@templates/path/to/my-template.html';
+        ```
+     2. Add the template to the templates map with its ID
+        ```javascript
+        const templates = {
+          // existing templates...
+          'my-template-id': myNewTemplate
+        };
+        ```
+   - Failing to register a template will cause runtime errors when TemplateEngine attempts to use it
+   - Template IDs in the templates map MUST match the HTML template's ID attribute
+   - Error symptoms: "Template element not found for ID: X" indicates a missing template registration
+
+11. Use the Manager pattern for separating concerns
+12. Create templates in HTML files rather than in PHP files or directly in JavaScript
+
+## Standardized Dialog Usage
+
+This project uses a standardized approach to dialogs through the `ConfirmationDialog` component. This ensures consistent UI and behavior for all confirmation interactions throughout the application.
+
+### Accessing the Dialog Component
+
+The `ConfirmationDialog` component is initialized in the `ModalManager` constructor and is accessible in two ways:
+
+1. **Through the ModalManager (preferred method)**:
+   ```javascript
+   this.modalManager.confirmationDialog.show({
+     // dialog options
+   });
+   ```
+
+2. **Through global window object (for backward compatibility only)**:
+   ```javascript
+   window.productEstimator.dialog.show({
+     // dialog options
+   });
+   ```
+
+### Using the Dialog Component
+
+Always use the standardized `show()` method with an options object:
+
+```javascript
+modalManager.confirmationDialog.show({
+  title: 'Action Confirmation',              // Dialog title
+  message: 'Are you sure you want to proceed?', // Dialog message
+  confirmText: 'Confirm',                    // Text for confirm button
+  cancelText: 'Cancel',                      // Text for cancel button (set to false to hide)
+  type: 'product',                           // Optional: Context type ('product', 'room', 'estimate')
+  action: 'delete',                          // Optional: Action being performed ('delete', 'add', etc.)
+  onConfirm: () => {                         // Callback function when confirmed
+    // Confirmation logic
+  },
+  onCancel: () => {                          // Callback function when cancelled
+    // Cancellation logic
+  }
+});
+```
+
+### Simplified API for Simple Confirmations
+
+For simple confirmation dialogs, you can use the convenience `confirm()` method:
+
+```javascript
+modalManager.confirmationDialog.confirm(
+  'Action Confirmation',                     // Dialog title
+  'Are you sure you want to proceed?',       // Dialog message
+  () => {                                    // Callback function when confirmed
+    // Confirmation logic
+  },
+  () => {                                    // Callback function when cancelled
+    // Cancellation logic
+  }
+);
+```
+
+### Best Practices
+
+1. Always use the `modalManager.confirmationDialog` instead of creating your own dialog implementation
+2. Provide clear, specific titles and messages that explain the action and its consequences
+3. Use the `type` and `action` properties to provide context for the dialog
+4. Include appropriate callbacks for both confirmation and cancellation paths
+5. Always include a fallback to native `confirm()` for cases where the dialog component isn't available
+6. Follow this structure for fallbacks:
+
+```javascript
+if (this.modalManager && this.modalManager.confirmationDialog) {
+  this.modalManager.confirmationDialog.show({
+    // dialog options
+  });
+} else {
+  // Fallback to native confirm
+  if (confirm('Are you sure you want to proceed?')) {
+    // Confirmation logic
+  }
+}
+```
+
+## ConfirmationDialog Implementation
+
+The `ConfirmationDialog` component (in `src/js/frontend/ConfirmationDialog.js`) provides a standardized dialog system for the application. It follows these key design principles:
+
+### Architecture
+
+1. **Template-Based**: Uses the HTML template in `src/templates/ui/confirmation-dialog.html` loaded by the TemplateEngine
+2. **CSS-Driven Styling**: Relies on CSS classes for styling and visibility rather than inline styles
+3. **Lazy Initialization**: Creates dialog elements only when needed (on first show() call)
+4. **Proper Event Handling**: Manages its own event listeners with proper cleanup
+
+### Dialog Visibility Control
+
+The dialog uses CSS classes rather than inline styles for showing and hiding:
+
+```scss
+// In Dialog.scss
+.pe-dialog-backdrop {
+  display: none;
+  
+  &.visible {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+  }
+}
+
+.pe-confirmation-dialog {
+  display: none;
+  
+  &.visible {
+    display: block;
+  }
+}
+```
+
+Showing and hiding is managed by adding/removing the `.visible` class:
+
+```javascript
+// Show dialog
+backdropElement.classList.add('visible');
+dialog.classList.add('visible');
+
+// Hide dialog
+backdropElement.classList.remove('visible');
+dialog.classList.remove('visible');
+```
+
+### Usage
+
+The dialog component is accessible through the `ModalManager`:
+
+```javascript
+modalManager.confirmationDialog.show({
+  title: 'Action Confirmation',              // Dialog title
+  message: 'Are you sure you want to proceed?', // Dialog message
+  confirmText: 'Confirm',                    // Text for confirm button
+  cancelText: 'Cancel',                      // Text for cancel button (set to false to hide)
+  type: 'product',                           // Optional: Context type ('product', 'room', 'estimate')
+  action: 'delete',                          // Optional: Action being performed ('delete', 'add', etc.)
+  showCancel: true,                          // Optional: Whether to show cancel button
+  onConfirm: () => {                         // Callback function when confirmed
+    // Confirmation logic
+  },
+  onCancel: () => {                          // Callback function when cancelled
+    // Cancellation logic
+  }
+});
+```
+
+### Available CSS Modifier Classes
+
+The dialog supports the following CSS modifier classes:
+
+```scss
+// For delete confirmations
+.pe-dialog-action-delete {
+  .pe-dialog-title {
+    color: $error-color;
+  }
+  
+  .pe-dialog-confirm {
+    @include button-danger;
+  }
+}
+
+// For full-width confirm button (when cancel is hidden)
+.pe-dialog-confirm.full-width {
+  width: 100%;
+}
+
+// For hiding cancel button
+.pe-dialog-cancel.hidden {
+  display: none;
+}
+```
+
+### Best Practices
+
+1. Always use the `modalManager.confirmationDialog` instead of creating your own dialog implementation
+2. Provide clear, specific titles and messages that explain the action and its consequences
+3. Use the `type` and `action` properties to provide context for the dialog
+4. For delete confirmations, use `action: 'delete'` to apply the danger styling
+5. For single-button dialogs, set `cancelText: false` to hide the cancel button
+6. Prefer CSS classes over inline styles for any dialog customizations
+
+## Legacy Code Reference
+
+The file `ModalManagerOLD.js` is kept as a reference of the original monolithic implementation before the manager pattern refactoring. Important notes:
+
+- This file is deprecated and should not be used in production code
+- Do not add new features to this file
+- Only use as a reference if stuck during the refactoring process
+- All new development should use the manager pattern and templates
+- The file contains over 4,000 lines of code that has been reorganized into specialized manager classes
 
 ## AJAX Handler Architecture
 

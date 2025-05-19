@@ -2,71 +2,165 @@
  * General Settings Module JavaScript
  *
  * Handles functionality specific to the general settings tab.
+ * Extends VerticalTabbedModule for common vertical tab and form handling.
  */
 import { setupTinyMCEHTMLPreservation } from '@utils/tinymce-preserver';
 import { createLogger } from '@utils';
 
-import ProductEstimatorSettings from '../common/ProductEstimatorSettings'; // Adjust path as needed
+import VerticalTabbedModule from '../common/VerticalTabbedModule';
 
 const logger = createLogger('GeneralSettingsModule');
 
-class GeneralSettingsModule extends ProductEstimatorSettings {
-  /**
-   * Initialize the module
-   */
+class GeneralSettingsModule extends VerticalTabbedModule {
   constructor() {
-    super({
-      isModule: true,
-      settingsObjectName: 'generalSettings', // Matches window.generalSettings
-      defaultTabId: 'general', // Corrected from 'genaral' if that was a typo
+    const config = {
+      mainTabId: 'general',
+      defaultSubTabId: 'settings',
+      ajaxActionPrefix: 'save_general',
+      localizedDataName: 'generalSettings'
+    };
+
+    super(config); // Calls AdminTableManager constructor
+
+
+    // DOM elements cache
+    this.dom = {};
+
+    this.$(document).on(`admin_table_manager_ready_${this.config.mainTabId}`, () => {
+      this.validateMarkup = this.validateMarkup.bind(this);
+      this.validateExpiryDays = this.validateExpiryDays.bind(this);
+      this.handleFileUpload = this.handleFileUpload.bind(this);
+      this.handleFileRemove = this.handleFileRemove.bind(this);
+      this.setupTinyMCEEditors = this.setupTinyMCEEditors.bind(this);
+      this.onSubTabActivated = this.onSubTabActivated.bind(this);
+      this.validateSelect2Field = this.validateSelect2Field.bind(this);
+      this._initializeSelect2 = this._initializeSelect2.bind(this);
+      this._cacheDOM = this._cacheDOM.bind(this);
     });
-    // this.$ and this.settings are initialized by super()
-
     // Bind methods that will be used as event handlers or callbacks
-    // This is done in constructor as they are instance-specific and need `this`
-    this.validateMarkup = this.validateMarkup.bind(this);
-    this.validateExpiryDays = this.validateExpiryDays.bind(this);
-    this.handleFileUpload = this.handleFileUpload.bind(this);
-    this.handleFileRemove = this.handleFileRemove.bind(this);
-    this.handleTabChanged = this.handleTabChanged.bind(this); // Ensure this is bound if used as event handler directly
-    // No need to bind showFieldError, clearFieldError as they are called as this.showFieldError()
+
   }
 
   /**
-   * Module-specific initialization.
+   * Bind module-specific events beyond what the parent class handles
    */
-  moduleInit() {
-    this.mediaFrame = null;
-    this.bindEvents();
-    this.setupValidation();
-    this.setupWpEditors(); // Must be called after tab is potentially visible or DOM ready for editors
+  bindModuleSpecificEvents() {
+    super.bindModuleSpecificEvents();
 
-    // Validate all fields on load if needed, or on tab activation
-    // this.validateAllFields(); // Consider if this is needed on init or tab change
-  }
+    // Only bind events if container exists
+    if (!this.$container || !this.$container.length) {
+      return;
+    }
 
-  /**
-   * Bind event handlers
-   */
-  bindEvents() {
-    this.$(document).on('product_estimator_tab_changed', this.handleTabChanged);
+    // Cache DOM elements
+    this._cacheDOM();
+
     this.$('.select-file-button').on('click', this.handleFileUpload);
     this.$('.remove-file-button').on('click', this.handleFileRemove);
 
-    // Form submission for this specific module's form can be handled here if necessary,
-    // or rely on the main ProductEstimatorSettings handler if the form structure matches.
-    // If this module has its own form with a specific ID/class, handle it here:
-    // this.$('#general-settings-form').on('submit', this.handleFormSubmit.bind(this));
+    // Add validation events
+    this.$('#default_markup').on('change input', this.validateMarkup);
+    this.$('#estimate_expiry_days').on('change input', this.validateExpiryDays);
+    this.$('#pdf_template').on('change', this.validateFileInput.bind(this, 'pdf_template'));
+
+    // Select2 field validation
+    if (this.dom.primaryProductCategories) {
+      this.dom.primaryProductCategories.on('change', () => this.validateSelect2Field('primary_product_categories'));
+    }
+
+    // Listen for sub-tab changes
+    this.$(document).on(`pe_sub_tab_changed_${this.settings.tab_id}`, (e, subTabId) => {
+      this.onSubTabActivated(subTabId);
+    });
+
+    // Initialize Select2 when ready
+    this._initializeSelect2();
   }
 
   /**
-   * Setup TinyMCE editors.
+   * Override for actions when the main "General" tab is activated.
    */
-  setupWpEditors() {
-    setupTinyMCEHTMLPreservation(
-      ['pdf_footer_text', 'pdf_footer_contact_details_content'],
-      '#general' // Assuming '#general' is the ID of the tab content
-    );
+  onMainTabActivated() {
+    super.onMainTabActivated();
+
+    // Setup the editors when the tab is activated
+    const activeSubTabId = this.getActiveSubTabId();
+    if (activeSubTabId) {
+      this.setupTinyMCEEditors(activeSubTabId);
+
+      // Reinitialize Select2 fields on the settings tab
+      if (activeSubTabId === 'settings') {
+        // Re-cache DOM elements since they might not have been available on initial load
+        this._cacheDOM();
+        // Refresh Select2 components if they're already initialized
+        if (this.dom.primaryProductCategories && this.dom.primaryProductCategories.hasClass("select2-hidden-accessible")) {
+          this.refreshSelect2(this.dom.primaryProductCategories);
+        }
+      }
+    }
+  }
+
+  /**
+   * Get the currently active sub-tab ID
+   */
+  getActiveSubTabId() {
+    if (!this.$container || !this.$container.length) {
+      return this.vtmConfig.defaultSubTabId;
+    }
+
+    const activeTabContent = this.$container.find('.vertical-tab-content.active, .pe-vtabs-tab-panel.active');
+    if (activeTabContent.length) {
+      return activeTabContent.data('tab-id') || activeTabContent.attr('id');
+    }
+
+    // Try to get from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSubTab = urlParams.get('sub_tab');
+    if (urlSubTab) {
+      return urlSubTab;
+    }
+
+    // Fallback to default
+    return this.vtmConfig.defaultSubTabId;
+  }
+
+  /**
+   * Called when sub-tab is changed - needs to setup TinyMCE and field validation
+   * @param subTabId
+   */
+  onSubTabActivated(subTabId) {
+    logger.log(`Sub-tab activated: ${subTabId}`);
+
+    // Setup TinyMCE for the active tab
+    this.setupTinyMCEEditors(subTabId);
+
+    // Reinitialize Select2 fields if we're on the settings tab
+    if (subTabId === 'settings') {
+      // Re-cache DOM elements since they might not have been available on initial load
+      this._cacheDOM();
+      this._initializeSelect2();
+    }
+  }
+
+  /**
+   * Initialize TinyMCE editors for the given sub-tab
+   * @param subTabId
+   */
+  setupTinyMCEEditors(subTabId) {
+    // Map sub-tab IDs to editor fields
+    const editorFields = {
+      'pdf-settings': ['pdf_footer_text', 'pdf_footer_contact_details_content'],
+      // Add other sub-tabs with their editor fields
+    };
+
+    // If this sub-tab has editors, initialize them
+    if (editorFields[subTabId]) {
+      logger.log(`Setting up TinyMCE editors for ${subTabId}: ${editorFields[subTabId].join(', ')}`);
+      setupTinyMCEHTMLPreservation(
+        editorFields[subTabId],
+        `#${this.settings.mainTabId} .vertical-tab-content[data-tab-id="${subTabId}"]`
+      );
+    }
   }
 
   handleFileUpload(e) {
@@ -164,11 +258,6 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
     this.$('.upload-instructions').remove();
   }
 
-  setupValidation() {
-    this.$('#default_markup').on('change input', this.validateMarkup);
-    this.$('#estimate_expiry_days').on('change input', this.validateExpiryDays);
-  }
-
   validateMarkup(e) {
     const $input = this.$(e.currentTarget);
     const value = parseInt($input.val(), 10);
@@ -177,7 +266,6 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
 
     // Use generalSettings.i18n if available, otherwise use this.settings.i18n
     const i18n = (window.generalSettings && window.generalSettings.i18n) || this.settings.i18n || {};
-
 
     if (isNaN(value) || value < min || value > max) {
       this.showFieldError($input, i18n.validationErrorMarkup || `Value must be between ${min} and ${max}.`);
@@ -203,11 +291,25 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
     return true;
   }
 
-  handleTabChanged(e, tabId) {
-    if (tabId === this.settings.tab_id) { // Use this.settings.tab_id from base class
-      this.setupWpEditors(); // Refresh editors when tab becomes active
+  /**
+   * Override validateAllFields to save editor content before validation
+   */
+  validateAllFields() {
+    this.saveEditorContent(); // Save editor content before validation
+
+    let isValid = super.validateAllFields();
+
+    // Also validate file inputs
+    if (!this.validateFileInput('pdf_template')) {
+      isValid = false;
     }
-    this.clearSubTabFromUrl(); // Common URL clearing
+
+    // Validate select2 fields
+    if (!this.validateSelect2Field('primary_product_categories')) {
+      isValid = false;
+    }
+
+    return isValid;
   }
 
   saveEditorContent() {
@@ -222,15 +324,104 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
     }
   }
 
-  validateAllFields() {
-    let isValid = true;
-    this.saveEditorContent(); // Save editor content before validation
+  /**
+   * Validate file input fields
+   * @param {string} fieldId - The ID of the file input field
+   */
+  validateFileInput(fieldId) {
+    const $input = this.$(`#${fieldId}`);
+    const value = $input.val();
+    const isRequired = $input.prop('required') || $input.data('required') === true;
 
-    // Trigger change event to run validation
-    if (!this.validateMarkup({ currentTarget: this.$('#default_markup')[0] })) isValid = false;
-    if (!this.validateExpiryDays({ currentTarget: this.$('#estimate_expiry_days')[0] })) isValid = false;
+    const i18n = (window.generalSettings && window.generalSettings.i18n) || this.settings.i18n || {};
 
-    return isValid;
+    if (isRequired && !value) {
+      this.showFieldError($input, i18n.validationErrorRequired || 'This field is required.');
+      return false;
+    }
+
+    this.clearFieldError($input);
+    return true;
+  }
+
+
+  /**
+   * Validate a Select2 field
+   * @param {string} fieldId - The ID of the select2 field
+   * @returns {boolean} Whether the field is valid
+   */
+  validateSelect2Field(fieldId) {
+    const $select = this.$(`#${fieldId}`);
+    if (!$select.length) {return true; }
+
+    const isRequired = $select.prop('required') || $select.data('required') === true;
+    const value = $select.val();
+    const isEmpty = !value || (Array.isArray(value) && value.length === 0);
+
+    if (isRequired && isEmpty) {
+      this.showFieldError($select, 'This field is required.');
+      return false;
+    }
+
+    this.clearFieldError($select);
+    return true;
+  }
+
+  /**
+   * Cache DOM elements for later use
+   * @private
+   */
+  _cacheDOM() {
+    // Cache the select2 elements
+    if (!this.dom) {
+      this.dom = {};
+    }
+    this.dom.primaryProductCategories = this.$('#primary_product_categories');
+
+    // Log cache status for debugging
+    if (this.dom.primaryProductCategories && this.dom.primaryProductCategories.length) {
+      logger.log('Successfully cached DOM element for primary categories');
+    } else {
+      logger.warn('Failed to cache primary categories DOM element - element not found');
+    }
+  }
+
+  /**
+   * Initialize Select2 dropdowns
+   * @private
+   */
+  _initializeSelect2() {
+    this.initializeSelect2Dropdowns({
+      elements: [
+        {
+          element: this.dom.primaryProductCategories,
+          placeholderKey: 'primaryProductCategories',
+          fallbackText: 'Select primary product categories',
+          name: 'primary product categories',
+          config: {
+            width: '100%',
+            dropdownAutoWidth: true,
+            minimumResultsForSearch: 0,
+            matcher: (params, data) => {
+              // If there are no params or no search term, return all data
+              if (!params || !params.term) {
+                return data;
+              }
+              
+              // Search in the text field
+              if (data.text.toLowerCase().indexOf(params.term.toLowerCase()) > -1) {
+                return data;
+              }
+              
+              // Return null if the term doesn't match
+              return null;
+            }
+            // templateResult is now provided by the base class
+          }
+        }
+      ],
+      moduleName: 'General Settings'
+    });
   }
 
   /**
@@ -239,7 +430,7 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
    * @returns {string} Formatted size (e.g., "256 KB")
    */
   _formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) {return '0 Bytes';}
 
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -247,15 +438,14 @@ class GeneralSettingsModule extends ProductEstimatorSettings {
 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
-
-  // showFieldError, clearFieldError, showNotice are inherited from ProductEstimatorSettings
-  // No need to redefine them here.
 }
 
-jQuery(document).ready(function() {
+jQuery(document).ready(function($) {
   // Ensure module is only instantiated if its corresponding UI is present.
-  if (jQuery('#general').length) { // Assuming 'general' is the ID of the tab content
+  if ($('#general').length) {
     window.GeneralSettingsModuleInstance = new GeneralSettingsModule();
+  } else {
+    logger.warn('Container #general not found. GeneralSettingsModule will not be initialized.');
   }
 });
 

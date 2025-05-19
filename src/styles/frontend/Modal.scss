@@ -6,6 +6,8 @@
 
 @use 'variables' as *;
 
+@use 'mixins' as *;
+
 @use 'animations' as *;
 
 /* Modal Base */
@@ -140,6 +142,14 @@
   overflow: hidden;
 }
 
+// Room items should have the same border styling as estimate sections
+.room-item {
+  border: 1px solid $border-color;
+  border-radius: $border-radius;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
 .estimate-name {
   color: $primary-color;
   flex-grow: 1;
@@ -185,7 +195,7 @@
   padding: 8px;
   transition: color 0.2s ease;
   z-index: 5;
-  
+
   &:hover {
     background: transparent;
     color: $error-color;
@@ -256,10 +266,6 @@
 
 .accordion-item {
   border-bottom: 1px solid $border-color;
-
-  &:last-child {
-    border-bottom: none;
-  }
 }
 
 /* Removal buttons styling */
@@ -289,6 +295,59 @@
     transition: $transition-base;
     width: 100%;
 
+    &.room-item-header {
+      align-items: flex-start;
+      flex-flow: row wrap;  // Keep horizontal layout with wrapping
+      gap: 10px;
+      padding: 15px;
+
+      .room-image-wrapper {
+        align-self: center;  // Vertically center the image
+        flex-shrink: 0;  // Prevent image from shrinking
+      }
+
+      .room-details-wrapper {
+        align-self: center;  // Vertically center within the header
+        flex: 1;  // Take remaining space in the row
+        min-width: 0;  // Allow content to shrink for proper truncation
+
+        .room-details {
+          align-items: center;
+          color: $primary-color;
+          display: flex;
+          font-size: 1.2rem;
+          font-weight: 600;
+          justify-content: space-between;
+
+          .room-name-wrapper {
+            align-items: center;
+            display: flex;
+            gap: 8px;
+            margin: 0;
+
+            .primary-product-name {
+              color: #333;
+            }
+
+            .room-dimensions {
+              font-weight: 400;
+            }
+          }
+
+          .room-price {
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: auto;  // Push to the right
+          }
+        }
+      }
+
+      .price-graph-container {
+        flex-basis: 100%;  // Full width on new line
+        width: 100%;
+      }
+    }
+
     &:hover {
       background-color: $bg-lighter;
     }
@@ -312,48 +371,48 @@
       transform: translateY(-50%) rotate(180deg);
     }
 
-    .room-name {
-      font-weight: 400;
-    }
-
     .room-dimensions {
       color: $text-light;
-      font-size: 15px;
-      margin-right: 10px;
+      margin-left: 10px;
       white-space: nowrap;
     }
 
-    .room-name,
+    .primary-product-name,
     .room-dimensions {
-      margin-right: 10px;
-      white-space: nowrap;
+      margin-left: 10px;
+
     }
 
     /* Additional spacing for room dimensions and total price */
 
-    .room-dimensions,
     .room-total-price {
       margin-right: 30px; /* Ensure text doesn't overlap with indicator */
     }
   }
 }
 
-.remove-room {
+.room-actions {
   align-items: center;
-  background: transparent;
-  border: none;
-  color: $text-lighter;
-  cursor: pointer;
+  align-self: center;  // Vertically center within the header
   display: flex;
   justify-content: center;
   margin-right: 10px;
   padding: 8px;
-  transition: color 0.2s ease;
 
-  &:hover {
+  .remove-room {
     background: transparent;
-    color: $error-color;
+    border: none;
+    color: $text-lighter;
+    cursor: pointer;
+    transition: color 0.2s ease;
+
+    &:hover {
+      background: transparent;
+      color: $error-color;
+    }
   }
+
+
 }
 
 .accordion-content {
@@ -363,23 +422,22 @@
   padding: 15px 0;
 }
 
-.room-products {
-  padding: 15px;
+/* Room products section removed - products now displayed directly in room template */
 
-  h5 {
-    color: $text-color;
-    font-size: $font-size-base;
-    margin-bottom: 15px;
-    margin-top: 0;
+/* Room empty state */
+
+.room-empty-state {
+  padding: 30px;
+  text-align: center;
+
+  .products {
+    color: $text-light;
+
+    p {
+      font-size: $font-size-base;
+      margin: 0;
+    }
   }
-}
-
-/* Room Products */
-
-.product-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
 }
 
 .product-item {
@@ -461,7 +519,6 @@
   padding: 4px;
   position: absolute;
   right: 10px;
-  top: 10px;
   transition: color 0.2s ease;
 
   &:hover {
@@ -792,24 +849,25 @@ body.modal-open {
 /* Individual include item */
 
 .include-item {
-  align-items: flex-start;
+  align-items: center;
   display: flex;
   font-size: 12px;
-  justify-content: space-between;
-  line-height: 1.4;
+  gap: 8px;
+  min-height: 24px;
   position: relative;
 
   &-name {
     color: $text-light;
-    flex: 1;
     font-weight: normal;
-    padding-right: 8px;
+    line-height: 24px;
+    margin: 0;
+    white-space: nowrap;
   }
 
   &-prices {
-    align-items: flex-end;
+    align-items: center;
     display: flex;
-    flex-direction: column;
+    margin-left: auto;
   }
 
   &-total-price {
@@ -1132,10 +1190,12 @@ body.modal-open {
   justify-content: flex-end;
   margin-bottom: 15px;
   margin-top: 15px;
+  padding: 0 15px; // Add padding to match estimate-content
 
   ul {
     display: flex;
     gap: 1rem; /* Adjust spacing between items as needed */
+    justify-content: flex-end; // Ensure ul is also right-aligned
     list-style: none;
     margin: 0;
     padding: 0;
@@ -1144,17 +1204,15 @@ body.modal-open {
       display: inline-block;
 
       a {
+        @include button-primary;
         align-items: center;
-        background: $primary-color;
-        border-radius: 0;
-        color: white;
-        cursor: pointer;
         display: inline-flex;
-        padding: 0.5rem 1rem;
+        font-size: 14px;
+        padding: 8px 15px;
         text-decoration: none;
 
         &:hover {
-          background: $primary-hover;
+          text-decoration: none;
         }
 
         .dashicons {
@@ -1172,7 +1230,6 @@ body.modal-open {
   font-family: $font-family;
   margin: 10px 0;
   max-width: 100%;
-  padding: 0 20px; /* ✅ Full padding around container */
   position: relative;
   width: 100%;
 }
@@ -1185,12 +1242,32 @@ body.modal-open {
   font-weight: bold;
   justify-content: space-between;
   margin-bottom: 8px;
+
+  .primary-product-image {
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    flex-shrink: 0;
+    height: 60px;
+    margin-right: 15px;
+    object-fit: cover;
+    width: 60px;
+
+    &[data-visible-if="has_primary_product"] {
+
+      &:not([src=""]) {
+        display: inline-block;
+      }
+
+      &[src=""] {
+        display: none;
+      }
+    }
+  }
 }
 
 .price-title {
   color: $primary-color;
   flex: 1;
-  margin-right: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1305,9 +1382,7 @@ body.modal-open {
 
 .price-dimensions {
   color: $text-light;
-  font-size: 0.9em;
   font-weight: 400;
-  margin-left: 8px;
 }
 
 .price-notice {
@@ -1315,7 +1390,8 @@ body.modal-open {
   font-size: 10px;
   font-weight: normal;
   margin-top: 5px;
-  text-align: right;
+
+  // text-align: right;
 }
 
 /* Email Prompt Modal Styles */

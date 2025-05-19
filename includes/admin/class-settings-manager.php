@@ -117,7 +117,6 @@ class SettingsManager {
             'ProductAdditionsSettingsModule',
             'PricingRulesSettingsModule',
             'SimilarProductsSettingsModule',
-            'ProductUpgradesSettingsModule',
             'NotificationSettingsModule',
             'LabelsSettingsModule',
             'FeatureSwitchesSettingsModule',

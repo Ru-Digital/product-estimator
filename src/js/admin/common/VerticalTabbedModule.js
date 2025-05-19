@@ -31,6 +31,8 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
       defaultTabId: config.mainTabId,
     });
 
+    this.config = config; // <<<< ADD THIS LINE
+
     // Store VTM-specific configuration.
     // this.settings is populated by the super() call with ajaxUrl, nonce, i18n, tab_id (which is mainTabId)
     this.vtmConfig = {
@@ -476,6 +478,31 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
       this.showNotice('Error: Could not save settings. Form configuration is missing "data-sub-tab-id".', 'error');
       return;
     }
+
+    // Special handling for multi-select elements using Select2
+    $form.find('select[multiple]').each((idx, select) => {
+      const $select = this.$(select);
+      const name = $select.attr('name');
+      
+      // If this is a multi-select that uses Select2
+      if (name && $select.hasClass('pe-select2')) {
+        const values = $select.val();
+        
+        // Remove any existing serialized versions of this field
+        const regex = new RegExp(`${encodeURIComponent(name)}=[^&]*&?`, 'g');
+        formDataStr = formDataStr.replace(regex, '');
+        
+        // Add each selected value individually with array notation
+        if (values && values.length) {
+          values.forEach(value => {
+            formDataStr += `&${encodeURIComponent(name)}[]=${encodeURIComponent(value)}`;
+          });
+        } else {
+          // Ensure empty array is sent if nothing selected
+          formDataStr += `&${encodeURIComponent(name)}[]=`;
+        }
+      }
+    });
 
     // Handle unchecked checkboxes
     $form.find('input[type="checkbox"]').each((idx, cb) => {

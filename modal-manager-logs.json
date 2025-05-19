@@ -1,0 +1,1735 @@
+[
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "Log capture initialized. Run window.exportLogs() to download logs."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "[ModalManager]",
+      "Initializing ModalManager"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "[ModalManager]",
+      "Modal element not found in DOM. Creating from template..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "[TemplateEngine]",
+      "Creating modal container from template"
+    ]
+  },
+  {
+    "type": "warn",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "[TemplateEngine]",
+      "[getTemplate] TemplateEngine not initialized yet. Calling init()."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Initializing TemplateEngine. Templates to process:",
+      [
+        "product-item-template",
+        "room-item-template",
+        "estimate-item-template",
+        "suggestion-item-template",
+        "note-item-template",
+        "include-item-template",
+        "similar-product-item-template",
+        "product-upgrade-item-template",
+        "new-estimate-form-template",
+        "new-room-form-template",
+        "room-selection-form-template",
+        "estimate-selection-template",
+        "estimates-empty-template",
+        "rooms-empty-template",
+        "products-empty-template",
+        "modal-messages-template",
+        "modal-container-template"
+      ]
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"product-item-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"product-item-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"room-item-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"room-item-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.614Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Checking \"room-item-template\" content for .product-list:",
+      "Found"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"estimate-item-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"estimate-item-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"suggestion-item-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"suggestion-item-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"note-item-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"note-item-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"include-item-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"include-item-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"similar-product-item-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"similar-product-item-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"product-upgrade-item-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"product-upgrade-item-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"new-estimate-form-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"new-estimate-form-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"new-room-form-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"new-room-form-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"room-selection-form-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"room-selection-form-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"estimate-selection-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"estimate-selection-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"estimates-empty-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"estimates-empty-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"rooms-empty-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"rooms-empty-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"products-empty-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"products-empty-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"modal-messages-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"modal-messages-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] Template element found in HTML for ID: \"modal-container-template\""
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateElement for \"modal-container-template\" created. Inner HTML starts with:",
+      "No innerHTML or content..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.615Z",
+    "args": [
+      "[TemplateEngine]",
+      "[init] TemplateEngine initialized with 17 template elements"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Template id:",
+      "modal-container-template"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Template found:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Template outerHTML:",
+      "<template id=\"modal-container-template\"> <div id=\"product-estimator-modal\" class=\"product-estimator-modal\"> <div class=\"product-estimator-modal-overlay\"></div> <div class=\"product-estimator-modal-container\"> <button class=\"product-estimator-modal-close\" aria-label=\"Close\"> <span aria-hidden=\"true\">×</span> </button> <div class=\"product-estimator-modal-header\"> <h2>Product Estimator</h2> </div> <div class=\"product-estimator-modal-form-container\"> <div id=\"estimates\"></div> <div id=\"estimate-selection-wrapper\" style=\"display:none\"></div> <div id=\"room-selection-form-wrapper\" style=\"display:none\"></div> <div id=\"new-estimate-form-wrapper\" style=\"display:none\"></div> <div id=\"new-room-form-wrapper\" style=\"display:none\"></div> </div> <div class=\"product-estimator-modal-loading\" style=\"display:none\"> <div class=\"loading-spinner\"></div> <div class=\"loading-text\">Loading...</div> </div> </div> </div> </template>"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Template has content property with:",
+      3,
+      "child nodes"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Node[0]:",
+      3,
+      "#text"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Node[1]:",
+      1,
+      "DIV"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Node[2]:",
+      3,
+      "#text"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Template content inner HTML:",
+      " <div id=\"product-estimator-modal\" class=\"product-estimator-modal\"> <div class=\"product-estimator-modal-overlay\"></div> <div class=\"product-estimator-modal-container\"> <button class=\"product-estimator-modal-close\" aria-label=\"Close\"> <span aria-hidden=\"true\">×</span> </button> <div class=\"product-estimator-modal-header\"> <h2>Product Estimator</h2> </div> <div class=\"product-estimator-modal-form-container\"> <div id=\"estimates\"></div> <div id=\"estimate-selection-wrapper\" style=\"display:none\"></div..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Template contains #estimates:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Template contains #estimate-selection-wrapper:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Template contains #room-selection-form-wrapper:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[DEBUG][TemplateEngine.create] Found template element for \"modal-container-template\":",
+      {}
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[DEBUG][TemplateEngine.create] Template \"modal-container-template\" direct innerHTML (first 200 chars):",
+      " <div id=\"product-estimator-modal\" class=\"product-estimator-modal\"> <div class=\"product-estimator-modal-overlay\"></div> <div class=\"product-estimator-modal-container\"> <button class=\"product-estimator"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[DEBUG][TemplateEngine.create] Template \"modal-container-template\" has .content property:",
+      {}
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[DEBUG][TemplateEngine.create] Template \"modal-container-template\" .content.childNodes count:",
+      3
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[DEBUG][TemplateEngine.create] Node[0] type: 3, name: #text, text: ..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[DEBUG][TemplateEngine.create] Node[1] type: 1, name: DIV, text: ×   Product Estimator           Loading......"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[DEBUG][TemplateEngine.create] Node[2] type: 3, name: #text, text: ..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[DEBUG][TemplateEngine.create] Template \"modal-container-template\" .content.firstElementChild:",
+      {}
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[create] Cloned template content for \"modal-container-template\". Result is a DocumentFragment."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[DEBUG][TemplateEngine.create] Cloned fragment structure for \"modal-container-template\" (first 200 chars):  <div id=\"product-estimator-modal\" class=\"product-estimator-modal\"> <div class=\"product-estimator-modal-overlay\"></div> <div class=\"product-estimator-modal-container\"> <button class=\"product-estimator..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "[create] Populated fragment for \"modal-container-template\"."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Created fragment structure for modal:",
+      3,
+      "child nodes at root level"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Fragment content before appending to DOM:",
+      " <div id=\"product-estimator-modal\" class=\"product-estimator-modal\"> <div class=\"product-estimator-modal-overlay\"></div> <div class=\"product-estimator-modal-container\"> <button class=\"product-estimator-modal-close\" aria-label=\"Close\"> <span aria-hidden=\"true\">×</span> </button> <div class=\"product-es..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Fragment contains #estimates:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.616Z",
+    "args": [
+      "[TemplateEngine]",
+      "Fragment contains form-container:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[TemplateEngine]",
+      "Modal fragment appended to document body"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[TemplateEngine]",
+      "DOM after fragment append - modal found:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[TemplateEngine]",
+      "Modal element created with child elements status:",
+      {
+        "modal": true,
+        "container": true,
+        "formContainer": true,
+        "estimates": true,
+        "estimateSelection": true,
+        "roomSelection": true,
+        "newEstimate": true,
+        "newRoom": true
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[TemplateEngine]",
+      "Modal HTML structure:",
+      "<div id=\"product-estimator-modal\" class=\"product-estimator-modal\"> <div class=\"product-estimator-modal-overlay\"></div> <div class=\"product-estimator-modal-container\"> <button class=\"product-estimator-modal-close\" aria-label=\"Close\"> <span aria-hidden=\"true\">×</span> </button> <div class=\"product-estimator-modal-header\"> <h2>Product Estimator</h2> </div> <div class=\"product-estimator-modal-form-container\"> <div id=\"estimates\"></div> <div id=\"estimate-selection-wrapper\" style=\"display:none\"></div>..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[TemplateEngine]",
+      "Modal container created and added to DOM"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal created successfully from template"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal found, starting initialization sequence"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal ID:",
+      "product-estimator-modal"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal is in document.body:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal has form container:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal has #estimates div:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal outerHTML (partial):",
+      "<div id=\"product-estimator-modal\" class=\"product-estimator-modal\"> <div class=\"product-estimator-modal-overlay\"></div> <div class=\"product-estimator-modal-container\"> <button class=\"product-estimator-..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "First attempt at element initialization..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Initializing DOM elements"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal ID:",
+      "product-estimator-modal"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal is instanceof HTMLElement:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal in DOM:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal classList:",
+      [
+        "product-estimator-modal"
+      ]
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Modal direct child count:",
+      5
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Selector tests against modal:",
+      {
+        "modalOverlay": false,
+        "closeButton": false,
+        "contentContainer": false,
+        "loadingIndicator": false,
+        "estimatesList": false,
+        "estimateSelection": false,
+        "estimateSelectionForm": false,
+        "roomSelectionForm": false,
+        "newEstimateForm": false,
+        "newRoomForm": false
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Direct selector tests against modal:",
+      {
+        "#estimates": true,
+        "#estimate-selection-wrapper": true,
+        "#room-selection-form-wrapper": true,
+        "#new-estimate-form-wrapper": true,
+        "#new-room-form-wrapper": true,
+        ".product-estimator-modal-form-container": true
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Form container exists, children count:",
+      11
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Form container direct children:"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Child[0]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Child[1]:",
+      {
+        "nodeType": 1,
+        "nodeName": "DIV",
+        "id": "estimates",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Child[2]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Child[3]:",
+      {
+        "nodeType": 1,
+        "nodeName": "DIV",
+        "id": "estimate-selection-wrapper",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Child[4]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Child[5]:",
+      {
+        "nodeType": 1,
+        "nodeName": "DIV",
+        "id": "room-selection-form-wrapper",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Child[6]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.617Z",
+    "args": [
+      "[ModalManager]",
+      "Child[7]:",
+      {
+        "nodeType": 1,
+        "nodeName": "DIV",
+        "id": "new-estimate-form-wrapper",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "Child[8]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "Child[9]:",
+      {
+        "nodeType": 1,
+        "nodeName": "DIV",
+        "id": "new-room-form-wrapper",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "Child[10]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "Container elements found status:",
+      {
+        "modal": "found",
+        "contentContainer": "missing",
+        "estimatesList": "missing",
+        "estimateSelection": "missing",
+        "estimateSelectionForm": "missing",
+        "roomSelectionForm": "missing",
+        "newEstimateForm": "missing",
+        "newRoomForm": "missing"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "Critical: #estimates div not found in modal template!"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "Modal content structure:",
+      " <div class=\"product-estimator-modal-overlay\"></div> <div class=\"product-estimator-modal-container\"> <button class=\"product-estimator-modal-close\" aria-label=\"Close\"> <span aria-hidden=\"true\">×</span> </button> <div class=\"product-estimator-modal-header\"> <h2>Product Estimator</h2> </div> <div class=\"product-estimator-modal-form-container\"> <div id=\"estimates\"></div> <div id=\"estimate-selection-wrapper\" style=\"display:none\"></div> <div id=\"room-selection-form-wrapper\" style=\"display:none\"></div>..."
+    ]
+  },
+  {
+    "type": "warn",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "Loading indicator not found, creating one"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "DOM elements initialization attempt completed"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "Critical elements found on first try:",
+      null
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "Critical elements not found on first try, will retry after DOM update"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[ModalManager]",
+      "ModalManager initialization completed successfully"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[CustomerDetailsManager]",
+      "Edit button not found, skipping event binding"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[CustomerDetailsManager]",
+      "CustomerDetailsManager initialized"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[EstimatorCore]",
+      "initialized successfully"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.618Z",
+    "args": [
+      "[EstimatorCore]",
+      "%c=== PRODUCT ESTIMATOR INITIALIZATION COMPLETE ===",
+      "background: #f0f0f0; color: #333; padding: 3px; border-radius: 3px;"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.740Z",
+    "args": [
+      "[ModalManager]",
+      "Retrying element initialization after delay..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.740Z",
+    "args": [
+      "[ModalManager]",
+      "Modal is in document.body:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.740Z",
+    "args": [
+      "[ModalManager]",
+      "Modal has form container:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.740Z",
+    "args": [
+      "[ModalManager]",
+      "Modal has #estimates div:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.740Z",
+    "args": [
+      "[ModalManager]",
+      "Form container children count:",
+      11
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.740Z",
+    "args": [
+      "[ModalManager]",
+      "Form container HTML:",
+      " <div id=\"estimates\"></div> <div id=\"estimate-selection-wrapper\" style=\"display:none\"></div> <div id=\"room-selection-form-wrapper\" style=\"display:none\"></div> <div id=\"new-estimate-form-wrapper\" style..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Initializing DOM elements"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Modal ID:",
+      "product-estimator-modal"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Modal is instanceof HTMLElement:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Modal in DOM:",
+      true
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Modal classList:",
+      [
+        "product-estimator-modal"
+      ]
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Modal direct child count:",
+      6
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Selector tests against modal:",
+      {
+        "modalOverlay": false,
+        "closeButton": false,
+        "contentContainer": false,
+        "loadingIndicator": false,
+        "estimatesList": false,
+        "estimateSelection": false,
+        "estimateSelectionForm": false,
+        "roomSelectionForm": false,
+        "newEstimateForm": false,
+        "newRoomForm": false
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Direct selector tests against modal:",
+      {
+        "#estimates": true,
+        "#estimate-selection-wrapper": true,
+        "#room-selection-form-wrapper": true,
+        "#new-estimate-form-wrapper": true,
+        "#new-room-form-wrapper": true,
+        ".product-estimator-modal-form-container": true
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Form container exists, children count:",
+      11
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Form container direct children:"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[0]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[1]:",
+      {
+        "nodeType": 1,
+        "nodeName": "DIV",
+        "id": "estimates",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[2]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[3]:",
+      {
+        "nodeType": 1,
+        "nodeName": "DIV",
+        "id": "estimate-selection-wrapper",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[4]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[5]:",
+      {
+        "nodeType": 1,
+        "nodeName": "DIV",
+        "id": "room-selection-form-wrapper",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[6]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[7]:",
+      {
+        "nodeType": 1,
+        "nodeName": "DIV",
+        "id": "new-estimate-form-wrapper",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[8]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[9]:",
+      {
+        "nodeType": 1,
+        "nodeName": "DIV",
+        "id": "new-room-form-wrapper",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Child[10]:",
+      {
+        "nodeType": 3,
+        "nodeName": "#text",
+        "id": "no-id",
+        "className": "no-class",
+        "innerHTML": "no-innerHTML"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Container elements found status:",
+      {
+        "modal": "found",
+        "contentContainer": "missing",
+        "estimatesList": "missing",
+        "estimateSelection": "missing",
+        "estimateSelectionForm": "missing",
+        "roomSelectionForm": "missing",
+        "newEstimateForm": "missing",
+        "newRoomForm": "missing"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "time": "2025-05-13T15:33:12.741Z",
+    "args": [
+      "[ModalManager]",
+      "Critical: #estimates div not found in modal template!"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "Modal content structure:",
+      " <div class=\"product-estimator-modal-overlay\"></div> <div class=\"product-estimator-modal-container\"> <button class=\"product-estimator-modal-close\" aria-label=\"Close\"> <span aria-hidden=\"true\">×</span> </button> <div class=\"product-estimator-modal-header\"> <h2>Product Estimator</h2> </div> <div class=\"product-estimator-modal-form-container\"> <div id=\"estimates\"></div> <div id=\"estimate-selection-wrapper\" style=\"display:none\"></div> <div id=\"room-selection-form-wrapper\" style=\"display:none\"></div>..."
+    ]
+  },
+  {
+    "type": "warn",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "Loading indicator not found, creating one"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "DOM elements initialization attempt completed"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "Second attempt results:",
+      {
+        "estimatesList": false,
+        "contentContainer": false
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "Setting up loader safety mechanisms"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "Loader safety mechanisms installed"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "Initializing specialized managers"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[EstimateManager]",
+      "EstimateManager events bound"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[EstimateManager]",
+      "EstimateManager initialized"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[RoomManager]",
+      "RoomManager events bound"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[RoomManager]",
+      "RoomManager initialized"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ProductManager]",
+      "ProductManager events bound"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ProductManager]",
+      "ProductManager initialized"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[FormManager]",
+      "FormManager initialized"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[UIManager]",
+      "Product details toggle functionality initialized"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[UIManager]",
+      "UIManager initialized"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "Specialized managers initialized"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "Binding core modal events"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "Core modal events bound"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.742Z",
+    "args": [
+      "[ModalManager]",
+      "ModalManager initialization completed successfully"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.790Z",
+    "args": [
+      "[FrontEndIndex]",
+      "Initializing EstimatorCore..."
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.790Z",
+    "args": [
+      "[EstimatorCore]",
+      "already initialized - aborting"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.790Z",
+    "args": [
+      "[ConfirmationDialog]",
+      "Initialized"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.791Z",
+    "args": [
+      "[FrontEndIndex]",
+      "[ProductDetailsToggle] initialization complete"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.791Z",
+    "args": [
+      "[FrontEndIndex]",
+      "Product Estimator initialized"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:12.844Z",
+    "args": [
+      "[ModalManager]",
+      "Loading indicator forcibly hidden for safety"
+    ]
+  },
+  {
+    "type": "warn",
+    "time": "2025-05-13T15:33:13.780Z",
+    "args": [
+      "Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:17.207Z",
+    "args": [
+      "[EstimatorCore]",
+      "Menu button clicked - opening modal in list view"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:17.208Z",
+    "args": [
+      "[ModalManager]",
+      "MODAL OPEN CALLED WITH:",
+      {
+        "productId": null,
+        "forceListView": true,
+        "typeOfProductId": "object"
+      }
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:17.208Z",
+    "args": [
+      "[ModalManager]",
+      "Resetting modal state"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:17.208Z",
+    "args": [
+      "[EstimateManager]",
+      "Showing estimates list view"
+    ]
+  },
+  {
+    "type": "error",
+    "time": "2025-05-13T15:33:17.208Z",
+    "args": [
+      "[EstimateManager]",
+      "Estimates list container not found in modal"
+    ]
+  },
+  {
+    "type": "log",
+    "time": "2025-05-13T15:33:17.509Z",
+    "args": [
+      "[UIManager]",
+      "Initializing all carousels"
+    ]
+  }
+]

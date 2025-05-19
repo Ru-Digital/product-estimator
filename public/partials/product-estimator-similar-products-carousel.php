@@ -97,17 +97,9 @@ if (isset($product['id']) && !empty($product['id'])):
             $room_length = isset($room['length']) ? floatval($room['length']) : 0;
             $room_area = $room_width * $room_length;
 
-            // Get default markup from the estimate in session instead of global settings
-            // First try to get it from the estimate
-            $session_handler = \RuDigital\ProductEstimator\Includes\SessionHandler::getInstance();
-            $estimate = $session_handler->getEstimate($estimate_id);
-            $default_markup = isset($estimate['default_markup']) ? floatval($estimate['default_markup']) : 0;
-
-            // If no markup found in the estimate, fall back to global settings
-            if ($default_markup === 0) {
-                $pricing_rules = get_option('product_estimator_pricing_rules');
-                $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
-            }
+            // Get default markup from global settings
+            $pricing_rules = get_option('product_estimator_pricing_rules');
+            $default_markup = isset($pricing_rules['default_markup']) ? floatval($pricing_rules['default_markup']) : 0;
             ?>
             <!-- This is a similar products carousel - should be bound by product-item -->
             <div class="product-similar-products">

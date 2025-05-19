@@ -19,6 +19,7 @@ class ProductDetailsToggle {
         notesToggleButton: '.product-notes-toggle',
         includesToggleButton: '.product-includes-toggle', // Add new selector
         productItem: '.product-item',
+        roomItem: '.room-item',
         similarProductsContainer: '.similar-products-container',
         productIncludes: '.product-includes',
         similarProducts: '.product-similar-products',
@@ -202,14 +203,12 @@ class ProductDetailsToggle {
   setup() {
     logger.log('Setting up product details toggles');
 
-    // Prepare the DOM structure for all toggle types
-    this.prepareProductsToggle();
+    // Prepare the DOM structure for toggle types
+    // Skip prepareProductsToggle and prepareIncludesToggle - handled by RoomManager
     this.prepareNotesToggle();
-    this.prepareIncludesToggle();
     this.prepareSuggestionsToggle();
 
-
-    // Then bind events to all toggle buttons
+    // Then bind events to toggle buttons
     this.bindEvents();
 
     // Re-initialize carousels after setup
@@ -220,49 +219,33 @@ class ProductDetailsToggle {
    */
   /**
    * Prepare the DOM for similar products toggle
-   * REMOVED logic that unconditionally showed the container.
-   * Visibility is now solely controlled by ModalManager based on data.
+   * Now only handles similar products in room items
+   * Visibility is controlled by ModalManager based on data.
    */
   prepareProductsToggle() {
-    const productItems = document.querySelectorAll(this.config.selectors.productItem);
-    logger.log(`Found ${productItems.length} product items to process for similar products toggle`);
+    // Handle similar products in room items only
+    const roomItems = document.querySelectorAll(this.config.selectors.roomItem);
+    logger.log(`Found ${roomItems.length} room items to process for similar products toggle`);
 
-    productItems.forEach(productItem => {
-      if (productItem.classList.contains('products-toggle-processed')) {
+    roomItems.forEach(roomItem => {
+      if (roomItem.classList.contains('products-toggle-processed')) {
         return;
       }
 
-      const similarProductsSection = productItem.querySelector(this.config.selectors.similarProducts);
+      const similarProductsSection = roomItem.querySelector(this.config.selectors.similarProducts);
       if (!similarProductsSection) {
         // Mark as processed even if no section found, to prevent re-checking
-        productItem.classList.add('products-toggle-processed');
+        roomItem.classList.add('products-toggle-processed');
         return;
       }
 
       // Only mark as having similar products if the container exists
       // ModalManager will hide toggle/container later if data is empty
-      productItem.classList.add('has-similar-products');
-
-      // Container and button variables (for later if needed)
-      // let similarProductsContainer = productItem.querySelector(this.config.selectors.similarProductsContainer);
-      // let toggleButton = productItem.querySelector(this.config.selectors.productToggleButton);
-
-      // --- START REMOVAL / COMMENT ---
-      // // Initially show the similar products container (expanded by default) <<-- REMOVE THIS LOGIC
-      // if (similarProductsContainer) {
-      //     similarProductsContainer.style.display = 'block';
-      //     similarProductsContainer.classList.add('visible');
-      // }
-      // if (toggleButton) {
-      //     toggleButton.classList.add('expanded');
-      //     // ... (optional icon update) ...
-      // }
-      // --- END REMOVAL / COMMENT ---
-
+      roomItem.classList.add('has-similar-products');
 
       // Mark as processed
-      productItem.classList.add('products-toggle-processed');
-      logger.log('Product item processed for similar products toggle (visibility managed elsewhere).');
+      roomItem.classList.add('products-toggle-processed');
+      logger.log('Room item processed for similar products toggle (visibility managed elsewhere).');
     });
   }
 
@@ -411,29 +394,8 @@ class ProductDetailsToggle {
    * Bind click events to all toggle buttons
    */
   bindEvents() {
-    // Bind product toggle buttons
-    const productToggleButtons = document.querySelectorAll(this.config.selectors.productToggleButton);
-    logger.log(`Found ${productToggleButtons.length} similar products toggle buttons to bind`);
-
-    productToggleButtons.forEach(button => {
-      // Skip if already bound
-      if (button._toggleBound) {
-        return;
-      }
-
-      // Store reference to handler for potential removal
-      button._toggleHandler = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.toggleSimilarProducts(button);
-      };
-
-      // Add event listener
-      button.addEventListener('click', button._toggleHandler);
-
-      // Mark as bound to avoid duplicate handlers
-      button._toggleBound = true;
-    });
+    // Skip binding similar products toggles - these are now handled by RoomManager
+    logger.log('Skipping similar products toggle binding - handled by RoomManager');
 
     // Bind notes toggle buttons
     const notesToggleButtons = document.querySelectorAll(this.config.selectors.notesToggleButton);
@@ -461,29 +423,8 @@ class ProductDetailsToggle {
       button._toggleBound = true;
     });
 
-    // Bind includes toggle buttons
-    const includesToggleButtons = document.querySelectorAll(this.config.selectors.includesToggleButton);
-    logger.log(`Found ${includesToggleButtons.length} includes toggle buttons to bind`);
-
-    includesToggleButtons.forEach(button => {
-      // Skip if already bound
-      if (button._toggleBound) {
-        return;
-      }
-
-      // Store reference to handler for potential removal
-      button._toggleHandler = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.toggleIncludes(button);
-      };
-
-      // Add event listener
-      button.addEventListener('click', button._toggleHandler);
-
-      // Mark as bound to avoid duplicate handlers
-      button._toggleBound = true;
-    });
+    // Skip binding includes toggles - these are now handled by RoomManager
+    logger.log('Skipping includes toggle binding - handled by RoomManager');
 
     if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) { // <--- THIS IS THE KEY CHECK
 
@@ -588,20 +529,20 @@ class ProductDetailsToggle {
 
 
   /**
-   * Toggle the visibility of similar products
+   * Toggle the visibility of similar products in room items
    * @param {HTMLElement} toggleButton - The button that was clicked
    */
   toggleSimilarProducts(toggleButton) {
-    // Find parent product item
-    const productItem = toggleButton.closest(this.config.selectors.productItem);
+    // Find parent room item (similar products are only in room items now)
+    const roomItem = toggleButton.closest(this.config.selectors.roomItem);
 
-    if (!productItem) {
-      logger.log('Product item not found for toggle button');
+    if (!roomItem) {
+      logger.log('Room item not found for toggle button');
       return;
     }
 
     // Find similar products container
-    const similarProductsContainer = productItem.querySelector(this.config.selectors.similarProductsContainer);
+    const similarProductsContainer = roomItem.querySelector(this.config.selectors.similarProductsContainer);
 
     if (!similarProductsContainer) {
       logger.log('Similar products container not found');
@@ -740,32 +681,33 @@ class ProductDetailsToggle {
    * Prepare the DOM for includes toggle
    */
   prepareIncludesToggle() {
-    // Find all product items
-    const productItems = document.querySelectorAll(this.config.selectors.productItem);
-    logger.log(`Found ${productItems.length} product items to process for includes toggle`);
+    // Find room items for includes toggle (product items no longer have includes)
+    const roomItems = document.querySelectorAll('.room-item');
+    
+    logger.log(`Found ${roomItems.length} room items to process for includes toggle`);
 
-    productItems.forEach(productItem => {
+    roomItems.forEach(item => {
       // Skip if already processed for includes toggle
-      if (productItem.classList.contains('includes-toggle-processed')) {
+      if (item.classList.contains('includes-toggle-processed')) {
         return;
       }
 
       // Find product includes section
-      const includesSection = productItem.querySelector(this.config.selectors.productIncludes);
+      const includesSection = item.querySelector(this.config.selectors.productIncludes);
 
-      // Check if product has includes to toggle
+      // Check if item has includes to toggle
       if (!includesSection) {
-        logger.log('No includes section found for product item, skipping', productItem);
+        logger.log('No includes section found for item, skipping', item);
         return; // No includes to toggle
       }
 
       logger.log('Found includes section, processing', includesSection);
 
-      // Mark the product item as having includes
-      productItem.classList.add('has-includes');
+      // Mark the item as having includes
+      item.classList.add('has-includes');
 
       // Check if container already exists
-      let includesContainer = productItem.querySelector('.includes-container');
+      let includesContainer = item.querySelector('.includes-container');
 
       // If no container exists but there is an includes section, we need to create one
       if (!includesContainer) {
@@ -784,14 +726,14 @@ class ProductDetailsToggle {
           includesSection.parentNode.removeChild(includesSection);
         }
 
-        // Add the container to the product item
-        productItem.appendChild(includesContainer);
+        // Add the container to the item
+        item.appendChild(includesContainer);
       }
 
       // Add toggle button if not already present
-      let toggleButton = productItem.querySelector('.product-includes-toggle');
+      let toggleButton = item.querySelector('.product-includes-toggle');
       if (!toggleButton) {
-        logger.log('Adding includes toggle button to product item');
+        logger.log('Adding includes toggle button to item');
         toggleButton = document.createElement('button');
 
         // Mark as expanded by default and use the proper class for the arrow
@@ -805,7 +747,7 @@ class ProductDetailsToggle {
       `;
 
         // Insert button before the includes container
-        productItem.insertBefore(toggleButton, includesContainer);
+        item.insertBefore(toggleButton, includesContainer);
       } else {
         // Make sure existing button has the correct state
         toggleButton.classList.add('expanded');
@@ -821,8 +763,8 @@ class ProductDetailsToggle {
       includesContainer.classList.add('visible');
 
       // Mark as processed to avoid duplicating
-      productItem.classList.add('includes-toggle-processed');
-      logger.log('Product item processed for includes toggle');
+      item.classList.add('includes-toggle-processed');
+      logger.log('Item processed for includes toggle');
     });
   }
 
@@ -831,16 +773,16 @@ class ProductDetailsToggle {
    * @param {HTMLElement} toggleButton - The button that was clicked
    */
   toggleIncludes(toggleButton) {
-    // Find parent product item
-    const productItem = toggleButton.closest(this.config.selectors.productItem);
+    // Find parent room item (product items no longer have includes)
+    const roomItem = toggleButton.closest('.room-item');
 
-    if (!productItem) {
-      logger.log('Product item not found for includes toggle button');
+    if (!roomItem) {
+      logger.log('Room item not found for includes toggle button');
       return;
     }
 
     // Find includes container
-    const includesContainer = productItem.querySelector('.includes-container');
+    const includesContainer = roomItem.querySelector('.includes-container');
 
     if (!includesContainer) {
       logger.log('Includes container not found');

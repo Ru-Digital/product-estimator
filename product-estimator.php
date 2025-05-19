@@ -178,6 +178,8 @@ function add_estimator_button_to_menu($items, $args) {
         // Append the button to the existing menu items
         $items .= $estimator_button;
     }
+
+
     return $items;
 }
 // Hook the function into the 'wp_nav_menu_items' filter

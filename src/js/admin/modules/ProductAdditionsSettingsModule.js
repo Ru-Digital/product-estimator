@@ -67,6 +67,12 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
       this.dom.clearProductButton = this.$container.find(paSelectors.clearProductButton);
       this.dom.noteTextInput = this.$container.find(paSelectors.noteTextInput);
       this.dom.noteRow = this.$container.find(paSelectors.noteRow);
+      
+      // New fields for auto-add product sections
+      this.dom.sectionTitleRow = this.$container.find('.section-title-row');
+      this.dom.sectionDescriptionRow = this.$container.find('.section-description-row');
+      this.dom.optionColorRows = this.$container.find('.option-color-row');
+      this.dom.colorPickers = this.$container.find('.pe-color-picker');
     } else {
       this.logger.warn('ProductAdditionsSettingsModule: Settings or selectors not available for DOM caching');
     }
@@ -120,6 +126,23 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
       ],
       moduleName: 'Product Additions'
     });
+    
+    // Initialize color pickers
+    this._initializeColorPickers();
+  }
+  
+  /**
+   * Initialize WordPress color pickers.
+   * @private
+   */
+  _initializeColorPickers() {
+    if (this.dom.colorPickers && this.dom.colorPickers.length && this.$.fn.wpColorPicker) {
+      this.dom.colorPickers.wpColorPicker({
+        change: () => {
+          this.formModified = true; // Mark form as modified when color changes
+        }
+      });
+    }
   }
 
   /**
@@ -154,6 +177,9 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     this.dom.targetCategoryRow?.hide();
     this.dom.productSearchRow?.hide();
     this.dom.noteRow?.hide();
+    this.dom.sectionTitleRow?.hide();
+    this.dom.sectionDescriptionRow?.hide();
+    this.dom.optionColorRows?.hide();
 
     this.dom.targetCategorySelect?.val(null).trigger('change.select2'); // Reset Select2
     this._clearProductSelectionFields();
@@ -161,6 +187,9 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
 
     if (actionType === 'auto_add_by_category') {
       this.dom.targetCategoryRow?.show();
+      this.dom.sectionTitleRow?.show();
+      this.dom.sectionDescriptionRow?.show();
+      this.dom.optionColorRows?.show();
     } else if (actionType === 'auto_add_note_by_category') {
       this.dom.noteRow?.show();
     } else if (actionType === 'suggest_products_by_category') {
@@ -321,11 +350,28 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
     // Target category and product search fields are typically handled by _handleRelationTypeChange
     this._clearProductSelectionFields(); // Explicitly clear product fields
     this.dom.noteTextInput?.val('');
+    
+    // Clear new fields
+    this.$container.find('#section_title').val('');
+    this.$container.find('#section_description').val('');
+    
+    // Reset color pickers to default
+    for (let i = 1; i <= 5; i++) {
+      const colourKey = `option_colour_${i}`;
+      this.$container.find(`#${colourKey}`).val('#000000');
+      // Reset color picker if it exists
+      if (this.$.fn.wpColorPicker) {
+        this.$container.find(`#${colourKey}`).wpColorPicker('color', '#000000');
+      }
+    }
 
     // Ensure dependent rows are hidden according to the reset relationType
     this.dom.targetCategoryRow?.hide();
     this.dom.productSearchRow?.hide();
     this.dom.noteRow?.hide();
+    this.dom.sectionTitleRow?.hide();
+    this.dom.sectionDescriptionRow?.hide();
+    this.dom.optionColorRows?.hide();
 
   }
 
@@ -363,6 +409,24 @@ class ProductAdditionsSettingsModule extends AdminTableManager {
           this.dom.selectedProductIdInput?.val(productId);
           this.dom.selectedProductDisplay?.find('.selected-product-info').html(`Product ID: ${productId} (Name not available)`);
           this.dom.selectedProductDisplay?.show();
+        }
+        
+        // Populate new fields for auto-add product sections
+        if (itemData.section_title) {
+          this.$container.find('#section_title').val(itemData.section_title);
+        }
+        if (itemData.section_description) {
+          this.$container.find('#section_description').val(itemData.section_description);
+        }
+        
+        // Populate color fields
+        for (let i = 1; i <= 5; i++) {
+          const colourKey = `option_colour_${i}`;
+          if (itemData[colourKey]) {
+            this.$container.find(`#${colourKey}`).val(itemData[colourKey]);
+            // Update color picker preview if it exists
+            this.$container.find(`#${colourKey}`).wpColorPicker('color', itemData[colourKey]);
+          }
         }
       } else if (relationType === 'suggest_products_by_category') {
         if (this.settings.feature_flags && this.settings.feature_flags.suggested_products_enabled) {

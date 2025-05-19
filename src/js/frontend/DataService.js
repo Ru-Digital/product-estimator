@@ -12,6 +12,7 @@ import AjaxService from './AjaxService';
 import {
   addEstimate, // Imports from EstimateStorage
   loadEstimateData, // Imports from EstimateStorage
+  saveEstimateData, // Imports from EstimateStorage
   addRoom, // Imports from EstimateStorage
   removeRoom as removeRoomFromStorage, // Imports from EstimateStorage
   removeEstimate as removeEstimateFromStorage, // Imports from EstimateStorage
@@ -19,8 +20,8 @@ import {
   removeProductFromRoom as removeProductFromRoomStorage, // Imports from EstimateStorage
   replaceProductInRoom as replaceProductInRoomStorage, // Imports from EstimateStorage
   addSuggestionsToRoom as replaceSuggestionsInRoomStorage,
-  getSuggestionsForRoom as getSuggestionsForRoomFromStorage
-  // getEstimate, addProductToRoom - Removed unused imports
+  getSuggestionsForRoom as getSuggestionsForRoomFromStorage,
+  getEstimate // Import getEstimate function
 } from './EstimateStorage'; // Import necessary functions from storage
 
 const logger = createLogger('DataService');
@@ -83,6 +84,32 @@ class DataService {
   }
 
   /**
+   * Get product variation data including available variations and attributes
+   * @param {string|number} productId - The product ID to get variation data for
+   * @returns {Promise<object>} Promise resolving to variation data
+   */
+  getProductVariationData(productId) {
+    logger.log(`Getting variation data for product ID: ${productId}`);
+    
+    return this.ajaxService._request('product_estimator_get_product_variations', {
+      product_id: productId
+    })
+    .then(data => {
+      logger.log(`Variation data received for product ${productId}:`, data);
+      return {
+        isVariable: data.is_variable || false,
+        productName: data.product_name || '',
+        variations: data.variations || [],
+        attributes: data.attributes || {}
+      };
+    })
+    .catch(error => {
+      logger.error('Error getting product variation data:', error);
+      throw error;
+    });
+  }
+
+  /**
    * Check if any estimates exist in the session by checking localStorage
    * @returns {Promise<boolean>} True if estimates exist
    */
@@ -107,41 +134,6 @@ class DataService {
     });
   }
 
-  /**
-   * Get available upgrades for a product.
-   * @param {string|number} productId - The ID of the product to get upgrades for.
-   * @param {string|number} estimateId - The ID of the current estimate.
-   * @param {string|number} roomId - The ID of the room the product is in.
-   * @param {number} roomArea - The area of the room.
-   * @param {string} upgradeType - The type of upgrade (e.g., 'main', 'additional').
-   * @param {boolean} bypassCache - Whether to bypass the cache.
-   * @returns {Promise<Array>} - A promise resolving to an array of upgrade options.
-   */
-  getProductUpgrades(productId, estimateId, roomId, roomArea, upgradeType, bypassCache = false) {
-    logger.log(`[DataService.getProductUpgrades] DEBUG: Called with productId: ${productId}, estimateId: ${estimateId}, roomId: ${roomId}, roomArea: ${roomArea}, upgradeType: ${upgradeType}, bypassCache: ${bypassCache}`);
-    
-    // Delegate to AjaxService which now handles its own caching
-    return this.ajaxService.getProductUpgrades({
-      product_id: productId,
-      estimate_id: estimateId,
-      room_id: roomId,
-      room_area: roomArea,
-      upgrade_type: upgradeType,
-    }, bypassCache)
-      .then(data => {
-        logger.log(`[DataService.getProductUpgrades] DEBUG: Response from ajaxService.getProductUpgrades:`, data);
-        if (data && Array.isArray(data.upgrades)) {
-          return data.upgrades;
-        } else {
-          logger.warn('[getProductUpgrades] DEBUG: get_product_upgrades did not return expected data structure.', data);
-          return [];
-        }
-      })
-      .catch(error => {
-        logger.error('[getProductUpgrades] DEBUG: Error fetching product upgrades:', error);
-        throw error;
-      });
-  }
 
   /**
    * Get all estimates data for dropdowns by reading from localStorage.
@@ -170,6 +162,27 @@ class DataService {
 
     // Return the data wrapped in a resolved Promise, as the original function API expects a Promise
     return Promise.resolve(estimatesArray);
+  }
+
+  /**
+   * Get a specific estimate by ID from localStorage
+   * @param {string|number} estimateId - The estimate ID
+   * @returns {Promise<object|null>} A promise that resolves with the estimate data or null if not found
+   */
+  getEstimate(estimateId) {
+    logger.log(`Getting estimate ${estimateId} from localStorage.`);
+
+    // Use the imported getEstimate function from EstimateStorage
+    const estimate = getEstimate(estimateId);
+
+    if (estimate) {
+      logger.log(`Found estimate ${estimateId} in localStorage.`);
+    } else {
+      logger.warn(`Estimate ${estimateId} not found in localStorage.`);
+    }
+
+    // Return the estimate as a resolved promise to maintain API consistency
+    return Promise.resolve(estimate);
   }
 
   /**
@@ -240,6 +253,48 @@ class DataService {
     return Promise.resolve(responseData);
   }
 
+  /**
+   * Get products for a specific room from an estimate
+   * @param {string|number} estimateId - Estimate ID
+   * @param {string|number} roomId - Room ID
+   * @returns {Promise<Array>} - A promise that resolves with an array of products
+   */
+  getProductsForRoom(estimateId, roomId) {
+    logger.log(`Getting products for room ${roomId} in estimate ${estimateId} from localStorage.`);
+
+    // Load all estimate data
+    const estimateData = loadEstimateData();
+
+    // Check if the estimate and room exist
+    if (!estimateData.estimates ||
+        !estimateData.estimates[estimateId] ||
+        !estimateData.estimates[estimateId].rooms ||
+        !estimateData.estimates[estimateId].rooms[roomId]) {
+      logger.warn(`Estimate ${estimateId} or room ${roomId} not found in localStorage.`);
+      return Promise.resolve([]);
+    }
+
+    // Get the products from the room
+    const room = estimateData.estimates[estimateId].rooms[roomId];
+
+    // Convert products object to array for backward compatibility with consumers of this API
+    let productsArray = [];
+    if (room.products) {
+      if (typeof room.products === 'object' && !Array.isArray(room.products)) {
+        // If products is already an object with ID keys, convert to array
+        productsArray = Object.values(room.products);
+      } else if (Array.isArray(room.products)) {
+        // If it's still an array (legacy format), use it directly
+        productsArray = room.products;
+      }
+    }
+
+    logger.log(`Found ${productsArray.length} products for room ${roomId} in estimate ${estimateId}.`);
+
+    // Return the products as a resolved promise
+    return Promise.resolve(productsArray);
+  }
+
 
 // In DataService.js
 
@@ -271,27 +326,48 @@ class DataService {
       roomWidth = room.width;
       roomLength = room.length;
 
-      if (room.products && room.products.find(product => String(product.id) === String(productId))) {
-        logger.warn(`DataService: Product ID ${productId} already exists in room ${roomId} locally. Aborting.`);
-        return Promise.reject({
-          message: this.config.i18n.product_already_exists || 'This product already exists in the selected room.',
-          data: { duplicate: true, estimate_id: estimateId, room_id: roomId }
-        });
+      if (room.products) {
+        const productIdStr = String(productId);
+        // Check if product exists in the room's products object
+        if ((typeof room.products === 'object' && room.products[productIdStr]) ||
+            (Array.isArray(room.products) && room.products.find(product => String(product.id) === productIdStr))) {
+          logger.warn(`DataService: Product ID ${productId} already exists in room ${roomId} locally. Aborting.`);
+          return Promise.reject({
+            message: this.config.i18n.product_already_exists || 'This product already exists in the selected room.',
+            data: { duplicate: true, estimate_id: estimateId, room_id: roomId }
+          });
+        }
+        
+        // Note: Primary category checking happens on the server side during the AJAX request
+        // We can't check it here without the product category information and settings
       }
     } else {
       logger.warn(`DataService: Room ID ${roomId} not found in local storage for estimate ${estimateId}. Room dimensions will be null for product data fetch.`);
     }
 
-    const existingProductIdsInRoom = room?.products?.map(p => p.id) ?? [];
+    // Extract product IDs from room.products, which could be an object or array
+    let existingProductIdsInRoom = [];
+    if (room && room.products) {
+      if (typeof room.products === 'object' && !Array.isArray(room.products)) {
+        existingProductIdsInRoom = Object.keys(room.products);
+      } else if (Array.isArray(room.products)) {
+        existingProductIdsInRoom = room.products.map(p => p.id);
+      }
+    }
     // For fetching suggestions, send the context of products that *will be* in the room
     const allProductIdsForSuggestionContext = [...new Set([...existingProductIdsInRoom, String(productId)])];
 
+
+    // Validate productId before proceeding
+    if (!productId || productId === 'null' || productId === 'undefined' || productId === '0' || String(productId).trim() === '') {
+      return Promise.reject(new Error('Valid product ID is required to add a product to a room'));
+    }
 
     // STEP 1: Fetch comprehensive product data for the new product.
     // The backend ('get_product_data_for_storage') is expected to return:
     // - product_data: { ... (main product details), similar_products: [...] }
     // - room_suggested_products: [...] (suggestions for the room *with* the new product, if applicable)
-    // 
+    //
     // This is a CRITICAL request that must succeed - we cannot proceed with fallbacks.
     const fetchProductAndSuggestionsPromise = this.ajaxService.getProductDataForStorage({
       product_id: String(productId),
@@ -304,35 +380,55 @@ class DataService {
     const localStoragePromise = fetchProductAndSuggestionsPromise
       .then(productDataResponse => {
         logger.log('DataService: Fetched comprehensive product data response:', productDataResponse);
+        
+        // Log specifically for additional products and their upgrades
+        if (productDataResponse.product_data && productDataResponse.product_data.additional_products) {
+          console.log('ADDITIONAL PRODUCTS CHECK: Found additional products:', productDataResponse.product_data.additional_products);
+          
+          // Check each additional product for upgrades
+          Object.entries(productDataResponse.product_data.additional_products).forEach(([productId, productData]) => {
+            console.log(`ADDITIONAL PRODUCTS CHECK: Product ${productId} - ${productData.name}`);
+            console.log(`  - has_upgrades: ${productData.has_upgrades}`);
+            
+            if (productData.has_upgrades && productData.upgrades) {
+              console.log(`  - upgrades data:`, productData.upgrades);
+              if (productData.upgrades.products) {
+                console.log(`  - number of upgrade products: ${productData.upgrades.products.length}`);
+              }
+            }
+          });
+        } else {
+          console.log('ADDITIONAL PRODUCTS CHECK: No additional products found in response');
+        }
 
         // Critical validation: If getProductDataForStorage failed or returned no response
         if (!productDataResponse) {
           const errorMsg = 'Failed to get comprehensive product data from server - null/undefined response.';
           logger.error(errorMsg); // Critical error - high priority
-          return { 
-            success: false, 
+          return {
+            success: false,
             error: new Error(errorMsg),
             critical: true // Mark as critical error that should block the UI
           };
         }
-        
+
         // Critical validation: If getProductDataForStorage returned no product_data
         if (!productDataResponse.product_data) {
           const errorMsg = 'Failed to get comprehensive product data from server - missing product_data property.';
           logger.error(errorMsg, productDataResponse); // Critical error - high priority
-          return { 
-            success: false, 
+          return {
+            success: false,
             error: new Error(errorMsg),
             critical: true // Mark as critical error that should block the UI
           };
         }
-        
+
         // Critical validation: If this is a fallback response from a failed request
         if (productDataResponse.isFallback === true) {
           const errorMsg = `Unable to get product data from server for product ID ${productId}. This is a required server request.`;
           logger.error(errorMsg); // Critical error - high priority
-          return { 
-            success: false, 
+          return {
+            success: false,
             error: new Error(errorMsg),
             critical: true // Mark as critical error that should block the UI
           };
@@ -341,9 +437,43 @@ class DataService {
         const comprehensiveProductData = productDataResponse.product_data;
         let roomSuggestedProductsToStore = []; // Initialize to empty
 
-        // Ensure similar_products is an array, even if it's missing or null from backend
-        if (!Array.isArray(comprehensiveProductData.similar_products)) {
-          comprehensiveProductData.similar_products = [];
+        // Check if the new product is in a primary category
+        if (comprehensiveProductData.is_primary_category === true) {
+          // Check existing products in the room for primary category conflicts
+          const estimate = getEstimate(estimateId);
+          const room = estimate && estimate.rooms && estimate.rooms[roomId];
+          const existingProducts = room && room.products ? room.products : {};
+          
+          for (const productKey in existingProducts) {
+            const existingProduct = existingProducts[productKey];
+            // Skip non-product items like notes
+            if (existingProduct.type === 'note') continue;
+            
+            if (existingProduct.is_primary_category === true) {
+              // Found an existing primary category product - return conflict response
+              logger.log('DataService: Primary category conflict detected. Existing product:', existingProduct.name, 'New product:', comprehensiveProductData.name);
+              
+              return {
+                success: false,
+                error: new Error('Primary category conflict - flooring product already exists in this room'),
+                primaryConflict: true,
+                existingProductId: existingProduct.id,
+                newProductId: productId,
+                roomId: roomId,
+                estimateId: estimateId,
+                existingProductName: existingProduct.name,
+                newProductName: comprehensiveProductData.name
+              };
+            }
+          }
+        }
+
+        // Add debug logs to see what's happening with similar_products
+
+        // Keep similar_products in their original format (now that we've fixed the parser error)
+        // This allows object formatted similar_products to be preserved
+        if (!comprehensiveProductData.similar_products) {
+          comprehensiveProductData.similar_products = {};
         }
 
         if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
@@ -366,6 +496,8 @@ class DataService {
 
 
         try {
+          // Add debug log before passing to storage
+
           // Add the main product (with its similar_products) to the room's product list in localStorage
           const productAddedSuccess = addProductToRoomStorage(estimateId, roomId, comprehensiveProductData);
           if (productAddedSuccess) {
@@ -406,72 +538,35 @@ class DataService {
       });
 
     // STEP 3: Make the asynchronous server request for session update ONLY if local storage succeeded.
-    // This step is non-blocking - errors will be logged but won't affect the UI
+    // This step is completely non-blocking - we'll fire and forget
     localStoragePromise
       .then(localResult => {
-        // Check for critical errors from product data fetch
+        // If not successful or critical error, just log and don't try server sync
         if (!localResult.success) {
           if (localResult.critical) {
             // This is a critical error - show a visible error message to the user
-            // Here we're using the console.error for visibility, but in a real app
-            // you might want to show a modal dialog or other UI element
             const errorMsg = localResult.error?.message || 'Critical error: Unable to add product to room.';
             logger.error('CRITICAL ERROR:', errorMsg);
-            
-            // This should be replaced with your app's error display mechanism
-            if (typeof window.productEstimatorShowError === 'function') {
-              window.productEstimatorShowError(errorMsg);
-            } else if (typeof window.alert === 'function') {
-              window.alert(`Error: ${errorMsg}`);
-            }
-            
-            // Propagate the error so the UI can handle it
-            throw new Error(errorMsg);
+
+            // Just log for critical errors - we already returned the error to the UI via localStoragePromise
+            return;
           }
-          
-          // Non-critical error
+
+          // Non-critical error - just log
           logger.warn('Local storage update failed, skipping asynchronous server request for adding product to session.');
-          return Promise.resolve({ 
-            server_request_skipped: true, 
-            local_error: localResult.error 
-          });
+          return;
         }
-        
-        // If successful, proceed with server sync
-        logger.log('DataService: Local storage update successful, sending asynchronous server request for adding product to session.');
-        const requestData = {
-          room_id: String(roomId),
-          product_id: String(productId),
-        };
-        if (estimateId !== null) {
-          requestData.estimate_id = String(estimateId);
-        }
-        
-        // Try to send to server, but don't let failures block the UI
-        return this.ajaxService.addProductToRoom(requestData)
-          .catch(error => {
-            // Log the error but swallow it to keep the promise chain going
-            logger.error('Error sending product to server, but continuing with local data:', error);
-            logger.warn('Product added to local storage only. Changes may not persist between sessions.');
-            return { server_request_skipped: true, error_message: error.message };
-          });
+
+        // Local storage update successful - no server sync needed
+        logger.log('DataService: Local storage update successful. No server sync required.');
       })
-      .then(serverData => {
-        if (serverData && !serverData.server_request_skipped) {
-          logger.log('DataService: Asynchronous server-side product add (to session) successful:', serverData);
-          this.invalidateCache();
-        } else if (serverData && serverData.server_request_skipped) {
-          // Soft-fail: Just log but let the UI continue working with local data
-          logger.warn('Using local data only - server sync skipped or failed');
-        }
-      })
-      .catch(serverError => {
-        // This will now catch and propagate critical errors
-        logger.error('Error in product-to-room process:', serverError);
-        // Propagate error to caller
-        throw serverError;
+      .catch(error => {
+        // Just log any errors in the fire-and-forget path - they were already propagated
+        // to the UI via localStoragePromise
+        logger.error('Error in background sync process:', error);
       });
 
+    // Return just the localStorage promise - UI continues as soon as local storage is updated
     return localStoragePromise;
   }
 
@@ -503,20 +598,35 @@ class DataService {
     const roomLength = room?.length;
 
     let futureRoomProductIds = [];
-    if (room && Array.isArray(room.products)) {
-      futureRoomProductIds = room.products.map(p => String(p.id)); // Ensure string IDs for comparison
-      const oldProductStringId = String(oldProductId);
-      const oldProductIdx = futureRoomProductIds.indexOf(oldProductStringId);
+    const oldProductStringId = String(oldProductId);
+    const newProductStringId = String(newProductId);
 
-      if (oldProductIdx > -1) {
-        futureRoomProductIds.splice(oldProductIdx, 1, String(newProductId)); // Replace old with new
-      } else {
-        // If oldProductId wasn't in the main list (e.g., an additional_product not directly in room.products)
-        // still add the newProductId to ensure it's considered for suggestions.
-        futureRoomProductIds.push(String(newProductId));
+    if (room && room.products) {
+      if (typeof room.products === 'object' && !Array.isArray(room.products)) {
+        // Object-based products
+        // Get all product IDs as strings
+        futureRoomProductIds = Object.keys(room.products);
+
+        // Remove the old product ID and add the new one
+        if (futureRoomProductIds.includes(oldProductStringId)) {
+          futureRoomProductIds = futureRoomProductIds.filter(id => id !== oldProductStringId);
+        }
+        futureRoomProductIds.push(newProductStringId);
+      } else if (Array.isArray(room.products)) {
+        // Legacy array-based product handling
+        futureRoomProductIds = room.products.map(p => String(p.id)); // Ensure string IDs for comparison
+        const oldProductIdx = futureRoomProductIds.indexOf(oldProductStringId);
+
+        if (oldProductIdx > -1) {
+          futureRoomProductIds.splice(oldProductIdx, 1, newProductStringId); // Replace old with new
+        } else {
+          // If oldProductId wasn't in the main list (e.g., an additional_product not directly in room.products)
+          // still add the newProductId to ensure it's considered for suggestions.
+          futureRoomProductIds.push(newProductStringId);
+        }
       }
     } else {
-      futureRoomProductIds.push(String(newProductId));
+      futureRoomProductIds.push(newProductStringId);
     }
     futureRoomProductIds = [...new Set(futureRoomProductIds)];
 
@@ -544,9 +654,10 @@ class DataService {
         const comprehensiveNewProductData = productDataResponse.product_data;
         let roomSuggestedProductsToStore = []; // Initialize to empty
 
-        // Ensure similar_products is an array on the new product data, even if missing or null from backend
-        if (!Array.isArray(comprehensiveNewProductData.similar_products)) {
-          comprehensiveNewProductData.similar_products = [];
+        // Keep similar_products in their original format (object or array)
+        // Don't convert to empty array if it's an object with data
+        if (!comprehensiveNewProductData.similar_products) {
+          comprehensiveNewProductData.similar_products = {};
         }
 
         if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
@@ -617,30 +728,13 @@ class DataService {
     // STEP 3: Asynchronous server request for session update.
     localStorageAndUpdateSuggestionsPromise
       .then(localResult => {
-        if (localResult.success) { // Ensure local operation was successful before calling server
-          logger.log('DataService: Local storage replacement successful, sending asynchronous server request for session update.');
-          const requestData = {
-            estimate_id: String(estimateId),
-            room_id: String(roomId),
-            product_id: String(newProductId), // The ID of the new product
-            replace_product_id: String(oldProductId), // The ID of the product being replaced
-            replace_type: replaceType
-          };
-          if (parentProductId !== null && parentProductId !== undefined) { // Check for null or undefined
-            requestData.parent_product_id = String(parentProductId);
-          }
-          return this.ajaxService.replaceProductInRoom(requestData);
+        if (localResult.success) {
+          logger.log('DataService: Local storage replacement successful. No server sync required.');
         }
         // If localResult was not success (e.g. promise was rejected and caught by caller), this part is skipped.
       })
-      .then(serverData => {
-        if (serverData) { // Check if serverData exists (meaning request was made and potentially succeeded)
-          logger.log('DataService: Asynchronous server-side product replacement (session) successful:', serverData);
-          this.invalidateCache();
-        }
-      })
-      .catch(serverError => {
-        logger.error('Asynchronous server-side product replacement (session) failed:', serverError);
+      .catch(error => {
+        logger.error('Error during local storage replacement:', error);
       });
 
     return localStorageAndUpdateSuggestionsPromise;
@@ -666,11 +760,30 @@ class DataService {
     // Use the specific AjaxService method - it now handles its own caching
     return this.ajaxService.getSimilarProducts(requestData, bypassCache)
       .then(data => {
-        // Assuming the backend returns an object with a 'products' key containing the array
+        // Handle different response formats from the backend
         if (data && Array.isArray(data.products)) {
+          // If we have section_info, return the full response
+          if (data.section_info) {
+            return data;
+          }
+          // Otherwise just return the products array for backward compatibility
           return data.products;
+        } else if (data && typeof data.products === 'object' && !Array.isArray(data.products)) {
+          // Backend returned an object with products as an object (keyed by ID)
+          // Convert to array format
+          logger.log('Converting products object to array format');
+          const productsArray = Object.values(data.products);
+          // If we have section_info, return the full response with converted products
+          if (data.section_info) {
+            return { ...data, products: productsArray };
+          }
+          return productsArray;
+        } else if (data && data.message && data.source_product_id) {
+          // Fallback: empty products with just a message
+          logger.log(data.message);
+          return [];
         } else {
-          logger.warn('get_similar_products did not return expected data structure (expected { products: [...] })', data);
+          logger.warn('get_similar_products did not return expected data structure', data);
           // Return an empty array if the response format is unexpected
           return [];
         }
@@ -688,27 +801,13 @@ class DataService {
    * @param {FormData | object | string} formData - Form data
    * @param {number|null} productId - Optional product ID
    * @returns {Promise<object>} A promise that resolves immediately with the client-side estimate ID.
-   * The server-side creation is handled asynchronously.
    */
   addNewEstimate(formData, productId = null) {
-    let requestData = {
-      form_data: this.formatFormData(formData)
-    };
-
-    if (productId) {
-      requestData.product_id = productId;
-    }
-
     const estimateName = formData instanceof FormData ? formData.get('estimate_name') : (formData.estimate_name || 'Unnamed Estimate');
 
-    const existingData = loadEstimateData();
-    const existingEstimates = existingData.estimates || {};
-    // Use the count of existing estimates as the next sequential ID for local storage
-    const nextSequentialId = Object.keys(existingEstimates).length;
-
-    // Create a basic estimate object for local storage with the sequential ID
+    // Create a basic estimate object for local storage
     const clientSideEstimateData = {
-      id: String(nextSequentialId), // Ensure ID is a string for consistency
+      // Let EstimateStorage.js generate the unique ID
       name: estimateName,
       rooms: {}, // Start with an empty rooms object
       // Add any other default properties needed for a new estimate client-side
@@ -716,33 +815,7 @@ class DataService {
 
     // Add the estimate to local storage immediately
     const clientSideEstimateId = addEstimate(clientSideEstimateData);
-    logger.log(`Client-side estimate saved to localStorage with sequential ID: ${clientSideEstimateId}`);
-
-    // Make the AJAX request to the server asynchronously
-    this.ajaxService.addNewEstimate(requestData)
-      .then(serverData => {
-        logger.log('DataService: Server-side estimate creation successful:', serverData);
-        // Invalidate caches since we modified data on the server
-        this.invalidateCache();
-
-        // You might want to update the client-side estimate with the server-assigned ID
-        // if the server returns one and it's different from the sequential client-side ID.
-        // Example: if (serverData.estimate_id && serverData.estimate_id !== clientSideEstimateId) {
-        //   updateEstimateIdInStorage(clientSideEstimateId, serverData.estimate_id);
-        // }
-
-        // Trigger an event that ModalManager (or other parts of the app) can listen to
-        // to know that the server-side creation is complete.
-        // Example: EventBus.emit('estimateCreatedOnServer', { clientSideId: clientSideEstimateId, serverData: serverData });
-
-      })
-      .catch(serverError => {
-        logger.error('Server-side estimate creation failed:', serverError);
-        // Handle server-side error asynchronously, e.g., show a notification to the user.
-        // You might also want to consider removing the locally created estimate if the server creation failed.
-        // Example: removeEstimateFromStorage(clientSideEstimateId);
-        // Example: ModalManager.showError('Failed to save estimate on server.');
-      });
+    logger.log(`Client-side estimate saved to localStorage with unique ID: ${clientSideEstimateId}`);
 
     // Return a new Promise that resolves immediately with the client-side estimate ID.
     // The ModalManager will use the resolution of this promise to proceed with the next step
@@ -751,23 +824,15 @@ class DataService {
   }
 
   /**
-   // In DataService.js
-   
-   /**
-   * Create a new room.
-   * If a productId is provided, it fetches data for that product (including similar products)
-   * and conditionally fetches/stores room suggestions based on a feature switch, then adds
-   * the product to the new room in localStorage.
-   * The main promise resolves after local changes. Async calls update the server.
+   * Create a new room without adding products.
+   * The main promise resolves after local changes.
    * @param {FormData | object | string} formData - Form data for the new room
    * @param {string|number} estimateId - Estimate ID to add the room to
-   * @param {number|null} productId - Optional product ID to add to the new room
-   * @returns {Promise<object>} A promise that resolves with the new room data (and product if added).
+   * @returns {Promise<object>} A promise that resolves with the new room data.
    */
-  addNewRoom(formData, estimateId, productId = null) {
+  addNewRoom(formData, estimateId) {
     logger.log('DataService: Adding new room', {
       estimateId: estimateId,
-      productId: productId,
       formData: formData instanceof FormData ? Object.fromEntries(formData) : formData
     });
 
@@ -778,174 +843,35 @@ class DataService {
       if (!estimate) {
         const errorMsg = `Estimate with ID ${estimateId} not found in local storage. Cannot add room.`;
         logger.error(`DataService: ${errorMsg}`);
-        // Attempt server request for room creation anyway for consistency, but reject local promise.
-        const requestDataOnLocalFailure = {
-          form_data: this.formatFormData(formData),
-          estimate_id: String(estimateId) // Ensure string
-        };
-        if (productId) {
-          requestDataOnLocalFailure.product_id = String(productId); // Ensure string
-        }
-        this.ajaxService.addNewRoom(requestDataOnLocalFailure)
-          .then(serverData => logger.log('DataService: Server add_new_room (after local estimate not found) response:', serverData))
-          .catch(serverError => logger.error('Server add_new_room (after local estimate not found) failed:', serverError));
         reject(new Error(errorMsg));
         return;
       }
 
-      const clientSideRoomId = String(Object.keys(estimate.rooms || {}).length);
       const roomWidth = parseFloat(formData instanceof FormData ? formData.get('room_width') : formData.room_width) || 0;
       const roomLength = parseFloat(formData instanceof FormData ? formData.get('room_length') : formData.room_length) || 0;
 
       const newRoomData = {
-        id: clientSideRoomId,
+        // Let EstimateStorage.js generate the unique ID
         name: formData instanceof FormData ? formData.get('room_name') || 'Unnamed Room' : formData.room_name || 'Unnamed Room',
         width: roomWidth,
         length: roomLength,
-        products: [],
-        // product_suggestions: [], // Suggestions will be explicitly managed if a product is added
+        products: {}, // Initialize as an empty object for the new storage structure
+        // product_suggestions: [], // Suggestions will be managed separately
         min_total: 0,
         max_total: 0
       };
 
-      addRoom(estimateId, newRoomData); // Add the basic room structure to local storage
-      logger.log(`Room ID ${newRoomData.id} (empty) added to localStorage for estimate ${estimateId}`);
+      // Add the basic room structure to local storage (without products)
+      const clientSideRoomId = addRoom(estimateId, newRoomData);
+      logger.log(`Room ID ${clientSideRoomId} (empty) added to localStorage for estimate ${estimateId}`);
 
-      // Asynchronously send the request to the server to add the room
-      // This part of the server request might include the product_id if the backend handles
-      // creating the room and adding the product in one step.
-      let serverRequestData = {
-        form_data: this.formatFormData(formData),
-        estimate_id: String(estimateId)
-      };
-      if (productId) {
-        serverRequestData.product_id = String(productId);
-      }
-      this.ajaxService.addNewRoom(serverRequestData)
-        .then(serverData => {
-          logger.log('DataService: Server-side room creation successful (potentially with product):', serverData);
-          this.invalidateCache();
-        })
-        .catch(serverError => {
-          logger.error('Server-side room creation failed:', serverError);
-        });
-
-      if (productId) {
-        logger.log(`DataService: Product ID ${productId} provided for new room ${clientSideRoomId}. Fetching product data and managing suggestions.`);
-        // Fetch comprehensive data for the product to be added.
-        // The backend should provide 'room_suggested_products' based on this single product in the new room.
-        this.ajaxService.getProductDataForStorage({
-          product_id: String(productId),
-          room_width: roomWidth,
-          room_length: roomLength,
-          room_products: [String(productId)] // Context for suggestions: just this product in the new room
-        })
-          .then(productDataResponse => {
-            logger.log('DataService: Fetched comprehensive product data for new room product:', productDataResponse);
-
-            if (!productDataResponse || !productDataResponse.product_data) {
-              const errorMsg = 'Failed to get comprehensive product data for new room product.';
-              logger.warn(`DataService: ${errorMsg}`);
-              // The room is created, but product addition failed. Resolve with partial success.
-              resolve({
-                room_id: clientSideRoomId,
-                estimate_id: estimateId,
-                ...newRoomData,
-                product_added_successfully: false,
-                error: errorMsg
-              });
-              return;
-            }
-
-            const comprehensiveProductData = productDataResponse.product_data;
-            let roomSuggestedProductsToStore = [];
-
-            if (!Array.isArray(comprehensiveProductData.similar_products)) {
-              comprehensiveProductData.similar_products = [];
-            }
-
-            if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
-              const rawSuggestions = productDataResponse.room_suggested_products || comprehensiveProductData.room_suggested_products || [];
-              if (Array.isArray(rawSuggestions)) {
-                roomSuggestedProductsToStore = rawSuggestions;
-              }
-              logger.log('DataService: Suggestions enabled. Processed room suggestions for new room:', roomSuggestedProductsToStore);
-            } else {
-              logger.log('DataService: Suggestions feature disabled. Not processing room suggestions for new room.');
-            }
-
-            if (Object.prototype.hasOwnProperty.call(comprehensiveProductData, 'room_suggested_products')) {
-              delete comprehensiveProductData.room_suggested_products;
-            }
-            logger.log('DataService: Comprehensive product data for new room (similar_products processed):', comprehensiveProductData);
-
-            try {
-              const productAddedSuccess = addProductToRoomStorage(estimateId, clientSideRoomId, comprehensiveProductData);
-              if (productAddedSuccess) {
-                logger.log(`Product ID ${productId} successfully added to new room ${clientSideRoomId} in localStorage.`);
-
-                if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
-                  replaceSuggestionsInRoomStorage(roomSuggestedProductsToStore, estimateId, clientSideRoomId);
-                  logger.log(`Suggestions updated for new room ${clientSideRoomId} in localStorage.`);
-                } else {
-                  replaceSuggestionsInRoomStorage([], estimateId, clientSideRoomId);
-                  logger.log(`Suggestions cleared for new room ${clientSideRoomId} as feature is disabled.`);
-                }
-
-                const finalEstimateData = loadEstimateData();
-                const finalEstimate = finalEstimateData.estimates?.[estimateId];
-                const finalRoom = finalEstimate?.rooms?.[clientSideRoomId]; // This should now contain the product
-
-                resolve({
-                  room_id: clientSideRoomId,
-                  estimate_id: estimateId,
-                  ...(finalRoom || newRoomData), // Use the updated room data from storage
-                  product_data: comprehensiveProductData, // Data of the product added
-                  product_added_successfully: true
-                });
-              } else {
-                const errorMsg = `Failed to add product ID ${productId} to new room ${clientSideRoomId} via addProductToRoomStorage.`;
-                logger.warn(`DataService: ${errorMsg}`);
-                resolve({
-                  room_id: clientSideRoomId,
-                  estimate_id: estimateId,
-                  ...newRoomData, // Room exists, but product not added
-                  product_added_successfully: false,
-                  error: errorMsg
-                });
-              }
-            } catch (e) {
-              const errorMsg = `Error adding product ID ${productId} to new room ${clientSideRoomId} in localStorage: ${e.message}`;
-              logger.error(`DataService: ${errorMsg}`, e);
-              // This is a critical failure in adding the product after room creation.
-              // The room exists in local storage, but the product part failed.
-              // Depending on desired behavior, could reject or resolve with error.
-              // Here, we reject to signal that the 'add product to new room' part failed significantly.
-              reject(new Error(errorMsg));
-            }
-          })
-          .catch(error => { // Catches errors from this.request('get_product_data_for_storage', ...)
-            const errorMsg = `DataService: Error fetching product data for new room (product ID ${productId}): ${error.message}`;
-            logger.error(errorMsg, error);
-            // If fetching product data fails, the product cannot be added, and suggestions are unknown.
-            // Reject the promise as this part of the operation failed.
-            reject(new Error(errorMsg));
-          });
-      } else {
-        // No productId, so resolve the promise with just the new room data.
-        // Suggestions are not relevant here as no product is being immediately added.
-        // However, ensure the suggestions array for the new empty room is initialized if not done by `addRoom`.
-        // `addRoom` should ideally create `product_suggestions: []` for the new room.
-        // If not, one could call `replaceSuggestionsInRoomStorage([], estimateId, clientSideRoomId);` here too.
-        // For now, assuming `addRoom` initializes it or it's implicitly empty.
-        logger.log(`No product ID provided for new room ${clientSideRoomId}. Resolving with basic room data.`);
-        resolve({
-          room_id: clientSideRoomId,
-          estimate_id: estimateId,
-          ...newRoomData, // Contains `products: []`
-          product_added_successfully: null // Not applicable
-        });
-      }
+      // Resolve with the room data immediately - product addition is a separate concern
+      logger.log(`Room ${clientSideRoomId} created. Resolving with basic room data.`);
+      resolve({
+        room_id: clientSideRoomId,
+        estimate_id: estimateId,
+        ...newRoomData, // Contains `products: []`
+      });
     });
   }
 
@@ -971,21 +897,34 @@ class DataService {
       const estimate = currentEstimateData.estimates?.[estimateId];
       const room = estimate?.rooms?.[roomId];
 
-      if (!room || !Array.isArray(room.products)) {
-        const errorMsg = 'Room or products array not found in localStorage for product removal.';
+      if (!room || (!room.products)) {
+        const errorMsg = 'Room or products not found in localStorage for product removal.';
         logger.log(`[removeProductFromRoom] Error: ${errorMsg}`);
         reject(new Error(errorMsg));
         return;
       }
 
-      const productToRemove = room.products.find(p => String(p.id) === String(productId));
-      if (!productToRemove) {
+      const productIdStr = String(productId);
+      let productExists = false;
+      let remainingProductIds = [];
+
+      if (typeof room.products === 'object' && !Array.isArray(room.products)) {
+        // Object-based products
+        productExists = !!room.products[productIdStr];
+        // Get all product IDs except the one being removed
+        remainingProductIds = Object.keys(room.products).filter(id => id !== productIdStr);
+      } else if (Array.isArray(room.products)) {
+        // Legacy array-based products
+        const productToRemove = room.products.find(p => String(p.id) === productIdStr);
+        productExists = !!productToRemove;
+        const remainingProductObjects = room.products.filter(product => String(product.id) !== productIdStr);
+        remainingProductIds = remainingProductObjects.map(p => p.id);
+      }
+
+      if (!productExists) {
         // Log warning but proceed, as removeProductFromRoomStorage will ultimately determine local removal success.
         logger.log(`[removeProductFromRoom] Warning: Product with ID ${productId} not found in room ${roomId} (localStorage) before attempting removal logic.`);
       }
-
-      const remainingProductObjects = room.products.filter(product => String(product.id) !== String(productId));
-      const remainingProductIds = remainingProductObjects.map(p => p.id);
 
       const performProductRemovalAndResolve = (suggestionsManagedStatus) => {
         // suggestionsManagedStatus can be 'updated', 'update_failed', 'disabled', 'cleared_due_to_disabled'
@@ -1044,22 +983,9 @@ class DataService {
           room_totals: finalRoom?.totals || { min_total: 0, max_total: 0 }
         });
 
-        // Asynchronous server call to remove the product from the session
-        logger.log('[removeProductFromRoom] Initiating asynchronous server call to remove_product_from_room.');
-        this.ajaxService.removeProductFromRoom({
-          estimate_id: estimateId,
-          room_id: roomId,
-          product_index: productIndex, // Backend might still use this
-          product_id: productId      // Also send productId to backend
-        })
-          .then(serverResponse => {
-            logger.log('[removeProductFromRoom] Async server product removal successful:', serverResponse);
-            this.invalidateCache();
-          })
-          .catch(serverError => {
-            logger.log('[removeProductFromRoom] Async server product removal failed:', serverError);
-            // Non-blocking error, local changes are already reflected.
-          });
+        // No server sync needed - local storage is the source of truth
+        logger.log('[removeProductFromRoom] Product removed from localStorage. No server sync required.');
+        this.invalidateCache();
       };
 
       if (window.productEstimatorVars.featureSwitches.suggested_products_enabled) {
@@ -1127,30 +1053,8 @@ class DataService {
       logger.error(`Error removing room ID ${roomId} from localStorage:`, e);
     }
 
-
-    // Force string conversion for consistency
-    const requestData = {
-      estimate_id: String(estimateId),
-      room_id: String(roomId)
-    };
-
-    // Make the AJAX request to the server asynchronously
-    this.ajaxService.removeRoom(requestData)
-      .then(serverData => {
-        logger.log('DataService: Server-side room removal successful:', serverData);
-        // Invalidate caches since we modified data on the server
-        this.invalidateCache();
-        // You might update local state further based on server response if needed
-      })
-      .catch(serverError => {
-        logger.error('Server-side room removal failed:', serverError);
-        // Handle server error asynchronously, e.g., notify user.
-        // You might need to add the room back to local storage if the server removal failed.
-      });
-
     // Return a promise that resolves immediately after the local removal attempt.
     // ModalManager will use this to update the UI based on the local change.
-    // Note: This promise does NOT wait for the server response.
     return Promise.resolve({ success: true }); // Assuming local removal attempt was made
   }
 
@@ -1174,25 +1078,8 @@ class DataService {
       logger.error(`Error removing estimate ID ${estimateId} from localStorage:`, e);
     }
 
-    // Make the AJAX request to the server asynchronously
-    this.ajaxService.removeEstimate({
-      estimate_id: estimateId
-    })
-      .then(serverData => {
-        logger.log(`DataService: Server-side estimate removal successful: ${estimateId}`, serverData);
-        // Invalidate caches since we modified data
-        this.invalidateCache();
-        // You might update local state further based on server response if needed
-      })
-      .catch(serverError => {
-        logger.error(`DataService: Server-side estimate removal failed: ${estimateId}`, serverError);
-        // Handle server error asynchronously, e.g., notify user.
-        // You might need to add the estimate back to local storage if the server removal failed.
-      });
-
     // Return a promise that resolves immediately after the local removal attempt.
     // ModalManager will use this to update the UI based on the local change.
-    // Note: This promise does NOT wait for the server response.
     return Promise.resolve({ success: true }); // Assuming local removal attempt was made
   }
 
@@ -1263,7 +1150,7 @@ class DataService {
    */
   invalidateCache(cacheType = null) {
     logger.log('Invalidating caches');
-    
+
     // Invalidate local in-memory cache
     if (cacheType) {
       if (Object.prototype.hasOwnProperty.call(this.cache, cacheType)) {
@@ -1278,9 +1165,102 @@ class DataService {
       this.cache.estimatesList = null;
       this.cache.rooms = {};
     }
-    
+
     // Delegate to AjaxService to invalidate its cache
     this.ajaxService.invalidateCache(cacheType);
+  }
+
+  /**
+   * Force reload estimates from localStorage and update cache
+   * @returns {object} Raw estimates data from localStorage
+   */
+  refreshEstimatesCache() {
+    logger.log('Refreshing estimates cache directly from localStorage');
+
+    // Load directly from localStorage
+    const storageData = loadEstimateData();
+
+    // Update the cache with the fresh data
+    if (storageData && storageData.estimates) {
+      // Convert the object of estimates to an array for the cache
+      this.cache.estimatesData = Object.values(storageData.estimates);
+      logger.log(`Refreshed cache with ${this.cache.estimatesData.length} estimates`);
+    } else {
+      // Reset the cache if no data found
+      this.cache.estimatesData = [];
+      logger.log('No estimates found in localStorage during refresh');
+    }
+
+    // Return the raw data
+    return storageData;
+  }
+
+  /**
+   * Update the selected variation for a product addition
+   * @param {string} estimateId - The estimate ID
+   * @param {string} roomId - The room ID
+   * @param {string} parentProductId - The parent additional product ID
+   * @param {string} variationId - The selected variation ID
+   * @returns {Promise<void>}
+   */
+  updateProductAdditionVariation(estimateId, roomId, parentProductId, variationId) {
+    logger.log('DataService: Updating product addition variation', { estimateId, roomId, parentProductId, variationId });
+    
+    return new Promise((resolve, reject) => {
+      try {
+        // Get the estimate data from localStorage
+        const estimatesData = loadEstimateData();
+        const estimate = estimatesData.estimates[estimateId];
+        
+        if (!estimate || !estimate.rooms[roomId]) {
+          logger.error('Estimate or room not found', { estimateId, roomId });
+          reject(new Error('Estimate or room not found'));
+          return;
+        }
+        
+        const room = estimate.rooms[roomId];
+        
+        // Find the parent product that has this additional product
+        let parentProduct = null;
+        let additionalProduct = null;
+        
+        if (room.products && typeof room.products === 'object') {
+          Object.values(room.products).forEach(product => {
+            if (product.additional_products && product.additional_products[parentProductId]) {
+              parentProduct = product;
+              additionalProduct = product.additional_products[parentProductId];
+            }
+          });
+        }
+        
+        if (!parentProduct || !additionalProduct) {
+          logger.error('Parent product or additional product not found', { parentProductId });
+          reject(new Error('Parent product or additional product not found'));
+          return;
+        }
+        
+        // Update the selected_option
+        additionalProduct.selected_option = parseInt(variationId);
+        
+        // Update the selected state for all variations
+        if (additionalProduct.variations) {
+          Object.values(additionalProduct.variations).forEach(variation => {
+            variation.selected = (variation.id === parseInt(variationId));
+          });
+        }
+        
+        // Save the updated data to localStorage
+        saveEstimateData(estimatesData);
+        
+        // Refresh the cache
+        this.refreshEstimatesCache();
+        
+        resolve();
+      } catch (error) {
+        logger.error('Error updating product addition variation', error);
+        reject(error);
+      }
+    });
   }
 }
 

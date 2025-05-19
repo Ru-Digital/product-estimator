@@ -80,7 +80,6 @@
             "includes/ajax/class-product-ajax-handler.php",
             "includes/ajax/class-storage-ajax-handler.php",
             "includes/ajax/class-suggestion-ajax-handler.php",
-            "includes/ajax/class-ui-ajax-handler.php",
             "includes/ajax/class-validation-ajax-handler.php"
         ],
         "files": []

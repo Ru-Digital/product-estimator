@@ -20,31 +20,6 @@ class ValidationAjaxHandler extends AjaxHandlerBase {
     }
 
     /**
-     * Check if a product is in one of the primary product categories
-     *
-     * @param int $product_id The product ID to check
-     * @return bool True if the product is in a primary category
-     */
-    protected function isProductInPrimaryCategories($product_id) {
-        // Get the primary categories from settings
-        $general_settings = get_option('product_estimator_general', []);
-        $primary_category_ids = isset($general_settings['primary_product_categories']) ? $general_settings['primary_product_categories'] : [];
-
-        // If no primary categories are configured, no product can be primary
-        if (empty($primary_category_ids)) {
-            return false;
-        }
-
-        // Get the product's categories
-        $product_categories = wp_get_post_terms($product_id, 'product_cat', ['fields' => 'ids']);
-
-        // Check if any of the product's categories are in the primary categories list
-        $is_primary = !empty(array_intersect($product_categories, $primary_category_ids));
-
-        return $is_primary;
-    }
-
-    /**
      * Check for primary category conflicts
      * This is still needed to validate primary category rules server-side
      */

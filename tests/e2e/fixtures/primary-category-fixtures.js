@@ -72,7 +72,6 @@ const primaryCategoryFixtures = {
     primary_product_categories: [123], // Flooring category ID
     feature_switches: {
       suggested_products_enabled: true,
-      product_upgrades_enabled: true
     }
   },
   

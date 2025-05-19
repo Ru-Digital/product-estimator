@@ -37,7 +37,6 @@ class SettingsPage extends AdminBasePage {
     this.labelsTab = '.pe-vertical-tabs-nav-item:has-text("Labels")';
     this.featureSwitchesTab = '.pe-vertical-tabs-nav-item:has-text("Feature Switches")';
     this.notificationsTab = '.pe-vertical-tabs-nav-item:has-text("Notifications")';
-    this.productUpgradesTab = '.pe-vertical-tabs-nav-item:has-text("Product Upgrades")';
     
     // Specific settings fields
     this.estimateValidityPeriod = 'input[name="estimate_validity_period"]';

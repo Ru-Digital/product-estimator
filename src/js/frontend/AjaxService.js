@@ -34,7 +34,6 @@ class AjaxService {
 
     // Initialize cache for server-side data
     this.cache = {
-      productUpgrades: {},
       productData: {},
       similarProducts: {},
       suggestions: {},
@@ -113,37 +112,6 @@ class AjaxService {
     return formatFormData(formData);
   }
 
-  /**
-   * Get product upgrades
-   * @param {object} data - Request data object
-   * @param {boolean} bypassCache - Whether to bypass the cache
-   * @returns {Promise<Array>} - A promise resolving to an array of upgrade options
-   */
-  getProductUpgrades(data, bypassCache = false) {
-    // Create a cache key from the request data
-    const cacheKey = `${data.product_id}_${data.estimate_id}_${data.room_id}_${data.upgrade_type}`;
-
-    // Check if we have cached data
-    if (!bypassCache && this.cache.productUpgrades[cacheKey]) {
-      logger.log(`Returning cached product upgrades for key ${cacheKey}`);
-      return Promise.resolve(this.cache.productUpgrades[cacheKey]);
-    }
-
-    // Make the request if no cache hit
-    return this._request('get_product_upgrades', data)
-      .then(responseData => {
-        // Cache the response
-        if (responseData && responseData.upgrades) {
-          this.cache.productUpgrades[cacheKey] = responseData;
-        }
-        return responseData;
-      })
-      .catch(error => {
-        // Clear cache on error
-        delete this.cache.productUpgrades[cacheKey];
-        throw error;
-      });
-  }
 
   /**
    * Get product data for storage
@@ -431,7 +399,6 @@ class AjaxService {
       logger.log('Invalidating all caches');
       // Reset all caches
       this.cache = {
-        productUpgrades: {},
         productData: {},
         similarProducts: {},
         suggestions: {},

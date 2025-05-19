@@ -134,41 +134,6 @@ class DataService {
     });
   }
 
-  /**
-   * Get available upgrades for a product.
-   * @param {string|number} productId - The ID of the product to get upgrades for.
-   * @param {string|number} estimateId - The ID of the current estimate.
-   * @param {string|number} roomId - The ID of the room the product is in.
-   * @param {number} roomArea - The area of the room.
-   * @param {string} upgradeType - The type of upgrade (e.g., 'main', 'additional').
-   * @param {boolean} bypassCache - Whether to bypass the cache.
-   * @returns {Promise<Array>} - A promise resolving to an array of upgrade options.
-   */
-  getProductUpgrades(productId, estimateId, roomId, roomArea, upgradeType, bypassCache = false) {
-    logger.log(`[DataService.getProductUpgrades] DEBUG: Called with productId: ${productId}, estimateId: ${estimateId}, roomId: ${roomId}, roomArea: ${roomArea}, upgradeType: ${upgradeType}, bypassCache: ${bypassCache}`);
-
-    // Delegate to AjaxService which now handles its own caching
-    return this.ajaxService.getProductUpgrades({
-      product_id: productId,
-      estimate_id: estimateId,
-      room_id: roomId,
-      room_area: roomArea,
-      upgrade_type: upgradeType,
-    }, bypassCache)
-      .then(data => {
-        logger.log(`[DataService.getProductUpgrades] DEBUG: Response from ajaxService.getProductUpgrades:`, data);
-        if (data && Array.isArray(data.upgrades)) {
-          return data.upgrades;
-        } else {
-          logger.warn('[getProductUpgrades] DEBUG: get_product_upgrades did not return expected data structure.', data);
-          return [];
-        }
-      })
-      .catch(error => {
-        logger.error('[getProductUpgrades] DEBUG: Error fetching product upgrades:', error);
-        throw error;
-      });
-  }
 
   /**
    * Get all estimates data for dropdowns by reading from localStorage.

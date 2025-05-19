@@ -17,12 +17,12 @@
   327:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/DataService.js
-  421:11  warning  Unexpected console statement  no-console
-  425:13  warning  Unexpected console statement  no-console
-  426:13  warning  Unexpected console statement  no-console
-  429:15  warning  Unexpected console statement  no-console
-  431:17  warning  Unexpected console statement  no-console
-  436:11  warning  Unexpected console statement  no-console
+  386:11  warning  Unexpected console statement  no-console
+  390:13  warning  Unexpected console statement  no-console
+  391:13  warning  Unexpected console statement  no-console
+  394:15  warning  Unexpected console statement  no-console
+  396:17  warning  Unexpected console statement  no-console
+  401:11  warning  Unexpected console statement  no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimateActions.js
    10:1   warning  There should be at least one empty line between import groups                 import/order
@@ -118,9 +118,14 @@
     13:28  warning  'saveEstimateData' is defined but never used                             no-unused-vars
     13:46  warning  'addRoom' is defined but never used                                      no-unused-vars
     13:55  warning  'removeRoom' is defined but never used                                   no-unused-vars
-  1048:7   warning  'sectionInfo' is assigned a value but never used                         no-unused-vars
-  1266:69  warning  'index' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
-  2518:1   warning  Invalid JSDoc @param "sectionInfo" type "Object"; prefer: "object"       jsdoc/check-types
+  1050:7   warning  'sectionInfo' is assigned a value but never used                         no-unused-vars
+  1231:5   error    Unreachable code                                                         no-unreachable
+  1269:69  warning  'index' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  1304:5   error    Unreachable code                                                         no-unreachable
+  1387:7   error    Unreachable code                                                         no-unreachable
+  1388:12  error    Unreachable code                                                         no-unreachable
+  1402:5   error    Unreachable code                                                         no-unreachable
+  2522:1   warning  Invalid JSDoc @param "sectionInfo" type "Object"; prefer: "object"       jsdoc/check-types
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/UIManager.js
    11:10  warning  'format' is defined but never used                                              no-unused-vars
@@ -130,17 +135,17 @@
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/template-loader.js
    6:1  warning  There should be no empty line within import group  import/order
-  16:1  warning  There should be no empty line within import group  import/order
-  21:1  warning  There should be no empty line within import group  import/order
-  24:1  warning  There should be no empty line within import group  import/order
-  30:1  warning  There should be no empty line within import group  import/order
-  36:1  warning  There should be no empty line within import group  import/order
-  39:1  warning  There should be no empty line within import group  import/order
-  46:1  warning  There should be no empty line within import group  import/order
-  51:1  warning  There should be no empty line within import group  import/order
-  56:1  warning  There should be no empty line within import group  import/order
-  59:1  warning  There should be no empty line within import group  import/order
-  63:1  warning  There should be no empty line within import group  import/order
+  15:1  warning  There should be no empty line within import group  import/order
+  20:1  warning  There should be no empty line within import group  import/order
+  23:1  warning  There should be no empty line within import group  import/order
+  29:1  warning  There should be no empty line within import group  import/order
+  35:1  warning  There should be no empty line within import group  import/order
+  38:1  warning  There should be no empty line within import group  import/order
+  45:1  warning  There should be no empty line within import group  import/order
+  50:1  warning  There should be no empty line within import group  import/order
+  55:1  warning  There should be no empty line within import group  import/order
+  58:1  warning  There should be no empty line within import group  import/order
+  62:1  warning  There should be no empty line within import group  import/order
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/format.js
   36:1  warning  Missing JSDoc @returns declaration                 jsdoc/require-returns
@@ -151,10 +156,6 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-✖ 116 problems (0 errors, 116 warnings)
+✖ 121 problems (5 errors, 116 warnings)
   0 errors and 2 warnings potentially fixable with the `--fix` option.
-
-
-> product-estimator@1.3.0 lint:scss
-> stylelint 'src/styles/**/*.scss'
 

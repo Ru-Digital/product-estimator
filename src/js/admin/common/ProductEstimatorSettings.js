@@ -136,7 +136,6 @@ class ProductEstimatorSettings {
     window.notificationSettings = window.notificationSettings || { tab_id: 'notifications', i18n: {} };
     window.pricingRulesSettings = window.pricingRulesSettings || { tab_id: 'pricing_rules', i18n: {} };
     window.productAdditionsSettings = window.productAdditionsSettings || { tab_id: 'product_additions', i18n: {} };
-    window.productUpgradesSettings = window.productUpgradesSettings || { tab_id: 'product_upgrades', i18n: {} };
     window.similarProductsSettings = window.similarProductsSettings || { tab_id: 'similar_products', i18n: {} };
     window.labelSettings = window.labelSettings || { tab_id: 'labels', i18n: {} };
 

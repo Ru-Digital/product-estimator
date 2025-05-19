@@ -170,14 +170,6 @@ if (isset($estimate_id)) {
         <?php endif; ?>
     </div>
 
-    <!-- Product Upgrades Toggle Button - Hidden initially, will be shown by JS when upgrades are available -->
-    <button class="product-upgrades-toggle" style="display: none;">
-        <?php esc_html_e('Available Upgrades', 'product-estimator'); ?>
-        <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span>
-    </button>
-
-    <!-- Product Upgrades Container - Initially empty, will be filled by JS -->
-    <div class="product-upgrades-container" style="display: none;"></div>
 
     <?php
     // Display additional products if available - NOW TOGGLEABLE
@@ -250,16 +242,6 @@ if (isset($estimate_id)) {
                         </div>
                     <?php endforeach; ?>
                 </div>
-                <?php
-                // Include product upgrades template if available
-                if (!isset($product['type']) || $product['type'] !== 'note') {
-                    $upgrade_product_id = $additional_product['id'];
-                    $upgrade_type = "additional_products";
-                    if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-upgrades-display.php')) {
-                        include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-upgrades-display.php';
-                    }
-                }
-                ?>
             </div>
         </div>
     <?php endif; ?>

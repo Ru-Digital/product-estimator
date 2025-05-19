@@ -42,9 +42,6 @@ class AjaxHandlerLoader {
             $this->handlers['suggestion'] = new SuggestionAjaxHandler();
         }
         
-        if ($features->product_upgrades_enabled) {
-            $this->handlers['upgrade'] = new UpgradeAjaxHandler();
-        }
         
         // Allow adding custom handlers via filter
         $this->handlers = apply_filters('product_estimator_ajax_handlers', $this->handlers);

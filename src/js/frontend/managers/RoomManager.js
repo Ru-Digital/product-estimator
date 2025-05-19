@@ -727,8 +727,10 @@ class RoomManager {
       // Render product upgrades for the room
       this.renderRoomUpgrades(room, roomElement);
 
-      // Initialize similar products for the room
-      this.initializeSimilarProductsForRoom(estimateId, roomId);
+      // Initialize similar products for the room with a delay to ensure DOM is ready
+      setTimeout(() => {
+        this.initializeSimilarProductsForRoom(estimateId, roomId);
+      }, 300);
 
       // Product loading removed - products now displayed as part of room-item template
 
@@ -1220,11 +1222,12 @@ class RoomManager {
   }
 
   /**
-   * Render product upgrades for a room
+   * Render product upgrades for a room - no-op (feature removed)
    * @param {object} room - The room data
    * @param {HTMLElement} roomElement - The room element
    */
   renderRoomUpgrades(room, roomElement) {
+    return;
     logger.log('Rendering room upgrades', { roomName: room.name });
 
     // Get estimate and room IDs from the room element
@@ -1391,10 +1394,11 @@ class RoomManager {
   }
 
   /**
-   * Bind events for upgrade buttons
+   * Bind events for upgrade buttons - no-op (feature removed)
    * @param {HTMLElement} upgradesContainer - The upgrades container
    */
   bindUpgradeButtons(upgradesContainer) {
+    return;
     const upgradeButtons = upgradesContainer.querySelectorAll('.replace-product-in-room');
 
     upgradeButtons.forEach(button => {
@@ -2347,9 +2351,9 @@ class RoomManager {
     }
 
     // Also update similar products since product list changed
-    // Force refresh if this is the first product in the room to ensure we get data from server
-    const isFirstProduct = room.products && Object.keys(room.products).length === 1;
-    this.initializeSimilarProductsForRoom(estimateId, roomId, isFirstProduct);
+    setTimeout(() => {
+      this.initializeSimilarProductsForRoom(estimateId, roomId, false);
+    }, 300);
   }
 
   /**

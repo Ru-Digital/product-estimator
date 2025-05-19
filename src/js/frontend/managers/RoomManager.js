@@ -12,7 +12,7 @@ import { format, createLogger } from '@utils';
 
 import { loadEstimateData, saveEstimateData, addRoom, removeRoom } from '../EstimateStorage';
 import TemplateEngine from '../TemplateEngine';
-import { SuggestionsCarousel } from '../SuggestionsCarousel';
+import { InfiniteCarousel } from '../InfiniteCarousel';
 
 const logger = createLogger('RoomManager');
 
@@ -2631,18 +2631,10 @@ class RoomManager {
     const carouselContainer = roomElement.querySelector('.similar-products-carousel');
     if (carouselContainer && similarProducts.length > 0) {
       logger.log('Initializing similar products carousel manually');
-      // The SuggestionsCarousel should automatically initialize when content is added
-      // But we can trigger initialization manually if needed
+      // Initialize the infinite carousel after a short delay to ensure DOM is ready
       setTimeout(() => {
-        if (this.modalManager.uiManager) {
-          this.modalManager.uiManager.initializeCarouselInContainer(carouselContainer);
-        } else {
-          // Fallback: create carousel directly
-          logger.log('UIManager not available, initializing carousel directly');
-          if (!carouselContainer.carouselInstance) {
-            // Import is already at the top of the file, so we can use it directly
-            new SuggestionsCarousel(carouselContainer);
-          }
+        if (!carouselContainer.carouselInstance) {
+          new InfiniteCarousel(carouselContainer);
         }
       }, 100);
     }

@@ -74,8 +74,8 @@
   box-sizing: border-box;
   margin-bottom: 0;
   max-width: 100%;
-  overflow: visible; /* Changed to allow buttons to be visible */
-  padding: 0 35px; /* Increased padding to make room for buttons */
+  overflow: hidden; /* Hide overflow for infinite scroll */
+  padding: 0 35px; /* Make room for navigation buttons */
   position: relative;
   width: 100%;
 
@@ -133,8 +133,9 @@
     box-sizing: border-box;
     display: flex;
     gap: 5px;
-    margin: 0 auto;
-    max-width: 100%;
+    margin: 0;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
   }
 
   /* Suggestion items */
@@ -164,6 +165,15 @@
   .add-suggestion-to-room {
     font-size: 11px;
     padding: 4px 8px;
+  }
+  
+  /* Clone items for infinite scroll */
+  .suggestion-item.duplicated {
+    // Clones should look exactly like regular items
+    
+    &.fade-in {
+      transition: opacity 0.3s ease;
+    }
   }
 }
 

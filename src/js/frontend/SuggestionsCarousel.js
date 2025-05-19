@@ -43,18 +43,22 @@ class SuggestionsCarousel {
 
     // Configuration based on carousel type
     if (this.isSimilarProducts) {
-      // Similar products - fixed small size
-      this.itemWidth = 130;
+      // Similar products - fixed small size (must match CSS)
+      this.itemWidth = 170; // Matches the CSS width
       this.itemGap = 5;
+      this.scrollStep = 1; // Number of items to scroll at a time
     } else {
       // Regular suggestions - larger items
       this.itemWidth = 200;
       this.itemGap = 15;
+      this.scrollStep = 1;
     }
 
     this.visibleItems = this.calculateVisibleItems();
     this.currentPosition = 0;
-    this.maxPosition = Math.max(0, this.items.length - this.visibleItems);
+    this.maxPosition = this.calculateMaxPosition();
+    
+    logger.log(`[${this.id}] Carousel state - Items: ${this.items.length}, Visible: ${this.visibleItems}, Max Position: ${this.maxPosition}`);
 
     // Set up container and items
     this.setContainerSize();
@@ -109,19 +113,42 @@ class SuggestionsCarousel {
   calculateVisibleItems() {
     // Calculate available width
     const containerWidth = this.getContainerWidth();
-    const availableWidth = containerWidth - 50; // Allow space for navigation
+    const availableWidth = containerWidth - 80; // Allow space for navigation, padding, and partial item visibility
 
-    // Fixed item widths for similar products carousel
-    const effectiveItemWidth = this.isSimilarProducts ? 130 : this.itemWidth;
-    const effectiveGap = this.isSimilarProducts ? 5 : this.itemGap;
+    // Use the configured item widths
+    const effectiveItemWidth = this.itemWidth;
+    const effectiveGap = this.itemGap;
 
-    // Calculate how many items fit
+    // Calculate how many full items fit
     const totalItemWidth = effectiveItemWidth + effectiveGap;
-    const visibleItems = Math.max(1, Math.floor(availableWidth / totalItemWidth));
+    const visibleItems = Math.floor(availableWidth / totalItemWidth);
+    
+    // Ensure at least 1 item is visible
+    return Math.max(1, visibleItems);
+  }
 
-    // logger.log(`[${this.id}] Container width: ${containerWidth}px, available: ${availableWidth}px, visible items: ${visibleItems}`);
-
-    return visibleItems;
+  calculateMaxPosition() {
+    // Calculate the maximum scrollable position
+    // This ensures we can scroll to see all items including the last one
+    const totalItems = this.items.length;
+    const visibleItems = this.visibleItems;
+    
+    if (totalItems <= visibleItems) {
+      return 0; // No scrolling needed
+    }
+    
+    // For similar products, calculate exact max position to show last items fully
+    if (this.isSimilarProducts) {
+      const containerWidth = this.getContainerWidth();
+      const totalItemsWidth = totalItems * this.itemWidth + (totalItems - 1) * this.itemGap;
+      const availableWidth = containerWidth - 80; // Account for navigation buttons and padding
+      
+      // Calculate how many positions we need to scroll to see all items
+      const maxScroll = Math.ceil((totalItemsWidth - availableWidth) / (this.itemWidth + this.itemGap));
+      return Math.max(0, maxScroll);
+    }
+    
+    return totalItems - visibleItems;
   }
 
 
@@ -188,9 +215,9 @@ class SuggestionsCarousel {
 
     // Recalculate values on resize
     this.visibleItems = this.calculateVisibleItems();
-    this.maxPosition = Math.max(0, this.items.length - this.visibleItems);
+    this.maxPosition = this.calculateMaxPosition();
 
-    // logger.log(`[${this.id}] Window resized, visible items: ${this.visibleItems}, max position: ${this.maxPosition}`);
+    logger.log(`[${this.id}] Window resized - Items: ${this.items.length}, visible items: ${this.visibleItems}, max position: ${this.maxPosition}`);
 
     // Ensure current position is valid after resize
     if (this.currentPosition > this.maxPosition) {
@@ -247,7 +274,17 @@ class SuggestionsCarousel {
     const totalItemWidth = this.itemWidth + this.itemGap;
 
     // Calculate translateX value
-    const translateX = -this.currentPosition * totalItemWidth;
+    let translateX = -this.currentPosition * totalItemWidth;
+    
+    // For similar products at the last position, adjust to show last items fully
+    if (this.isSimilarProducts && this.currentPosition === this.maxPosition && this.maxPosition > 0) {
+      const containerWidth = this.getContainerWidth();
+      const totalItemsWidth = this.items.length * this.itemWidth + (this.items.length - 1) * this.itemGap;
+      const availableWidth = containerWidth - 80; // Same as in calculateMaxPosition
+      
+      // Calculate the exact position to show the last items
+      translateX = -(totalItemsWidth - availableWidth);
+    }
 
     // Set transition for smooth movement
     this.itemsContainer.style.transition = 'transform 0.3s ease';
@@ -255,7 +292,7 @@ class SuggestionsCarousel {
     // Apply the transform
     this.itemsContainer.style.transform = `translateX(${translateX}px)`;
 
-    // logger.log(`[${this.id}] Position updated to ${this.currentPosition}, translateX: ${translateX}px`);
+    logger.log(`[${this.id}] Position updated to ${this.currentPosition}, translateX: ${translateX}px`);
   }
 
   updateButtons() {

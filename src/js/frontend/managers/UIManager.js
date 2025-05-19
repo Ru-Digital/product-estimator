@@ -10,7 +10,7 @@
 
 import { format, createLogger } from '@utils';
 
-import { SuggestionsCarousel, initSuggestionsCarousels } from '../SuggestionsCarousel';
+import { InfiniteCarousel } from '../InfiniteCarousel';
 import ProductDetailsToggle from '../ProductDetailsToggle';
 import TemplateEngine from '../TemplateEngine';
 
@@ -81,7 +81,16 @@ class UIManager {
    */
   initializeCarousels() {
     logger.log('Initializing all carousels');
-    this.carousels = initSuggestionsCarousels();
+    const carouselContainers = document.querySelectorAll('.suggestions-carousel');
+    this.carousels = [];
+    
+    carouselContainers.forEach(container => {
+      if (!container.carouselInstance) {
+        const carousel = new InfiniteCarousel(container);
+        this.carousels.push(carousel);
+      }
+    });
+    
     return this.carousels;
   }
   
@@ -233,7 +242,7 @@ class UIManager {
    * Create and initialize a carousel
    * @param {HTMLElement} container - The container element for the carousel
    * @param {string} type - The type of carousel ('similar', 'suggestions', etc.)
-   * @returns {SuggestionsCarousel} The initialized carousel
+   * @returns {InfiniteCarousel} The initialized carousel
    */
   createCarousel(container, type) {
     logger.log(`Creating carousel of type: ${type}`);
@@ -250,7 +259,7 @@ class UIManager {
     }
     
     // Initialize new carousel
-    const carousel = new SuggestionsCarousel(container);
+    const carousel = new InfiniteCarousel(container);
     logger.log('New carousel created', carousel);
     
     return carousel;
@@ -277,7 +286,7 @@ class UIManager {
       if (carouselContainer.carouselInstance) {
         carouselContainer.carouselInstance.destroy();
       }
-      new SuggestionsCarousel(carouselContainer);
+      new InfiniteCarousel(carouselContainer);
     });
   }
   

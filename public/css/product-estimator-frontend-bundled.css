@@ -3256,14 +3256,15 @@ body.modal-open {
   box-sizing: border-box;
   margin-bottom: 0;
   max-width: 100%;
-  overflow: visible; /* Changed to allow buttons to be visible */
-  padding: 0 35px; /* Increased padding to make room for buttons */
+  overflow: hidden; /* Hide overflow for infinite scroll */
+  padding: 0 35px; /* Make room for navigation buttons */
   position: relative;
   width: 100%;
   /* Legacy product-item carousel styling - no longer needed */
   /* Navigation arrows */
   /* Suggestions container */
   /* Suggestion items */
+  /* Clone items for infinite scroll */
 }
 .similar-products-carousel .suggestions-nav {
   align-items: center;
@@ -3307,8 +3308,9 @@ body.modal-open {
   box-sizing: border-box;
   display: flex;
   gap: 5px;
-  margin: 0 auto;
-  max-width: 100%;
+  margin: 0;
+  transition: transform 0.3s ease;
+  white-space: nowrap;
 }
 .similar-products-carousel .suggestion-item {
   box-sizing: border-box;
@@ -3331,6 +3333,9 @@ body.modal-open {
 .similar-products-carousel .add-suggestion-to-room {
   font-size: 11px;
   padding: 4px 8px;
+}
+.similar-products-carousel .suggestion-item.duplicated.fade-in {
+  transition: opacity 0.3s ease;
 }
 
 /* Unit price styling */

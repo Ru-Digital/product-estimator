@@ -16,7 +16,6 @@ use RuDigital\ProductEstimator\Includes\LabelsUsageAnalytics;
 use RuDigital\ProductEstimator\Includes\LabelsDocumentationGenerator;
 use RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsAnalyticsDashboard;
 use RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsDocumentationPage;
-use RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsMigrationTool;
 
 
 /**
@@ -122,13 +121,6 @@ class ProductEstimator {
      * @var LabelsDocumentationPage
      */
     private $labels_documentation_page;
-    
-    /**
-     * Labels Migration Tool
-     *
-     * @var LabelsMigrationTool
-     */
-    private $labels_migration_tool;
 
 
 
@@ -190,16 +182,6 @@ class ProductEstimator {
                             $this->plugin_name,
                             $this->version,
                             $this->labels_documentation_generator
-                        );
-                    }
-                    
-                    // Initialize migration tool
-                    if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-migration-tool.php')) {
-                        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-migration-tool.php';
-                        $this->labels_migration_tool = new LabelsMigrationTool(
-                            $this->plugin_name,
-                            $this->version,
-                            $this->labels_frontend
                         );
                     }
                 }

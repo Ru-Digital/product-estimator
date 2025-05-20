@@ -7,6 +7,7 @@
  */
 
 import { createLogger } from '@utils';
+import { ajax } from '@utils/ajax';
 
 // Create logger with proper configuration
 const logger = createLogger('LabelsManagement');
@@ -18,20 +19,20 @@ class LabelsManagement {
         this.bulkEditItems = [];
         
         // Get the labels context safely
-        // First check in window.productEstimatorAdmin
-        if (window.productEstimatorAdmin && window.productEstimatorAdmin.labelsSettings) {
-            this.labelsContext = window.productEstimatorAdmin.labelsSettings;
-            logger.log('Found labelsContext in productEstimatorAdmin');
-        } 
-        // Then check in window.labelsSettings which might be set by wp_localize_script
-        else if (window.labelsSettings) {
-            this.labelsContext = window.labelsSettings;
-            logger.log('Found labelsContext in window.labelsSettings');
+        // First check in window.labelSettings
+        if (window.labelSettings) {
+            this.labelsContext = window.labelSettings;
+            logger.log('Found labelsContext in window.labelSettings', this.labelsContext);
         }
+        // Then check in window.productEstimatorAdmin
+        else if (window.productEstimatorAdmin && window.productEstimatorAdmin.labelsSettings) {
+            this.labelsContext = window.productEstimatorAdmin.labelsSettings;
+            logger.log('Found labelsContext in productEstimatorAdmin', this.labelsContext);
+        } 
         // Check if context might be in the settings object directly
         else if (window.productEstimatorSettingsData && window.productEstimatorSettingsData.labelsSettings) {
             this.labelsContext = window.productEstimatorSettingsData.labelsSettings;
-            logger.log('Found labelsContext in productEstimatorSettingsData');
+            logger.log('Found labelsContext in productEstimatorSettingsData', this.labelsContext);
         }
         // Create a minimal context to avoid errors if nothing is found
         else {
@@ -53,6 +54,9 @@ class LabelsManagement {
                 }
             };
         }
+        
+        // Add debugging for nonce
+        logger.log('Labels Management nonce value:', this.labelsContext.managementNonce);
         
         // Initialize component after 50ms delay to allow WordPress to fully initialize
         setTimeout(() => this.init(), 50);
@@ -112,23 +116,49 @@ class LabelsManagement {
     }
     
     handleExport() {
+        logger.log('Export button clicked');
+        logger.log('Nonce value being sent:', this.labelsContext.managementNonce);
+        logger.log('AJAX URL:', window.ajaxurl);
+        
+        // If managementNonce is empty, try to get it from other sources
+        let nonce = this.labelsContext.managementNonce;
+        if (!nonce) {
+            // Check if we can get it from other sources
+            if (window.labelSettings && window.labelSettings.nonce) {
+                nonce = window.labelSettings.nonce;
+                logger.log('Using nonce from window.labelSettings.nonce');
+            } else if (window.productEstimatorSettings && window.productEstimatorSettings.nonce) {
+                nonce = window.productEstimatorSettings.nonce;
+                logger.log('Using nonce from window.productEstimatorSettings.nonce');
+            }
+        }
+        
         jQuery.ajax({
-            url: window.ajaxurl,
+            url: window.ajaxurl || '/wp-admin/admin-ajax.php',
             type: 'POST',
             data: {
                 action: 'pe_export_labels',
-                nonce: this.labelsContext.managementNonce
+                nonce: nonce
             },
             success: (response) => {
+                logger.log('Export AJAX response:', response);
                 if (response.success) {
                     this.downloadJSON(response.data.filename, response.data.data);
                     this.showNotice(this.labelsContext.i18n.exportSuccess, 'success');
+                } else {
+                    logger.error('Export failed:', response);
+                    this.showNotice('Export failed: ' + (response.data || 'Unknown error'), 'error');
                 }
+            },
+            error: (xhr, status, error) => {
+                logger.error('Export AJAX error:', {xhr, status, error});
+                this.showNotice('Export failed: ' + error, 'error');
             }
         });
     }
     
     handleImport(e) {
+        logger.log('Import button clicked');
         const file = e.target.files[0];
         if (!file) return;
         
@@ -141,25 +171,42 @@ class LabelsManagement {
         reader.onload = (event) => {
             const importData = event.target.result;
             
+            // Get nonce as in handleExport
+            let nonce = this.labelsContext.managementNonce;
+            if (!nonce) {
+                if (window.labelSettings && window.labelSettings.nonce) {
+                    nonce = window.labelSettings.nonce;
+                    logger.log('Using nonce from window.labelSettings.nonce');
+                } else if (window.productEstimatorSettings && window.productEstimatorSettings.nonce) {
+                    nonce = window.productEstimatorSettings.nonce;
+                    logger.log('Using nonce from window.productEstimatorSettings.nonce');
+                }
+            }
+            
+            logger.log('Import sending nonce:', nonce);
+            
             jQuery.ajax({
-                url: window.ajaxurl,
+                url: window.ajaxurl || '/wp-admin/admin-ajax.php',
                 type: 'POST',
                 data: {
                     action: 'pe_import_labels',
-                    nonce: this.labelsContext.managementNonce,
+                    nonce: nonce,
                     import_data: importData
                 },
                 success: (response) => {
+                    logger.log('Import AJAX response:', response);
                     if (response.success) {
                         this.showNotice(response.data.message, 'success');
                         // Reload page to show imported labels
                         setTimeout(() => location.reload(), 1500);
                     } else {
+                        logger.error('Import failed:', response);
                         this.showNotice(response.data || this.labelsContext.i18n.importError, 'error');
                     }
                     jQuery('#import-file').val('');
                 },
-                error: () => {
+                error: (xhr, status, error) => {
+                    logger.error('Import AJAX error:', {xhr, status, error});
                     this.showNotice(this.labelsContext.i18n.importError, 'error');
                     jQuery('#import-file').val('');
                 }

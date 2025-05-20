@@ -16,8 +16,23 @@
   294:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
   327:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
 
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/admin/modules/LabelSettingsModule.js
+   10:1  warning  There should be at least one empty line between import groups                   import/order
+   11:1  warning  `@utils` import should occur before import of `../common/VerticalTabbedModule`  import/order
+  109:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  157:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  199:3  warning  Missing JSDoc @param "results" declaration                                      jsdoc/require-param
+  273:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  420:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  433:3  warning  Missing JSDoc @returns declaration                                              jsdoc/require-returns
+  433:3  warning  Missing JSDoc @param "labelId" declaration                                      jsdoc/require-param
+  448:3  warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
+  448:3  warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
+
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/admin/modules/LabelsManagement.js
-  86:13  warning  Unexpected console statement  no-console
+  10:10  error    ajax not found in '@utils/ajax'   import/named
+  10:10  warning  'ajax' is defined but never used  no-unused-vars
+  90:13  warning  Unexpected console statement      no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/examples/using-labels.js
   142:9  error  Parsing error: Unexpected token <
@@ -186,6 +201,6 @@
   206:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
   228:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
 
-✖ 143 problems (6 errors, 137 warnings)
-  0 errors and 19 warnings potentially fixable with the `--fix` option.
+✖ 156 problems (7 errors, 149 warnings)
+  0 errors and 29 warnings potentially fixable with the `--fix` option.
 

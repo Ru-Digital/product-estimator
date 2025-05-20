@@ -11,7 +11,7 @@ This checklist will help track the migration of hardcoded text to dynamic labels
 #### Frontend Core Templates
 - [ ] `/public/partials/product-estimator-display.php`
 - [ ] `/public/partials/product-estimator-estimate-selection-form.php`
-- [ ] `/public/partials/product-estimator-estimates-list.php`
+- [x] `/public/partials/product-estimator-estimates-list.php`
 - [ ] `/public/partials/product-estimator-modal-template.php`
 - [ ] `/public/partials/product-estimator-new-estimate-form.php`
 - [ ] `/public/partials/product-estimator-new-room-form.php`
@@ -32,7 +32,7 @@ This checklist will help track the migration of hardcoded text to dynamic labels
 - [ ] `/src/templates/components/common/toggle/hide.html`
 - [ ] `/src/templates/components/common/toggle/show.html`
 - [ ] `/src/templates/components/estimate/estimate-item.html`
-- [x] `/src/templates/components/room/room-item.html` (Partially done)
+- [x] `/src/templates/components/room/room-item.html`
 - [ ] `/src/templates/components/room/actions-footer.html`
 - [ ] `/src/templates/components/room/rooms-container.html`
 - [ ] `/src/templates/components/product/additional-product-option.html`
@@ -44,7 +44,7 @@ This checklist will help track the migration of hardcoded text to dynamic labels
 
 #### Form Templates
 - [ ] `/src/templates/forms/estimate/estimate-selection.html`
-- [ ] `/src/templates/forms/estimate/new-estimate.html`
+- [x] `/src/templates/forms/estimate/new-estimate.html`
 - [ ] `/src/templates/forms/room/new-room.html`
 - [ ] `/src/templates/forms/room/room-selection.html`
 
@@ -56,17 +56,17 @@ This checklist will help track the migration of hardcoded text to dynamic labels
 - [ ] `/src/templates/ui/dialog-content-form.html`
 - [ ] `/src/templates/ui/dialog-form-field.html`
 - [ ] `/src/templates/ui/dialog-form-fields.html`
-- [ ] `/src/templates/ui/dialogs/confirmation.html`
-- [ ] `/src/templates/ui/dialogs/product-selection.html`
+- [x] `/src/templates/ui/dialogs/confirmation.html`
+- [x] `/src/templates/ui/dialogs/product-selection.html`
 - [ ] `/src/templates/ui/dialogs/variation-option.html`
-- [ ] `/src/templates/ui/dialogs/variation-swatch-wrapper.html`
 - [ ] `/src/templates/ui/dialogs/variation-swatch.html`
-- [ ] `/src/templates/ui/empty-states/estimates-empty.html`
-- [ ] `/src/templates/ui/empty-states/products-empty.html`
-- [ ] `/src/templates/ui/empty-states/rooms-empty.html`
+- [ ] `/src/templates/ui/dialogs/variation-swatch-wrapper.html`
+- [x] `/src/templates/ui/empty-states/estimates-empty.html`
+- [x] `/src/templates/ui/empty-states/products-empty.html`
+- [x] `/src/templates/ui/empty-states/rooms-empty.html`
 - [ ] `/src/templates/ui/errors/form-error.html`
-- [ ] `/src/templates/ui/errors/product-error.html`
-- [ ] `/src/templates/ui/errors/room-error.html`
+- [x] `/src/templates/ui/errors/product-error.html`
+- [x] `/src/templates/ui/errors/room-error.html`
 - [ ] `/src/templates/ui/messages/modal-messages.html`
 - [ ] `/src/templates/ui/tooltip-rich.html`
 - [ ] `/src/templates/ui/tooltip.html`
@@ -74,8 +74,7 @@ This checklist will help track the migration of hardcoded text to dynamic labels
 ## JavaScript Components
 
 ### Frontend Core Components
-- [ ] `/src/js/frontend/AjaxService.js`
-- [ ] `/src/js/frontend/ConfirmationDialog.js`
+- [x] `/src/js/frontend/ConfirmationDialog.js`
 - [ ] `/src/js/frontend/CustomerDetailsManager.js`
 - [ ] `/src/js/frontend/CustomerStorage.js`
 - [ ] `/src/js/frontend/DataService.js`
@@ -86,7 +85,7 @@ This checklist will help track the migration of hardcoded text to dynamic labels
 - [ ] `/src/js/frontend/ProductDetailsToggle.js`
 - [ ] `/src/js/frontend/ProductSelectionDialog.js`
 - [ ] `/src/js/frontend/SuggestionsCarousel.js`
-- [ ] `/src/js/frontend/TemplateEngine.js`
+- [x] `/src/js/frontend/TemplateEngine.js`
 - [ ] `/src/js/frontend/Tooltip.js`
 - [ ] `/src/js/frontend/VariationHandler.js`
 
@@ -101,64 +100,97 @@ This checklist will help track the migration of hardcoded text to dynamic labels
 ## Label Categories Progress
 
 ### Buttons
-- [ ] save_estimate
-- [ ] print_estimate
-- [ ] request_copy
-- [ ] similar_products
-- [ ] product_includes
-- [ ] suggested_products
-- [ ] add_product
-- [ ] remove_product
-- [ ] edit_product
-- [ ] cancel
-- [ ] continue
+- [x] buttons.create_new_estimate
+- [x] buttons.confirm
+- [x] buttons.cancel
+- [x] buttons.contact_email
+- [x] buttons.contact_phone
+- [x] buttons.delete_estimate
+- [x] buttons.remove_room
+- [x] buttons.add_new_room
+- [x] buttons.print_estimate
+- [x] buttons.request_contact
+- [x] buttons.request_copy
+- [x] buttons.add_to_estimate
+- [x] buttons.edit
+- [x] buttons.save_changes
+- [x] buttons.create_estimate
+- [x] buttons.product_includes
+- [x] buttons.similar_products
+- [x] buttons.suggested_products
+- [ ] buttons.add_product
+- [ ] buttons.remove_product
+- [ ] buttons.edit_product
+- [ ] buttons.save_estimate
+- [ ] buttons.continue
 
 ### Forms
-- [ ] estimate_name
-- [ ] placeholder_email
-- [ ] customer_name
-- [ ] customer_phone
-- [ ] room_name
-- [ ] room_width
-- [ ] room_length
-- [ ] product_quantity
+- [x] forms.estimate_name
+- [x] forms.customer_name 
+- [x] forms.customer_email
+- [x] forms.customer_phone
+- [x] forms.customer_postcode
+- [x] forms.placeholder_estimate_name
+- [x] forms.placeholder_name
+- [x] forms.placeholder_email
+- [x] forms.placeholder_phone
+- [x] forms.placeholder_postcode
+- [ ] forms.room_name
+- [ ] forms.room_width
+- [ ] forms.room_length
+- [ ] forms.product_quantity
 
 ### Messages
-- [ ] product_added
-- [ ] estimate_saved
-- [ ] estimate_deleted
-- [ ] room_added
-- [ ] room_deleted
-- [ ] confirm_delete
-- [ ] showing_results
+- [x] messages.product_load_error
+- [x] messages.room_load_error
+- [x] messages.confirm_proceed
+- [x] messages.select_options
+- [ ] messages.product_added
+- [ ] messages.estimate_saved
+- [ ] messages.estimate_deleted
+- [ ] messages.room_added
+- [ ] messages.room_deleted
+- [ ] messages.showing_results
 
 ### UI Elements
-- [ ] get_started
-- [ ] expand
-- [ ] collapse
-- [ ] price_notice
-- [ ] empty_estimates
-- [ ] empty_rooms
-- [ ] empty_products
-- [ ] loading
+- [x] ui_elements.confirm_title
+- [x] ui_elements.no_estimates
+- [x] ui_elements.no_rooms
+- [x] ui_elements.no_products
+- [x] ui_elements.price_notice
+- [x] ui_elements.select_product_options
+- [x] ui_elements.create_new_estimate
+- [x] ui_elements.your_details
+- [x] ui_elements.saved_details
+- [x] ui_elements.edit_your_details
+- [x] ui_elements.primary_product
+- [x] ui_elements.previous
+- [x] ui_elements.next
+- [x] ui_elements.previous_suggestions
+- [x] ui_elements.next_suggestions
+- [x] ui_elements.rooms_heading
+- [x] ui_elements.products_heading
+- [ ] ui_elements.get_started
+- [ ] ui_elements.expand
+- [ ] ui_elements.collapse
+- [ ] ui_elements.loading
 
 ## Implementation Status
 
 | Category      | Total Labels | Implemented | Progress |
 |---------------|--------------|------------|----------|
-| Buttons       | 0            | 0          | 0%       |
-| Forms         | 0            | 0          | 0%       |
-| Messages      | 0            | 0          | 0%       |
-| UI Elements   | 0            | 0          | 0%       |
-| **TOTAL**     | **0**        | **0**      | **0%**   |
+| Buttons       | 22           | 18         | 82%      |
+| Forms         | 14           | 10         | 71%      |
+| Messages      | 10           | 4          | 40%      |
+| UI Elements   | 20           | 17         | 85%      |
+| **TOTAL**     | **66**       | **49**     | **74%**  |
 
 ## Next Steps
 
-1. Complete the inventory of all text strings in templates
-2. Update the table above with accurate counts
-3. Start migration with high-priority templates
-4. Test labels in various contexts
-5. Update progress regularly
+1. Continue migrating template files to use dynamic labels
+2. Update the JavaScript components to use the labelManager
+3. Test all labels in various contexts
+4. Update progress regularly in this checklist
 
 ## Notes
 

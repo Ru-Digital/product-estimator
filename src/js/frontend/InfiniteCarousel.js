@@ -6,6 +6,7 @@
  */
 
 import { createLogger } from '@utils';
+import { labelManager } from '@utils/labels';
 
 const logger = createLogger('InfiniteCarousel');
 
@@ -52,6 +53,9 @@ class InfiniteCarousel {
     // Initialize position
     this.setPosition(0, false);
     
+    // Process any labels in the carousel
+    this.processLabels();
+    
     // Bind events
     this.bindEvents();
     
@@ -59,6 +63,27 @@ class InfiniteCarousel {
     this.updateButtons();
     
     logger.log(`Initialized continuous scroll carousel with ${this.itemCount} items`);
+  }
+  
+  /**
+   * Process any data-label attributes in the carousel
+   */
+  processLabels() {
+    // Process all data-label attributes in the container
+    labelManager.updateDOM(this.container);
+    
+    // Set default aria labels for navigation buttons if not already set
+    if (this.prevBtn) {
+      if (!this.prevBtn.getAttribute('aria-label')) {
+        this.prevBtn.setAttribute('aria-label', labelManager.get('ui_elements.previous', 'Previous'));
+      }
+    }
+    
+    if (this.nextBtn) {
+      if (!this.nextBtn.getAttribute('aria-label')) {
+        this.nextBtn.setAttribute('aria-label', labelManager.get('ui_elements.next', 'Next'));
+      }
+    }
   }
   
   calculateDimensions() {
@@ -110,6 +135,9 @@ class InfiniteCarousel {
     // Append to container
     clonedItems.forEach(clone => {
       this.itemsContainer.appendChild(clone);
+      
+      // Process labels on cloned items
+      labelManager.updateDOM(clone);
     });
     
     // Update counts

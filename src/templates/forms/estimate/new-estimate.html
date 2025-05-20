@@ -1,31 +1,31 @@
 <template id="new-estimate-form-template">
   <div id="new-estimate-form-wrapper">
-    <h2>Create New Estimate</h2>
+    <h2 data-label="ui_elements.create_new_estimate">Create New Estimate</h2>
     <form id="new-estimate-form" method="post" data-has-email="false">
       <div class="form-group">
-        <label for="estimate-name">Estimate Name</label>
-        <input type="text" id="estimate-name" name="estimate_name" placeholder="e.g. Home Renovation" required>
+        <label for="estimate-name" data-label="forms.estimate_name">Estimate Name</label>
+        <input type="text" id="estimate-name" name="estimate_name" data-placeholder-label="forms.placeholder_estimate_name" placeholder="e.g. Home Renovation" required>
       </div>
 
       <div class="customer-details-section">
-        <h4>Your Details</h4>
+        <h4 data-label="ui_elements.your_details">Your Details</h4>
         <div class="form-group">
-          <label for="customer-postcode">Postcode</label>
-          <input type="text" id="customer-postcode" name="customer_postcode" placeholder="Your postcode" required>
+          <label for="customer-postcode" data-label="forms.customer_postcode">Postcode</label>
+          <input type="text" id="customer-postcode" name="customer_postcode" data-placeholder-label="forms.placeholder_postcode" placeholder="Your postcode" required>
         </div>
       </div>
 
       <div class="button-group">
-        <button type="submit" class="submit-btn create-estimate-btn">Create Estimate</button>
-        <button type="button" class="cancel-btn" data-form-type="estimate">Cancel</button>
+        <button type="submit" class="submit-btn create-estimate-btn" data-label="buttons.create_estimate">Create Estimate</button>
+        <button type="button" class="cancel-btn" data-form-type="estimate" data-label="buttons.cancel">Cancel</button>
       </div>
     </form>
     
     <div class="customer-details-display" style="display: none;">
       <div class="customer-details-header">
-        <h4>Your Saved Details</h4>
+        <h4 data-label="ui_elements.saved_details">Your Saved Details</h4>
         <div class="customer-details-actions">
-          <button type="button" class="edit-customer-details" id="edit-customer-details-btn">Edit</button>
+          <button type="button" class="edit-customer-details" id="edit-customer-details-btn" data-label="buttons.edit">Edit</button>
         </div>
       </div>
       <div class="customer-details-content saved-customer-details">
@@ -34,27 +34,27 @@
       
       <!-- Edit form (hidden by default) -->
       <div class="customer-details-edit-form" style="display: none;">
-        <h4>Edit Your Details</h4>
+        <h4 data-label="ui_elements.edit_your_details">Edit Your Details</h4>
         <form id="customer-details-edit-form">
           <div class="form-group">
-            <label for="edit-customer-name">Name</label>
-            <input type="text" id="edit-customer-name" name="customer_name" placeholder="Your name">
+            <label for="edit-customer-name" data-label="forms.customer_name">Name</label>
+            <input type="text" id="edit-customer-name" name="customer_name" data-placeholder-label="forms.placeholder_name" placeholder="Your name">
           </div>
           <div class="form-group">
-            <label for="edit-customer-email">Email</label>
-            <input type="email" id="edit-customer-email" name="customer_email" placeholder="Your email">
+            <label for="edit-customer-email" data-label="forms.customer_email">Email</label>
+            <input type="email" id="edit-customer-email" name="customer_email" data-placeholder-label="forms.placeholder_email" placeholder="Your email">
           </div>
           <div class="form-group">
-            <label for="edit-customer-phone">Phone</label>
-            <input type="tel" id="edit-customer-phone" name="customer_phone" placeholder="Your phone">
+            <label for="edit-customer-phone" data-label="forms.customer_phone">Phone</label>
+            <input type="tel" id="edit-customer-phone" name="customer_phone" data-placeholder-label="forms.placeholder_phone" placeholder="Your phone">
           </div>
           <div class="form-group">
-            <label for="edit-customer-postcode">Postcode</label>
-            <input type="text" id="edit-customer-postcode" name="customer_postcode" placeholder="Your postcode">
+            <label for="edit-customer-postcode" data-label="forms.customer_postcode">Postcode</label>
+            <input type="text" id="edit-customer-postcode" name="customer_postcode" data-placeholder-label="forms.placeholder_postcode" placeholder="Your postcode">
           </div>
           <div class="customer-details-edit-actions">
-            <button type="button" class="save-customer-details" id="save-customer-details-btn">Save Changes</button>
-            <button type="button" class="cancel-edit-customer-details" id="cancel-edit-customer-details-btn">Cancel</button>
+            <button type="button" class="save-customer-details" id="save-customer-details-btn" data-label="buttons.save_changes">Save Changes</button>
+            <button type="button" class="cancel-edit-customer-details" id="cancel-edit-customer-details-btn" data-label="buttons.cancel">Cancel</button>
           </div>
         </form>
       </div>

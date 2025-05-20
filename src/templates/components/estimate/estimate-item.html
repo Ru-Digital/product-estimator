@@ -13,7 +13,7 @@
           <div class="price-graph-labels"></div>
         </div>
       </h3>
-      <button class="remove-estimate" data-estimate-id="" title="Delete Estimate">
+      <button class="remove-estimate" data-estimate-id="" data-title-label="buttons.delete_estimate" title="Delete Estimate">
         <span class="dashicons dashicons-trash"></span>
       </button>
 
@@ -21,8 +21,8 @@
     <div class="estimate-content">
       <div id="rooms">
         <div class="room-header">
-          <h4>Rooms</h4>
-          <button class="add-room" data-estimate-id="">Add New Room</button>
+          <h4 data-label="ui_elements.rooms_heading">Rooms</h4>
+          <button class="add-room" data-estimate-id="" data-label="buttons.add_new_room">Add New Room</button>
         </div>
         <div class="rooms-container"></div>
       </div>
@@ -30,18 +30,18 @@
     <div class="estimate-actions">
       <ul>
         <li>
-          <a class="print-estimate" data-estimate-id="" title="Print Estimate">
-            <span class="dashicons dashicons-pdf"></span> Print estimate
+          <a class="print-estimate" data-estimate-id="" data-title-label="buttons.print_estimate" title="Print Estimate">
+            <span class="dashicons dashicons-pdf"></span> <span data-label="buttons.print_estimate">Print estimate</span>
           </a>
         </li>
         <li>
-          <a class="request-contact-estimate" data-estimate-id="" title="Request contact from store">
-            <span class="dashicons dashicons-businessperson"></span> Request contact from store
+          <a class="request-contact-estimate" data-estimate-id="" data-title-label="buttons.request_contact" title="Request contact from store">
+            <span class="dashicons dashicons-businessperson"></span> <span data-label="buttons.request_contact">Request contact from store</span>
           </a>
         </li>
         <li>
-          <a class="request-a-copy" data-estimate-id="" title="Request a copy">
-            <span class="dashicons dashicons-email"></span> Request a copy
+          <a class="request-a-copy" data-estimate-id="" data-title-label="buttons.request_copy" title="Request a copy">
+            <span class="dashicons dashicons-email"></span> <span data-label="buttons.request_copy">Request a copy</span>
           </a>
         </li>
       </ul>

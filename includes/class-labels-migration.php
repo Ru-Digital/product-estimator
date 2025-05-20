@@ -130,6 +130,8 @@ class LabelsMigration {
                 'edit_product' => __('Edit Product', 'product-estimator'),
                 'add_to_estimate' => __('Add to Estimate', 'product-estimator'),
                 'continue' => __('Continue', 'product-estimator'),
+                'create_estimate' => __('Create Estimate', 'product-estimator'),
+                'save_changes' => __('Save Changes', 'product-estimator'),
             ],
             'forms' => [
                 'estimate_name' => __('Estimate Name', 'product-estimator'),
@@ -180,6 +182,7 @@ class LabelsMigration {
                 'confirm_delete_room' => __('Delete this room and all its products?', 'product-estimator'),
                 'unsaved_changes' => __('You have unsaved changes. Are you sure you want to leave?', 'product-estimator'),
                 'confirm_proceed' => __('Are you sure you want to proceed?', 'product-estimator'),
+                'select_options' => __('Please select your options below:', 'product-estimator'),
 
                 // Validation messages
                 'min_length' => __('Minimum {min} characters required', 'product-estimator'),
@@ -214,6 +217,14 @@ class LabelsMigration {
                 'no_products' => __('No products added to this room yet.', 'product-estimator'),
                 'rooms_heading' => __('Rooms', 'product-estimator'),
                 'products_heading' => __('Products', 'product-estimator'),
+                'select_product_options' => __('Select Product Options', 'product-estimator'),
+                'create_new_estimate' => __('Create New Estimate', 'product-estimator'),
+                'your_details' => __('Your Details', 'product-estimator'),
+                'saved_details' => __('Your Saved Details', 'product-estimator'),
+                'edit_your_details' => __('Edit Your Details', 'product-estimator'),
+                'primary_product' => __('Primary product', 'product-estimator'),
+                'previous_suggestions' => __('Previous Suggestions', 'product-estimator'),
+                'next_suggestions' => __('Next Suggestions', 'product-estimator'),
             ],
             'pdf' => [
                 'title' => __('Product Estimate', 'product-estimator'),

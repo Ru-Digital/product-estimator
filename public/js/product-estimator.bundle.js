@@ -13793,8 +13793,7 @@ var RoomManager = /*#__PURE__*/function () {
         // Render additional products with variations
         this.renderAdditionalProducts(room, roomElement);
 
-        // Render product upgrades for the room
-        this.renderRoomUpgrades(room, roomElement);
+        // Product upgrades feature has been removed
 
         // Initialize similar products for the room with a delay to ensure DOM is ready
         setTimeout(function () {
@@ -14296,219 +14295,7 @@ var RoomManager = /*#__PURE__*/function () {
       });
     }
 
-    /**
-     * Render product upgrades for a room - no-op (feature removed)
-     * @param {object} room - The room data
-     * @param {HTMLElement} roomElement - The room element
-     */
-  }, {
-    key: "renderRoomUpgrades",
-    value: function renderRoomUpgrades(room, roomElement) {
-      return;
-      logger.log('Rendering room upgrades', {
-        roomName: room.name
-      });
-
-      // Get estimate and room IDs from the room element
-      var estimateId = roomElement.dataset.estimateId;
-      var roomId = roomElement.dataset.roomId;
-      if (!estimateId || !roomId) {
-        logger.error('Missing estimate or room ID on room element');
-        return;
-      }
-
-      // Find the upgrades container in the room element
-      var upgradesListContainer = roomElement.querySelector('.product-upgrades-list');
-      var upgradesContainer = roomElement.querySelector('.product-upgrades-container');
-      if (!upgradesListContainer) {
-        logger.warn('Product upgrades list container not found in room element');
-        return;
-      }
-
-      // Clear existing upgrades
-      upgradesListContainer.innerHTML = '';
-
-      // Collect all upgrades from all products in the room
-      var allUpgrades = [];
-      if (room.products && _typeof(room.products) === 'object') {
-        Object.values(room.products).forEach(function (product) {
-          logger.log('Checking product for upgrades:', {
-            productId: product.id,
-            productName: product.name,
-            hasAdditionalProducts: !!product.additional_products,
-            additionalProductsCount: product.additional_products ? Object.keys(product.additional_products).length : 0
-          });
-
-          // Check if additional_products is an object (as in the localStorage data)
-          if (product.additional_products && _typeof(product.additional_products) === 'object') {
-            // Iterate through additional products object
-            Object.values(product.additional_products).forEach(function (item, index) {
-              logger.log("Additional product:", {
-                id: item.id,
-                name: item.name,
-                has_upgrades: item.has_upgrades,
-                upgrades: item.upgrades,
-                entire_item: item
-              });
-
-              // Check if this additional product has upgrades
-              if (item.has_upgrades && item.upgrades && item.upgrades.products && Array.isArray(item.upgrades.products)) {
-                logger.log("Found ".concat(item.upgrades.products.length, " upgrades for ").concat(item.name));
-
-                // Create upgrade sections for each additional product with upgrades
-                var upgradeSection = _objectSpread(_objectSpread({}, item.upgrades), {}, {
-                  parent_product_id: item.id,
-                  parent_product_name: item.name,
-                  products: item.upgrades.products.map(function (upgradeProduct) {
-                    return _objectSpread(_objectSpread({}, upgradeProduct), {}, {
-                      room_id: roomId,
-                      estimate_id: estimateId,
-                      replace_product_id: item.id,
-                      pricing_method: upgradeProduct.pricing_method || 'fixed',
-                      parent_product_name: item.name
-                    });
-                  })
-                });
-                allUpgrades.push(upgradeSection);
-              }
-            });
-          }
-        });
-      }
-      logger.log("Found ".concat(allUpgrades.length, " upgrades for room ").concat(room.name));
-
-      // If we have upgrades, show the container and render them
-      if (allUpgrades.length > 0) {
-        if (upgradesContainer) {
-          upgradesContainer.style.display = '';
-        }
-
-        // Render each upgrade section
-        allUpgrades.forEach(function (upgradeSection) {
-          logger.log('Rendering upgrade section:', {
-            title: upgradeSection.title,
-            description: upgradeSection.description,
-            productCount: upgradeSection.products ? upgradeSection.products.length : 0,
-            parentProduct: upgradeSection.parent_product_name
-          });
-
-          // Create a section container for each upgrade group
-          var sectionContainer = document.createElement('div');
-          sectionContainer.className = 'product-upgrades';
-          sectionContainer.setAttribute('data-product-id', upgradeSection.parent_product_id);
-
-          // Create the upgrade option container
-          var optionContainer = document.createElement('div');
-          optionContainer.className = 'product-upgrade-option';
-          optionContainer.setAttribute('data-upgrade-id', upgradeSection.parent_product_id);
-
-          // Add section title and description if available
-          if (upgradeSection.title) {
-            var titleElement = document.createElement('h6');
-            titleElement.className = 'upgrade-title';
-            titleElement.textContent = upgradeSection.title;
-            optionContainer.appendChild(titleElement);
-          }
-          if (upgradeSection.description) {
-            var descElement = document.createElement('p');
-            descElement.className = 'upgrade-description';
-            descElement.textContent = upgradeSection.description;
-            optionContainer.appendChild(descElement);
-          }
-
-          // Create tiles container structure
-          var tilesContainer = document.createElement('div');
-          tilesContainer.className = 'product-upgrade-tiles';
-          tilesContainer.setAttribute('data-upgrade-id', upgradeSection.parent_product_id);
-
-          // Create tiles wrapper
-          var tilesWrapper = document.createElement('div');
-          tilesWrapper.className = 'tiles-wrapper';
-
-          // Render each upgrade product in the section
-          if (upgradeSection.products && Array.isArray(upgradeSection.products)) {
-            upgradeSection.products.forEach(function (upgrade) {
-              var upgradeData = {
-                product_id: upgrade.id,
-                estimate_id: upgrade.estimate_id,
-                room_id: upgrade.room_id,
-                replace_product_id: upgrade.replace_product_id,
-                pricing_method: upgrade.pricing_method,
-                replace_type: 'product_upgrade',
-                name: upgrade.name,
-                product_name: upgrade.name,
-                price: upgrade.min_total || upgrade.price || 0,
-                product_price: format.currency(upgrade.min_total || upgrade.price || 0),
-                image: upgrade.image || '',
-                url: upgrade.url || '#',
-                parent_product_name: upgrade.parent_product_name
-              };
-              logger.log('Rendering upgrade product:', upgradeData);
-              TemplateEngine.insert('product-upgrade-item-template', upgradeData, tilesWrapper);
-            });
-          }
-
-          // Assemble the structure: tiles wrapper -> tiles container -> option container -> section container
-          tilesContainer.appendChild(tilesWrapper);
-          optionContainer.appendChild(tilesContainer);
-          sectionContainer.appendChild(optionContainer);
-          upgradesListContainer.appendChild(sectionContainer);
-        });
-
-        // Bind events for upgrade buttons
-        this.bindUpgradeButtons(upgradesListContainer);
-      } else {
-        // Hide the upgrades container if no upgrades
-        if (upgradesContainer) {
-          upgradesContainer.style.display = 'none';
-        }
-      }
-    }
-
-    /**
-     * Bind events for upgrade buttons - no-op (feature removed)
-     * @param {HTMLElement} upgradesContainer - The upgrades container
-     */
-  }, {
-    key: "bindUpgradeButtons",
-    value: function bindUpgradeButtons(upgradesContainer) {
-      var _this8 = this;
-      return;
-      var upgradeButtons = upgradesContainer.querySelectorAll('.replace-product-in-room');
-      upgradeButtons.forEach(function (button) {
-        if (button._clickHandler) {
-          button.removeEventListener('click', button._clickHandler);
-        }
-        button._clickHandler = function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          var productId = button.dataset.productId;
-          var estimateId = button.dataset.estimateId;
-          var roomId = button.dataset.roomId;
-          var replaceProductId = button.dataset.replaceProductId;
-          var pricingMethod = button.dataset.pricingMethod;
-          var replaceType = button.dataset.replaceType;
-          logger.log('Upgrade button clicked', {
-            productId: productId,
-            estimateId: estimateId,
-            roomId: roomId,
-            replaceProductId: replaceProductId,
-            pricingMethod: pricingMethod,
-            replaceType: replaceType
-          });
-
-          // Use the productManager to handle the replacement
-          if (_this8.modalManager.productManager) {
-            // Note: replaceProductInRoom expects: estimateId, roomId, oldProductId, newProductId
-            _this8.modalManager.productManager.replaceProductInRoom(estimateId, roomId, replaceProductId,
-            // OLD product to replace
-            productId // NEW product (the upgrade)
-            );
-          }
-        };
-        button.addEventListener('click', button._clickHandler);
-      });
-    }
+    // Product upgrades methods removed - feature no longer supported
 
     /**
      * Bind toggle functionality for includes section
@@ -14572,7 +14359,7 @@ var RoomManager = /*#__PURE__*/function () {
   }, {
     key: "bindSimilarProductsToggle",
     value: function bindSimilarProductsToggle(roomElement) {
-      var _this9 = this;
+      var _this8 = this;
       logger.log('bindSimilarProductsToggle called for room element');
       var toggleButton = roomElement.querySelector('.similar-products-toggle');
       var similarProductsContainer = roomElement.querySelector('.similar-products-container');
@@ -14615,8 +14402,8 @@ var RoomManager = /*#__PURE__*/function () {
 
             // Trigger carousel initialization if not already loaded
             var carouselContainer = similarProductsContainer.querySelector('.similar-products-carousel');
-            if (carouselContainer && _this9.modalManager.uiManager) {
-              _this9.modalManager.uiManager.initializeCarouselInContainer(carouselContainer);
+            if (carouselContainer && _this8.modalManager.uiManager) {
+              _this8.modalManager.uiManager.initializeCarouselInContainer(carouselContainer);
             }
           }
         };
@@ -14636,7 +14423,7 @@ var RoomManager = /*#__PURE__*/function () {
   }, {
     key: "bindRoomEvents",
     value: function bindRoomEvents(roomElement, estimateId, roomId) {
-      var _this0 = this;
+      var _this9 = this;
       logger.log('Binding events to room element', {
         estimateId: estimateId,
         roomId: roomId
@@ -14671,7 +14458,7 @@ var RoomManager = /*#__PURE__*/function () {
             content.style.display = 'block';
 
             // Initialize similar products for the room
-            _this0.initializeSimilarProductsForRoom(estimateId, roomId);
+            _this9.initializeSimilarProductsForRoom(estimateId, roomId);
           }
         };
         accordionHeader.addEventListener('click', accordionHeader._clickHandler);
@@ -14686,7 +14473,7 @@ var RoomManager = /*#__PURE__*/function () {
         removeButton._clickHandler = function (e) {
           e.preventDefault();
           e.stopPropagation();
-          _this0.handleRoomRemoval(estimateId, roomId);
+          _this9.handleRoomRemoval(estimateId, roomId);
         };
         removeButton.addEventListener('click', removeButton._clickHandler);
       }
@@ -14713,8 +14500,8 @@ var RoomManager = /*#__PURE__*/function () {
           e.stopPropagation();
 
           // Delegate to ProductManager to show product selection
-          if (_this0.modalManager.productManager) {
-            _this0.modalManager.productManager.showProductSelection(estimateId, roomId);
+          if (_this9.modalManager.productManager) {
+            _this9.modalManager.productManager.showProductSelection(estimateId, roomId);
           } else {
             logger.error('ProductManager not available for showProductSelection');
           }
@@ -14832,7 +14619,7 @@ var RoomManager = /*#__PURE__*/function () {
   }, {
     key: "bindNewRoomFormEvents",
     value: function bindNewRoomFormEvents(formElement, estimateId) {
-      var _this1 = this;
+      var _this0 = this;
       var productId = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
       logger.log('Binding events to new room form', {
         estimateId: estimateId,
@@ -14853,7 +14640,7 @@ var RoomManager = /*#__PURE__*/function () {
         e.preventDefault();
 
         // Show loading indicator
-        _this1.modalManager.showLoading();
+        _this0.modalManager.showLoading();
 
         // Get the form data
         var formData = new FormData(formElement);
@@ -14861,18 +14648,18 @@ var RoomManager = /*#__PURE__*/function () {
         var roomWidth = formData.get('room_width');
         var roomLength = formData.get('room_length');
         if (!roomName) {
-          _this1.modalManager.showError('Please enter a room name.');
-          _this1.modalManager.hideLoading();
+          _this0.modalManager.showError('Please enter a room name.');
+          _this0.modalManager.hideLoading();
           return;
         }
         if (!roomWidth || !roomLength) {
-          _this1.modalManager.showError('Please enter room dimensions.');
-          _this1.modalManager.hideLoading();
+          _this0.modalManager.showError('Please enter room dimensions.');
+          _this0.modalManager.hideLoading();
           return;
         }
 
         // Create the room
-        _this1.dataService.addNewRoom({
+        _this0.dataService.addNewRoom({
           room_name: roomName,
           room_width: roomWidth,
           room_length: roomLength
@@ -14882,21 +14669,21 @@ var RoomManager = /*#__PURE__*/function () {
           // If a product ID is provided, add it to the new room
           if (productId) {
             // Delegate to the ProductManager to add product to the new room
-            if (_this1.modalManager.productManager) {
+            if (_this0.modalManager.productManager) {
               logger.log("[DEBUG][ROOM]".toJSON(newRoom));
-              return _this1.modalManager.productManager.addProductToRoom(estimateId, newRoom.room_id, productId).then(function () {
+              return _this0.modalManager.productManager.addProductToRoom(estimateId, newRoom.room_id, productId).then(function () {
                 // Hide loading
-                _this1.modalManager.hideLoading();
+                _this0.modalManager.hideLoading();
 
                 // First show the estimates list with the newly created room expanded
-                if (_this1.modalManager.estimateManager) {
-                  _this1.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.room_id);
+                if (_this0.modalManager.estimateManager) {
+                  _this0.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.room_id);
                 }
 
                 // Then show a confirmation dialog using ConfirmationDialog (with slight delay to allow UI to render)
-                if (_this1.modalManager && _this1.modalManager.confirmationDialog) {
+                if (_this0.modalManager && _this0.modalManager.confirmationDialog) {
                   setTimeout(function () {
-                    _this1.modalManager.confirmationDialog.show({
+                    _this0.modalManager.confirmationDialog.show({
                       title: 'Room Created',
                       message: 'The room has been created and the product has been added.',
                       type: 'room',
@@ -14912,31 +14699,31 @@ var RoomManager = /*#__PURE__*/function () {
                 // If it's a duplicate product error, the dialog is already shown by ProductManager
                 if (error && error.data && error.data.duplicate) {
                   // Still show the estimates list with the newly created room
-                  if (_this1.modalManager.estimateManager) {
-                    _this1.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.room_id);
+                  if (_this0.modalManager.estimateManager) {
+                    _this0.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.room_id);
                   }
-                  _this1.modalManager.hideLoading();
+                  _this0.modalManager.hideLoading();
                   return; // Dialog for duplicate already shown, just return
                 }
 
                 // For other errors, log and rethrow so the main catch handler can process it
                 logger.log('Error adding product to new room:', error);
-                _this1.modalManager.hideLoading();
+                _this0.modalManager.hideLoading();
                 throw error;
               });
             } else {
               logger.error('ProductManager not available for addProductToRoom');
-              _this1.modalManager.hideLoading();
+              _this0.modalManager.hideLoading();
 
               // First show the estimates list with the newly created room expanded
-              if (_this1.modalManager.estimateManager) {
-                _this1.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.id);
+              if (_this0.modalManager.estimateManager) {
+                _this0.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.id);
               }
 
               // Then show a confirmation dialog using ConfirmationDialog (with slight delay to allow UI to render)
-              if (_this1.modalManager && _this1.modalManager.confirmationDialog) {
+              if (_this0.modalManager && _this0.modalManager.confirmationDialog) {
                 setTimeout(function () {
-                  _this1.modalManager.confirmationDialog.show({
+                  _this0.modalManager.confirmationDialog.show({
                     title: 'Room Created',
                     message: 'The room has been created.',
                     type: 'room',
@@ -14951,16 +14738,16 @@ var RoomManager = /*#__PURE__*/function () {
             }
           } else {
             // No product ID, just show success message
-            _this1.modalManager.hideLoading();
+            _this0.modalManager.hideLoading();
 
             // First, switch view to show the estimate with the new room expanded
-            if (_this1.modalManager.estimateManager) {
-              _this1.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.id);
+            if (_this0.modalManager.estimateManager) {
+              _this0.modalManager.estimateManager.showEstimatesList(estimateId, newRoom.id);
 
               // Then show a confirmation dialog
-              if (_this1.modalManager && _this1.modalManager.confirmationDialog) {
+              if (_this0.modalManager && _this0.modalManager.confirmationDialog) {
                 setTimeout(function () {
-                  _this1.modalManager.confirmationDialog.show({
+                  _this0.modalManager.confirmationDialog.show({
                     title: 'Room Created',
                     message: 'The room has been created.',
                     type: 'room',
@@ -14974,8 +14761,8 @@ var RoomManager = /*#__PURE__*/function () {
               }
             } else {
               // No estimate manager, show message and close
-              if (_this1.modalManager && _this1.modalManager.confirmationDialog) {
-                _this1.modalManager.confirmationDialog.show({
+              if (_this0.modalManager && _this0.modalManager.confirmationDialog) {
+                _this0.modalManager.confirmationDialog.show({
                   title: 'Room Created',
                   message: 'The room has been created.',
                   type: 'room',
@@ -14983,19 +14770,19 @@ var RoomManager = /*#__PURE__*/function () {
                   showCancel: false,
                   confirmText: 'OK',
                   onConfirm: function onConfirm() {
-                    _this1.modalManager.closeModal();
+                    _this0.modalManager.closeModal();
                   }
                 });
               } else {
                 logger.log('Room created successfully.');
-                _this1.modalManager.closeModal();
+                _this0.modalManager.closeModal();
               }
             }
           }
         })["catch"](function (error) {
           logger.error('Error creating room:', error);
-          _this1.modalManager.showError('Error creating room. Please try again.');
-          _this1.modalManager.hideLoading();
+          _this0.modalManager.showError('Error creating room. Please try again.');
+          _this0.modalManager.hideLoading();
         });
       };
 
@@ -15015,17 +14802,17 @@ var RoomManager = /*#__PURE__*/function () {
           // otherwise go to the estimates list view
           if (productId) {
             // If we're adding a product, go back to estimate selection
-            if (_this1.modalManager.estimateManager) {
-              _this1.modalManager.estimateManager.showEstimateSelection(productId);
+            if (_this0.modalManager.estimateManager) {
+              _this0.modalManager.estimateManager.showEstimateSelection(productId);
             } else {
-              _this1.modalManager.closeModal();
+              _this0.modalManager.closeModal();
             }
           } else {
             // If we're just creating a room, go back to the estimates list
-            if (_this1.modalManager.estimateManager) {
-              _this1.modalManager.estimateManager.showEstimatesList();
+            if (_this0.modalManager.estimateManager) {
+              _this0.modalManager.estimateManager.showEstimatesList();
             } else {
-              _this1.modalManager.closeModal();
+              _this0.modalManager.closeModal();
             }
           }
         };
@@ -15044,17 +14831,17 @@ var RoomManager = /*#__PURE__*/function () {
           // Same behavior as cancel button
           if (productId) {
             // If we're adding a product, go back to estimate selection
-            if (_this1.modalManager.estimateManager) {
-              _this1.modalManager.estimateManager.showEstimateSelection(productId);
+            if (_this0.modalManager.estimateManager) {
+              _this0.modalManager.estimateManager.showEstimateSelection(productId);
             } else {
-              _this1.modalManager.closeModal();
+              _this0.modalManager.closeModal();
             }
           } else {
             // If we're just creating a room, go back to the estimates list
-            if (_this1.modalManager.estimateManager) {
-              _this1.modalManager.estimateManager.showEstimatesList();
+            if (_this0.modalManager.estimateManager) {
+              _this0.modalManager.estimateManager.showEstimatesList();
             } else {
-              _this1.modalManager.closeModal();
+              _this0.modalManager.closeModal();
             }
           }
         };
@@ -15075,7 +14862,7 @@ var RoomManager = /*#__PURE__*/function () {
   }, {
     key: "handleRoomRemoval",
     value: function handleRoomRemoval(estimateId, roomId) {
-      var _this10 = this;
+      var _this1 = this;
       logger.log('Handling room removal', {
         estimateId: estimateId,
         roomId: roomId
@@ -15106,7 +14893,7 @@ var RoomManager = /*#__PURE__*/function () {
         // Specify the action type (for proper styling)
         onConfirm: function onConfirm() {
           // User confirmed, remove the room
-          _this10.performRoomRemoval(estimateId, roomId);
+          _this1.performRoomRemoval(estimateId, roomId);
         },
         onCancel: function onCancel() {
           // User cancelled, do nothing
@@ -15124,7 +14911,7 @@ var RoomManager = /*#__PURE__*/function () {
   }, {
     key: "performRoomRemoval",
     value: function performRoomRemoval(estimateId, roomId) {
-      var _this11 = this;
+      var _this10 = this;
       logger.log('Performing room removal', {
         estimateId: estimateId,
         roomId: roomId
@@ -15154,13 +14941,13 @@ var RoomManager = /*#__PURE__*/function () {
 
           // Since we've already removed the room from localStorage,
           // refresh the estimate view to ensure UI is in sync
-          if (_this11.modalManager.estimateManager) {
-            _this11.modalManager.estimateManager.showEstimatesList(null, estimateId);
+          if (_this10.modalManager.estimateManager) {
+            _this10.modalManager.estimateManager.showEstimatesList(null, estimateId);
           }
         }
 
         // Update estimate totals and check for empty state
-        _this11.dataService.getEstimate(estimateId).then(function (estimate) {
+        _this10.dataService.getEstimate(estimateId).then(function (estimate) {
           // Check if any rooms remain in the estimate (using storage data)
           var hasRoomsInStorage = estimate && estimate.rooms && Object.keys(estimate.rooms).length > 0;
 
@@ -15196,14 +14983,14 @@ var RoomManager = /*#__PURE__*/function () {
         })["catch"](function (error) {
           logger.error('Error updating estimate totals after room removal:', error);
         })["finally"](function () {
-          _this11.modalManager.hideLoading();
+          _this10.modalManager.hideLoading();
         });
       })["catch"](function (error) {
         logger.error('Error removing room:', error);
 
         // Show error message using ConfirmationDialog
-        if (_this11.modalManager && _this11.modalManager.confirmationDialog) {
-          _this11.modalManager.confirmationDialog.show({
+        if (_this10.modalManager && _this10.modalManager.confirmationDialog) {
+          _this10.modalManager.confirmationDialog.show({
             title: 'Error',
             message: 'Error removing room. Please try again.',
             confirmText: 'OK',
@@ -15214,9 +15001,9 @@ var RoomManager = /*#__PURE__*/function () {
           });
         } else {
           // Fallback to modalManager.showError
-          _this11.modalManager.showError('Error removing room. Please try again.');
+          _this10.modalManager.showError('Error removing room. Please try again.');
         }
-        _this11.modalManager.hideLoading();
+        _this10.modalManager.hideLoading();
       });
     }
 
@@ -15233,7 +15020,7 @@ var RoomManager = /*#__PURE__*/function () {
   }, {
     key: "updateRoomTotals",
     value: function updateRoomTotals(estimateId, roomId, totals) {
-      var _this12 = this;
+      var _this11 = this;
       logger.log('Updating room totals', {
         estimateId: estimateId,
         roomId: roomId,
@@ -15281,8 +15068,8 @@ var RoomManager = /*#__PURE__*/function () {
         var estimateSection = document.querySelector(".estimate-section[data-estimate-id=\"".concat(estimateId, "\"]"));
         if (estimateSection) {
           var estimateActionsSection = estimateSection.querySelector('.estimate-actions');
-          if (estimateActionsSection && _this12.modalManager.estimateManager) {
-            var hasProducts = _this12.modalManager.estimateManager.estimateHasProducts(estimate);
+          if (estimateActionsSection && _this11.modalManager.estimateManager) {
+            var hasProducts = _this11.modalManager.estimateManager.estimateHasProducts(estimate);
             logger.log("Updating estimate actions visibility for ".concat(estimateId, ": ").concat(hasProducts));
             estimateActionsSection.style.display = hasProducts ? 'block' : 'none';
           }
@@ -15400,7 +15187,7 @@ var RoomManager = /*#__PURE__*/function () {
     value: function updateRoomIncludes(estimateId, roomId) {
       var _estimateData$estimat2,
         _estimate$rooms2,
-        _this13 = this;
+        _this12 = this;
       logger.log('Updating room includes', {
         estimateId: estimateId,
         roomId: roomId
@@ -15432,8 +15219,7 @@ var RoomManager = /*#__PURE__*/function () {
       var includesData = this.aggregateProductIncludes(room);
       this.renderRoomIncludes(includesData, roomElement, roomId, estimateId);
 
-      // Re-render the upgrades with updated room data
-      this.renderRoomUpgrades(room, roomElement);
+      // Product upgrades feature has been removed
 
       // If the room has products now, make sure similar products section is visible
       if (room.products && Object.keys(room.products).length > 0) {
@@ -15458,7 +15244,7 @@ var RoomManager = /*#__PURE__*/function () {
 
       // Also update similar products since product list changed
       setTimeout(function () {
-        _this13.initializeSimilarProductsForRoom(estimateId, roomId, false);
+        _this12.initializeSimilarProductsForRoom(estimateId, roomId, false);
       }, 300);
     }
 
@@ -15472,7 +15258,7 @@ var RoomManager = /*#__PURE__*/function () {
     key: "initializeSimilarProductsForRoom",
     value: function initializeSimilarProductsForRoom(estimateId, roomId) {
       var _estimateData$estimat3,
-        _this14 = this;
+        _this13 = this;
       var forceRefresh = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
       logger.log('Initializing similar products for room', {
         estimateId: estimateId,
@@ -15513,7 +15299,7 @@ var RoomManager = /*#__PURE__*/function () {
         logger.warn('Room element not found in DOM, deferring similar products initialization');
         // Defer initialization using setTimeout to allow DOM to render
         setTimeout(function () {
-          _this14.initializeSimilarProductsForRoom(estimateId, roomId, forceRefresh);
+          _this13.initializeSimilarProductsForRoom(estimateId, roomId, forceRefresh);
         }, 100);
         return;
       }
@@ -15641,7 +15427,7 @@ var RoomManager = /*#__PURE__*/function () {
   }, {
     key: "renderSimilarProductsList",
     value: function renderSimilarProductsList(similarProductsList, similarProductsContainer, toggleButton, similarProducts, estimateId, roomId, productIds, roomElement) {
-      var _this15 = this;
+      var _this14 = this;
       var sectionInfo = arguments.length > 8 && arguments[8] !== undefined ? arguments[8] : null;
       if (similarProducts.length === 0) {
         // No similar products found
@@ -15744,9 +15530,9 @@ var RoomManager = /*#__PURE__*/function () {
               });
 
               // Delegate to ProductManager to handle replacement with variation check
-              if (_this15.modalManager && _this15.modalManager.productManager) {
+              if (_this14.modalManager && _this14.modalManager.productManager) {
                 // Check if product has variations before replacing
-                _this15.modalManager.productManager.handleProductVariationSelection(productId, {
+                _this14.modalManager.productManager.handleProductVariationSelection(productId, {
                   action: 'replace',
                   estimateId: estimateId,
                   roomId: roomId,

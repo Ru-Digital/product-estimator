@@ -13,52 +13,52 @@ class LabelsMigration {
      * The old option name for labels
      */
     const OLD_OPTION_NAME = 'product_estimator_labels';
-    
+
     /**
      * The new option name for labels
      */
     const NEW_OPTION_NAME = 'product_estimator_labels';
-    
+
     /**
      * The option name for labels version
      */
     const VERSION_OPTION_NAME = 'product_estimator_labels_version';
-    
+
     /**
      * Run the migration
      */
     public static function migrate() {
         $existing_labels = get_option(self::OLD_OPTION_NAME, []);
-        
+
         if (empty($existing_labels)) {
             // No existing labels, create default structure
             self::create_default_structure();
             return;
         }
-        
+
         // Check if already migrated
         $version = get_option(self::VERSION_OPTION_NAME, '0');
         if (version_compare($version, '2.0.0', '>=')) {
             return; // Already migrated
         }
-        
+
         // Migrate existing labels to new structure
         $new_structure = self::migrate_labels($existing_labels);
-        
+
         // Save the new structure
         update_option(self::NEW_OPTION_NAME, $new_structure);
         update_option(self::VERSION_OPTION_NAME, '2.0.0');
-        
+
         // Clear any existing caches
         delete_transient('pe_frontend_labels_cache');
     }
-    
+
     /**
      * Migrate labels from old structure to new
      */
     private static function migrate_labels($old_labels) {
         $new_structure = self::get_default_structure();
-        
+
         // Map old labels to new categories
         foreach ($old_labels as $key => $value) {
             if (strpos($key, 'label_print') === 0 || strpos($key, 'label_save') === 0 || strpos($key, 'label_request') === 0) {
@@ -85,10 +85,10 @@ class LabelsMigration {
                 $new_structure['ui_elements'][$key] = $value;
             }
         }
-        
+
         return $new_structure;
     }
-    
+
     /**
      * Get the default label structure
      */
@@ -99,7 +99,7 @@ class LabelsMigration {
                 'request_copy' => __('Request a Copy', 'product-estimator'),
                 'save_estimate' => __('Save Estimate', 'product-estimator'),
                 'similar_products' => __('Similar Products', 'product-estimator'),
-                'product_includes' => __('Product Includes', 'product-estimator'),
+                'product_includes' => __('Product Includes.', 'product-estimator'),
                 'additional_products' => __('Additional Products', 'product-estimator'),
                 'suggested_products' => __('Suggested Products', 'product-estimator'),
                 'add_to_cart' => __('Add to Cart', 'product-estimator'),
@@ -152,7 +152,7 @@ class LabelsMigration {
                 'settings_saved' => __('Settings saved successfully', 'product-estimator'),
                 'room_created' => __('Room created successfully', 'product-estimator'),
                 'room_deleted' => __('Room deleted', 'product-estimator'),
-                
+
                 // Error messages
                 'general_error' => __('An error occurred. Please try again.', 'product-estimator'),
                 'save_failed' => __('Failed to save. Please try again.', 'product-estimator'),
@@ -160,13 +160,13 @@ class LabelsMigration {
                 'required_field' => __('This field is required', 'product-estimator'),
                 'network_error' => __('Network error. Please check your connection.', 'product-estimator'),
                 'permission_denied' => __('You do not have permission to perform this action', 'product-estimator'),
-                
+
                 // Confirmation messages
                 'confirm_delete' => __('Are you sure you want to delete this?', 'product-estimator'),
                 'confirm_remove_product' => __('Remove this product from the estimate?', 'product-estimator'),
                 'confirm_delete_room' => __('Delete this room and all its products?', 'product-estimator'),
                 'unsaved_changes' => __('You have unsaved changes. Are you sure you want to leave?', 'product-estimator'),
-                
+
                 // Validation messages
                 'min_length' => __('Minimum {min} characters required', 'product-estimator'),
                 'max_length' => __('Maximum {max} characters allowed', 'product-estimator'),
@@ -214,13 +214,13 @@ class LabelsMigration {
             ]
         ];
     }
-    
+
     /**
      * Create the default label structure
      */
     private static function create_default_structure() {
         $default_structure = self::get_default_structure();
-        
+
         update_option(self::NEW_OPTION_NAME, $default_structure);
         update_option(self::VERSION_OPTION_NAME, '2.0.0');
     }

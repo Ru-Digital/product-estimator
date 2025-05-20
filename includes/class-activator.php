@@ -25,6 +25,12 @@ class Activator {
         self::upgrade_tables();
         self::check_requirements();
 //        self::run_composer_install();
+        
+        // Run labels migration if the class exists
+        if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\LabelsMigration')) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-migration.php';
+            LabelsMigration::migrate();
+        }
 
         // Set activation flag
         update_option('product_estimator_activated', true);

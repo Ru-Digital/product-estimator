@@ -24,7 +24,9 @@ class NotificationSettingsModule extends VerticalTabbedModule {
    */
   bindModuleSpecificEvents() {
     super.bindModuleSpecificEvents();
-    if (!this.$container || !this.$container.length) return;
+    if (!this.$container || !this.$container.length) {
+      return;
+    }
 
     this.$container.on('change', '#enable_notifications', this.handleToggleAllNotifications.bind(this));
     this.$container.on('change', 'input[id^="notification_"][id$="_enabled"]', this.handleToggleSingleNotification.bind(this));
@@ -65,7 +67,7 @@ class NotificationSettingsModule extends VerticalTabbedModule {
 
   handleToggleAllNotifications() {
     if (!this.$container || !this.$container.length) return;
-    
+
     const $globalEnableCheckbox = this.$container.find('#enable_notifications');
     if (!$globalEnableCheckbox.length) {
       return;

@@ -1,3 +1,139 @@
 /**
- * Module styles for specific admin settings panel
+ * Module styles for Labels Settings Module
  */
+
+.label-settings-list {
+  margin-bottom: 20px;
+}
+
+/* Styling for label items */
+.label-item {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Label usage preview styles */
+.label-usage-preview {
+  background: #f0f0f0;
+  border-radius: 3px;
+  color: #666;
+  font-size: 0.9em;
+  margin-top: 5px;
+  padding: 5px 10px;
+}
+
+/* Label management tools */
+.label-management-tools {
+  .button {
+    margin-bottom: 10px;
+    text-align: center;
+    width: 100%;
+  }
+}
+
+/* Search section */
+.label-search-section {
+  margin-top: 20px;
+  
+  input {
+    margin-bottom: 10px;
+    width: 100%;
+  }
+  
+  #search-results {
+    max-height: 300px;
+    overflow-y: auto;
+    
+    .label-search-results {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      
+      li {
+        align-items: center;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        
+        &:hover {
+          background: #f9f9f9;
+        }
+        
+        strong {
+          color: #23282d;
+        }
+        
+        .button-link {
+          margin-left: 10px;
+        }
+      }
+    }
+  }
+}
+
+/* Bulk edit section */
+.label-bulk-edit-section {
+  background: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-top: 20px;
+  padding: 15px;
+  
+  h4 {
+    margin-top: 0;
+  }
+  
+  .bulk-edit-item {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    
+    label {
+      font-weight: 600;
+      min-width: 200px;
+    }
+    
+    input {
+      flex: 1;
+    }
+    
+    .remove-bulk-item {
+      color: #b32d2e;
+      
+      &:hover {
+        color: #8b1f1f;
+      }
+    }
+  }
+  
+  .button {
+    margin-right: 10px;
+  }
+}
+
+/* Label info section */
+.label-info-section {
+  border-top: 1px solid #ddd;
+  margin-top: 20px;
+  padding-top: 20px;
+  
+  p {
+    font-size: 0.9em;
+    margin: 5px 0;
+  }
+}
+
+/* Preview text */
+.label-preview-text {
+  color: #666;
+  font-size: 0.85em;
+  font-style: italic;
+  margin-top: 5px;
+  
+  em {
+    color: #333;
+    font-weight: 500;
+  }
+}

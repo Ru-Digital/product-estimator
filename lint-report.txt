@@ -16,6 +16,12 @@
   294:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
   327:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
 
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/admin/modules/LabelsManagement.js
+  86:13  warning  Unexpected console statement  no-console
+
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/examples/using-labels.js
+  142:9  error  Parsing error: Unexpected token <
+
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/CustomerDetailsManager.js
   10:52  warning  'clearCustomerDetails' is defined but never used  no-unused-vars
 
@@ -160,6 +166,26 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-✖ 123 problems (5 errors, 118 warnings)
-  0 errors and 2 warnings potentially fixable with the `--fix` option.
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/labels.js
+    2:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   13:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   29:21  warning  Unexpected console statement                                         no-console
+   39:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   42:1   warning  Invalid JSDoc @param "replacements" type "Object"; prefer: "object"  jsdoc/check-types
+   61:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   64:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+   71:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   81:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  104:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  133:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  137:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  151:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  181:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  192:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  194:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  206:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  228:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+
+✖ 143 problems (6 errors, 137 warnings)
+  0 errors and 19 warnings potentially fixable with the `--fix` option.
 

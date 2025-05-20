@@ -126,7 +126,6 @@ class ProductEstimator {
         // Add initialization on 'init' hook (early but not too early)
         add_action('init', array($this, 'initialize'), 20);
 
-        $this->load_templates();
     }
 
     private function initialize_feature_switches_and_set_global() { // Or your chosen method name
@@ -144,76 +143,6 @@ class ProductEstimator {
         } else {
             // ... error logging ...
         }
-    }
-
-
-    /**
-     * Load template files and register them with WordPress
-     */
-    public function load_templates() {
-        // Define template files to load
-        $templates = array(
-            'product-item-template' => 'templates/product-item.php',
-            'room-item-template' => 'templates/room-item.php',
-            'estimate-item-template' => 'templates/estimate-item.php',
-            'suggestion-item-template' => 'templates/suggestion-item.php',
-            'note-item-template' => 'templates/note-item.php',
-            'modal-messages' => 'templates/modal-messages.php',
-            'estimate-selection-template' => 'templates/estimate-selection-template.php',
-            'estimates-empty-template' => 'templates/estimates-empty-template.php',
-            'new-estimate-form-template' => 'templates/forms/new-estimate-form.php',
-            'new-room-form-template' => 'templates/forms/new-room-form.php',
-            'room-selection-form-template' => 'templates/forms/room-selection-form.php'
-        );
-
-        // Allow themes and plugins to modify the template paths
-        $templates = apply_filters('product_estimator_template_paths', $templates);
-
-        // Store loaded templates
-        $loaded_templates = array();
-
-        // Load each template
-        foreach ($templates as $template_id => $template_path) {
-            $full_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . $template_path;
-
-            // Allow template overriding in theme
-            $theme_path = get_stylesheet_directory() . '/product-estimator/' . $template_path;
-            if (file_exists($theme_path)) {
-                $full_path = $theme_path;
-            }
-
-            if (file_exists($full_path)) {
-                // Start output buffering to capture template content
-                ob_start();
-                include $full_path;
-                $template_content = ob_get_clean();
-
-                // Extract template ID from content if not explicitly provided
-                if (preg_match('/<template\s+id="([^"]+)"/', $template_content, $matches)) {
-                    // Use ID from template if it exists
-                    $extracted_id = $matches[1];
-
-                    // If the extracted ID differs from the key, use the extracted ID
-                    if ($extracted_id !== $template_id) {
-                        $template_id = $extracted_id;
-                    }
-                }
-
-                $loaded_templates[$template_id] = $template_content;
-            }
-        }
-
-        // Allow themes and plugins to modify templates content
-        $loaded_templates = apply_filters('product_estimator_templates', $loaded_templates);
-
-        // Store templates for later use
-        add_action('wp_enqueue_scripts', function() use ($loaded_templates) {
-            wp_localize_script(
-                'product-estimator-main',
-                'productEstimatorTemplates',
-                $loaded_templates
-            );
-        }, 30); // Higher priority to ensure script is loaded first
     }
 
     /**
@@ -257,10 +186,7 @@ class ProductEstimator {
         // Initialize AJAX handler (already modified for lazy session loading)
         if (class_exists(AjaxHandler::class)) {
             require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-ajax-handler.php';
-            // Include CustomerDetails dependency if AjaxHandler uses it directly
-            if (class_exists(CustomerDetails::class)) {
-                require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-customer-details.php';
-            }
+
             $this->ajax_handler = new AjaxHandler();
         } else {
             error_log("Product Estimator Error: AjaxHandler class not found.");

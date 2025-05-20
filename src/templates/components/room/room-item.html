@@ -36,14 +36,14 @@
     <div class="accordion-content">
       <div class="room-empty-state" style="display: none;"></div>
       <button class="product-includes-toggle expanded">
-        <span>Product Includes</span>
+        <span data-label="buttons.product_includes">Product Includes</span>
         <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
       </button>
       <div class="includes-container visible">
         <div class="product-includes">
           <div class="product-includes-items"></div>
         </div>
-        <div class="price-notice">Prices are subject to check measures without notice</div>
+        <div class="price-notice" data-label="ui_elements.price_notice">Prices are subject to check measures without notice</div>
         <div class="additional-products-container" style="display: none;">
           <div class="additional-products-list">
           </div>
@@ -51,7 +51,7 @@
       </div>
 
       <button class="product-details-toggle similar-products-toggle expanded">
-        <span>Similar Products</span>
+        <span data-label="buttons.similar_products">Similar Products</span>
         <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
       </button>
       <div class="similar-products-container visible" data-room-id="">
@@ -70,8 +70,10 @@
       </div>
 
       <div class="product-suggestions" style="display: none;">
-        <button class="product-suggestions-toggle"> Suggested Products
-          <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span></button>
+        <button class="product-suggestions-toggle">
+          <span data-label="buttons.suggested_products">Suggested Products</span>
+          <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span>
+        </button>
 
         <div class="suggestions-container-wrapper">
           <div class="suggestions-carousel">

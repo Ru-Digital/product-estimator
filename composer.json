@@ -38,6 +38,7 @@
         "classmap": [
             "includes/class-activator.php",
             "includes/class-feature-switches.php",
+            "includes/class-labels-migration.php",
             "includes/class-product-estimator.php",
             "includes/class-i18n.php",
             "includes/class-deactivator.php",

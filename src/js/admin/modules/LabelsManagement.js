@@ -5,20 +5,86 @@
  * label management functionality for the admin interface.
  * @since 2.0.0
  */
+
+import { createLogger } from '@utils';
+
+// Create logger with proper configuration
+const logger = createLogger('LabelsManagement');
+
 class LabelsManagement {
     constructor() {
-        this.labelsContext = window.productEstimatorAdmin.labelsSettings;
+        // Initialize core properties
         this.searchTimeout = null;
         this.bulkEditItems = [];
         
-        this.init();
+        // Get the labels context safely
+        // First check in window.productEstimatorAdmin
+        if (window.productEstimatorAdmin && window.productEstimatorAdmin.labelsSettings) {
+            this.labelsContext = window.productEstimatorAdmin.labelsSettings;
+            logger.log('Found labelsContext in productEstimatorAdmin');
+        } 
+        // Then check in window.labelsSettings which might be set by wp_localize_script
+        else if (window.labelsSettings) {
+            this.labelsContext = window.labelsSettings;
+            logger.log('Found labelsContext in window.labelsSettings');
+        }
+        // Check if context might be in the settings object directly
+        else if (window.productEstimatorSettingsData && window.productEstimatorSettingsData.labelsSettings) {
+            this.labelsContext = window.productEstimatorSettingsData.labelsSettings;
+            logger.log('Found labelsContext in productEstimatorSettingsData');
+        }
+        // Create a minimal context to avoid errors if nothing is found
+        else {
+            logger.warn('Labels context is not available in global scope, using fallback');
+            this.labelsContext = {
+                managementNonce: '',
+                categories: ['buttons', 'forms', 'messages', 'ui_elements', 'pdf'],
+                i18n: {
+                    saveSuccess: 'Label settings saved successfully.',
+                    saveError: 'Error saving label settings.',
+                    resetConfirm: 'Are you sure you want to reset this category to default values?',
+                    exportSuccess: 'Labels exported successfully.',
+                    importSuccess: 'Labels imported successfully.',
+                    importError: 'Error importing labels. Please check the file format.',
+                    searchNoResults: 'No labels found matching your search.',
+                    bulkUpdateSuccess: 'Labels updated successfully.',
+                    bulkUpdateError: 'Error updating labels.',
+                    confirmImport: 'This will replace all existing labels. Are you sure?'
+                }
+            };
+        }
+        
+        // Initialize component after 50ms delay to allow WordPress to fully initialize
+        setTimeout(() => this.init(), 50);
     }
     
     init() {
-        if (!this.labelsContext) return;
+        // We should always have a labelsContext now (even if it's a fallback)
+        // but check just to be safe
+        if (!this.labelsContext) {
+            this.labelsContext = {
+                managementNonce: '',
+                categories: [],
+                i18n: {}
+            };
+            logger.error('Using empty labelsContext as last resort');
+        }
         
-        this.bindEvents();
-        this.initializePreview();
+        try {
+            // Log the context we're using to help with debugging
+            logger.log('Initializing with context:', 
+                       JSON.stringify({
+                           has_nonce: !!this.labelsContext.managementNonce,
+                           categories: this.labelsContext.categories
+                       }));
+            
+            this.bindEvents();
+            this.initializePreview();
+            logger.log('LabelsManagement initialized successfully');
+        } catch (error) {
+            logger.error('Error initializing LabelsManagement:', error);
+            console.error('Full error details:', error);
+        }
     }
     
     bindEvents() {
@@ -381,7 +447,23 @@ class LabelsManagement {
 
 // Initialize when DOM is ready
 jQuery(document).ready(() => {
-    new LabelsManagement();
+    try {
+        // Check if we're on the labels settings page
+        if (jQuery('#labels').length && jQuery('.label-management-tools').length) {
+            logger.log('Initializing LabelsManagement');
+            window.ProductEstimatorLabelsManagementInstance = new LabelsManagement();
+        }
+    } catch (error) {
+        logger.error('Failed to initialize LabelsManagement:', error);
+        // Show error notice if possible
+        if (window.ProductEstimatorSettingsInstance && 
+            typeof window.ProductEstimatorSettingsInstance.showNotice === 'function') {
+            window.ProductEstimatorSettingsInstance.showNotice(
+                'Failed to initialize Labels Management. Check console for errors.', 
+                'error'
+            );
+        }
+    }
 });
 
 export default LabelsManagement;

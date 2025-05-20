@@ -4,6 +4,7 @@
  * Manages HTML templates for the Product Estimator plugin.
  */
 import { format, createLogger } from '@utils';
+import { labelManager } from '@utils/labels';
 const logger = createLogger('TemplateEngine');
 
 class TemplateEngine {
@@ -201,6 +202,9 @@ class TemplateEngine {
     // Product list check removed - products are now displayed directly in room template
 
 
+    // Process labels after populating with data
+    this.processLabels(clone);
+
     return clone; // Return the populated DocumentFragment
   }
 
@@ -217,6 +221,40 @@ class TemplateEngine {
     
     return str.replace(/\{\{(\w+)\}\}/g, (match, key) => {
       return data[key] !== undefined ? data[key] : match;
+    });
+  }
+  
+  /**
+   * Process labels in the element using data-label attributes
+   * @param {Element|DocumentFragment} element - Element to process
+   */
+  processLabels(element) {
+    const labelElements = element.querySelectorAll('[data-label]');
+    
+    labelElements.forEach(el => {
+      const labelKey = el.dataset.label;
+      const defaultValue = el.textContent;
+      
+      // Check for format parameters
+      const formatParams = el.dataset.labelParams;
+      
+      if (formatParams) {
+        try {
+          const params = JSON.parse(formatParams);
+          el.textContent = labelManager.format(labelKey, params, defaultValue);
+        } catch (e) {
+          logger.warn(`Invalid label params for ${labelKey}:`, e);
+          el.textContent = labelManager.get(labelKey, defaultValue);
+        }
+      } else {
+        el.textContent = labelManager.get(labelKey, defaultValue);
+      }
+      
+      // Remove the data-label attribute after processing
+      el.removeAttribute('data-label');
+      if (formatParams) {
+        el.removeAttribute('data-label-params');
+      }
     });
   }
   

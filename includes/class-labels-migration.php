@@ -119,6 +119,17 @@ class LabelsMigration {
                 'filter' => __('Filter', 'product-estimator'),
                 'reset' => __('Reset', 'product-estimator'),
                 'apply' => __('Apply', 'product-estimator'),
+                'create_new_estimate' => __('Create New Estimate', 'product-estimator'),
+                'contact_email' => __('Email', 'product-estimator'),
+                'contact_phone' => __('Phone', 'product-estimator'),
+                'delete_estimate' => __('Delete Estimate', 'product-estimator'),
+                'remove_room' => __('Remove Room', 'product-estimator'),
+                'request_contact' => __('Request contact from store', 'product-estimator'),
+                'add_new_room' => __('Add New Room', 'product-estimator'),
+                'add_product' => __('Add Product', 'product-estimator'),
+                'edit_product' => __('Edit Product', 'product-estimator'),
+                'add_to_estimate' => __('Add to Estimate', 'product-estimator'),
+                'continue' => __('Continue', 'product-estimator'),
             ],
             'forms' => [
                 'estimate_name' => __('Estimate Name', 'product-estimator'),
@@ -160,12 +171,15 @@ class LabelsMigration {
                 'required_field' => __('This field is required', 'product-estimator'),
                 'network_error' => __('Network error. Please check your connection.', 'product-estimator'),
                 'permission_denied' => __('You do not have permission to perform this action', 'product-estimator'),
+                'product_load_error' => __('Error loading products. Please try again.', 'product-estimator'),
+                'room_load_error' => __('Error loading rooms. Please try again.', 'product-estimator'),
 
                 // Confirmation messages
                 'confirm_delete' => __('Are you sure you want to delete this?', 'product-estimator'),
                 'confirm_remove_product' => __('Remove this product from the estimate?', 'product-estimator'),
                 'confirm_delete_room' => __('Delete this room and all its products?', 'product-estimator'),
                 'unsaved_changes' => __('You have unsaved changes. Are you sure you want to leave?', 'product-estimator'),
+                'confirm_proceed' => __('Are you sure you want to proceed?', 'product-estimator'),
 
                 // Validation messages
                 'min_length' => __('Minimum {min} characters required', 'product-estimator'),
@@ -194,6 +208,12 @@ class LabelsMigration {
                 'collapse' => __('Collapse', 'product-estimator'),
                 'previous' => __('Previous', 'product-estimator'),
                 'next' => __('Next', 'product-estimator'),
+                'confirm_title' => __('Confirm Action', 'product-estimator'),
+                'no_estimates' => __('You don\'t have any estimates yet.', 'product-estimator'),
+                'no_rooms' => __('No rooms added to this estimate yet.', 'product-estimator'),
+                'no_products' => __('No products added to this room yet.', 'product-estimator'),
+                'rooms_heading' => __('Rooms', 'product-estimator'),
+                'products_heading' => __('Products', 'product-estimator'),
             ],
             'pdf' => [
                 'title' => __('Product Estimate', 'product-estimator'),

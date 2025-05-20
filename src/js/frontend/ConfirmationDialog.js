@@ -13,6 +13,7 @@
  */
 
 import { createLogger } from '@utils';
+import { labelManager } from '@utils/labels';
 
 import TemplateEngine from './TemplateEngine';
 
@@ -50,8 +51,8 @@ class ConfirmationDialog {
     this.show({
       title: title,
       message: message,
-      confirmText: 'Confirm',
-      cancelText: 'Cancel',
+      confirmText: labelManager.get('buttons.confirm', 'Confirm'),
+      cancelText: labelManager.get('buttons.cancel', 'Cancel'),
       action: 'default',
       onConfirm: onConfirm,
       onCancel: onCancel
@@ -252,11 +253,11 @@ class ConfirmationDialog {
     const i18n = window.productEstimatorVars?.i18n || {};
 
     const defaults = {
-      title: 'Confirm Action',
-      message: 'Are you sure you want to proceed?',
+      title: labelManager.get('ui_elements.confirm_title', 'Confirm Action'),
+      message: labelManager.get('messages.confirm_proceed', 'Are you sure you want to proceed?'),
       type: '', // product, room, estimate - entity type for context
-      confirmText: i18n.confirm || 'Confirm',
-      cancelText: i18n.cancel || 'Cancel',
+      confirmText: labelManager.get('buttons.confirm', i18n.confirm || 'Confirm'),
+      cancelText: labelManager.get('buttons.cancel', i18n.cancel || 'Cancel'),
       onConfirm: null,
       onCancel: null,
       action: 'default', // dialog type: 'default', 'success', 'warning', 'error', 'delete'
@@ -330,8 +331,8 @@ class ConfirmationDialog {
         // Create contact selection dialog using template
         const selectionContainer = TemplateEngine.create('dialog-contact-selection-template', {
           message: settings.message || '',
-          emailButtonText: settings.emailButtonText || 'Email',
-          phoneButtonText: settings.phoneButtonText || 'Phone'
+          emailButtonText: settings.emailButtonText || labelManager.get('buttons.contact_email', 'Email'),
+          phoneButtonText: settings.phoneButtonText || labelManager.get('buttons.contact_phone', 'Phone')
         });
         
         messageEl.appendChild(selectionContainer);

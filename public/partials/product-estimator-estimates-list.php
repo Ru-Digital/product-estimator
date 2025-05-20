@@ -64,7 +64,7 @@ $options = get_option('product_estimator_settings');
                 </h3>
                 <button class="remove-estimate"
                         data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
-                        title="<?php esc_attr_e('Delete Estimate', 'product-estimator'); ?>">
+                        title="<?php echo product_estimator_label_attr('buttons.delete_estimate', 'Delete Estimate'); ?>">
                     <span class="dashicons dashicons-trash"></span>
                 </button>
             </div>
@@ -72,10 +72,10 @@ $options = get_option('product_estimator_settings');
 
             <div id="rooms">
                 <div class="room-header">
-                    <h4><?php esc_html_e('Rooms', 'product-estimator'); ?></h4>
+                    <h4><?php product_estimator_label('ui_elements.rooms_heading', 'Rooms'); ?></h4>
 
                     <button class="add-room" data-estimate="<?php echo esc_attr($estimate_id); ?>">
-                        <?php esc_html_e('Add New Room', 'product-estimator'); ?>
+                        <?php product_estimator_label('buttons.add_new_room', 'Add New Room'); ?>
                     </button>
                 </div>
 
@@ -130,7 +130,7 @@ $options = get_option('product_estimator_settings');
                                     <button class="remove-room"
                                             data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
                                             data-room-id="<?php echo esc_attr($room_id); ?>"
-                                            title="<?php esc_attr_e('Remove Room', 'product-estimator'); ?>">
+                                            title="<?php echo product_estimator_label_attr('buttons.remove_room', 'Remove Room'); ?>">
                                         <span class="dashicons dashicons-trash"></span>
                                     </button>
                                 </div>
@@ -138,7 +138,7 @@ $options = get_option('product_estimator_settings');
                                     <?php if (!empty($room['products'])): ?>
 
                                         <div class="room-products">
-                                            <h5><?php esc_html_e('Products', 'product-estimator'); ?></h5>
+                                            <h5><?php product_estimator_label('ui_elements.products_heading', 'Products'); ?></h5>
                                             <div class="product-list">
                                                 <?php
                                                 // In the loop where products are displayed
@@ -150,7 +150,7 @@ $options = get_option('product_estimator_settings');
                                         </div>
                                     <?php else: ?>
                                         <p class="no-products">
-                                            <?php esc_html_e('No products added to this room yet.', 'product-estimator'); ?>
+                                            <?php product_estimator_label('ui_elements.no_products', 'No products added to this room yet.'); ?>
                                         </p>
                                     <?php endif; ?>
                                     <?php include PRODUCT_ESTIMATOR_PLUGIN_DIR . 'public/partials/product-estimator-suggestions-carousel.php'; ?>
@@ -161,7 +161,7 @@ $options = get_option('product_estimator_settings');
                     </div>
                 <?php else: ?>
                     <p class="no-rooms">
-                        <?php esc_html_e('No rooms added to this estimate yet.', 'product-estimator'); ?>
+                        <?php product_estimator_label('ui_elements.no_rooms', 'No rooms added to this estimate yet.'); ?>
                     </p>
                 <?php endif; ?>
             </div>
@@ -199,8 +199,8 @@ $options = get_option('product_estimator_settings');
                             ?>
                             <a class="print-estimate"
                                data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
-                               title="<?php esc_attr_e('Print Estimate', 'product-estimator'); ?>">
-                                <span class="dashicons dashicons-pdf"></span> Print estimate
+                               title="<?php echo product_estimator_label_attr('buttons.print_estimate', 'Print Estimate'); ?>">
+                                <span class="dashicons dashicons-pdf"></span> <?php product_estimator_label('buttons.print_estimate', 'Print estimate'); ?>
                             </a>
                             <?php
 //                        }
@@ -209,15 +209,15 @@ $options = get_option('product_estimator_settings');
                     <li>
                         <a class="request-contact-estimate"
                            data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
-                           title="<?php esc_attr_e('Request contact from store', 'product-estimator'); ?>">
-                            <span class="dashicons dashicons-businessperson"></span> Request contact from store
+                           title="<?php echo product_estimator_label_attr('buttons.request_contact', 'Request contact from store'); ?>">
+                            <span class="dashicons dashicons-businessperson"></span> <?php product_estimator_label('buttons.request_contact', 'Request contact from store'); ?>
                         </a>
                     </li>
                     <li>
                         <a class="request-a-copy"
                            data-estimate-id="<?php echo esc_attr($estimate_id); ?>"
-                           title="<?php esc_attr_e('Request a copy', 'product-estimator'); ?>">
-                            <span class="dashicons dashicons-email"></span> Request a copy
+                           title="<?php echo product_estimator_label_attr('buttons.request_copy', 'Request a copy'); ?>">
+                            <span class="dashicons dashicons-email"></span> <?php product_estimator_label('buttons.request_copy', 'Request a copy'); ?>
                         </a>
                     </li>
 <!--                    <li>-->
@@ -233,9 +233,9 @@ $options = get_option('product_estimator_settings');
     <?php endforeach; ?>
 <?php else: ?>
     <div class="no-estimates">
-        <p><?php esc_html_e('You don\'t have any estimates yet.', 'product-estimator'); ?></p>
+        <p><?php product_estimator_label('ui_elements.no_estimates', 'You don\'t have any estimates yet.'); ?></p>
         <button id="create-estimate-btn" class="button">
-            <?php esc_html_e('Create New Estimate', 'product-estimator'); ?>
+            <?php product_estimator_label('buttons.create_new_estimate', 'Create New Estimate'); ?>
         </button>
     </div>
 <?php endif; ?>

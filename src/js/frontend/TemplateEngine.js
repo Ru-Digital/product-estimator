@@ -229,32 +229,82 @@ class TemplateEngine {
    * @param {Element|DocumentFragment} element - Element to process
    */
   processLabels(element) {
+    // Process regular data-label attributes
     const labelElements = element.querySelectorAll('[data-label]');
+    
+    logger.log(`Processing ${labelElements.length} label elements in template`);
     
     labelElements.forEach(el => {
       const labelKey = el.dataset.label;
       const defaultValue = el.textContent;
       
+      // Check for target attribute (for applying to other attributes)
+      const target = el.dataset.labelTarget || null;
+      
       // Check for format parameters
       const formatParams = el.dataset.labelParams;
+      
+      let labelValue;
       
       if (formatParams) {
         try {
           const params = JSON.parse(formatParams);
-          el.textContent = labelManager.format(labelKey, params, defaultValue);
+          labelValue = labelManager.format(labelKey, params, defaultValue);
         } catch (e) {
           logger.warn(`Invalid label params for ${labelKey}:`, e);
-          el.textContent = labelManager.get(labelKey, defaultValue);
+          labelValue = labelManager.get(labelKey, defaultValue);
         }
       } else {
-        el.textContent = labelManager.get(labelKey, defaultValue);
+        labelValue = labelManager.get(labelKey, defaultValue);
       }
       
-      // Remove the data-label attribute after processing
-      el.removeAttribute('data-label');
-      if (formatParams) {
-        el.removeAttribute('data-label-params');
+      // Apply the label based on target
+      if (target) {
+        // Apply to attribute (e.g., placeholder, title, aria-label)
+        el.setAttribute(target, labelValue);
+        // Don't remove the data attribute for attributes to allow re-processing
+      } else {
+        // Apply to text content
+        el.textContent = labelValue;
+        
+        // Remove the data-label attribute after processing
+        // This prevents double-processing but also means the labels won't
+        // be updated if the template is re-processed
+        el.removeAttribute('data-label');
+        if (formatParams) {
+          el.removeAttribute('data-label-params');
+        }
       }
+    });
+    
+    // Process aria-label attributes
+    const ariaLabelElements = element.querySelectorAll('[data-aria-label]');
+    ariaLabelElements.forEach(el => {
+      const labelKey = el.dataset.ariaLabel;
+      const defaultValue = el.getAttribute('aria-label') || '';
+      const labelValue = labelManager.get(labelKey, defaultValue);
+      el.setAttribute('aria-label', labelValue);
+      el.removeAttribute('data-aria-label');
+    });
+    
+    // Process title attributes
+    const titleElements = element.querySelectorAll('[data-title-label]');
+    titleElements.forEach(el => {
+      const labelKey = el.dataset.titleLabel;
+      const defaultValue = el.getAttribute('title') || '';
+      const labelValue = labelManager.get(labelKey, defaultValue);
+      el.setAttribute('title', labelValue);
+      el.removeAttribute('data-title-label');
+    });
+    
+    // Process placeholder attributes
+    const placeholderElements = element.querySelectorAll('[data-placeholder-label]');
+    placeholderElements.forEach(el => {
+      const labelKey = el.dataset.placeholderLabel;
+      const defaultValue = el.getAttribute('placeholder') || '';
+      const labelValue = labelManager.get(labelKey, defaultValue);
+      el.setAttribute('placeholder', labelValue);
+      el.removeAttribute('data-placeholder-label');
     });
   }
   

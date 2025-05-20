@@ -71,19 +71,20 @@ Database (wp_options) → PHP Classes → Localized to JS → Templates/Componen
 - [x] Migrate inline JavaScript text to label system
 - [x] Update AJAX responses to include labels
 
-### Phase 5: Performance Optimization
-- [ ] Implement smart caching strategy
-- [ ] Add label preloading for critical paths
-- [ ] Optimize database queries for label retrieval
-- [ ] Add compression for label data
-- [ ] Implement lazy loading for non-critical labels
+### Phase 5: Performance Optimization and Analytics ✅ COMPLETED
+- [x] Implement smart caching strategy
+- [x] Add label preloading for critical paths
+- [x] Optimize database queries for label retrieval
+- [x] Add compression for label data
+- [x] Implement lazy loading for non-critical labels
+- [x] Implement label usage analytics system
+- [x] Create analytics dashboard for monitoring label usage
+- [x] Add tracking for usage frequency and context
 
 ### Phase 6: Developer Tools
 - [ ] Create label documentation generator
-- [ ] Add console debugging tools for labels
-- [ ] Create label usage analyzer
-- [ ] Add unit tests for label system
-- [ ] Create migration tool for adding new labels
+- [x] Add console debugging tools for labels
+- [x] Create label usage analyzer
 
 ## Implementation Details
 
@@ -382,42 +383,54 @@ Phases 1-3 are complete, and we are now working on Phase 4 (Template Migration),
 7. ✅ Updated AJAX responses to include labels (100% complete)
 
 ### Current Focus:
-Phase 4 (Template Migration) is now 100% complete! We have successfully migrated all text content to the label system across the entire application, achieving a major milestone in our implementation plan. Accomplishments include:
+Phase 5 (Performance Optimization and Analytics) is now 100% complete! We have successfully implemented a comprehensive analytics system for tracking label usage across the application. Accomplishments include:
 
-1. HTML templates: All templates now use data-label attributes, providing complete customization capability
-2. JavaScript components: All frontend components now use the labelManager for text content
-3. AJAX handlers: All AJAX responses now include labels from the LabelsFrontend system
-4. PDF generation: The PDF system now fully integrates with the label system
-5. Modal dialogs: All confirmation and product dialogs now use standardized label keys
+1. Label Usage Analytics: Implemented tracking system that records which labels are used, how often, and in what contexts
+2. Analytics Dashboard: Created an admin interface for visualizing label usage data with charts and tables
+3. Performance Optimizations: Implemented smart caching, preloading, and lazy loading strategies
+4. Client-side Tracking: Added JavaScript tracking with batched AJAX submissions to minimize performance impact
+5. Usage Reports: Added ability to generate reports showing most-used and unused labels
 
-Moving forward to Phase 5 (Performance Optimization), we will focus on:
+Key features of the analytics system include:
 
-1. Implementing smart caching strategy with selective cache invalidation
-2. Adding label preloading for critical UI paths to improve initial load experience
-3. Optimizing database queries for label retrieval to minimize server load
-4. Implementing compression for label data to reduce payload size
-5. Adding lazy loading for non-critical labels to prioritize essential content
+1. Real-time tracking with minimal performance impact
+2. Visual dashboard with usage charts by category
+3. Identification of unused labels to streamline the application
+4. Export capabilities for deeper analysis
+5. Automatic tracking activation via feature switch
+
+Moving forward to Phase 6 (Developer Tools), we will focus on:
+
+1. Creating comprehensive documentation for the label system
+2. Adding unit tests for both PHP and JavaScript components
+3. Building developer-focused tools for maintaining and extending the label system
+4. Creating migration tools for adding new label categories
+5. Adding code generators for common label usage patterns
 
 ### Files to Reference:
 - `/includes/class-labels-migration.php` - Migration system
 - `/includes/admin/settings/class-labels-settings-module.php` - Admin settings
 - `/includes/admin/settings/class-labels-bulk-operations.php` - Bulk operations handler
+- `/includes/class-labels-usage-analytics.php` - Analytics tracking system
+- `/includes/admin/settings/class-labels-analytics-dashboard.php` - Analytics admin interface
 - `/includes/frontend/class-labels-frontend.php` - Frontend functionality
-- `/src/js/utils/labels.js` - JavaScript LabelManager
+- `/src/js/utils/labels.js` - JavaScript LabelManager with analytics tracking
 - `/src/js/admin/modules/LabelSettingsModule.js` - Admin UI for label management
 - `/src/js/frontend/TemplateEngine.js` - Template processing with labels
 - `LABELS-PHASE1-SUMMARY.md` - Detailed Phase 1 documentation
 - `LABELS-PHASE2-SUMMARY.md` - Detailed Phase 2 documentation
 - `LABELS-PHASE4-SUMMARY.md` - Template migration progress
+- `LABELS-ANALYTICS-FIX.md` - Analytics implementation fixes
 - `TEMPLATE-MIGRATION-STRATEGY.md` - Template migration strategy
 - `TEMPLATE-MIGRATION-TRACKING.md` - Template migration tracking
 
 ---
 
-*Last Updated: May 20, 2025*
-*Version: 2.2.0*
+*Last Updated: May 21, 2025*
+*Version: 2.3.0*
 *Phase 1: COMPLETE*
 *Phase 2: COMPLETE*
 *Phase 3: COMPLETE*
 *Phase 4: COMPLETE*
-*Phase 5: IN PROGRESS*
+*Phase 5: COMPLETE*
+*Phase 6: IN PROGRESS*

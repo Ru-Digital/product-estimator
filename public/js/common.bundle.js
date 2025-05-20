@@ -1728,10 +1728,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   LabelManager: () => (/* binding */ LabelManager),
 /* harmony export */   labelManager: () => (/* binding */ labelManager)
 /* harmony export */ });
-/* harmony import */ var _babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/toConsumableArray */ "./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js");
+/* harmony import */ var _babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/slicedToArray */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
 /* harmony import */ var _babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/helpers/typeof */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
-/* harmony import */ var _babel_runtime_helpers_classCallCheck__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babel/runtime/helpers/classCallCheck */ "./node_modules/@babel/runtime/helpers/esm/classCallCheck.js");
-/* harmony import */ var _babel_runtime_helpers_createClass__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @babel/runtime/helpers/createClass */ "./node_modules/@babel/runtime/helpers/esm/createClass.js");
+/* harmony import */ var _babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babel/runtime/helpers/toConsumableArray */ "./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js");
+/* harmony import */ var _babel_runtime_helpers_classCallCheck__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @babel/runtime/helpers/classCallCheck */ "./node_modules/@babel/runtime/helpers/esm/classCallCheck.js");
+/* harmony import */ var _babel_runtime_helpers_createClass__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @babel/runtime/helpers/createClass */ "./node_modules/@babel/runtime/helpers/esm/createClass.js");
+
 
 
 
@@ -1746,7 +1748,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
  */
 var LabelManager = /*#__PURE__*/function () {
   function LabelManager() {
-    (0,_babel_runtime_helpers_classCallCheck__WEBPACK_IMPORTED_MODULE_2__["default"])(this, LabelManager);
+    var _window$productEstima;
+    (0,_babel_runtime_helpers_classCallCheck__WEBPACK_IMPORTED_MODULE_3__["default"])(this, LabelManager);
     this.labels = window.productEstimatorLabels || {};
     this.version = this.labels._version || '2.0.0';
 
@@ -1756,31 +1759,103 @@ var LabelManager = /*#__PURE__*/function () {
     // List of high-priority labels to preload
     this.criticalLabels = ['buttons.save_estimate', 'buttons.print_estimate', 'buttons.email_estimate', 'buttons.add_product', 'buttons.add_room', 'forms.estimate_name', 'messages.product_added', 'messages.estimate_saved', 'messages.room_added'];
 
+    // Analytics configuration
+    this.analytics = {
+      enabled: ((_window$productEstima = window.productEstimatorSettings) === null || _window$productEstima === void 0 ? void 0 : _window$productEstima.labelAnalyticsEnabled) || false,
+      batchSize: 10,
+      pendingBatch: [],
+      counts: {},
+      timestamps: {},
+      sendInterval: 10000,
+      // 10 seconds
+      // Performance analysis
+      _lookups: {
+        hits: 0,
+        misses: 0,
+        startTime: Date.now(),
+        performanceMarks: []
+      }
+    };
+
+    // Set up analytics batch sending timer if enabled
+    if (this.analytics.enabled) {
+      this.setupAnalyticsBatchSending();
+    }
+
     // Preload critical labels
     this.preloadCriticalLabels();
   }
 
   /**
-   * Get a label value using dot notation with client-side caching
+   * Set up interval for sending analytics batches
    * 
-   * @param {string} key - Label key (e.g., 'buttons.save_estimate')
-   * @param {string} defaultValue - Default value if label not found
-   * @returns {string} Label value or default
+   * @private
    */
-  return (0,_babel_runtime_helpers_createClass__WEBPACK_IMPORTED_MODULE_3__["default"])(LabelManager, [{
+  return (0,_babel_runtime_helpers_createClass__WEBPACK_IMPORTED_MODULE_4__["default"])(LabelManager, [{
+    key: "setupAnalyticsBatchSending",
+    value: function setupAnalyticsBatchSending() {
+      var _this = this;
+      // Send pending analytics every 10 seconds if any exist
+      setInterval(function () {
+        if (_this.analytics.pendingBatch.length > 0) {
+          _this.sendAnalyticsBatch();
+        }
+      }, this.analytics.sendInterval);
+
+      // Also send analytics when page is unloaded if any pending
+      window.addEventListener('beforeunload', function () {
+        if (_this.analytics.pendingBatch.length > 0) {
+          _this.sendAnalyticsBatch();
+        }
+      });
+    }
+
+    /**
+     * Get a label value using dot notation with client-side caching
+     * 
+     * @param {string} key - Label key (e.g., 'buttons.save_estimate')
+     * @param {string} defaultValue - Default value if label not found
+     * @returns {string} Label value or default
+     */
+  }, {
     key: "get",
     value: function get(key) {
       var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+      // Mark start time for performance analysis
+      var startTime = window.performance && window.performance.now ? window.performance.now() : Date.now();
+
       // Check cache first for the fastest retrieval
       if (this.cache.has(key)) {
-        return this.cache.get(key);
+        // Record cache hit for performance metrics
+        if (this.analytics.enabled) {
+          this.analytics._lookups.hits++;
+          this.trackUsage(key);
+        }
+        var _value = this.cache.get(key);
+
+        // Record performance timing
+        this.recordLabelLookupPerformance(key, startTime, true);
+        return _value;
+      }
+
+      // Cache miss - record for performance metrics
+      if (this.analytics.enabled) {
+        this.analytics._lookups.misses++;
       }
 
       // Check if we have a flattened version first (faster lookup)
       if (this.labels._flat && this.labels._flat[key] !== undefined) {
-        var _value = this.labels._flat[key];
-        this.cache.set(key, _value); // Cache for future
-        return _value;
+        var _value2 = this.labels._flat[key];
+        this.cache.set(key, _value2); // Cache for future
+
+        // Track usage analytics
+        if (this.analytics.enabled) {
+          this.trackUsage(key);
+        }
+
+        // Record performance timing
+        this.recordLabelLookupPerformance(key, startTime, false, 'flattened');
+        return _value2;
       }
 
       // Standard dot notation lookup
@@ -1799,6 +1874,9 @@ var LabelManager = /*#__PURE__*/function () {
               console.warn("Label not found: ".concat(key));
             }
             this.cache.set(key, defaultValue); // Cache the default too
+
+            // Record performance timing for missing label
+            this.recordLabelLookupPerformance(key, startTime, false, 'missing');
             return defaultValue;
           }
         }
@@ -1810,7 +1888,136 @@ var LabelManager = /*#__PURE__*/function () {
         _iterator.f();
       }
       this.cache.set(key, value);
+
+      // Track usage analytics
+      if (this.analytics.enabled) {
+        this.trackUsage(key);
+      }
+
+      // Record performance timing for successful lookup
+      this.recordLabelLookupPerformance(key, startTime, false, 'found');
       return value;
+    }
+
+    /**
+     * Record performance metrics for label lookup
+     * 
+     * @private
+     * @param {string} key - Label key
+     * @param {number} startTime - Performance mark start time
+     * @param {boolean} cacheHit - Whether this was a cache hit
+     * @param {string} lookupType - Type of lookup performed
+     */
+  }, {
+    key: "recordLabelLookupPerformance",
+    value: function recordLabelLookupPerformance(key, startTime, cacheHit) {
+      var lookupType = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : '';
+      if (!this.analytics.enabled || !window.performance || !window.performance.now) {
+        return;
+      }
+      var endTime = window.performance.now();
+      var duration = endTime - startTime;
+
+      // Keep only last 100 performance marks to avoid memory issues
+      if (this.analytics._lookups.performanceMarks.length > 100) {
+        this.analytics._lookups.performanceMarks.shift();
+      }
+      this.analytics._lookups.performanceMarks.push({
+        key: key,
+        duration: duration,
+        cacheHit: cacheHit,
+        lookupType: lookupType,
+        timestamp: Date.now()
+      });
+
+      // For significant performance issues, record in analytics
+      if (duration > 50 && !cacheHit) {
+        // More than 50ms is significant
+        this.analytics.pendingBatch.push({
+          key: key,
+          timestamp: Date.now(),
+          page: window.location.pathname,
+          context: 'performance',
+          duration: duration,
+          lookupType: lookupType
+        });
+      }
+    }
+
+    /**
+     * Track label usage for analytics
+     * 
+     * @private
+     * @param {string} key - Label key
+     */
+  }, {
+    key: "trackUsage",
+    value: function trackUsage(key) {
+      // Increment local count
+      if (!this.analytics.counts[key]) {
+        this.analytics.counts[key] = 0;
+      }
+      this.analytics.counts[key]++;
+
+      // Update timestamp
+      this.analytics.timestamps[key] = Date.now();
+
+      // Add to pending batch
+      this.analytics.pendingBatch.push({
+        key: key,
+        timestamp: Date.now(),
+        page: window.location.pathname
+      });
+
+      // Send batch if threshold reached
+      if (this.analytics.pendingBatch.length >= this.analytics.batchSize) {
+        this.sendAnalyticsBatch();
+      }
+    }
+
+    /**
+     * Send analytics batch to server
+     * 
+     * @private
+     */
+  }, {
+    key: "sendAnalyticsBatch",
+    value: function sendAnalyticsBatch() {
+      var _window$productEstima2, _window$productEstima3;
+      if (!this.analytics.enabled || this.analytics.pendingBatch.length === 0) {
+        return;
+      }
+
+      // Clone the pending batch and clear it
+      var batch = (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_2__["default"])(this.analytics.pendingBatch);
+      this.analytics.pendingBatch = [];
+
+      // Send via fetch API
+      fetch((_window$productEstima2 = window.productEstimatorVars) === null || _window$productEstima2 === void 0 ? void 0 : _window$productEstima2.ajax_url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          action: 'pe_record_label_analytics',
+          nonce: (_window$productEstima3 = window.productEstimatorVars) === null || _window$productEstima3 === void 0 ? void 0 : _window$productEstima3.nonce,
+          data: JSON.stringify(batch)
+        })
+      }).then(function (response) {
+        var _window$productEstima4;
+        // Log success for debugging
+        if ((_window$productEstima4 = window.productEstimatorVars) !== null && _window$productEstima4 !== void 0 && _window$productEstima4.debug) {
+          response.json().then(function (data) {
+            console.log('Label analytics batch sent:', data);
+          });
+        }
+      })["catch"](function (error) {
+        var _window$productEstima5;
+        if ((_window$productEstima5 = window.productEstimatorVars) !== null && _window$productEstima5 !== void 0 && _window$productEstima5.debug) {
+          console.warn('Failed to send label analytics:', error);
+        }
+      });
     }
 
     /**
@@ -1826,12 +2033,30 @@ var LabelManager = /*#__PURE__*/function () {
     value: function format(key) {
       var replacements = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var defaultValue = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
+      // The get() method will already track usage
       var label = this.get(key, defaultValue);
 
       // Replace placeholders like {name} with actual values
       Object.keys(replacements).forEach(function (placeholder) {
         label = label.replace(new RegExp("{".concat(placeholder, "}"), 'g'), replacements[placeholder]);
       });
+
+      // Track as a formatted usage (with special context)
+      if (this.analytics.enabled) {
+        // Add to pending batch with format context
+        this.analytics.pendingBatch.push({
+          key: key,
+          timestamp: Date.now(),
+          page: window.location.pathname,
+          context: 'formatted',
+          params: Object.keys(replacements).join(',')
+        });
+
+        // Send batch if threshold reached
+        if (this.analytics.pendingBatch.length >= this.analytics.batchSize) {
+          this.sendAnalyticsBatch();
+        }
+      }
       return label;
     }
 
@@ -1891,25 +2116,54 @@ var LabelManager = /*#__PURE__*/function () {
   }, {
     key: "updateDOM",
     value: function updateDOM() {
-      var _this = this;
+      var _this2 = this;
       var container = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : document;
       var labelElements = container.querySelectorAll('[data-label]');
+      var containerInfo = container === document ? 'document' : container.id || container.tagName;
+      if (this.analytics.enabled) {
+        // Track batch update with metadata
+        this.analytics.pendingBatch.push({
+          key: 'dom_update',
+          timestamp: Date.now(),
+          page: window.location.pathname,
+          context: 'updateDOM',
+          container: containerInfo,
+          count: labelElements.length
+        });
+      }
       labelElements.forEach(function (element) {
         var labelKey = element.dataset.label;
         var defaultValue = element.textContent;
-        var label = _this.get(labelKey, defaultValue);
+        var label = _this2.get(labelKey, defaultValue);
 
         // Check for format parameters
         var formatParams = element.dataset.labelParams;
         if (formatParams) {
           try {
             var params = JSON.parse(formatParams);
-            element.textContent = _this.format(labelKey, params, defaultValue);
+            element.textContent = _this2.format(labelKey, params, defaultValue);
           } catch (e) {
             element.textContent = label;
           }
         } else {
           element.textContent = label;
+        }
+
+        // Track DOM update specifically (with element info)
+        if (_this2.analytics.enabled) {
+          _this2.analytics.pendingBatch.push({
+            key: labelKey,
+            timestamp: Date.now(),
+            page: window.location.pathname,
+            context: 'dom',
+            element: element.tagName,
+            container: containerInfo
+          });
+
+          // Send batch if threshold reached
+          if (_this2.analytics.pendingBatch.length >= _this2.analytics.batchSize) {
+            _this2.sendAnalyticsBatch();
+          }
         }
       });
     }
@@ -1925,10 +2179,10 @@ var LabelManager = /*#__PURE__*/function () {
   }, {
     key: "getComponentLabels",
     value: function getComponentLabels(component, labelKeys) {
-      var _this2 = this;
+      var _this3 = this;
       var componentLabels = {};
       labelKeys.forEach(function (key) {
-        componentLabels[key] = _this2.get(key);
+        componentLabels[key] = _this3.get(key);
       });
       return componentLabels;
     }
@@ -1986,7 +2240,7 @@ var LabelManager = /*#__PURE__*/function () {
   }, {
     key: "getDebugInfo",
     value: function getDebugInfo() {
-      var _this3 = this;
+      var _this4 = this;
       return {
         version: this.version,
         totalLabels: this.countLabels(),
@@ -1996,9 +2250,116 @@ var LabelManager = /*#__PURE__*/function () {
         missingLabels: this.findMissingLabels(),
         cacheSize: this.cache.size,
         criticalLabelsLoaded: this.criticalLabels.every(function (key) {
-          return _this3.cache.has(key);
-        })
+          return _this4.cache.has(key);
+        }),
+        // Analytics information
+        analytics: {
+          enabled: this.analytics.enabled,
+          trackedLabels: Object.keys(this.analytics.counts).length,
+          pendingBatchSize: this.analytics.pendingBatch.length,
+          topUsedLabels: this.getTopUsedLabels(5),
+          totalUsageCounts: Object.values(this.analytics.counts).reduce(function (sum, count) {
+            return sum + count;
+          }, 0)
+        }
       };
+    }
+
+    /**
+     * Get the top most used labels in the current session
+     * 
+     * @param {number} limit - Number of labels to return
+     * @returns {Array} Top used labels with usage count
+     */
+  }, {
+    key: "getTopUsedLabels",
+    value: function getTopUsedLabels() {
+      var limit = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 10;
+      var entries = Object.entries(this.analytics.counts);
+      entries.sort(function (a, b) {
+        return b[1] - a[1];
+      }); // Sort by count descending
+
+      return entries.slice(0, limit).map(function (_ref) {
+        var _ref2 = (0,_babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_0__["default"])(_ref, 2),
+          key = _ref2[0],
+          count = _ref2[1];
+        return {
+          key: key,
+          count: count
+        };
+      });
+    }
+
+    /**
+     * Analyze label usage performance
+     * 
+     * @returns {Object} Performance metrics
+     */
+  }, {
+    key: "analyzePerformance",
+    value: function analyzePerformance() {
+      if (!window.performance || !window.performance.getEntriesByType) {
+        return {
+          supported: false
+        };
+      }
+      var metrics = {
+        supported: true,
+        resourceLoading: {},
+        labelProcessing: {}
+      };
+
+      // Analyze resource loading
+      var resources = window.performance.getEntriesByType('resource');
+      var labelResources = resources.filter(function (res) {
+        return res.name.includes('productEstimatorLabels') || res.name.includes('product-estimator');
+      });
+      if (labelResources.length > 0) {
+        metrics.resourceLoading = {
+          count: labelResources.length,
+          totalTime: labelResources.reduce(function (sum, res) {
+            return sum + res.duration;
+          }, 0),
+          maxTime: Math.max.apply(Math, (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_2__["default"])(labelResources.map(function (res) {
+            return res.duration;
+          }))),
+          avgTime: labelResources.reduce(function (sum, res) {
+            return sum + res.duration;
+          }, 0) / labelResources.length
+        };
+      }
+
+      // Label processing metrics
+      metrics.labelProcessing = {
+        cacheHitRate: this.getCacheHitRate(),
+        totalProcessed: Object.values(this.analytics.counts).reduce(function (sum, count) {
+          return sum + count;
+        }, 0),
+        missingCount: this.findMissingLabels().length,
+        formatCount: this.analytics.pendingBatch.filter(function (item) {
+          return item.context === 'formatted';
+        }).length
+      };
+      return metrics;
+    }
+
+    /**
+     * Calculate cache hit rate for performance analysis
+     * 
+     * @private
+     * @returns {number} Cache hit rate as percentage
+     */
+  }, {
+    key: "getCacheHitRate",
+    value: function getCacheHitRate() {
+      if (!this.analytics._lookups) {
+        return 0;
+      }
+      var hits = this.analytics._lookups.hits || 0;
+      var misses = this.analytics._lookups.misses || 0;
+      var total = hits + misses;
+      return total > 0 ? hits / total * 100 : 0;
     }
 
     /**
@@ -2008,11 +2369,11 @@ var LabelManager = /*#__PURE__*/function () {
   }, {
     key: "preloadCriticalLabels",
     value: function preloadCriticalLabels() {
-      var _this4 = this;
+      var _this5 = this;
       // Preload each critical label into cache
       this.criticalLabels.forEach(function (key) {
-        if (!_this4.cache.has(key)) {
-          _this4.get(key);
+        if (!_this5.cache.has(key)) {
+          _this5.get(key);
         }
       });
       if (window.productEstimatorDebug) {
@@ -2050,16 +2411,16 @@ var LabelManager = /*#__PURE__*/function () {
   }, {
     key: "findMissingLabels",
     value: function findMissingLabels() {
-      var _this5 = this;
+      var _this6 = this;
       var missing = [];
       var labelElements = document.querySelectorAll('[data-label]');
       labelElements.forEach(function (element) {
         var labelKey = element.dataset.label;
-        if (!_this5.exists(labelKey)) {
+        if (!_this6.exists(labelKey)) {
           missing.push(labelKey);
         }
       });
-      return (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_0__["default"])(new Set(missing)); // Remove duplicates
+      return (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_2__["default"])(new Set(missing)); // Remove duplicates
     }
   }]);
 }();

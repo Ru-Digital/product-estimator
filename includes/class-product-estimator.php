@@ -12,6 +12,8 @@ use RuDigital\ProductEstimator\Includes\Loader;
 use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
 use RuDigital\ProductEstimator\Includes\Admin\AdminScriptHandler;
 use RuDigital\ProductEstimator\Includes\FeatureSwitches;
+use RuDigital\ProductEstimator\Includes\LabelsUsageAnalytics;
+use RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsAnalyticsDashboard;
 
 
 /**
@@ -89,6 +91,20 @@ class ProductEstimator {
      * @var FeatureSwitches
      */
     private $feature_switches;
+    
+    /**
+     * Labels Usage Analytics
+     *
+     * @var LabelsUsageAnalytics
+     */
+    private $labels_analytics;
+    
+    /**
+     * Labels Analytics Dashboard
+     *
+     * @var LabelsAnalyticsDashboard
+     */
+    private $labels_analytics_dashboard;
 
 
 
@@ -113,6 +129,25 @@ class ProductEstimator {
         } else {
             // Handle error: LabelsFrontend class not found
             error_log("Product Estimator Error: LabelsFrontend class not found.");
+        }
+        
+        // Initialize Labels Usage Analytics
+        if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-usage-analytics.php')) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-usage-analytics.php';
+            $this->labels_analytics = new LabelsUsageAnalytics($this->plugin_name, $this->version);
+            
+            // Make instance available globally
+            $GLOBALS['product_estimator_labels_analytics'] = $this->labels_analytics;
+            global $product_estimator;
+            $product_estimator = $this;
+            
+            // Initialize Labels Analytics Dashboard in admin
+            if (is_admin() && file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-analytics-dashboard.php')) {
+                require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-analytics-dashboard.php';
+                $this->labels_analytics_dashboard = new LabelsAnalyticsDashboard($this->plugin_name, $this->version, $this->labels_analytics);
+            }
+        } else {
+            error_log("Product Estimator Error: LabelsUsageAnalytics class file not found.");
         }
 
         // Make sure this code is actually running
@@ -386,5 +421,59 @@ class ProductEstimator {
         $products = get_posts($args);
 
         return $products;
+    }
+    
+    /**
+     * Get a component by name
+     *
+     * @since    2.3.0
+     * @access   public
+     * @param    string    $component_name    The component name.
+     * @return   object|null                  The component or null if not found.
+     */
+    public function get_component($component_name) {
+        switch ($component_name) {
+            case 'labels_frontend':
+                return $this->labels_frontend;
+            case 'labels_analytics':
+                return $this->labels_analytics;
+            case 'feature_switches':
+                return $this->feature_switches;
+            case 'wc_integration':
+                return $this->wc_integration;
+            case 'netsuite_integration':
+                return $this->netsuite_integration;
+            case 'ajax_handler':
+                return $this->ajax_handler;
+            default:
+                return null;
+        }
+    }
+    
+    /**
+     * Get the plugin loader
+     *
+     * @since    2.3.0
+     * @access   public
+     * @return   object    The loader.
+     */
+    public function get_loader() {
+        return $this;
+    }
+    
+    /**
+     * Check if a feature is enabled
+     *
+     * @since    2.3.0
+     * @access   public
+     * @param    string    $feature_name    The feature name.
+     * @param    bool      $default         Default value if feature doesn't exist.
+     * @return   bool      Whether the feature is enabled.
+     */
+    public function is_feature_enabled($feature_name, $default = false) {
+        if ($this->feature_switches) {
+            return $this->feature_switches->get_feature($feature_name, $default);
+        }
+        return $default;
     }
 }

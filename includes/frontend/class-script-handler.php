@@ -128,7 +128,17 @@ class ScriptHandler {
                 'plugin_url' => PRODUCT_ESTIMATOR_PLUGIN_URL,
                 'estimator_url' => home_url('/estimator/'),
                 'debug' => defined('WP_DEBUG') && WP_DEBUG, // Pass debug mode to JS,
-                'featureSwitches' => $processed_feature_switches, // <-- Add this line
+                'featureSwitches' => $processed_feature_switches // <-- Add this line
+            )
+        );
+        
+        // Also send settings to match the format expected by labels.js
+        wp_localize_script(
+            $this->plugin_name,
+            'productEstimatorSettings',
+            array(
+                'labelAnalyticsEnabled' => isset($processed_feature_switches['label_analytics_enabled']) ? 
+                    $processed_feature_switches['label_analytics_enabled'] : true, // Default to enabled for now
                 'i18n' => array(
                     'loading' => __('Loading...', 'product-estimator'),
                     'error' => __('Error loading content. Please try again.', 'product-estimator'),

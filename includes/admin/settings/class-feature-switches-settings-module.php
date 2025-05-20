@@ -43,6 +43,7 @@ final class FeatureSwitchesSettingsModule extends SettingsModuleBase implements 
     public function has_setting($key) {
         $module_settings = [
             'suggested_products_enabled',
+            'label_analytics_enabled',
         ];
 
         return in_array($key, $module_settings);
@@ -63,7 +64,11 @@ final class FeatureSwitchesSettingsModule extends SettingsModuleBase implements 
                 'type' => 'checkbox',
                 'description' => __('Enable Suggested Products', 'product-estimator')
             ),
-
+            'label_analytics_enabled' => array(
+                'title' => __('Label Analytics', 'product-estimator'),
+                'type' => 'checkbox',
+                'description' => __('Enable tracking of label usage for analytics and optimization', 'product-estimator')
+            ),
         );
 
         foreach ($fields as $id => $field_args) {
@@ -172,6 +177,6 @@ final class FeatureSwitchesSettingsModule extends SettingsModuleBase implements 
 
 
     protected function get_checkbox_fields() {
-        return ['suggested_products_enabled'];
+        return ['suggested_products_enabled', 'label_analytics_enabled'];
     }
 }

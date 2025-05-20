@@ -23,6 +23,18 @@ function product_estimator_get_label($key, $default = '') {
         $loader = $product_estimator->get_loader();
         $labels_frontend = $loader->get_component('labels_frontend');
         
+        // Track usage if analytics is enabled
+        $feature_switches = \RuDigital\ProductEstimator\Includes\FeatureSwitches::get_instance();
+        if ($feature_switches->get_feature('label_analytics_enabled', false)) {
+            $analytics = $loader->get_component('labels_analytics');
+            if ($analytics && method_exists($analytics, 'record_access')) {
+                // Get caller information for context
+                $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+                $context = isset($backtrace[1]['file']) ? basename($backtrace[1]['file']) : '';
+                $analytics->record_access($key, $context);
+            }
+        }
+        
         if ($labels_frontend && method_exists($labels_frontend, 'get_label')) {
             return $labels_frontend->get_label($key, $default);
         }
@@ -47,6 +59,18 @@ function product_estimator_format_label($key, $replacements = [], $default = '')
     if (isset($product_estimator) && method_exists($product_estimator, 'get_loader')) {
         $loader = $product_estimator->get_loader();
         $labels_frontend = $loader->get_component('labels_frontend');
+        
+        // Track usage if analytics is enabled
+        $feature_switches = \RuDigital\ProductEstimator\Includes\FeatureSwitches::get_instance();
+        if ($feature_switches->get_feature('label_analytics_enabled', false)) {
+            $analytics = $loader->get_component('labels_analytics');
+            if ($analytics && method_exists($analytics, 'record_access')) {
+                // Get caller information for context
+                $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2);
+                $context = isset($backtrace[1]['file']) ? basename($backtrace[1]['file']) : '';
+                $analytics->record_access($key, $context);
+            }
+        }
         
         if ($labels_frontend && method_exists($labels_frontend, 'format_label')) {
             return $labels_frontend->format_label($key, $replacements, $default);

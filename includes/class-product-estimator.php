@@ -13,7 +13,10 @@ use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
 use RuDigital\ProductEstimator\Includes\Admin\AdminScriptHandler;
 use RuDigital\ProductEstimator\Includes\FeatureSwitches;
 use RuDigital\ProductEstimator\Includes\LabelsUsageAnalytics;
+use RuDigital\ProductEstimator\Includes\LabelsDocumentationGenerator;
 use RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsAnalyticsDashboard;
+use RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsDocumentationPage;
+use RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsMigrationTool;
 
 
 /**
@@ -105,6 +108,27 @@ class ProductEstimator {
      * @var LabelsAnalyticsDashboard
      */
     private $labels_analytics_dashboard;
+    
+    /**
+     * Labels Documentation Generator
+     *
+     * @var LabelsDocumentationGenerator
+     */
+    private $labels_documentation_generator;
+    
+    /**
+     * Labels Documentation Page
+     *
+     * @var LabelsDocumentationPage
+     */
+    private $labels_documentation_page;
+    
+    /**
+     * Labels Migration Tool
+     *
+     * @var LabelsMigrationTool
+     */
+    private $labels_migration_tool;
 
 
 
@@ -145,6 +169,40 @@ class ProductEstimator {
             if (is_admin() && file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-analytics-dashboard.php')) {
                 require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-analytics-dashboard.php';
                 $this->labels_analytics_dashboard = new LabelsAnalyticsDashboard($this->plugin_name, $this->version, $this->labels_analytics);
+            }
+            
+            // Initialize Labels Documentation Generator and Page
+            if (is_admin() && $this->labels_frontend) {
+                // Initialize documentation generator
+                if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-documentation-generator.php')) {
+                    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-documentation-generator.php';
+                    $this->labels_documentation_generator = new LabelsDocumentationGenerator(
+                        $this->plugin_name, 
+                        $this->version, 
+                        $this->labels_frontend,
+                        $this->labels_analytics
+                    );
+                    
+                    // Initialize documentation page
+                    if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-documentation-page.php')) {
+                        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-documentation-page.php';
+                        $this->labels_documentation_page = new LabelsDocumentationPage(
+                            $this->plugin_name,
+                            $this->version,
+                            $this->labels_documentation_generator
+                        );
+                    }
+                    
+                    // Initialize migration tool
+                    if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-migration-tool.php')) {
+                        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-migration-tool.php';
+                        $this->labels_migration_tool = new LabelsMigrationTool(
+                            $this->plugin_name,
+                            $this->version,
+                            $this->labels_frontend
+                        );
+                    }
+                }
             }
         } else {
             error_log("Product Estimator Error: LabelsUsageAnalytics class file not found.");
@@ -437,6 +495,8 @@ class ProductEstimator {
                 return $this->labels_frontend;
             case 'labels_analytics':
                 return $this->labels_analytics;
+            case 'labels_documentation_generator':
+                return $this->labels_documentation_generator;
             case 'feature_switches':
                 return $this->feature_switches;
             case 'wc_integration':

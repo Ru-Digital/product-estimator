@@ -25,7 +25,6 @@ class LabelSettingsModule extends VerticalTabbedModule {
     logger.log('LabelSettingsModule constructor called');
     
     // Initialize label management properties
-    this.searchTimeout = null;
     this.bulkEditItems = [];
   }
 
@@ -51,8 +50,6 @@ class LabelSettingsModule extends VerticalTabbedModule {
     this.$('#import-labels').on('click', () => this.$('#import-file').click());
     this.$('#import-file').on('change', this.handleImport.bind(this));
     
-    // Search functionality
-    this.$('#label-search').on('input', this.handleSearch.bind(this));
     
     // Reset category
     this.$('#reset-category-defaults').on('click', this.handleResetCategory.bind(this));
@@ -154,80 +151,6 @@ class LabelSettingsModule extends VerticalTabbedModule {
     reader.readAsText(file);
   }
   
-  /**
-   * Handle searching for labels
-   */
-  handleSearch(e) {
-    logger.log('Search input changed');
-    const searchTerm = e.target.value.trim();
-    
-    // Clear previous timeout
-    if (this.searchTimeout) {
-      clearTimeout(this.searchTimeout);
-    }
-    
-    if (searchTerm.length < 3) {
-      jQuery('#search-results').hide().empty();
-      return;
-    }
-    
-    // Debounce search using the utility function
-    this.searchTimeout = setTimeout(() => {
-      logger.log('Searching for:', searchTerm);
-      
-      // Use managementNonce first, then fall back to regular nonce
-      const nonce = this.settings.managementNonce || this.settings.nonce;
-      
-      ajax.ajaxRequest({
-        url: this.settings.ajaxUrl,
-        data: {
-          action: 'pe_search_labels',
-          nonce: nonce,
-          search_term: searchTerm
-        }
-      })
-      .then(data => {
-        logger.log('Search response:', data);
-        this.displaySearchResults(data.results);
-      })
-      .catch(error => {
-        logger.error('Search failed:', error);
-      });
-    }, 300);
-  }
-  
-  /**
-   * Display search results
-   */
-  displaySearchResults(results) {
-    const $resultsContainer = jQuery('#search-results');
-    $resultsContainer.empty();
-    
-    if (!results || results.length === 0) {
-      $resultsContainer.html('<p>' + (this.settings.i18n.searchNoResults || 'No labels found matching your search.') + '</p>');
-    } else {
-      const $list = jQuery('<ul class="label-search-results"></ul>');
-      
-      results.forEach(result => {
-        const $item = jQuery(`
-          <li>
-            <strong>${result.path}</strong>: ${result.value}
-            <button type="button" class="button-link bulk-edit-trigger" 
-                   data-path="${result.path}" 
-                   data-category="${result.category}" 
-                   data-key="${result.key}">
-              Edit
-            </button>
-          </li>
-        `);
-        $list.append($item);
-      });
-      
-      $resultsContainer.append($list);
-    }
-    
-    $resultsContainer.show();
-  }
   
   /**
    * Handle reset category to defaults
@@ -343,9 +266,9 @@ class LabelSettingsModule extends VerticalTabbedModule {
     })
     .then(data => {
       logger.log('Reset category response:', data);
-      this.showNotice(data.message || 'Category reset to defaults successfully.', 'success');
+      this.showNotice(data.message || 'Category reset to defaults successfully. Page will refresh to show changes.', 'success');
       
-      // Update the form fields
+      // Update the form fields in the UI
       if (data.labels) {
         logger.log('Reset category: Updating', Object.keys(data.labels).length, 'labels');
         Object.entries(data.labels).forEach(([key, value]) => {
@@ -358,6 +281,12 @@ class LabelSettingsModule extends VerticalTabbedModule {
             logger.warn(`Reset category: Field not found for ${selector}`);
           }
         });
+        
+        // Schedule a page refresh after a short delay to show the changes
+        setTimeout(() => {
+          logger.log('Refreshing page to show updated labels');
+          window.location.reload();
+        }, 1500);
       } else {
         logger.warn('Reset category: No labels returned in response');
       }

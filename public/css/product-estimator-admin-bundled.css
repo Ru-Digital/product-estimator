@@ -1814,40 +1814,6 @@ textarea.error {
   width: 100%;
 }
 
-/* Search section */
-.label-search-section {
-  margin-top: 20px;
-}
-.label-search-section input {
-  margin-bottom: 10px;
-  width: 100%;
-}
-.label-search-section #search-results {
-  max-height: 300px;
-  overflow-y: auto;
-}
-.label-search-section #search-results .label-search-results {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.label-search-section #search-results .label-search-results li {
-  align-items: center;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  padding: 8px;
-}
-.label-search-section #search-results .label-search-results li:hover {
-  background: #f9f9f9;
-}
-.label-search-section #search-results .label-search-results li strong {
-  color: #23282d;
-}
-.label-search-section #search-results .label-search-results li .button-link {
-  margin-left: 10px;
-}
-
 /* Bulk edit section */
 .label-bulk-edit-section {
   background: #f8f8f8;

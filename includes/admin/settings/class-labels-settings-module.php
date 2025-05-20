@@ -62,7 +62,6 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         // Add AJAX handlers for labels management
         add_action('wp_ajax_pe_export_labels', [$this, 'ajax_export_labels']);
         add_action('wp_ajax_pe_import_labels', [$this, 'ajax_import_labels']);
-        add_action('wp_ajax_pe_search_labels', [$this, 'ajax_search_labels']);
         add_action('wp_ajax_pe_bulk_update_labels', [$this, 'ajax_bulk_update_labels']);
         add_action('wp_ajax_pe_reset_category_labels', [$this, 'ajax_reset_category_labels']);
     }
@@ -246,12 +245,6 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 </button>
             </div>
 
-            <div class="label-search-section">
-                <h4><?php esc_html_e( 'Search Labels', 'product-estimator' ); ?></h4>
-                <input type="text" id="label-search" class="regular-text"
-                       placeholder="<?php esc_attr_e( 'Search labels...', 'product-estimator' ); ?>" />
-                <div id="search-results" style="display: none;"></div>
-            </div>
 
             <div class="label-bulk-edit-section" style="display: none;">
                 <h4><?php esc_html_e( 'Bulk Edit', 'product-estimator' ); ?></h4>
@@ -296,7 +289,6 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             'exportSuccess' => __('Labels exported successfully.', 'product-estimator'),
             'importSuccess' => __('Labels imported successfully.', 'product-estimator'),
             'importError' => __('Error importing labels. Please check the file format.', 'product-estimator'),
-            'searchNoResults' => __('No labels found matching your search.', 'product-estimator'),
             'bulkUpdateSuccess' => __('Labels updated successfully.', 'product-estimator'),
             'bulkUpdateError' => __('Error updating labels.', 'product-estimator'),
             'confirmImport' => __('This will replace all existing labels. Are you sure?', 'product-estimator'),
@@ -678,65 +670,6 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         }
     }
 
-    /**
-     * Search labels by key or value
-     * 
-     * @param string $search_term Search term
-     * @param array $labels Optional labels array to search in
-     * @return array Matching labels with their paths
-     */
-    private function search_labels($search_term, $labels = null) {
-        if ($labels === null) {
-            $labels = get_option('product_estimator_labels', []);
-        }
-        
-        $results = [];
-        $search_term = strtolower($search_term);
-        
-        foreach ($labels as $category => $category_labels) {
-            if (!is_array($category_labels)) {
-                continue;
-            }
-            
-            foreach ($category_labels as $key => $value) {
-                if (strpos(strtolower($key), $search_term) !== false || 
-                    strpos(strtolower($value), $search_term) !== false) {
-                    $results[] = [
-                        'category' => $category,
-                        'key' => $key,
-                        'value' => $value,
-                        'path' => "{$category}.{$key}"
-                    ];
-                }
-            }
-        }
-        
-        return $results;
-    }
-
-    /**
-     * AJAX handler for searching labels
-     */
-    public function ajax_search_labels() {
-        check_ajax_referer('pe_labels_management', 'nonce');
-
-        if (!current_user_can('manage_options')) {
-            wp_die('Unauthorized');
-        }
-
-        $search_term = sanitize_text_field($_POST['search_term'] ?? '');
-
-        if (empty($search_term)) {
-            wp_send_json_error(__('Please provide a search term', 'product-estimator'));
-        }
-
-        $results = $this->search_labels($search_term);
-
-        wp_send_json_success([
-            'results' => $results,
-            'count' => count($results)
-        ]);
-    }
 
     /**
      * Bulk update multiple labels

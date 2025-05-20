@@ -31,46 +31,6 @@
   }
 }
 
-/* Search section */
-.label-search-section {
-  margin-top: 20px;
-  
-  input {
-    margin-bottom: 10px;
-    width: 100%;
-  }
-  
-  #search-results {
-    max-height: 300px;
-    overflow-y: auto;
-    
-    .label-search-results {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      
-      li {
-        align-items: center;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        justify-content: space-between;
-        padding: 8px;
-        
-        &:hover {
-          background: #f9f9f9;
-        }
-        
-        strong {
-          color: #23282d;
-        }
-        
-        .button-link {
-          margin-left: 10px;
-        }
-      }
-    }
-  }
-}
 
 /* Bulk edit section */
 .label-bulk-edit-section {

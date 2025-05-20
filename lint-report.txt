@@ -22,12 +22,12 @@
   109:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
   157:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
   199:3  warning  Missing JSDoc @param "results" declaration                                      jsdoc/require-param
-  273:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-  420:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-  433:3  warning  Missing JSDoc @returns declaration                                              jsdoc/require-returns
-  433:3  warning  Missing JSDoc @param "labelId" declaration                                      jsdoc/require-param
-  448:3  warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
-  448:3  warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
+  371:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  518:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  531:3  warning  Missing JSDoc @returns declaration                                              jsdoc/require-returns
+  531:3  warning  Missing JSDoc @param "labelId" declaration                                      jsdoc/require-param
+  546:3  warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
+  546:3  warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/admin/modules/LabelsManagement.js
   10:10  error    ajax not found in '@utils/ajax'   import/named

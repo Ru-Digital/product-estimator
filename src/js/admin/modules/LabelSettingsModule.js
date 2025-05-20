@@ -233,20 +233,106 @@ class LabelSettingsModule extends VerticalTabbedModule {
    * Handle reset category to defaults
    */
   handleResetCategory() {
-    const currentCategory = jQuery('.pe-vtabs-nav .active').data('vertical-tab-id');
+    // Valid categories list - must match what's defined in PHP
+    const validCategories = ['buttons', 'forms', 'messages', 'ui_elements', 'pdf'];
     
-    if (!currentCategory) {
-      return;
+    // Try multiple selector strategies to find the active category
+    let currentCategory = null;
+    
+    // Strategy 1: Use the form's data attribute in the visible panel (most reliable)
+    const $activeForm = jQuery('.pe-vtabs-tab-panel:visible form.pe-vtabs-tab-form, .vertical-tab-content:visible form');
+    if ($activeForm.length) {
+      currentCategory = $activeForm.data('sub-tab-id');
+      logger.log('Reset category: Found active category from form data attribute:', currentCategory);
+    }
+    
+    // Strategy 2: Check visible content panel ID
+    if (!currentCategory || !validCategories.includes(currentCategory)) {
+      const $visiblePanel = jQuery('.pe-vtabs-tab-panel:visible, .vertical-tab-content:visible');
+      if ($visiblePanel.length) {
+        currentCategory = $visiblePanel.attr('id');
+        logger.log('Reset category: Found active category from visible panel:', currentCategory);
+      }
+    }
+    
+    // Strategy 3: Look for navigation item with active class
+    if (!currentCategory || !validCategories.includes(currentCategory)) {
+      // First try data-tab attribute
+      const $activeNavItem = jQuery('.pe-vtabs-nav-item.active, .tab-item.active');
+      if ($activeNavItem.length) {
+        currentCategory = $activeNavItem.data('tab');
+        logger.log('Reset category: Found active category from nav item data-tab:', currentCategory);
+        
+        // If not found in data-tab, try data-vertical-tab-id
+        if (!currentCategory) {
+          currentCategory = $activeNavItem.data('vertical-tab-id');
+          logger.log('Reset category: Found active category from nav item data-vertical-tab-id:', currentCategory);
+        }
+      }
+    }
+    
+    // Strategy 4: Check active link elements in navigation
+    if (!currentCategory || !validCategories.includes(currentCategory)) {
+      const $activeLink = jQuery('.pe-vtabs-nav-item.active a, .tab-item.active a, .pe-vtabs-nav a.active');
+      if ($activeLink.length) {
+        currentCategory = $activeLink.data('tab');
+        logger.log('Reset category: Found active category from active link data-tab:', currentCategory);
+      }
+    }
+    
+    // Strategy 5: Extract from URL in active link href
+    if (!currentCategory || !validCategories.includes(currentCategory)) {
+      const $activeLink = jQuery('.pe-vtabs-nav-item.active a, .tab-item.active a');
+      if ($activeLink.length) {
+        const href = $activeLink.attr('href') || '';
+        const match = href.match(/[?&]sub_tab=([^&#]*)/i);
+        if (match && match[1]) {
+          currentCategory = decodeURIComponent(match[1].replace(/\+/g, ' '));
+          logger.log('Reset category: Found active category from href:', currentCategory);
+        }
+      }
+    }
+    
+    // Strategy 6: Fallback to URL parameter
+    if (!currentCategory || !validCategories.includes(currentCategory)) {
+      const urlParams = new URLSearchParams(window.location.search);
+      currentCategory = urlParams.get('sub_tab');
+      logger.log('Reset category: Found active category from URL param:', currentCategory);
+    }
+    
+    // Validate that we have a valid category
+    if (!currentCategory || !validCategories.includes(currentCategory)) {
+      logger.error(`Reset category: Invalid category "${currentCategory}". Must be one of: ${validCategories.join(', ')}`);
+      
+      // If we found a category but it's invalid, try to automatically determine the correct category
+      if (currentCategory) {
+        // Try to extract a valid category from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        
+        if (tabParam === 'labels') {
+          // If we're on the labels tab, default to 'buttons' category
+          currentCategory = 'buttons';
+          logger.log('Reset category: Defaulting to "buttons" category');
+        } else {
+          return; // Can't proceed without a valid category
+        }
+      } else {
+        return; // Can't proceed without a category at all
+      }
     }
     
     const confirmMessage = this.settings.i18n.resetConfirm || 'Are you sure you want to reset this category to default values?';
     if (!confirm(confirmMessage)) {
+      logger.log('Reset category: User canceled the operation');
       return;
     }
     
     // Use managementNonce first, then fall back to regular nonce
     const nonce = this.settings.managementNonce || this.settings.nonce;
+    logger.log('Reset category: Using nonce:', nonce);
     
+    logger.log('Reset category: Making AJAX request for category:', currentCategory);
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl,
       data: {
@@ -260,9 +346,21 @@ class LabelSettingsModule extends VerticalTabbedModule {
       this.showNotice(data.message || 'Category reset to defaults successfully.', 'success');
       
       // Update the form fields
-      Object.entries(data.labels).forEach(([key, value]) => {
-        jQuery(`#${currentCategory}_${key}`).val(value);
-      });
+      if (data.labels) {
+        logger.log('Reset category: Updating', Object.keys(data.labels).length, 'labels');
+        Object.entries(data.labels).forEach(([key, value]) => {
+          const selector = `#${currentCategory}_${key}`;
+          const $field = jQuery(selector);
+          if ($field.length) {
+            $field.val(value);
+            logger.log(`Reset category: Updated field ${selector} to "${value}"`);
+          } else {
+            logger.warn(`Reset category: Field not found for ${selector}`);
+          }
+        });
+      } else {
+        logger.warn('Reset category: No labels returned in response');
+      }
     })
     .catch(error => {
       logger.error('Reset category failed:', error);

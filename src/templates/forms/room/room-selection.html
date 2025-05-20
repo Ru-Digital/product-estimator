@@ -1,16 +1,16 @@
 <template id="room-selection-form-template">
-  <h2>Select a Room</h2>
+  <h2 data-label="ui_elements.select_room">Select a Room</h2>
   <form id="room-selection-form">
     <div class="form-group">
-      <label for="room-dropdown">Choose a room:</label>
+      <label for="room-dropdown" data-label="forms.choose_room">Choose a room:</label>
       <select id="room-dropdown" name="room_id" required>
-        <option value="">-- Select a Room --</option>
+        <option value="" data-label="forms.select_room_option">-- Select a Room --</option>
       </select>
     </div>
     <div class="form-actions">
-      <button type="submit" class="button submit-btn">Add Product to Room</button>
-      <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection">Back</button>
-      <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate-id="">Add New Room</button>
+      <button type="submit" class="button submit-btn" data-label="buttons.add_product_to_room">Add Product to Room</button>
+      <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection" data-label="buttons.back">Back</button>
+      <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate-id="" data-label="buttons.add_new_room">Add New Room</button>
     </div>
   </form>
 </template>

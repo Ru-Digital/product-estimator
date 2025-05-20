@@ -1,18 +1,18 @@
 <template id="estimate-selection-template">
   <div id="estimate-selection-wrapper">
     <div id="estimate-selection-form-wrapper">
-      <h2>Select an Estimate</h2>
+      <h2 data-label="ui_elements.select_estimate">Select an Estimate</h2>
       <form id="estimate-selection-form">
         <div class="form-group">
-          <label for="estimate-dropdown">Choose an estimate:</label>
+          <label for="estimate-dropdown" data-label="forms.choose_estimate">Choose an estimate:</label>
           <select id="estimate-dropdown" name="estimate_id" required>
-            <option value="">-- Select an Estimate --</option>
+            <option value="" data-label="forms.select_estimate_option">-- Select an Estimate --</option>
             <!-- Options will be populated by JavaScript -->
           </select>
         </div>
         <div class="form-actions">
-          <button type="submit" class="button submit-btn">Continue</button>
-          <button type="button" class="button cancel-btn" id="create-estimate-btn">
+          <button type="submit" class="button submit-btn" data-label="buttons.continue">Continue</button>
+          <button type="button" class="button cancel-btn" id="create-estimate-btn" data-label="buttons.create_new_estimate">
             Create New Estimate
           </button>
         </div>
@@ -20,20 +20,20 @@
     </div>
 
     <div id="room-selection-form-wrapper" style="display: none;">
-      <h2>Select a Room</h2>
+      <h2 data-label="ui_elements.select_room">Select a Room</h2>
       <form id="room-selection-form">
         <div class="form-group">
-          <label for="room-dropdown">Choose a room:</label>
+          <label for="room-dropdown" data-label="forms.choose_room">Choose a room:</label>
           <select id="room-dropdown" name="room_id" required>
-            <option value="">-- Select a Room --</option>
+            <option value="" data-label="forms.select_room_option">-- Select a Room --</option>
             <!-- Room options will be populated via JavaScript -->
           </select>
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="button submit-btn">Add Product to Room</button>
-          <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection">Back</button>
-          <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate="">Add New Room</button>
+          <button type="submit" class="button submit-btn" data-label="buttons.add_product_to_room">Add Product to Room</button>
+          <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection" data-label="buttons.back">Back</button>
+          <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate="" data-label="buttons.add_new_room">Add New Room</button>
         </div>
       </form>
     </div>

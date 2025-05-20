@@ -8,7 +8,7 @@
  * - Updating estimate UI
  */
 
-import { format, createLogger, showSuccessDialog, showErrorDialog, showDeleteConfirmDialog } from '@utils';
+import { format, createLogger, showSuccessDialog, showErrorDialog, showDeleteConfirmDialog, labelManager } from '@utils';
 
 import { loadEstimateData, saveEstimateData, addEstimate, removeEstimate } from '../EstimateStorage';
 import TemplateEngine from '../TemplateEngine';
@@ -153,7 +153,7 @@ class EstimateManager {
 
         // Show error message in the modal
         if (this.modalManager.contentContainer) {
-          TemplateEngine.showMessage('Error checking estimates. Please try again.', 'error', this.modalManager.contentContainer);
+          TemplateEngine.showMessage(labelManager.get('messages.estimate_check_error', 'Error checking estimates. Please try again.'), 'error', this.modalManager.contentContainer);
         }
 
         // Hide loading indicator
@@ -178,7 +178,7 @@ class EstimateManager {
     if (!estimateSelectionWrapper) {
       logger.error('Estimate selection wrapper not found in modal');
       this.modalManager.hideLoading();
-      this.modalManager.showError('Modal structure incomplete. Please contact support.');
+      this.modalManager.showError(labelManager.get('errors.modal_structure', 'Modal structure incomplete. Please contact support.'));
       return;
     }
 
@@ -208,17 +208,17 @@ class EstimateManager {
           this.bindEstimateSelectionFormEvents(formElement, productId);
         } else {
           logger.error('Form element not found inside the template after insertion!');
-          this.modalManager.showError('Error rendering form template. Please try again.');
+          this.modalManager.showError(labelManager.get('errors.form_template', 'Error rendering form template. Please try again.'));
           this.modalManager.hideLoading();
         }
       } else {
         logger.error('Estimate selection form wrapper not found in template!');
-        this.modalManager.showError('Modal structure incomplete. Please contact support.');
+        this.modalManager.showError(labelManager.get('errors.modal_structure', 'Modal structure incomplete. Please contact support.'));
         this.modalManager.hideLoading();
       }
     } catch (error) {
       logger.error('Error inserting estimate selection template:', error);
-      this.modalManager.showError('Error loading selection form template. Please try again.');
+      this.modalManager.showError(labelManager.get('errors.selection_template', 'Error loading selection form template. Please try again.'));
       this.modalManager.hideLoading();
     }
   }
@@ -283,7 +283,7 @@ class EstimateManager {
       })
       .catch(error => {
         logger.error('Error loading estimates:', error);
-        this.modalManager.showError('Error loading estimates. Please try again.');
+        this.modalManager.showError(labelManager.get('messages.load_estimates_error', 'Error loading estimates. Please try again.'));
         this.modalManager.hideLoading();
       });
   }
@@ -318,7 +318,7 @@ class EstimateManager {
       const estimateId = selectElement.value;
 
       if (!estimateId) {
-        this.modalManager.showError('Please select an estimate.');
+        this.modalManager.showError(labelManager.get('messages.select_estimate', 'Please select an estimate.'));
         this.modalManager.hideLoading();
         return;
       }
@@ -381,7 +381,7 @@ class EstimateManager {
     if (!estimatesList) {
       logger.error('Estimates list container not found in modal');
       this.modalManager.hideLoading();
-      this.modalManager.showError('Modal structure incomplete. Please contact support.');
+      this.modalManager.showError(labelManager.get('errors.modal_structure', 'Modal structure incomplete. Please contact support.'));
       return;
     }
 
@@ -400,9 +400,9 @@ class EstimateManager {
       .catch(error => {
         logger.error('Error loading estimates list:', error);
         if (estimatesList) {
-          TemplateEngine.showMessage('Error loading estimates. Please try again.', 'error', estimatesList);
+          TemplateEngine.showMessage(labelManager.get('messages.load_estimates_error', 'Error loading estimates. Please try again.'), 'error', estimatesList);
         } else {
-          this.modalManager.showError('Error loading estimates. Please try again.');
+          this.modalManager.showError(labelManager.get('messages.load_estimates_error', 'Error loading estimates. Please try again.'));
         }
       })
       .finally(() => {
@@ -688,7 +688,7 @@ class EstimateManager {
 
     if (!newEstimateForm) {
       logger.error('New estimate form container not found in modal');
-      this.modalManager.showError('Modal structure incomplete. Please contact support.');
+      this.modalManager.showError(labelManager.get('errors.modal_structure', 'Modal structure incomplete. Please contact support.'));
       this.modalManager.hideLoading();
       return;
     }
@@ -805,7 +805,7 @@ class EstimateManager {
       }
     } catch (error) {
       logger.error('Error inserting new estimate form template:', error);
-      this.modalManager.showError('Error loading form template. Please try again.');
+      this.modalManager.showError(labelManager.get('errors.form_template', 'Error loading form template. Please try again.'));
       this.modalManager.hideLoading();
     }
   }
@@ -825,7 +825,7 @@ class EstimateManager {
     // Show the confirmation dialog using the standardized dialog helper
     showDeleteConfirmDialog(
       this.modalManager,
-      'Are you sure you want to remove this estimate? This action cannot be undone.',
+      labelManager.get('messages.estimate_delete_confirm', 'Are you sure you want to remove this estimate? This action cannot be undone.'),
       () => {
         // User confirmed, remove the estimate
         logger.log('Confirm button clicked, proceeding with estimate removal');
@@ -854,7 +854,7 @@ class EstimateManager {
             // Show success message using the standardized dialog helper
             showSuccessDialog(
               this.modalManager, 
-              'The estimate has been removed successfully.', 
+              labelManager.get('messages.estimate_removed', 'The estimate has been removed successfully.'), 
               'estimate', 
               () => logger.log('Success dialog closed')
             );
@@ -865,7 +865,7 @@ class EstimateManager {
             // Show error through the standardized dialog helper
             showErrorDialog(
               this.modalManager, 
-              'There was a problem removing the estimate. Please try again.', 
+              labelManager.get('messages.estimate_remove_error', 'There was a problem removing the estimate. Please try again.'), 
               'estimate', 
               () => logger.log('Error dialog closed')
             );
@@ -904,7 +904,7 @@ class EstimateManager {
       })
       .catch(error => {
         logger.error('Error updating estimate:', error);
-        this.modalManager.showError('Error updating estimate. Please try again.');
+        this.modalManager.showError(labelManager.get('messages.update_estimate_error', 'Error updating estimate. Please try again.'));
         throw error;
       })
       .finally(() => {

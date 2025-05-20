@@ -575,7 +575,7 @@ var ConfirmationDialog = /*#__PURE__*/function () {
       // If creation failed, use fallback
       if (!this.dialog || !this.backdropElement) {
         logger.error('Failed to create dialog elements');
-        var message = options.message || 'Are you sure?';
+        var message = options.message || _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('messages.confirm_proceed', 'Are you sure you want to proceed?');
         if (confirm(message)) {
           if (typeof options.onConfirm === 'function') {
             options.onConfirm();
@@ -647,7 +647,7 @@ var ConfirmationDialog = /*#__PURE__*/function () {
         if (settings.type === 'form' && settings.formFields) {
           // Create form container using template
           var formContainer = _TemplateEngine__WEBPACK_IMPORTED_MODULE_5__["default"].create('dialog-content-form-template', {
-            instruction: settings.message || ''
+            instruction: settings.message || _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('ui_elements.form_instructions', 'Please fill out the following information:')
           });
 
           // Get the form fields container
@@ -669,7 +669,7 @@ var ConfirmationDialog = /*#__PURE__*/function () {
         } else if (settings.type === 'contact-selection') {
           // Create contact selection dialog using template
           var selectionContainer = _TemplateEngine__WEBPACK_IMPORTED_MODULE_5__["default"].create('dialog-contact-selection-template', {
-            message: settings.message || '',
+            message: settings.message || _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('messages.contact_selection', 'How would you like to be contacted?'),
             emailButtonText: settings.emailButtonText || _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('buttons.contact_email', 'Email'),
             phoneButtonText: settings.phoneButtonText || _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('buttons.contact_phone', 'Phone')
           });
@@ -5258,7 +5258,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @utils */ "./src/js/utils/index.js");
 
 
-var _window$productEstima, _window$productEstima2, _window$productEstima3, _window$productEstima4, _window$productEstima5, _window$productEstima6;
+var _window$productEstima;
 /**
  * ProductDetailsToggle.js
  *
@@ -6002,7 +6002,7 @@ var ProductDetailsToggle = /*#__PURE__*/function () {
           toggleButton.setAttribute('data-toggle-type', 'includes');
 
           // Use the hideIncludes text (since it's expanded) and arrow-up icon
-          toggleButton.innerHTML = "\n        ".concat(_this7.config.i18n.hideIncludes || 'Product Includes', "\n        <span class=\"toggle-icon dashicons dashicons-arrow-up-alt2\"></span>\n      ");
+          toggleButton.innerHTML = "\n        ".concat(_this7.config.i18n.hideIncludes, "\n        <span class=\"toggle-icon dashicons dashicons-arrow-up-alt2\"></span>\n      ");
 
           // Insert button before the includes container
           item.insertBefore(toggleButton, includesContainer);
@@ -6088,11 +6088,15 @@ var ProductDetailsToggle = /*#__PURE__*/function () {
 var instance = new ProductDetailsToggle({
   debug: ((_window$productEstima = window.productEstimatorVars) === null || _window$productEstima === void 0 ? void 0 : _window$productEstima.debug) || false,
   i18n: {
-    showProducts: ((_window$productEstima2 = window.productEstimatorVars) === null || _window$productEstima2 === void 0 || (_window$productEstima2 = _window$productEstima2.i18n) === null || _window$productEstima2 === void 0 ? void 0 : _window$productEstima2.showSimilarProducts) || 'Similar Products',
-    hideProducts: ((_window$productEstima3 = window.productEstimatorVars) === null || _window$productEstima3 === void 0 || (_window$productEstima3 = _window$productEstima3.i18n) === null || _window$productEstima3 === void 0 ? void 0 : _window$productEstima3.hideSimilarProducts) || 'Similar Products',
-    showNotes: ((_window$productEstima4 = window.productEstimatorVars) === null || _window$productEstima4 === void 0 || (_window$productEstima4 = _window$productEstima4.i18n) === null || _window$productEstima4 === void 0 ? void 0 : _window$productEstima4.showNotes) || 'Product Notes',
-    hideNotes: ((_window$productEstima5 = window.productEstimatorVars) === null || _window$productEstima5 === void 0 || (_window$productEstima5 = _window$productEstima5.i18n) === null || _window$productEstima5 === void 0 ? void 0 : _window$productEstima5.hideNotes) || 'Product Notes',
-    loading: ((_window$productEstima6 = window.productEstimatorVars) === null || _window$productEstima6 === void 0 || (_window$productEstima6 = _window$productEstima6.i18n) === null || _window$productEstima6 === void 0 ? void 0 : _window$productEstima6.loading) || 'Loading...'
+    showProducts: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.show_similar_products', 'Similar Products'),
+    hideProducts: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.hide_similar_products', 'Similar Products'),
+    showNotes: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.show_notes', 'Product Notes'),
+    hideNotes: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.hide_notes', 'Product Notes'),
+    showIncludes: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.show_includes', 'Product Includes'),
+    hideIncludes: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.hide_includes', 'Product Includes'),
+    showSuggestions: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.show_suggestions', 'Suggested Products'),
+    hideSuggestions: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.hide_suggestions', 'Suggested Products'),
+    loading: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.loading', 'Loading...')
   }
 });
 
@@ -9546,7 +9550,7 @@ var EstimateManager = /*#__PURE__*/function () {
 
         // Show error message in the modal
         if (_this2.modalManager.contentContainer) {
-          _TemplateEngine__WEBPACK_IMPORTED_MODULE_5__["default"].showMessage('Error checking estimates. Please try again.', 'error', _this2.modalManager.contentContainer);
+          _TemplateEngine__WEBPACK_IMPORTED_MODULE_5__["default"].showMessage(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('messages.estimate_check_error', 'Error checking estimates. Please try again.'), 'error', _this2.modalManager.contentContainer);
         }
 
         // Hide loading indicator
@@ -9572,7 +9576,7 @@ var EstimateManager = /*#__PURE__*/function () {
       if (!estimateSelectionWrapper) {
         logger.error('Estimate selection wrapper not found in modal');
         this.modalManager.hideLoading();
-        this.modalManager.showError('Modal structure incomplete. Please contact support.');
+        this.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.modal_structure', 'Modal structure incomplete. Please contact support.'));
         return;
       }
 
@@ -9602,17 +9606,17 @@ var EstimateManager = /*#__PURE__*/function () {
             this.bindEstimateSelectionFormEvents(formElement, productId);
           } else {
             logger.error('Form element not found inside the template after insertion!');
-            this.modalManager.showError('Error rendering form template. Please try again.');
+            this.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.form_template', 'Error rendering form template. Please try again.'));
             this.modalManager.hideLoading();
           }
         } else {
           logger.error('Estimate selection form wrapper not found in template!');
-          this.modalManager.showError('Modal structure incomplete. Please contact support.');
+          this.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.modal_structure', 'Modal structure incomplete. Please contact support.'));
           this.modalManager.hideLoading();
         }
       } catch (error) {
         logger.error('Error inserting estimate selection template:', error);
-        this.modalManager.showError('Error loading selection form template. Please try again.');
+        this.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.selection_template', 'Error loading selection form template. Please try again.'));
         this.modalManager.hideLoading();
       }
     }
@@ -9676,7 +9680,7 @@ var EstimateManager = /*#__PURE__*/function () {
         _this3.modalManager.hideLoading();
       })["catch"](function (error) {
         logger.error('Error loading estimates:', error);
-        _this3.modalManager.showError('Error loading estimates. Please try again.');
+        _this3.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('messages.load_estimates_error', 'Error loading estimates. Please try again.'));
         _this3.modalManager.hideLoading();
       });
     }
@@ -9712,7 +9716,7 @@ var EstimateManager = /*#__PURE__*/function () {
         var selectElement = formElement.querySelector('select');
         var estimateId = selectElement.value;
         if (!estimateId) {
-          _this4.modalManager.showError('Please select an estimate.');
+          _this4.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('messages.select_estimate', 'Please select an estimate.'));
           _this4.modalManager.hideLoading();
           return;
         }
@@ -9778,7 +9782,7 @@ var EstimateManager = /*#__PURE__*/function () {
       if (!estimatesList) {
         logger.error('Estimates list container not found in modal');
         this.modalManager.hideLoading();
-        this.modalManager.showError('Modal structure incomplete. Please contact support.');
+        this.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.modal_structure', 'Modal structure incomplete. Please contact support.'));
         return;
       }
 
@@ -9795,9 +9799,9 @@ var EstimateManager = /*#__PURE__*/function () {
       })["catch"](function (error) {
         logger.error('Error loading estimates list:', error);
         if (estimatesList) {
-          _TemplateEngine__WEBPACK_IMPORTED_MODULE_5__["default"].showMessage('Error loading estimates. Please try again.', 'error', estimatesList);
+          _TemplateEngine__WEBPACK_IMPORTED_MODULE_5__["default"].showMessage(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('messages.load_estimates_error', 'Error loading estimates. Please try again.'), 'error', estimatesList);
         } else {
-          _this5.modalManager.showError('Error loading estimates. Please try again.');
+          _this5.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('messages.load_estimates_error', 'Error loading estimates. Please try again.'));
         }
       })["finally"](function () {
         _this5.modalManager.hideLoading();
@@ -10085,7 +10089,7 @@ var EstimateManager = /*#__PURE__*/function () {
       var newEstimateForm = this.modalManager.newEstimateForm;
       if (!newEstimateForm) {
         logger.error('New estimate form container not found in modal');
-        this.modalManager.showError('Modal structure incomplete. Please contact support.');
+        this.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.modal_structure', 'Modal structure incomplete. Please contact support.'));
         this.modalManager.hideLoading();
         return;
       }
@@ -10197,7 +10201,7 @@ var EstimateManager = /*#__PURE__*/function () {
         }
       } catch (error) {
         logger.error('Error inserting new estimate form template:', error);
-        this.modalManager.showError('Error loading form template. Please try again.');
+        this.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.form_template', 'Error loading form template. Please try again.'));
         this.modalManager.hideLoading();
       }
     }
@@ -10217,7 +10221,7 @@ var EstimateManager = /*#__PURE__*/function () {
       }
 
       // Show the confirmation dialog using the standardized dialog helper
-      (0,_utils__WEBPACK_IMPORTED_MODULE_3__.showDeleteConfirmDialog)(this.modalManager, 'Are you sure you want to remove this estimate? This action cannot be undone.', function () {
+      (0,_utils__WEBPACK_IMPORTED_MODULE_3__.showDeleteConfirmDialog)(this.modalManager, _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('messages.estimate_delete_confirm', 'Are you sure you want to remove this estimate? This action cannot be undone.'), function () {
         // User confirmed, remove the estimate
         logger.log('Confirm button clicked, proceeding with estimate removal');
         _this8.modalManager.showLoading();
@@ -10239,14 +10243,14 @@ var EstimateManager = /*#__PURE__*/function () {
           }
           logger.log('Showing success dialog');
           // Show success message using the standardized dialog helper
-          (0,_utils__WEBPACK_IMPORTED_MODULE_3__.showSuccessDialog)(_this8.modalManager, 'The estimate has been removed successfully.', 'estimate', function () {
+          (0,_utils__WEBPACK_IMPORTED_MODULE_3__.showSuccessDialog)(_this8.modalManager, _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('messages.estimate_removed', 'The estimate has been removed successfully.'), 'estimate', function () {
             return logger.log('Success dialog closed');
           });
         })["catch"](function (error) {
           logger.error('Error removing estimate:', error);
 
           // Show error through the standardized dialog helper
-          (0,_utils__WEBPACK_IMPORTED_MODULE_3__.showErrorDialog)(_this8.modalManager, 'There was a problem removing the estimate. Please try again.', 'estimate', function () {
+          (0,_utils__WEBPACK_IMPORTED_MODULE_3__.showErrorDialog)(_this8.modalManager, _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('messages.estimate_remove_error', 'There was a problem removing the estimate. Please try again.'), 'estimate', function () {
             return logger.log('Error dialog closed');
           });
         })["finally"](function () {
@@ -10282,7 +10286,7 @@ var EstimateManager = /*#__PURE__*/function () {
         return _this9.loadEstimatesList(null, estimateId);
       })["catch"](function (error) {
         logger.error('Error updating estimate:', error);
-        _this9.modalManager.showError('Error updating estimate. Please try again.');
+        _this9.modalManager.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('messages.update_estimate_error', 'Error updating estimate. Please try again.'));
         throw error;
       })["finally"](function () {
         _this9.modalManager.hideLoading();
@@ -11314,7 +11318,7 @@ var ModalManager = /*#__PURE__*/function () {
           logger.warn('Loading indicator not found, creating one');
           this.loadingIndicator = document.createElement('div');
           this.loadingIndicator.className = 'product-estimator-modal-loading';
-          this.loadingIndicator.innerHTML = "\n          <div class=\"loading-spinner\"></div>\n          <div class=\"loading-text\">".concat(this.config.i18n.loading || 'Loading...', "</div>\n        ");
+          this.loadingIndicator.innerHTML = "\n          <div class=\"loading-spinner\"></div>\n          <div class=\"loading-text\">".concat(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('ui_elements.loading', 'Loading...'), "</div>\n        ");
           this.modal.appendChild(this.loadingIndicator);
         }
         logger.log('DOM elements initialized');
@@ -11494,11 +11498,11 @@ var ModalManager = /*#__PURE__*/function () {
                   // Show error dialog only for actual errors (not cancellation)
                   if (error.message !== 'Variation selection cancelled') {
                     _this2.confirmationDialog.show({
-                      title: 'Error',
-                      message: 'Unable to replace product. Please try again.',
+                      title: _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('ui_elements.error_title', 'Error'),
+                      message: _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.replace_product_error', 'Unable to replace product. Please try again.'),
                       type: 'error',
                       showCancel: false,
-                      confirmText: 'OK'
+                      confirmText: _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('buttons.ok', 'OK')
                     });
                   }
                 })["finally"](function () {
@@ -11553,7 +11557,7 @@ var ModalManager = /*#__PURE__*/function () {
           var loadingIndicator = document.createElement('div');
           loadingIndicator.className = 'product-estimator-modal-loading';
           loadingIndicator.style.display = 'flex';
-          loadingIndicator.innerHTML = "\n          <div class=\"loading-spinner\"></div>\n          <div class=\"loading-text\">".concat(this.config.i18n.loading || 'Loading...', "</div>\n        ");
+          loadingIndicator.innerHTML = "\n          <div class=\"loading-spinner\"></div>\n          <div class=\"loading-text\">".concat(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('ui_elements.loading', 'Loading...'), "</div>\n        ");
           this.modal.appendChild(loadingIndicator);
           this.loadingIndicator = loadingIndicator;
         } else {
@@ -11672,7 +11676,7 @@ var ModalManager = /*#__PURE__*/function () {
       // Make sure modal exists and is initialized
       if (!this.modal) {
         logger.error('Cannot open modal - not found in DOM');
-        this.showError('Modal element not found. Please contact support.');
+        this.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.modal_not_found', 'Modal element not found'));
         return;
       }
       try {
@@ -11695,7 +11699,7 @@ var ModalManager = /*#__PURE__*/function () {
                 _this4.productSelectionDialog.show({
                   product: {
                     id: productId,
-                    name: variationData.productName || 'Select Product Options'
+                    name: variationData.productName || _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('ui_elements.select_options', 'Select Options')
                   },
                   variations: variationData.variations,
                   attributes: variationData.attributes,
@@ -11747,7 +11751,7 @@ var ModalManager = /*#__PURE__*/function () {
       } catch (error) {
         logger.error('Error opening modal:', error);
         this.hideLoading();
-        this.showError('An error occurred opening the modal. Please try again.');
+        this.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.modal_open_error', 'Error opening modal'));
       }
     }
 
@@ -11813,7 +11817,7 @@ var ModalManager = /*#__PURE__*/function () {
       } catch (error) {
         logger.error('Error proceeding with modal open:', error);
         this.hideLoading();
-        this.showError('An error occurred opening the modal. Please try again.');
+        this.showError(_utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.modal_open_error', 'Error opening modal'));
       }
     }
 
@@ -12169,12 +12173,12 @@ var ProductManager = /*#__PURE__*/function () {
             var confirmationDialog = _this.modalManager.confirmationDialog;
             if (confirmationDialog) {
               confirmationDialog.show({
-                title: 'Success',
-                message: 'Product added successfully!',
+                title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.success_title', 'Success'),
+                message: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('messages.product_added_success', 'Product added successfully!'),
                 type: 'product',
                 action: 'add',
                 showCancel: false,
-                confirmText: 'OK'
+                confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.ok', 'OK')
               });
             } else {
               logger.warn('ConfirmationDialog not available, using console log instead');
@@ -12192,12 +12196,12 @@ var ProductManager = /*#__PURE__*/function () {
             var confirmationDialog = _this.modalManager.confirmationDialog;
             if (confirmationDialog) {
               confirmationDialog.show({
-                title: 'Error',
-                message: 'Error adding product. Please try again.',
+                title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.error_title', 'Error'),
+                message: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('messages.product_add_error', 'Error adding product. Please try again.'),
                 type: 'product',
                 action: 'error',
                 showCancel: false,
-                confirmText: 'OK'
+                confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.ok', 'OK')
               });
             } else {
               logger.warn('ConfirmationDialog not available, using console log instead');
@@ -12301,12 +12305,12 @@ var ProductManager = /*#__PURE__*/function () {
           // Show warning dialog instead of error
           if (_this2.modalManager && _this2.modalManager.confirmationDialog) {
             _this2.modalManager.confirmationDialog.show({
-              title: 'Product Already Exists',
-              message: error.message || 'This product already exists in the selected room.',
+              title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.product_exists_title', 'Product Already Exists'),
+              message: error.message || _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('messages.product_already_exists', 'This product already exists in the selected room.'),
               type: 'product',
               action: 'warning',
               showCancel: false,
-              confirmText: 'OK'
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.ok', 'OK')
             });
           }
 
@@ -12326,14 +12330,18 @@ var ProductManager = /*#__PURE__*/function () {
           if (_this2.modalManager && _this2.modalManager.confirmationDialog) {
             var roomName = _this2.modalManager.roomManager ? _this2.modalManager.roomManager.getRoomName(error.estimateId, error.roomId) : 'selected room';
             _this2.modalManager.confirmationDialog.show({
-              title: 'A flooring product already exists in the selected room',
-              message: "The ".concat(roomName, " already contains \"").concat(error.existingProductName, "\". Would you like to replace it with \"").concat(error.newProductName, "\"?"),
+              title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.product_conflict_title', 'A flooring product already exists in the selected room'),
+              message: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.format('messages.product_conflict', {
+                room_name: roomName,
+                existing_product: error.existingProductName,
+                new_product: error.newProductName
+              }, "The ".concat(roomName, " already contains \"").concat(error.existingProductName, "\". Would you like to replace it with \"").concat(error.newProductName, "\"?")),
               type: 'product',
               action: 'replace',
               confirmText: 'Replace the existing product',
               cancelText: 'Go back to room select',
               additionalButtons: [{
-                text: 'Cancel',
+                text: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.cancel', 'Cancel'),
                 callback: function callback() {
                   // Simply close the dialog - no action needed
                 }
@@ -12366,14 +12374,14 @@ var ProductManager = /*#__PURE__*/function () {
           // Show confirmation dialog for primary category conflict
           if (_this2.modalManager && _this2.modalManager.confirmationDialog) {
             _this2.modalManager.confirmationDialog.show({
-              title: 'Primary Product Category Conflict',
+              title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.primary_conflict_title', 'Primary Product Category Conflict'),
               message: error.message || error.data.message,
               type: 'product',
               action: 'replace',
-              confirmText: 'Replace existing product',
-              cancelText: 'Back',
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.replace_existing_product', 'Replace existing product'),
+              cancelText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.back', 'Back'),
               additionalButtons: [{
-                text: 'Cancel',
+                text: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.cancel', 'Cancel'),
                 callback: function callback() {
                   // Simply close the dialog - no action needed
                 }
@@ -12529,10 +12537,10 @@ var ProductManager = /*#__PURE__*/function () {
       // Show the confirmation dialog using the dedicated component
       this.modalManager.confirmationDialog.show({
         // TODO: Implement labels from localization system
-        title: 'Remove Product',
-        message: 'Are you sure you want to remove this product from the room?',
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
+        title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.remove_product_title', 'Remove Product'),
+        message: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('messages.confirm_product_remove', 'Are you sure you want to remove this product from the room?'),
+        confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.delete', 'Delete'),
+        cancelText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.cancel', 'Cancel'),
         type: 'product',
         action: 'delete',
         onConfirm: function onConfirm() {
@@ -12574,12 +12582,12 @@ var ProductManager = /*#__PURE__*/function () {
           this.modalManager.hideLoading();
           if (this.modalManager.confirmationDialog) {
             this.modalManager.confirmationDialog.show({
-              title: 'Error',
-              message: 'Could not identify the product to remove.',
+              title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.error_title', 'Error'),
+              message: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('messages.product_remove_error', 'Could not identify the product to remove.'),
               type: 'product',
               action: 'error',
               showCancel: false,
-              confirmText: 'OK'
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.ok', 'OK')
             });
           }
         }
@@ -12664,7 +12672,7 @@ var ProductManager = /*#__PURE__*/function () {
               type: 'product',
               action: 'error',
               showCancel: false,
-              confirmText: 'OK'
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.ok', 'OK')
             });
           } else {
             // Fallback to modalManager.showError
@@ -12764,7 +12772,7 @@ var ProductManager = /*#__PURE__*/function () {
               type: 'product',
               action: 'error',
               showCancel: false,
-              confirmText: 'OK'
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.ok', 'OK')
             });
           } else {
             _this6.modalManager.showError('Error updating variation. Please try again.');
@@ -12825,12 +12833,12 @@ var ProductManager = /*#__PURE__*/function () {
           setTimeout(function () {
             if (_this7.modalManager.confirmationDialog) {
               _this7.modalManager.confirmationDialog.show({
-                title: 'Product Replaced Successfully',
-                message: 'The product has been successfully replaced in your estimate.',
+                title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.product_replaced_title', 'Product Replaced Successfully'),
+                message: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('messages.product_replaced_success', 'The product has been successfully replaced in your estimate.'),
                 type: 'success',
                 action: 'success',
                 showCancel: false,
-                confirmText: 'OK'
+                confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.ok', 'OK')
               });
             }
           }, 200);
@@ -12862,7 +12870,7 @@ var ProductManager = /*#__PURE__*/function () {
             type: 'product',
             action: 'error',
             showCancel: false,
-            confirmText: 'OK'
+            confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('buttons.ok', 'OK')
           });
         }
       });
@@ -12917,7 +12925,7 @@ var ProductManager = /*#__PURE__*/function () {
           disabled: button.disabled
         };
         button.disabled = true;
-        button.innerHTML = '<span class="spinner"></span> Loading...';
+        button.innerHTML = "<span class=\"spinner\"></span> ".concat(_utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.loading', 'Loading...'));
         button.classList.add('loading');
       }
 
@@ -12958,7 +12966,7 @@ var ProductManager = /*#__PURE__*/function () {
 
                   // Re-disable button if provided
                   if (button) {
-                    button.innerHTML = '<span class="spinner"></span> Loading...';
+                    button.innerHTML = "<span class=\"spinner\"></span> ".concat(_utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('ui_elements.loading', 'Loading...'));
                     button.disabled = true;
                     button.classList.add('loading');
                   }
@@ -16431,7 +16439,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="loading-placeholder-template"> <div class="loading-placeholder"> <span class="loading-message">{{message}}</span> </div> </template>`;
+var code = `<template id="loading-placeholder-template"> <div class="loading-placeholder"> <span class="loading-message" data-label="ui_elements.loading">Loading...</span> </div> </template>`;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16465,7 +16473,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="toggle-button-hide-template"> <span>{{buttonText}}</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </template>`;
+var code = `<template id="toggle-button-hide-template"> <span data-label="buttons.hide">Hide</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </template>`;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16482,7 +16490,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="toggle-button-show-template"> <span>{{buttonText}}</span> <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span> </template>`;
+var code = `<template id="toggle-button-show-template"> <span data-label="buttons.show">Show</span> <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span> </template>`;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16499,7 +16507,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="estimate-item-template"> <div class="estimate-section collapsed" data-estimate-id=""> <div class="estimate-header"> <h3 class="estimate-name"> <div class="price-graph-container"> <div class="price-range-title"> <span class="price-title name"></span> <span class="estimate-price min_total max_total"></span> </div> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> </h3> <button class="remove-estimate" data-estimate-id="" data-title-label="buttons.delete_estimate" title="Delete Estimate"> <span class="dashicons dashicons-trash"></span> </button> </div> <div class="estimate-content"> <div id="rooms"> <div class="room-header"> <h4 data-label="ui_elements.rooms_heading">Rooms</h4> <button class="add-room" data-estimate-id="" data-label="buttons.add_new_room">Add New Room</button> </div> <div class="rooms-container"></div> </div> </div> <div class="estimate-actions"> <ul> <li> <a class="print-estimate" data-estimate-id="" data-title-label="buttons.print_estimate" title="Print Estimate"> <span class="dashicons dashicons-pdf"></span> <span data-label="buttons.print_estimate">Print estimate</span> </a> </li> <li> <a class="request-contact-estimate" data-estimate-id="" data-title-label="buttons.request_contact" title="Request contact from store"> <span class="dashicons dashicons-businessperson"></span> <span data-label="buttons.request_contact">Request contact from store</span> </a> </li> <li> <a class="request-a-copy" data-estimate-id="" data-title-label="buttons.request_copy" title="Request a copy"> <span class="dashicons dashicons-email"></span> <span data-label="buttons.request_copy">Request a copy</span> </a> </li> </ul> </div> </div> </template> `;
+var code = `<template id="estimate-item-template"> <div class="estimate-section collapsed" data-estimate-id=""> <div class="estimate-header"> <h3 class="estimate-name" data-prefix-label="ui_elements.estimate"> <div class="price-graph-container"> <div class="price-range-title"> <span class="price-title name" data-prefix-label="ui_elements.estimate"></span> <span class="estimate-price min_total max_total"></span> </div> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> </h3> <button class="remove-estimate" data-estimate-id="" data-title-label="buttons.delete_estimate" data-aria-label="buttons.delete_estimate" title="Delete Estimate" aria-label="Delete Estimate"> <span class="dashicons dashicons-trash"></span> </button> </div> <div class="estimate-content"> <div id="rooms"> <div class="room-header"> <h4 data-label="ui_elements.rooms_heading">Rooms</h4> <button class="add-room" data-estimate-id="" data-label="buttons.add_new_room">Add New Room</button> </div> <div class="rooms-container"></div> </div> </div> <div class="estimate-actions"> <ul> <li> <a class="print-estimate" data-estimate-id="" data-title-label="buttons.print_estimate" title="Print Estimate"> <span class="dashicons dashicons-pdf"></span> <span data-label="buttons.print_estimate">Print estimate</span> </a> </li> <li> <a class="request-contact-estimate" data-estimate-id="" data-title-label="buttons.request_contact" title="Request contact from store"> <span class="dashicons dashicons-businessperson"></span> <span data-label="buttons.request_contact">Request contact from store</span> </a> </li> <li> <a class="request-a-copy" data-estimate-id="" data-title-label="buttons.request_copy" title="Request a copy"> <span class="dashicons dashicons-email"></span> <span data-label="buttons.request_copy">Request a copy</span> </a> </li> </ul> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16518,7 +16526,7 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `<template id="additional-product-option-template"> <div class="additional-product-option-tile"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="" class="tile-image product-img"> <span class="tile-label product-name"></span> <div class="option-price product-price"></div> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-replace-type=""> Upgrade </button> </div> </template> `;
+var code = `<template id="additional-product-option-template"> <div class="additional-product-option-tile"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="" class="tile-image product-img"> <span class="tile-label product-name"></span> <div class="option-price product-price"></div> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-replace-type="" data-label="buttons.add"> Add </button> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16535,7 +16543,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="additional-products-section-template"> <div class="additional-products-section"> <div class="additional-products-header"> <h3 class="additional-product-title">Product Addition</h3> <p class="additional-product-description"></p> </div> <div class="additional-products-list"> </div> </div> </template>`;
+var code = `<template id="additional-products-section-template"> <div class="additional-products-section"> <div class="additional-products-header"> <h3 class="additional-product-title" data-label="ui_elements.additional_products">Additional Products</h3> <p class="additional-product-description"></p> </div> <div class="additional-products-list"> </div> </div> </template>`;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16552,7 +16560,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="include-item-template"> <div class="include-item" data-product-id=""> <span class="product-includes-icon"> <span class="dashicons dashicons-plus-alt"></span> </span> <span class="include-item-name product-name"></span> <span class="pe-info-button" data-tooltip-type="rich" data-tooltip-position="right" data-tooltip-title="Product Information" aria-label="View product information"></span> <div class="include-item-prices"> <div class="include-item-total-price product-price"> </div> </div> <button class="remove-product" data-estimate-id="" data-room-id="" data-product-id="" title="Remove Product"> <span class="dashicons dashicons-trash"></span> </button> </div> </template> `;
+var code = `<template id="include-item-template"> <div class="include-item" data-product-id=""> <span class="product-includes-icon"> <span class="dashicons dashicons-plus-alt"></span> </span> <span class="include-item-name product-name"></span> <span class="pe-info-button" data-tooltip-type="rich" data-tooltip-position="right" data-title-label="ui_elements.product_information" data-tooltip-title="Product Information" data-aria-label="ui_elements.view_product_information" aria-label="View product information" data-label="ui_elements.view_product_information"></span> <div class="include-item-prices"> <div class="include-item-total-price product-price"> </div> </div> <button class="remove-product" data-estimate-id="" data-room-id="" data-product-id="" data-title-label="buttons.remove_product" title="Remove Product" aria-label="Remove Product" data-label="buttons.remove_product_aria"> <span class="dashicons dashicons-trash"></span> </button> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16569,7 +16577,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="note-item-template"> <div class="include-item note-item"> <span class="product-includes-icon"> <span class="dashicons dashicons-sticky"></span> </span> <div class="include-item-note"> <p class="note-text">r</p> </div> </div> </template> `;
+var code = `<template id="note-item-template"> <div class="include-item note-item"> <span class="product-includes-icon"> <span class="dashicons dashicons-sticky" data-title-label="ui_elements.note" title="Note"></span> </span> <div class="include-item-note"> <p class="note-text"></p> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16588,7 +16596,7 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `<template id="similar-product-item-template"> <div class="suggestion-item similar-product-item" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method=""> <div class="suggestion-image"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="Similar Product Image" class="similar-product-thumbnail product-img"> <div class="no-image" style="display:none"></div> </div> <div class="suggestion-details"> <div class="suggestion-name product-name"></div> <div class="suggestion-price product-price"></div> <div class="suggestion-actions"> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method=""> Replace </button> </div> </div> </div> </template> `;
+var code = `<template id="similar-product-item-template"> <div class="suggestion-item similar-product-item" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method=""> <div class="suggestion-image"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="Similar Product Image" class="similar-product-thumbnail product-img" data-alt-label="ui_elements.similar_product_image"> <div class="no-image" style="display:none"></div> </div> <div class="suggestion-details"> <div class="suggestion-name product-name"></div> <div class="suggestion-price product-price"></div> <div class="suggestion-actions"> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-label="buttons.replace_product"> Replace </button> </div> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16607,7 +16615,7 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `<template id="suggestion-item-template"> <div class="suggestion-item"> <div class="suggestion-image"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="" class="suggestion-img product-img"> </div> <div class="suggestion-details"> <div class="suggestion-name product-name"></div> <div class="suggestion-price product-price"></div> <div class="suggestion-actions"> <button type="button" class="add-suggestion-to-room" data-product-id="" data-estimate-id="" data-room-id=""> Add </button> </div> </div> </div> </template> `;
+var code = `<template id="suggestion-item-template"> <div class="suggestion-item"> <div class="suggestion-image"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="" class="suggestion-img product-img"> </div> <div class="suggestion-details"> <div class="suggestion-name product-name"></div> <div class="suggestion-price product-price"></div> <div class="suggestion-actions"> <button type="button" class="add-suggestion-to-room" data-product-id="" data-estimate-id="" data-room-id="" data-label="buttons.add"> Add </button> </div> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16643,7 +16651,7 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `<template id="room-item-template"> <div class="accordion-item room-item" data-room-id="" data-estimate-id=""> <div class="accordion-header-wrapper"> <div class="accordion-header room-item-header"> <div class="room-image-wrapper"> <img class="primary-product-image product-thumbnail" src="${___HTML_LOADER_IMPORT_0___}" data-aria-label="ui_elements.primary_product" alt="Primary product" data-visible-if="has_primary_product"> </div> <div class="room-details-wrapper"> <div class="room-details"> <div class="room-name-wrapper"> <span class="room-name"></span> <span class="primary-product-name"></span> <span class="room-dimensions"></span> </div> <div class="room-price"></div> </div> <div class="price-graph-container"> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> </div> <div class="room-actions"> <button class="remove-room" data-estimate-id="" data-room-id="" data-title-label="buttons.remove_room" title="Remove Room"> <span class="dashicons dashicons-trash"></span> </button> </div> </div> </div> <div class="accordion-content"> <div class="room-empty-state" style="display:none"></div> <button class="product-includes-toggle expanded"> <span data-label="buttons.product_includes">Product Includes</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="includes-container visible"> <div class="product-includes"> <div class="product-includes-items"></div> </div> <div class="price-notice" data-label="ui_elements.price_notice">Prices are subject to check measures without notice</div> <div class="additional-products-container" style="display:none"> <div class="additional-products-list"> </div> </div> </div> <button class="product-details-toggle similar-products-toggle expanded"> <span data-label="buttons.similar_products">Similar Products</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="similar-products-container visible" data-room-id=""> <div class="product-similar-products"> <div class="suggestions-carousel similar-products-carousel"> <div class="suggestions-nav prev" data-aria-label="ui_elements.previous" aria-label="Previous"> <span class="dashicons dashicons-arrow-left-alt2"></span> </div> <div class="suggestions-container similar-products-list"> </div> <div class="suggestions-nav next" data-aria-label="ui_elements.next" aria-label="Next"> <span class="dashicons dashicons-arrow-right-alt2"></span> </div> </div> </div> </div> <div class="product-suggestions" style="display:none"> <button class="product-suggestions-toggle"> <span data-label="buttons.suggested_products">Suggested Products</span> <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span> </button> <div class="suggestions-container-wrapper"> <div class="suggestions-carousel"> <div class="suggestions-nav prev" data-aria-label="ui_elements.previous_suggestions" aria-label="Previous Suggestions">&#10094;</div> <div class="suggestions-container"> </div> <div class="suggestions-nav next" data-aria-label="ui_elements.next_suggestions" aria-label="Next Suggestions">&#10095;</div> </div> </div> </div> </div> </div> </template>`;
+var code = `<template id="room-item-template"> <div class="accordion-item room-item" data-room-id="" data-estimate-id=""> <div class="accordion-header-wrapper"> <div class="accordion-header room-item-header"> <div class="room-image-wrapper"> <img class="primary-product-image product-thumbnail" src="${___HTML_LOADER_IMPORT_0___}" data-aria-label="ui_elements.primary_product" data-alt-label="ui_elements.primary_product" alt="Primary product" data-visible-if="has_primary_product"> </div> <div class="room-details-wrapper"> <div class="room-details"> <div class="room-name-wrapper"> <span class="room-name" data-prefix-label="ui_elements.room"></span> <span class="primary-product-name"></span> <span class="room-dimensions"></span> </div> <div class="room-price" data-prefix-label="ui_elements.products"></div> </div> <div class="price-graph-container"> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> </div> <div class="room-actions"> <button class="remove-room" data-estimate-id="" data-room-id="" data-title-label="buttons.remove_room" title="Remove Room" data-aria-label="buttons.remove_room"> <span class="dashicons dashicons-trash"></span> </button> </div> </div> </div> <div class="accordion-content"> <div class="room-empty-state" style="display:none"></div> <button class="product-includes-toggle expanded"> <span data-label="buttons.product_includes">Product Includes</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="includes-container visible"> <div class="product-includes"> <div class="product-includes-items"></div> </div> <div class="price-notice" data-label="ui_elements.price_notice">Prices are subject to check measures without notice</div> <div class="additional-products-container" style="display:none"> <div class="additional-products-list"> </div> </div> </div> <button class="product-details-toggle similar-products-toggle expanded"> <span data-label="buttons.similar_products">Similar Products</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="similar-products-container visible" data-room-id=""> <div class="product-similar-products"> <div class="suggestions-carousel similar-products-carousel"> <div class="suggestions-nav prev" data-aria-label="ui_elements.previous" data-title-label="ui_elements.previous" aria-label="Previous" title="Previous"> <span class="dashicons dashicons-arrow-left-alt2"></span> </div> <div class="suggestions-container similar-products-list"> </div> <div class="suggestions-nav next" data-aria-label="ui_elements.next" data-title-label="ui_elements.next" aria-label="Next" title="Next"> <span class="dashicons dashicons-arrow-right-alt2"></span> </div> </div> </div> </div> <div class="product-suggestions" style="display:none"> <button class="product-suggestions-toggle"> <span data-label="buttons.suggested_products">Suggested Products</span> <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span> </button> <div class="suggestions-container-wrapper"> <div class="suggestions-carousel"> <div class="suggestions-nav prev" data-aria-label="ui_elements.previous_suggestions" data-title-label="ui_elements.previous_suggestions" aria-label="Previous Suggestions" title="Previous Suggestions">&#10094;</div> <div class="suggestions-container"> </div> <div class="suggestions-nav next" data-aria-label="ui_elements.next_suggestions" data-title-label="ui_elements.next_suggestions" aria-label="Next Suggestions" title="Next Suggestions">&#10095;</div> </div> </div> </div> </div> </div> </template>`;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16677,7 +16685,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="estimate-selection-template"> <div id="estimate-selection-wrapper"> <div id="estimate-selection-form-wrapper"> <h2>Select an Estimate</h2> <form id="estimate-selection-form"> <div class="form-group"> <label for="estimate-dropdown">Choose an estimate:</label> <select id="estimate-dropdown" name="estimate_id" required> <option value="">-- Select an Estimate --</option> </select> </div> <div class="form-actions"> <button type="submit" class="button submit-btn">Continue</button> <button type="button" class="button cancel-btn" id="create-estimate-btn"> Create New Estimate </button> </div> </form> </div> <div id="room-selection-form-wrapper" style="display:none"> <h2>Select a Room</h2> <form id="room-selection-form"> <div class="form-group"> <label for="room-dropdown">Choose a room:</label> <select id="room-dropdown" name="room_id" required> <option value="">-- Select a Room --</option> </select> </div> <div class="form-actions"> <button type="submit" class="button submit-btn">Add Product to Room</button> <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection">Back</button> <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate="">Add New Room</button> </div> </form> </div> </div> </template> `;
+var code = `<template id="estimate-selection-template"> <div id="estimate-selection-wrapper"> <div id="estimate-selection-form-wrapper"> <h2 data-label="ui_elements.select_estimate">Select an Estimate</h2> <form id="estimate-selection-form"> <div class="form-group"> <label for="estimate-dropdown" data-label="forms.choose_estimate">Choose an estimate:</label> <select id="estimate-dropdown" name="estimate_id" required> <option value="" data-label="forms.select_estimate_option">-- Select an Estimate --</option> </select> </div> <div class="form-actions"> <button type="submit" class="button submit-btn" data-label="buttons.continue">Continue</button> <button type="button" class="button cancel-btn" id="create-estimate-btn" data-label="buttons.create_new_estimate"> Create New Estimate </button> </div> </form> </div> <div id="room-selection-form-wrapper" style="display:none"> <h2 data-label="ui_elements.select_room">Select a Room</h2> <form id="room-selection-form"> <div class="form-group"> <label for="room-dropdown" data-label="forms.choose_room">Choose a room:</label> <select id="room-dropdown" name="room_id" required> <option value="" data-label="forms.select_room_option">-- Select a Room --</option> </select> </div> <div class="form-actions"> <button type="submit" class="button submit-btn" data-label="buttons.add_product_to_room">Add Product to Room</button> <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection" data-label="buttons.back">Back</button> <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate="" data-label="buttons.add_new_room">Add New Room</button> </div> </form> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16728,7 +16736,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="room-selection-form-template"> <h2>Select a Room</h2> <form id="room-selection-form"> <div class="form-group"> <label for="room-dropdown">Choose a room:</label> <select id="room-dropdown" name="room_id" required> <option value="">-- Select a Room --</option> </select> </div> <div class="form-actions"> <button type="submit" class="button submit-btn">Add Product to Room</button> <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection">Back</button> <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate-id="">Add New Room</button> </div> </form> </template> `;
+var code = `<template id="room-selection-form-template"> <h2 data-label="ui_elements.select_room">Select a Room</h2> <form id="room-selection-form"> <div class="form-group"> <label for="room-dropdown" data-label="forms.choose_room">Choose a room:</label> <select id="room-dropdown" name="room_id" required> <option value="" data-label="forms.select_room_option">-- Select a Room --</option> </select> </div> <div class="form-actions"> <button type="submit" class="button submit-btn" data-label="buttons.add_product_to_room">Add Product to Room</button> <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection" data-label="buttons.back">Back</button> <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate-id="" data-label="buttons.add_new_room">Add New Room</button> </div> </form> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16745,7 +16753,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="modal-container-template"> <div id="product-estimator-modal" class="product-estimator-modal"> <div class="product-estimator-modal-overlay"></div> <div class="product-estimator-modal-container"> <button class="product-estimator-modal-close" aria-label="Close"> <span aria-hidden="true">&times;</span> </button> <div class="product-estimator-modal-header"> <h2>Product Estimator</h2> </div> <div class="product-estimator-modal-form-container"> <div id="estimates"></div> <div id="estimate-selection-wrapper" style="display:none"></div> <div id="room-selection-form-wrapper" style="display:none"></div> <div id="new-estimate-form-wrapper" style="display:none"></div> <div id="new-room-form-wrapper" style="display:none"></div> </div> <div class="product-estimator-modal-loading" style="display:none"> <div class="loading-spinner"></div> <div class="loading-text">Loading...</div> </div> </div> </div> </template>`;
+var code = `<template id="modal-container-template"> <div id="product-estimator-modal" class="product-estimator-modal"> <div class="product-estimator-modal-overlay"></div> <div class="product-estimator-modal-container"> <button class="product-estimator-modal-close" aria-label="Close" data-label="ui_elements.close"> <span aria-hidden="true">&times;</span> </button> <div class="product-estimator-modal-header"> <h2 data-label="ui_elements.product_estimator_title">Product Estimator</h2> </div> <div class="product-estimator-modal-form-container"> <div id="estimates"></div> <div id="estimate-selection-wrapper" style="display:none"></div> <div id="room-selection-form-wrapper" style="display:none"></div> <div id="new-estimate-form-wrapper" style="display:none"></div> <div id="new-room-form-wrapper" style="display:none"></div> </div> <div class="product-estimator-modal-loading" style="display:none"> <div class="loading-spinner"></div> <div class="loading-text" data-label="ui_elements.loading">Loading...</div> </div> </div> </div> </template>`;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16949,7 +16957,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="form-error-template"> <div class="form-errors error-message"> <p>{{errorMessage}}</p> </div> </template>`;
+var code = `<template id="form-error-template"> <div class="form-errors error-message"> <p data-label="messages.form_error">An error occurred with the form submission. Please try again.</p> </div> </template>`;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 

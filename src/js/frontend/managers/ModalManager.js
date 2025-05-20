@@ -6,7 +6,7 @@
  * specific responsibilities to specialized manager classes.
  */
 
-import { createLogger } from '@utils';
+import { createLogger, labelManager } from '@utils';
 
 // Import services and utils first
 import { loadEstimateData, saveEstimateData, clearEstimateData } from '../EstimateStorage';
@@ -238,7 +238,7 @@ class ModalManager {
         this.loadingIndicator.className = 'product-estimator-modal-loading';
         this.loadingIndicator.innerHTML = `
           <div class="loading-spinner"></div>
-          <div class="loading-text">${this.config.i18n.loading || 'Loading...'}</div>
+          <div class="loading-text">${labelManager.get('ui_elements.loading', 'Loading...')}</div>
         `;
         this.modal.appendChild(this.loadingIndicator);
       }
@@ -423,11 +423,11 @@ class ModalManager {
                 // Show error dialog only for actual errors (not cancellation)
                 if (error.message !== 'Variation selection cancelled') {
                   this.confirmationDialog.show({
-                    title: 'Error',
-                    message: 'Unable to replace product. Please try again.',
+                    title: labelManager.get('ui_elements.error_title', 'Error'),
+                    message: labelManager.get('errors.replace_product_error', 'Unable to replace product. Please try again.'),
                     type: 'error',
                     showCancel: false,
-                    confirmText: 'OK'
+                    confirmText: labelManager.get('buttons.ok', 'OK')
                   });
                 }
               })
@@ -481,7 +481,7 @@ class ModalManager {
         loadingIndicator.style.display = 'flex';
         loadingIndicator.innerHTML = `
           <div class="loading-spinner"></div>
-          <div class="loading-text">${this.config.i18n.loading || 'Loading...'}</div>
+          <div class="loading-text">${labelManager.get('ui_elements.loading', 'Loading...')}</div>
         `;
         this.modal.appendChild(loadingIndicator);
         this.loadingIndicator = loadingIndicator;
@@ -595,7 +595,7 @@ class ModalManager {
     // Make sure modal exists and is initialized
     if (!this.modal) {
       logger.error('Cannot open modal - not found in DOM');
-      this.showError('Modal element not found. Please contact support.');
+      this.showError(labelManager.get('errors.modal_not_found', 'Modal element not found'));
       return;
     }
     
@@ -619,7 +619,7 @@ class ModalManager {
                 this.productSelectionDialog.show({
                   product: {
                     id: productId,
-                    name: variationData.productName || 'Select Product Options'
+                    name: variationData.productName || labelManager.get('ui_elements.select_options', 'Select Options')
                   },
                   variations: variationData.variations,
                   attributes: variationData.attributes,
@@ -674,7 +674,7 @@ class ModalManager {
     } catch (error) {
       logger.error('Error opening modal:', error);
       this.hideLoading();
-      this.showError('An error occurred opening the modal. Please try again.');
+      this.showError(labelManager.get('errors.modal_open_error', 'Error opening modal'));
     }
   }
   
@@ -737,7 +737,7 @@ class ModalManager {
     } catch (error) {
       logger.error('Error proceeding with modal open:', error);
       this.hideLoading();
-      this.showError('An error occurred opening the modal. Please try again.');
+      this.showError(labelManager.get('errors.modal_open_error', 'Error opening modal'));
     }
   }
   

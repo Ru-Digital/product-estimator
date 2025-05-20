@@ -1,10 +1,10 @@
 <template id="estimate-item-template">
   <div class="estimate-section collapsed" data-estimate-id="">
     <div class="estimate-header">
-      <h3 class="estimate-name">
+      <h3 class="estimate-name" data-prefix-label="ui_elements.estimate">
         <div class="price-graph-container">
           <div class="price-range-title">
-            <span class="price-title name"></span>
+            <span class="price-title name" data-prefix-label="ui_elements.estimate"></span>
             <span class="estimate-price min_total max_total"></span>
           </div>
           <div class="price-graph-bar">
@@ -13,7 +13,7 @@
           <div class="price-graph-labels"></div>
         </div>
       </h3>
-      <button class="remove-estimate" data-estimate-id="" data-title-label="buttons.delete_estimate" title="Delete Estimate">
+      <button class="remove-estimate" data-estimate-id="" data-title-label="buttons.delete_estimate" data-aria-label="buttons.delete_estimate" title="Delete Estimate" aria-label="Delete Estimate">
         <span class="dashicons dashicons-trash"></span>
       </button>
 

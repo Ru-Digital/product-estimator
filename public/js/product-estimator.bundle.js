@@ -14778,16 +14778,30 @@ var RoomManager = /*#__PURE__*/function () {
         if (formElement) {
           // Store estimate ID and product ID as data attributes on the form
           formElement.dataset.estimateId = estimateId;
+
+          // Get the submit button regardless of productId
+          var submitButton = formElement.querySelector('.submit-btn');
           if (productId) {
             formElement.dataset.productId = productId;
 
             // Update the submit button text if we're in the add product flow
-            var submitButton = formElement.querySelector('.submit-btn');
             if (submitButton) {
               submitButton.textContent = 'Add Room & Product';
             }
           } else {
             delete formElement.dataset.productId;
+
+            // Set default button text for regular room addition flow
+            if (submitButton) {
+              // Either use the label from the data-label attribute or set a default
+              if (submitButton.dataset.label) {
+                // Use imported labelManager
+                submitButton.textContent = _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('buttons.add_room', 'Add Room');
+              } else {
+                // Fallback text if no data-label attribute
+                submitButton.textContent = 'Add Room';
+              }
+            }
           }
 
           // Delegate form binding to the FormManager or bind events ourselves
@@ -16560,7 +16574,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="include-item-template"> <div class="include-item" data-product-id=""> <span class="product-includes-icon"> <span class="dashicons dashicons-plus-alt"></span> </span> <span class="include-item-name product-name"></span> <span class="pe-info-button" data-tooltip-type="rich" data-tooltip-position="right" data-title-label="ui_elements.product_information" data-tooltip-title="Product Information" data-aria-label="ui_elements.view_product_information" aria-label="View product information" data-label="ui_elements.view_product_information"></span> <div class="include-item-prices"> <div class="include-item-total-price product-price"> </div> </div> <button class="remove-product" data-estimate-id="" data-room-id="" data-product-id="" data-title-label="buttons.remove_product" title="Remove Product" aria-label="Remove Product" data-label="buttons.remove_product_aria"> <span class="dashicons dashicons-trash"></span> </button> </div> </template> `;
+var code = `<template id="include-item-template"> <div class="include-item" data-product-id=""> <span class="product-includes-icon"> <span class="dashicons dashicons-plus-alt"></span> </span> <span class="include-item-name product-name"></span> <span class="pe-info-button" data-tooltip-type="rich" data-tooltip-position="right" data-title-label="ui_elements.product_information" data-tooltip-title="Product Information" data-aria-label="ui_elements.view_product_information" aria-label="View product information" data-label="ui_elements.view_product_information"></span> <div class="include-item-prices"> <div class="include-item-total-price product-price"> </div> </div> <button class="remove-product" data-estimate-id="" data-room-id="" data-product-id="" data-title-label="buttons.remove_product" title="Remove Product" aria-label="Remove Product"> <span class="dashicons dashicons-trash"></span> <span class="remove-text" data-label="buttons.remove">Remove</span> </button> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 

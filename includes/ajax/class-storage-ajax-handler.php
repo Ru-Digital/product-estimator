@@ -21,7 +21,13 @@ class StorageAjaxHandler extends AjaxHandlerBase {
      */
     public function __construct() {
         parent::__construct();
-        $this->labels = new LabelsFrontend();
+        global $product_estimator_plugin_info;
+        
+        // Get plugin name and version from global if available, or use defaults
+        $plugin_name = isset($product_estimator_plugin_info['name']) ? $product_estimator_plugin_info['name'] : 'product-estimator';
+        $version = isset($product_estimator_plugin_info['version']) ? $product_estimator_plugin_info['version'] : '2.0.0';
+        
+        $this->labels = new LabelsFrontend($plugin_name, $version);
     }
     use EstimateDbHandler;
 

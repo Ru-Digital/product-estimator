@@ -515,15 +515,28 @@
   color: $text-lighter;
   cursor: pointer;
   display: flex;
+  font-size: 12px;
+  gap: 4px;
   justify-content: center;
-  padding: 4px;
+  padding: 4px 8px;
   position: absolute;
   right: 10px;
   transition: color 0.2s ease;
 
+  .remove-text {
+    display: none; /* Hide by default on small screens */
+  }
+
   &:hover {
     background: transparent;
     color: $error-color;
+  }
+  
+  /* Show text on larger screens or when hovered */
+  @media screen and (min-width: $breakpoint-md) {
+    &:hover .remove-text {
+      display: inline-block;
+    }
   }
 }
 

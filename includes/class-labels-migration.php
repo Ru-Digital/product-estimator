@@ -114,6 +114,7 @@ class LabelsMigration {
                 'edit' => __('Edit', 'product-estimator'),
                 'add' => __('Add', 'product-estimator'),
                 'remove' => __('Remove', 'product-estimator'),
+                'remove_product' => __('Remove Product', 'product-estimator'),
                 'update' => __('Update', 'product-estimator'),
                 'search' => __('Search', 'product-estimator'),
                 'filter' => __('Filter', 'product-estimator'),

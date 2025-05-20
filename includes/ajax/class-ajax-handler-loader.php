@@ -30,10 +30,15 @@ class AjaxHandlerLoader {
     private function load_handlers() {
         $features = product_estimator_features();
 
+        // Get plugin name and version from global
+        global $product_estimator_plugin_info;
+        $plugin_name = isset($product_estimator_plugin_info['name']) ? $product_estimator_plugin_info['name'] : 'product-estimator';
+        $version = isset($product_estimator_plugin_info['version']) ? $product_estimator_plugin_info['version'] : '2.0.0';
+        
         // Core handlers - always loaded
         $this->handlers['storage'] = new StorageAjaxHandler();
         $this->handlers['validation'] = new ValidationAjaxHandler();
-        $this->handlers['product'] = new ProductAjaxHandler();
+        $this->handlers['product'] = new ProductAjaxHandler($plugin_name, $version);
 
         // Feature-dependent handlers
         if ($features->suggested_products_enabled) {

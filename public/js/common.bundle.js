@@ -1749,10 +1749,19 @@ var LabelManager = /*#__PURE__*/function () {
     (0,_babel_runtime_helpers_classCallCheck__WEBPACK_IMPORTED_MODULE_2__["default"])(this, LabelManager);
     this.labels = window.productEstimatorLabels || {};
     this.version = this.labels._version || '2.0.0';
+
+    // Local cache for processed labels
+    this.cache = new Map();
+
+    // List of high-priority labels to preload
+    this.criticalLabels = ['buttons.save_estimate', 'buttons.print_estimate', 'buttons.email_estimate', 'buttons.add_product', 'buttons.add_room', 'forms.estimate_name', 'messages.product_added', 'messages.estimate_saved', 'messages.room_added'];
+
+    // Preload critical labels
+    this.preloadCriticalLabels();
   }
 
   /**
-   * Get a label value using dot notation
+   * Get a label value using dot notation with client-side caching
    * 
    * @param {string} key - Label key (e.g., 'buttons.save_estimate')
    * @param {string} defaultValue - Default value if label not found
@@ -1762,6 +1771,19 @@ var LabelManager = /*#__PURE__*/function () {
     key: "get",
     value: function get(key) {
       var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+      // Check cache first for the fastest retrieval
+      if (this.cache.has(key)) {
+        return this.cache.get(key);
+      }
+
+      // Check if we have a flattened version first (faster lookup)
+      if (this.labels._flat && this.labels._flat[key] !== undefined) {
+        var _value = this.labels._flat[key];
+        this.cache.set(key, _value); // Cache for future
+        return _value;
+      }
+
+      // Standard dot notation lookup
       var keys = key.split('.');
       var value = this.labels;
       var _iterator = _createForOfIteratorHelper(keys),
@@ -1776,14 +1798,18 @@ var LabelManager = /*#__PURE__*/function () {
             if (window.productEstimatorDebug) {
               console.warn("Label not found: ".concat(key));
             }
+            this.cache.set(key, defaultValue); // Cache the default too
             return defaultValue;
           }
         }
+
+        // Cache the result for next time
       } catch (err) {
         _iterator.e(err);
       } finally {
         _iterator.f();
       }
+      this.cache.set(key, value);
       return value;
     }
 
@@ -1960,14 +1986,38 @@ var LabelManager = /*#__PURE__*/function () {
   }, {
     key: "getDebugInfo",
     value: function getDebugInfo() {
+      var _this3 = this;
       return {
         version: this.version,
         totalLabels: this.countLabels(),
         categories: Object.keys(this.labels).filter(function (k) {
-          return k !== '_version';
+          return k !== '_version' && k !== '_flat';
         }),
-        missingLabels: this.findMissingLabels()
+        missingLabels: this.findMissingLabels(),
+        cacheSize: this.cache.size,
+        criticalLabelsLoaded: this.criticalLabels.every(function (key) {
+          return _this3.cache.has(key);
+        })
       };
+    }
+
+    /**
+     * Preload critical labels for better performance
+     * This is called automatically on init, but can be called manually as well
+     */
+  }, {
+    key: "preloadCriticalLabels",
+    value: function preloadCriticalLabels() {
+      var _this4 = this;
+      // Preload each critical label into cache
+      this.criticalLabels.forEach(function (key) {
+        if (!_this4.cache.has(key)) {
+          _this4.get(key);
+        }
+      });
+      if (window.productEstimatorDebug) {
+        console.log("Preloaded ".concat(this.criticalLabels.length, " critical labels"));
+      }
     }
 
     /**
@@ -2000,12 +2050,12 @@ var LabelManager = /*#__PURE__*/function () {
   }, {
     key: "findMissingLabels",
     value: function findMissingLabels() {
-      var _this3 = this;
+      var _this5 = this;
       var missing = [];
       var labelElements = document.querySelectorAll('[data-label]');
       labelElements.forEach(function (element) {
         var labelKey = element.dataset.label;
-        if (!_this3.exists(labelKey)) {
+        if (!_this5.exists(labelKey)) {
           missing.push(labelKey);
         }
       });

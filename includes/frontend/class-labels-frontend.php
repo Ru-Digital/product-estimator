@@ -39,6 +39,34 @@ class LabelsFrontend extends FrontendBase {
      * @var      int $cache_duration Cache duration
      */
     private $cache_duration = DAY_IN_SECONDS;
+    
+    /**
+     * In-memory cache for labels
+     *
+     * @since    2.0.0
+     * @access   private
+     * @var      array $memory_cache Memory cache
+     */
+    private static $memory_cache = null;
+    
+    /**
+     * Frequently used labels cache
+     *
+     * @since    2.0.0
+     * @access   private
+     * @var      array $frequent_labels Frequently used labels
+     */
+    private $frequent_labels = [
+        'buttons.save_estimate',
+        'buttons.print_estimate',
+        'buttons.email_estimate',
+        'buttons.add_product',
+        'buttons.add_room',
+        'forms.estimate_name',
+        'messages.product_added',
+        'messages.estimate_saved',
+        'messages.room_added'
+    ];
 
     /**
      * Initialize the class and set its properties.
@@ -54,10 +82,16 @@ class LabelsFrontend extends FrontendBase {
         if (!is_admin()) {
             // Add labels to frontend scripts
             add_action('wp_enqueue_scripts', [$this, 'add_labels_to_frontend'], 20);
+            
+            // Preload frequently used labels on frontend
+            add_action('wp', [$this, 'preload_frequent_labels']);
         }
         
         // Run migration if needed
         add_action('init', [$this, 'maybe_run_migration']);
+        
+        // Cache invalidation on label update
+        add_action('updated_option', [$this, 'maybe_invalidate_cache'], 10, 3);
     }
 
     /**
@@ -83,18 +117,32 @@ class LabelsFrontend extends FrontendBase {
      * @return   array    All labels with cache
      */
     public function get_all_labels_with_cache() {
+        // First level: Memory cache (fastest)
+        if (self::$memory_cache !== null) {
+            return self::$memory_cache;
+        }
+        
+        // Second level: Transient cache (persists between requests)
         $cache_key = 'pe_frontend_labels_' . $this->get_labels_version();
         $cached_labels = get_transient($cache_key);
         
         if ($cached_labels !== false) {
+            // Store in memory cache
+            self::$memory_cache = $cached_labels;
             return $cached_labels;
         }
         
-        // Build labels array
+        // Cache miss: Build labels array
         $labels = $this->build_all_labels();
         
-        // Cache for specified duration
+        // Update both cache levels
+        self::$memory_cache = $labels;
         set_transient($cache_key, $labels, $this->cache_duration);
+        
+        // Log cache miss in debug mode
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Labels cache miss - rebuilt and cached labels');
+        }
         
         return $labels;
     }
@@ -111,14 +159,25 @@ class LabelsFrontend extends FrontendBase {
     }
 
     /**
-     * Build all labels array
+     * Build all labels array with optimized DB queries
      *
      * @since    2.0.0
      * @access   private
      * @return   array    All labels
      */
     private function build_all_labels() {
-        $stored_labels = get_option($this->option_name, []);
+        // Use alloptions for more efficient retrieval when possible
+        // This avoids separate DB query when labels are already in cache
+        global $wp_options;
+        $alloptions = wp_load_alloptions();
+        
+        // Check if our option is in the alloptions cache
+        if (isset($alloptions[$this->option_name])) {
+            $stored_labels = maybe_unserialize($alloptions[$this->option_name]);
+        } else {
+            // Fallback to regular get_option
+            $stored_labels = get_option($this->option_name, []);
+        }
         
         // If no labels exist, get defaults
         if (empty($stored_labels)) {
@@ -129,7 +188,37 @@ class LabelsFrontend extends FrontendBase {
         $default_labels = LabelsMigration::get_default_structure();
         $merged_labels = array_replace_recursive($default_labels, $stored_labels);
         
+        // Apply performance improvements for large label sets
+        $merged_labels = $this->optimize_label_structure($merged_labels);
+        
         return $merged_labels;
+    }
+    
+    /**
+     * Optimize label structure for performance
+     *
+     * @since    2.0.0
+     * @access   private
+     * @param    array    $labels    Labels array
+     * @return   array    Optimized labels
+     */
+    private function optimize_label_structure($labels) {
+        // Flatten deeply nested structures for faster access
+        // This is especially important for templates that access deep properties
+        if (isset($labels['templates']) && is_array($labels['templates'])) {
+            foreach ($labels['templates'] as $template_key => $template_labels) {
+                if (is_array($template_labels) && count($template_labels) > 0) {
+                    // Create flattened access paths for deeply nested template labels
+                    foreach ($template_labels as $key => $value) {
+                        if (is_string($value)) {
+                            $labels['_flat']['templates_' . $template_key . '_' . $key] = $value;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return $labels;
     }
 
     /**
@@ -295,8 +384,100 @@ class LabelsFrontend extends FrontendBase {
      * @access   public
      */
     public function invalidate_cache() {
+        // Clear memory cache
+        self::$memory_cache = null;
+        
+        // Clear transient cache
         $cache_key = 'pe_frontend_labels_' . $this->get_labels_version();
         delete_transient($cache_key);
+        
+        // Clear other related caches
+        delete_transient('pe_frontend_frequent_labels');
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Labels cache invalidated');
+        }
+    }
+    
+    /**
+     * Check if cache should be invalidated on option update
+     *
+     * @since    2.0.0
+     * @access   public
+     * @param    string    $option_name    The option name
+     * @param    mixed     $old_value      The old option value
+     * @param    mixed     $new_value      The new option value
+     */
+    public function maybe_invalidate_cache($option_name, $old_value, $new_value) {
+        // Only invalidate for our options
+        if ($option_name === $this->option_name || $option_name === $this->version_option_name) {
+            $this->invalidate_cache();
+        }
+    }
+    
+    /**
+     * Preload frequently used labels
+     *
+     * @since    2.0.0
+     * @access   public
+     */
+    public function preload_frequent_labels() {
+        // Skip if not needed
+        if (!$this->should_preload_labels()) {
+            return;
+        }
+        
+        // Try to get from transient first
+        $frequent_cache_key = 'pe_frontend_frequent_labels';
+        $preloaded = get_transient($frequent_cache_key);
+        
+        if ($preloaded !== false) {
+            return;
+        }
+        
+        // Get all labels first to ensure they're cached
+        $all_labels = $this->get_all_labels_with_cache();
+        
+        // Extract frequent labels into a smaller cache
+        $frequent_values = [];
+        foreach ($this->frequent_labels as $key) {
+            $frequent_values[$key] = $this->get_label($key);
+        }
+        
+        // Cache the frequent labels
+        set_transient($frequent_cache_key, $frequent_values, $this->cache_duration);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Preloaded ' . count($frequent_values) . ' frequently used labels');
+        }
+    }
+    
+    /**
+     * Check if labels should be preloaded
+     *
+     * @since    2.0.0
+     * @access   private
+     * @return   bool     Whether to preload labels
+     */
+    private function should_preload_labels() {
+        // Preload on product pages or estimator shortcode pages
+        global $post;
+        
+        if (!is_a($post, 'WP_Post')) {
+            return false;
+        }
+        
+        // Always preload if the estimator shortcode is present
+        if (has_shortcode($post->post_content, 'product_estimator')) {
+            return true;
+        }
+        
+        // Preload on product pages if WooCommerce is active
+        if (function_exists('is_product') && is_product()) {
+            return true;
+        }
+        
+        return false;
     }
 
     /**

@@ -1430,15 +1430,26 @@
   color: #999;
   cursor: pointer;
   display: flex;
+  font-size: 12px;
+  gap: 4px;
   justify-content: center;
-  padding: 4px;
+  padding: 4px 8px;
   position: absolute;
   right: 10px;
   transition: color 0.2s ease;
+  /* Show text on larger screens or when hovered */
+}
+.remove-product .remove-text {
+  display: none; /* Hide by default on small screens */
 }
 .remove-product:hover {
   background: transparent;
   color: #d63638;
+}
+@media screen and (min-width: 768px) {
+  .remove-product:hover .remove-text {
+    display: inline-block;
+  }
 }
 
 /* Form Styles */

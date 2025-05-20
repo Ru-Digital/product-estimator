@@ -144,8 +144,14 @@ register_deactivation_hook(__FILE__, 'RuDigital\\ProductEstimator\\deactivate_pr
  * @since    1.0.0
  */
 function run_product_estimator() {
+    // Set global plugin info for later use
+    global $product_estimator_plugin_info;
+    $product_estimator_plugin_info = [
+        'name' => 'product-estimator',
+        'version' => PRODUCT_ESTIMATOR_VERSION
+    ];
+    
     // Ensure the main plugin class file is loaded (autoloader should handle this)
-    // require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-product-estimator.php'; // Autoloader should find this
     if (class_exists(ProductEstimator::class)) {
         $plugin = new ProductEstimator('product-estimator', PRODUCT_ESTIMATOR_VERSION);
     } else {

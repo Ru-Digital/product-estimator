@@ -121,7 +121,7 @@ try {
     showNotification(errorMessage, 'error');
 }
 
-// Example 15: React/Component usage pattern
+// Example 15: Component usage pattern
 const useLabels = (labelKeys) => {
     const labels = {};
     labelKeys.forEach(key => {
@@ -138,11 +138,24 @@ const MyComponent = () => {
         'messages.unsaved_changes'
     ]);
     
-    return (
-        <div>
-            <button>{labels['buttons.save']}</button>
-            <button>{labels['buttons.cancel']}</button>
-            <p>{labels['messages.unsaved_changes']}</p>
-        </div>
-    );
+    // Create element with DOM API instead of JSX
+    const createComponent = () => {
+        const container = document.createElement('div');
+        
+        const saveButton = document.createElement('button');
+        saveButton.textContent = labels['buttons.save'];
+        container.appendChild(saveButton);
+        
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = labels['buttons.cancel'];
+        container.appendChild(cancelButton);
+        
+        const message = document.createElement('p');
+        message.textContent = labels['messages.unsaved_changes'];
+        container.appendChild(message);
+        
+        return container;
+    };
+    
+    return createComponent();
 };

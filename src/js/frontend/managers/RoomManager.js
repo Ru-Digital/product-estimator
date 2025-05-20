@@ -8,7 +8,7 @@
  * - Updating room totals
  */
 
-import { format, createLogger } from '@utils';
+import { format, createLogger, labelManager } from '@utils';
 
 import { loadEstimateData, saveEstimateData, addRoom, removeRoom } from '../EstimateStorage';
 import TemplateEngine from '../TemplateEngine';
@@ -1715,16 +1715,30 @@ class RoomManager {
         // Store estimate ID and product ID as data attributes on the form
         formElement.dataset.estimateId = estimateId;
 
+        // Get the submit button regardless of productId
+        const submitButton = formElement.querySelector('.submit-btn');
+        
         if (productId) {
           formElement.dataset.productId = productId;
 
           // Update the submit button text if we're in the add product flow
-          const submitButton = formElement.querySelector('.submit-btn');
           if (submitButton) {
             submitButton.textContent = 'Add Room & Product';
           }
         } else {
           delete formElement.dataset.productId;
+          
+          // Set default button text for regular room addition flow
+          if (submitButton) {
+            // Either use the label from the data-label attribute or set a default
+            if (submitButton.dataset.label) {
+              // Use imported labelManager
+              submitButton.textContent = labelManager.get('buttons.add_room', 'Add Room');
+            } else {
+              // Fallback text if no data-label attribute
+              submitButton.textContent = 'Add Room';
+            }
+          }
         }
 
         // Delegate form binding to the FormManager or bind events ourselves

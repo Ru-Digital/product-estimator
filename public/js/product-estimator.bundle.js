@@ -16326,7 +16326,7 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `<template id="additional-product-option-template"> <div class="additional-product-option-tile"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="" class="tile-image product-img"> <span class="tile-label product-name"></span> <div class="option-price product-price"></div> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-replace-type="" data-label="buttons.add"> Add </button> </div> </template> `;
+var code = `<template id="additional-product-option-template"> <div class="additional-product-option-tile"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="" class="tile-image product-img" data-alt-label="ui_elements.product_details"> <span class="tile-label product-name"></span> <div class="option-price product-price" data-prefix-label="ui_elements.single_price"></div> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-replace-type="" data-label="buttons.select_additional_product" data-aria-label="buttons.select_additional_product" data-title-label="buttons.select_additional_product"> Select </button> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16360,7 +16360,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="include-item-template"> <div class="include-item" data-product-id=""> <span class="product-includes-icon"> <span class="dashicons dashicons-plus-alt"></span> </span> <span class="include-item-name product-name"></span> <span class="pe-info-button" data-tooltip-type="rich" data-tooltip-position="right" data-title-label="ui_elements.product_information" data-tooltip-title="Product Information" data-aria-label="ui_elements.view_product_information" aria-label="View product information" data-label="ui_elements.view_product_information"></span> <div class="include-item-prices"> <div class="include-item-total-price product-price"> </div> </div> <button class="remove-product" data-estimate-id="" data-room-id="" data-product-id="" data-title-label="buttons.remove_product" title="Remove Product" aria-label="Remove Product"> <span class="dashicons dashicons-trash"></span> <span class="remove-text" data-label="buttons.remove">Remove</span> </button> </div> </template> `;
+var code = `<template id="include-item-template"> <div class="include-item" data-product-id=""> <span class="product-includes-icon"> <span class="dashicons dashicons-plus-alt"></span> </span> <span class="include-item-name product-name"></span> <span class="pe-info-button" data-tooltip-type="rich" data-tooltip-position="right" data-title-label="ui_elements.product_details" data-tooltip-title="Product Details" data-aria-label="ui_elements.view_details" aria-label="View Details" data-label="buttons.view_details"></span> <div class="include-item-prices"> <div class="include-item-total-price product-price" data-prefix-label="ui_elements.single_price"> </div> </div> <button class="remove-product" data-estimate-id="" data-room-id="" data-product-id="" data-title-label="buttons.remove_product" data-aria-label="buttons.remove_product"> <span class="dashicons dashicons-trash"></span> <span class="remove-text" data-label="buttons.remove">Remove</span> </button> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16377,7 +16377,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="note-item-template"> <div class="include-item note-item"> <span class="product-includes-icon"> <span class="dashicons dashicons-sticky" data-title-label="ui_elements.note" title="Note"></span> </span> <div class="include-item-note"> <p class="note-text"></p> </div> </div> </template> `;
+var code = `<template id="note-item-template"> <div class="include-item note-item"> <span class="product-includes-icon"> <span class="dashicons dashicons-sticky" data-title-label="ui_elements.notes_heading" data-aria-label="ui_elements.notes_heading"> </span> </span> <div class="include-item-note"> <p class="note-text"></p> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16396,7 +16396,7 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `<template id="similar-product-item-template"> <div class="suggestion-item similar-product-item" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method=""> <div class="suggestion-image"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="Similar Product Image" class="similar-product-thumbnail product-img" data-alt-label="ui_elements.similar_product_image"> <div class="no-image" style="display:none"></div> </div> <div class="suggestion-details"> <div class="suggestion-name product-name"></div> <div class="suggestion-price product-price"></div> <div class="suggestion-actions"> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-label="buttons.replace_product"> Replace </button> </div> </div> </div> </template> `;
+var code = `<template id="similar-product-item-template"> <div class="suggestion-item similar-product-item" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method=""> <div class="suggestion-image"> <img src="${___HTML_LOADER_IMPORT_0___}" class="similar-product-thumbnail product-img" data-alt-label="ui_elements.similar_product_image" data-aria-label="ui_elements.similar_product_image"> <div class="no-image" style="display:none"></div> </div> <div class="suggestion-details"> <div class="suggestion-name product-name"></div> <div class="suggestion-price product-price" data-prefix-label="ui_elements.single_price"></div> <div class="suggestion-actions"> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-label="buttons.replace_product" data-aria-label="buttons.replace_product" data-title-label="buttons.replace_product"> Replace </button> </div> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16415,7 +16415,7 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `<template id="suggestion-item-template"> <div class="suggestion-item"> <div class="suggestion-image"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="" class="suggestion-img product-img"> </div> <div class="suggestion-details"> <div class="suggestion-name product-name"></div> <div class="suggestion-price product-price"></div> <div class="suggestion-actions"> <button type="button" class="add-suggestion-to-room" data-product-id="" data-estimate-id="" data-room-id="" data-label="buttons.add"> Add </button> </div> </div> </div> </template> `;
+var code = `<template id="suggestion-item-template"> <div class="suggestion-item"> <div class="suggestion-image"> <img src="${___HTML_LOADER_IMPORT_0___}" class="suggestion-img product-img" data-alt-label="ui_elements.product_suggestion" data-aria-label="ui_elements.product_suggestion"> </div> <div class="suggestion-details"> <div class="suggestion-name product-name"></div> <div class="suggestion-price product-price" data-prefix-label="ui_elements.single_price"></div> <div class="suggestion-actions"> <button type="button" class="add-suggestion-to-room" data-product-id="" data-estimate-id="" data-room-id="" data-label="buttons.add_to_room" data-aria-label="buttons.add_to_room" data-title-label="buttons.add_to_room"> Add to Room </button> </div> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16553,7 +16553,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="modal-container-template"> <div id="product-estimator-modal" class="product-estimator-modal"> <div class="product-estimator-modal-overlay"></div> <div class="product-estimator-modal-container"> <button class="product-estimator-modal-close" aria-label="Close" data-label="ui_elements.close"> <span aria-hidden="true">&times;</span> </button> <div class="product-estimator-modal-header"> <h2 data-label="ui_elements.product_estimator_title">Product Estimator</h2> </div> <div class="product-estimator-modal-form-container"> <div id="estimates"></div> <div id="estimate-selection-wrapper" style="display:none"></div> <div id="room-selection-form-wrapper" style="display:none"></div> <div id="new-estimate-form-wrapper" style="display:none"></div> <div id="new-room-form-wrapper" style="display:none"></div> </div> <div class="product-estimator-modal-loading" style="display:none"> <div class="loading-spinner"></div> <div class="loading-text" data-label="ui_elements.loading">Loading...</div> </div> </div> </div> </template>`;
+var code = `<template id="modal-container-template"> <div id="product-estimator-modal" class="product-estimator-modal"> <div class="product-estimator-modal-overlay"></div> <div class="product-estimator-modal-container"> <button class="product-estimator-modal-close" aria-label="Close" data-label="ui_elements.close"> <span aria-hidden="true">&times;</span> </button> <div class="product-estimator-modal-header"> <h2 data-label="ui_elements.modal_header_title">Product Estimator</h2> </div> <div class="product-estimator-modal-form-container"> <div id="estimates"></div> <div id="estimate-selection-wrapper" style="display:none"></div> <div id="room-selection-form-wrapper" style="display:none"></div> <div id="new-estimate-form-wrapper" style="display:none"></div> <div id="new-room-form-wrapper" style="display:none"></div> </div> <div class="product-estimator-modal-loading" style="display:none"> <div class="loading-spinner"></div> <div class="loading-text" data-label="ui_elements.loading">Loading...</div> </div> </div> </div> </template>`;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16672,7 +16672,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="variation-option-template"> <div class="pe-variation-group" data-attribute-name="{{attributeName}}"> <label class="pe-variation-label">{{attributeLabel}}</label> <div class="pe-variation-swatches"> </div> </div> </template>`;
+var code = `<template id="variation-option-template"> <div class="pe-variation-group" data-attribute-name="{{attributeName}}"> <label class="pe-variation-label">{{attributeLabel}}</label> <div class="pe-variation-swatches" data-aria-label="ui_elements.select_variation"> </div> </div> </template>`;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 

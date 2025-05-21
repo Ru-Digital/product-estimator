@@ -1,18 +1,23 @@
 <template id="suggestion-item-template">
   <div class="suggestion-item">
     <div class="suggestion-image">
-      <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="" class="suggestion-img product-img">
+      <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" 
+           class="suggestion-img product-img"
+           data-alt-label="ui_elements.product_suggestion"
+           data-aria-label="ui_elements.product_suggestion">
     </div>
     <div class="suggestion-details">
       <div class="suggestion-name product-name"></div>
-      <div class="suggestion-price product-price"></div>
+      <div class="suggestion-price product-price" data-prefix-label="ui_elements.single_price"></div>
       <div class="suggestion-actions">
         <button type="button" class="add-suggestion-to-room"
                 data-product-id=""
                 data-estimate-id=""
                 data-room-id=""
-                data-label="buttons.add">
-          Add
+                data-label="buttons.add_to_room"
+                data-aria-label="buttons.add_to_room"
+                data-title-label="buttons.add_to_room">
+          Add to Room
         </button>
       </div>
     </div>

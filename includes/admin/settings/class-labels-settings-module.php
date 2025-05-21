@@ -142,13 +142,13 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             // Field name for nested structure - this is the critical part
             // We need to use $this->option_name[$category][$label_key] format
             $field_name = $this->option_name . "[" . $category . "][" . $label_key . "]";
-            
+
             // Create render args with the proper field_id from callback_args if available
             $render_args = $args;
             if (isset($args['field_id'])) {
                 $render_args['id'] = $args['field_id']; // Use the bracketed ID format
             }
-            
+
             // Call parent render_field with our custom field name
             parent::render_field($render_args, $current_value, $field_name);
 
@@ -231,6 +231,9 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'upgrade' => 'Text for product upgrade buttons in additional product options',
                 'replace_product' => 'Text for the button to replace a product with another',
                 'remove_product_aria' => 'Accessibility text for product removal buttons (screen readers)',
+                'select_additional_product' => 'Text for button to select an additional product',
+                'selected_additional_product' => 'Text for button indicating an additional product is selected',
+                'add_product_and_room' => 'Text for button to add both product and room at once',
             ],
             'forms' => [
                 'estimate_name' => 'Label for the estimate name field',
@@ -299,6 +302,9 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'pricing_helper_file_missing' => 'Error message when pricing helper file cannot be found',
                 'modal_open_error' => 'Error message shown when the modal cannot be opened properly',
                 'replace_product_error' => 'Error message shown when a product replacement fails',
+                'product_replaced_success' => 'Message shown when a product is successfully replaced',
+                'primary_product_conflict' => 'Message shown when a product conflicts with primary product selection',
+                'product_already_exists' => 'Message shown when a product already exists in the estimate',
             ],
             'ui_elements' => [
                 'confirm_title' => 'Title text for confirmation dialogs',
@@ -343,6 +349,10 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'modal_not_found' => 'Error message when the estimator modal cannot be loaded',
                 'close' => 'Text for close buttons (screen reader and aria-label)',
                 'select_options' => 'Prompt shown to user to select product options for variable products',
+                'product_replaced_title' => 'Title for dialog when a product is successfully replaced',
+                'primary_product_conflict_title' => 'Title for dialog when a product conflicts with primary product',
+                'product_already_exists_title' => 'Title for dialog when a product already exists in the estimate',
+                'add_new_room_title' => 'Title for the add new room form',
             ],
             'pdf' => [
                 'title' => 'Title for the PDF document',
@@ -412,6 +422,9 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'upgrade' => 'Additional product options, product upgrade tiles',
                 'replace_product' => 'Product replacement dialog, similar products section',
                 'remove_product_aria' => 'Product item component, accessibility labels',
+                'select_additional_product' => 'Additional products section, selection button',
+                'selected_additional_product' => 'Additional products section, selected state button',
+                'add_product_and_room' => 'New room form, submission button',
             ],
             'forms' => [
                 'estimate_name' => 'New estimate form, edit estimate form',
@@ -480,6 +493,9 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'pricing_helper_file_missing' => 'AJAX error handling, file dependency errors',
                 'modal_open_error' => 'Modal system, error handling',
                 'replace_product_error' => 'Product replacement flows, error notifications',
+                'product_replaced_success' => 'Product replacement success notification',
+                'primary_product_conflict' => 'Product conflict warning dialog',
+                'product_already_exists' => 'Product duplicate warning dialog',
             ],
             'ui_elements' => [
                 'confirm_title' => 'Confirmation dialog header',
@@ -524,6 +540,10 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'modal_not_found' => 'Error handling, modal initialization',
                 'close' => 'Modal header, dialogs, accessibility labels',
                 'select_options' => 'Product variation dialog, selection prompts',
+                'product_replaced_title' => 'Product replacement success dialog, header',
+                'primary_product_conflict_title' => 'Product conflict dialog, header',
+                'product_already_exists_title' => 'Product already exists dialog, header',
+                'add_new_room_title' => 'New room form, heading',
             ],
             'pdf' => [
                 'title' => 'PDF document, main title header',
@@ -632,7 +652,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
     /**
      * Get fields for a given context (sub-tab) in a format compatible with the parent class methods.
      * This method is specially designed to handle the nested category[key] format used in the labels settings.
-     * 
+     *
      * @since    2.0.0
      * @access   protected
      * @param    string|null $context_id    The sub_tab_id (category name)
@@ -654,7 +674,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             // Important: For the context fields, use just the label_key as the field_id
             // This is because the handle_ajax_save method expects to find these keys directly in the input data
             $display_id = $context_id . '_' . $label_key;
-            
+
             $context_fields[$label_key] = [
                 'id' => $display_id,              // HTML ID for the element
                 'field_id' => $label_key,         // Key for matching in validation
@@ -699,55 +719,55 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
         // Get the current category (sub-tab) being updated
         $current_context_id = isset($_POST['sub_tab_id']) ? sanitize_key($_POST['sub_tab_id']) : null;
-        if (defined('WP_DEBUG') && WP_DEBUG) { 
-            error_log('Attempted to read "sub_tab_id" from POST. Value for $current_context_id: "' . 
-                ($current_context_id === null ? 'NULL' : $current_context_id) . '"'); 
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Attempted to read "sub_tab_id" from POST. Value for $current_context_id: "' .
+                ($current_context_id === null ? 'NULL' : $current_context_id) . '"');
         }
-        
+
         if (empty($current_context_id) || !isset($this->label_categories[$current_context_id])) {
-            if (defined('WP_DEBUG') && WP_DEBUG) { 
-                error_log(get_class($this) . ': AJAX save error - $current_context_id is invalid for labels module.'); 
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(get_class($this) . ': AJAX save error - $current_context_id is invalid for labels module.');
             }
             wp_send_json_error(['message' => __('Error: Invalid category context.', 'product-estimator')]); exit;
         }
-        
+
         // Get the submission data for the current category
         $category_data = $parsed_form_data[$this->option_name][$current_context_id] ?? [];
         if (empty($category_data)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) { 
-                error_log(get_class($this) . ': AJAX save error - No data found for category ' . $current_context_id); 
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log(get_class($this) . ': AJAX save error - No data found for category ' . $current_context_id);
             }
             wp_send_json_error(['message' => __('Error: No data received for this category.', 'product-estimator')]); exit;
         }
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) { 
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('Category data for validation: ' . print_r($category_data, true));
         }
-        
+
         // Get existing options to merge with
         $existing_options = get_option($this->option_name, []);
         if (!is_array($existing_options)) { $existing_options = []; }
         $new_options = $existing_options;
-        
+
         // Ensure the category exists in the options
         if (!isset($new_options[$current_context_id])) {
             $new_options[$current_context_id] = [];
         }
-        
+
         // Process and sanitize the category data
         foreach ($category_data as $label_key => $label_value) {
             $new_options[$current_context_id][$label_key] = sanitize_text_field($label_value);
         }
-        
+
         // Save the updated options
         update_option($this->option_name, $new_options);
-        
+
         // Increment version for cache busting
         update_option('product_estimator_labels_version', time());
-        
+
         // Clear caches
         delete_transient('pe_frontend_labels_cache');
-        
+
         if (defined('WP_DEBUG') && WP_DEBUG) { error_log('--- AJAX SAVE SUCCESS (' . get_class($this) . ') ---'); }
         wp_send_json_success([
             'message' => sprintf(
@@ -767,7 +787,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
         // With the new field name structure, input should be in nested format:
         // { buttons: { save: "Save", cancel: "Cancel", ... }, forms: { ... } }
-        
+
         // Process the input data
         foreach ($input as $category => $values) {
             // Only process valid categories
@@ -775,7 +795,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 if (!isset($validated[$category])) {
                     $validated[$category] = [];
                 }
-                
+
                 // Process all values for this category
                 if (is_array($values)) {
                     foreach ($values as $label_key => $label_value) {
@@ -797,45 +817,9 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         return $validated;
     }
 
-//    /**
-//     * AJAX handler for saving labels by category
-//     */
-//    public function ajax_save_labels_category() {
-//        check_ajax_referer('pe_save_labels', 'nonce');
-//
-//        if (!current_user_can('manage_options')) {
-//            wp_die('Unauthorized');
-//        }
-//
-//        $category = sanitize_text_field($_POST['category'] ?? '');
-//        $labels = $_POST['labels'] ?? [];
-//
-//        if (empty($category) || !isset($this->label_categories[$category])) {
-//            wp_send_json_error('Invalid category');
-//        }
-//
-//        // Get current options
-//        $options = get_option($this->option_name, []);
-//
-//        // Update the specific category
-//        $options[$category] = array_map('sanitize_text_field', $labels);
-//
-//        // Save
-//        update_option($this->option_name, $options);
-//
-//        // Clear caches
-//        delete_transient('pe_frontend_labels_cache');
-//        update_option('product_estimator_labels_version', time());
-//
-//        wp_send_json_success([
-//            'message' => __('Labels saved successfully', 'product-estimator'),
-//            'category' => $category,
-//        ]);
-//    }
-
     /**
      * Export labels to JSON format
-     * 
+     *
      * @param array $labels Labels array to export
      * @return string JSON string
      */
@@ -843,16 +827,16 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         if ($labels === null) {
             $labels = get_option('product_estimator_labels', []);
         }
-        
+
         $export_data = [
             'version' => get_option('product_estimator_labels_version', '2.0.0'),
             'exported_at' => current_time('mysql'),
             'labels' => $labels
         ];
-        
+
         return json_encode($export_data, JSON_PRETTY_PRINT);
     }
-    
+
     /**
      * AJAX handler for exporting labels
      */
@@ -874,25 +858,25 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
     /**
      * Validate import data structure
-     * 
+     *
      * @param array $data Import data to validate
      * @return array|false Validated data or false if invalid
      */
     private function validate_import_data($data) {
         $valid_categories = ['buttons', 'forms', 'messages', 'ui_elements', 'pdf'];
         $validated_data = [];
-        
+
         foreach ($data as $category => $labels) {
             if (!in_array($category, $valid_categories)) {
                 continue;
             }
-            
+
             if (!is_array($labels)) {
                 continue;
             }
-            
+
             $validated_data[$category] = [];
-            
+
             foreach ($labels as $key => $value) {
                 // Sanitize key to ensure it's valid
                 $clean_key = sanitize_key($key);
@@ -901,13 +885,13 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 }
             }
         }
-        
+
         return empty($validated_data) ? false : $validated_data;
     }
-    
+
     /**
      * Count total labels across all categories
-     * 
+     *
      * @param array $labels Labels array
      * @return int Total count
      */
@@ -920,48 +904,48 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         }
         return $count;
     }
-    
+
     /**
      * Import labels from JSON string
-     * 
+     *
      * @param string $json_string JSON string containing labels
      * @return array Result of the import operation
      */
     private function import_labels($json_string) {
         try {
             $data = json_decode($json_string, true);
-            
+
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return ['success' => false, 'message' => 'Invalid JSON format'];
             }
-            
+
             if (!isset($data['labels'])) {
                 return ['success' => false, 'message' => 'No labels found in import data'];
             }
-            
+
             // Validate label structure
             $validated_labels = $this->validate_import_data($data['labels']);
-            
+
             if (!$validated_labels) {
                 return ['success' => false, 'message' => 'Invalid label structure'];
             }
-            
+
             // Update labels
             update_option('product_estimator_labels', $validated_labels);
-            
+
             // Update version to trigger cache invalidation
             $new_version = time() . '.0.0';
             update_option('product_estimator_labels_version', $new_version);
-            
+
             // Clear transients
             delete_transient('pe_labels_' . get_option('product_estimator_labels_version'));
-            
+
             return [
-                'success' => true, 
+                'success' => true,
                 'message' => 'Labels imported successfully',
                 'count' => $this->count_labels($validated_labels)
             ];
-            
+
         } catch (\Exception $e) {
             return ['success' => false, 'message' => 'Import failed: ' . $e->getMessage()];
         }
@@ -995,40 +979,40 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
     /**
      * Bulk update multiple labels
-     * 
+     *
      * @param array $updates Array of label updates ['path' => 'new value']
      * @return array Result of the operation
      */
     private function bulk_update_labels($updates) {
         $labels = get_option('product_estimator_labels', []);
         $updated_count = 0;
-        
+
         foreach ($updates as $path => $new_value) {
             $parts = explode('.', $path);
             if (count($parts) !== 2) {
                 continue;
             }
-            
+
             $category = $parts[0];
             $key = $parts[1];
-            
+
             if (isset($labels[$category][$key])) {
                 $labels[$category][$key] = sanitize_text_field($new_value);
                 $updated_count++;
             }
         }
-        
+
         if ($updated_count > 0) {
             update_option('product_estimator_labels', $labels);
-            
+
             // Update version to trigger cache invalidation
             $new_version = time() . '.0.0';
             update_option('product_estimator_labels_version', $new_version);
-            
+
             // Clear transients
             delete_transient('pe_labels_' . get_option('product_estimator_labels_version'));
         }
-        
+
         return [
             'success' => true,
             'updated_count' => $updated_count

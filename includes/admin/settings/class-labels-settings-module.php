@@ -176,14 +176,25 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
     }
 
     private function get_labels_for_category( $category ) {
-        $all_labels = get_option($this->option_name, []);
-
-        // If no labels exist, get defaults
-        if (empty($all_labels)) {
-            $all_labels = LabelsMigration::get_default_structure();
+        // Get saved labels from DB
+        $saved_labels = get_option($this->option_name, []);
+        
+        // Get default structure
+        $default_labels = LabelsMigration::get_default_structure();
+        
+        // If category doesn't exist in saved labels, use defaults
+        if (!isset($saved_labels[$category])) {
+            return $default_labels[$category] ?? [];
         }
-
-        return $all_labels[$category] ?? [];
+        
+        // Merge default and saved labels - this ensures new labels are included
+        // Default labels come first, then are overridden by any saved labels
+        $merged_labels = array_merge(
+            $default_labels[$category] ?? [],
+            $saved_labels[$category] ?? []
+        );
+        
+        return $merged_labels;
     }
 
     private function get_label_description($category, $label_key) {
@@ -754,7 +765,18 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             $new_options[$current_context_id] = [];
         }
 
-        // Process and sanitize the category data
+        // Get all default labels for this category to ensure we don't lose any new ones
+        $default_labels = LabelsMigration::get_default_structure();
+        $default_category_labels = $default_labels[$current_context_id] ?? [];
+        
+        // First, add any default labels not in the saved options (preserved across saves)
+        foreach ($default_category_labels as $key => $value) {
+            if (!isset($new_options[$current_context_id][$key])) {
+                $new_options[$current_context_id][$key] = $value;
+            }
+        }
+        
+        // Then process and sanitize the submitted data
         foreach ($category_data as $label_key => $label_value) {
             $new_options[$current_context_id][$label_key] = sanitize_text_field($label_value);
         }
@@ -784,6 +806,9 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         // Get existing options to merge with
         $existing_options = get_option($this->option_name, []);
         $validated = $existing_options;
+        
+        // Get default structure to ensure new labels are included
+        $default_labels = LabelsMigration::get_default_structure();
 
         // With the new field name structure, input should be in nested format:
         // { buttons: { save: "Save", cancel: "Cancel", ... }, forms: { ... } }
@@ -794,6 +819,16 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             if (isset($this->label_categories[$category])) {
                 if (!isset($validated[$category])) {
                     $validated[$category] = [];
+                }
+                
+                // Get default labels for this category
+                $default_category_labels = $default_labels[$category] ?? [];
+                
+                // First, add any default labels not in the existing options
+                foreach ($default_category_labels as $key => $value) {
+                    if (!isset($validated[$category][$key])) {
+                        $validated[$category][$key] = $value;
+                    }
                 }
 
                 // Process all values for this category
@@ -930,8 +965,46 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 return ['success' => false, 'message' => 'Invalid label structure'];
             }
 
-            // Update labels
-            update_option('product_estimator_labels', $validated_labels);
+            // Get current labels and default structure
+            $current_labels = get_option('product_estimator_labels', []);
+            $default_labels = LabelsMigration::get_default_structure();
+            
+            // Merge in a way that preserves new labels:
+            // 1. Start with defaults (ensures all default labels exist)
+            // 2. Override with existing saved labels (preserves customizations)
+            // 3. Override with imported labels (applies the import)
+            $merged_labels = [];
+            
+            // Add all categories from defaults, current, and imported
+            $all_categories = array_unique(array_merge(
+                array_keys($default_labels),
+                array_keys($current_labels),
+                array_keys($validated_labels)
+            ));
+            
+            foreach ($all_categories as $category) {
+                if (!isset($merged_labels[$category])) {
+                    $merged_labels[$category] = [];
+                }
+                
+                // First add defaults
+                if (isset($default_labels[$category]) && is_array($default_labels[$category])) {
+                    $merged_labels[$category] = array_merge($merged_labels[$category], $default_labels[$category]);
+                }
+                
+                // Then add current saved values
+                if (isset($current_labels[$category]) && is_array($current_labels[$category])) {
+                    $merged_labels[$category] = array_merge($merged_labels[$category], $current_labels[$category]);
+                }
+                
+                // Finally override with imported values
+                if (isset($validated_labels[$category]) && is_array($validated_labels[$category])) {
+                    $merged_labels[$category] = array_merge($merged_labels[$category], $validated_labels[$category]);
+                }
+            }
+            
+            // Update labels with the merged result
+            update_option('product_estimator_labels', $merged_labels);
 
             // Update version to trigger cache invalidation
             $new_version = time() . '.0.0';
@@ -943,7 +1016,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             return [
                 'success' => true,
                 'message' => 'Labels imported successfully',
-                'count' => $this->count_labels($validated_labels)
+                'count' => $this->count_labels($merged_labels)
             ];
 
         } catch (\Exception $e) {
@@ -1056,14 +1129,15 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             wp_send_json_error(__('Invalid category', 'product-estimator'));
         }
 
-        // Get default structure
+        // Get default structure for this category
         $defaults = LabelsMigration::get_default_structure();
+        $default_category = $defaults[$category] ?? [];
 
         // Get current options
         $options = get_option($this->option_name, []);
 
-        // Reset the specific category
-        $options[$category] = $defaults[$category] ?? [];
+        // Reset the specific category to defaults
+        $options[$category] = $default_category;
 
         // Save
         update_option($this->option_name, $options);

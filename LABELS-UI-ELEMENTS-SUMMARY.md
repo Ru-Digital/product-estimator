@@ -103,13 +103,35 @@ While this implementation completes the labels system for UI elements, future en
 3. Improved analytics to track which labels are most viewed
 4. Enhanced bulk import/export for labels management
 
+## Admin Interface Improvements
+
+We've enhanced the label management system to automatically handle new label definitions without requiring manual resets:
+
+1. **Auto-merging with Defaults**: The admin interface now automatically merges the default label definitions with stored values, ensuring new labels appear without requiring a reset
+   
+2. **Preserving Customizations**: When new labels are added to the code, they'll appear in the admin with their default values, while any customized labels retain their edited values
+
+3. **Import/Export Preservation**: The import/export functionality now intelligently merges imported labels with defaults, ensuring newly added labels aren't lost during import operations
+
+This improvement means that whenever developers add new labels to the system, they'll automatically appear in the admin interface without requiring any manual intervention or resets.
+
+### Optional Reset Feature
+
+You can still use the "Reset Category to Defaults" button in the admin interface if you want to revert all labels in a category back to their default values:
+
+1. Navigate to the Labels tab in the Product Estimator settings
+2. Select the category you want to reset (e.g., "UI Elements" or "Buttons")
+3. Click the "Reset Category to Defaults" button
+4. This will reset all labels in that category to their default values from LabelsMigration.php
+
 ## Files Modified
 
-1. `/includes/class-labels-migration.php` - Added default label values
-2. `/src/templates/ui/dialogs/*.html` - Updated dialog templates
-3. `/src/templates/components/product/*.html` - Updated product components 
-4. `/src/templates/layout/modal-container.html` - Updated modal container
-5. `/LABELS-IMPLEMENTATION.md` - Updated implementation tracking document
+1. `/includes/class-labels-migration.php` - Added default label values for new UI elements and buttons
+2. `/includes/admin/settings/class-labels-settings-module.php` - Enhanced to automatically display new labels without requiring reset
+3. `/src/templates/ui/dialogs/*.html` - Updated dialog templates with data-label attributes
+4. `/src/templates/components/product/*.html` - Updated product components with data-label attributes
+5. `/src/templates/layout/modal-container.html` - Updated modal container with data-label attributes
+6. `/LABELS-IMPLEMENTATION.md` - Updated implementation tracking document
 
 ## Conclusion
 

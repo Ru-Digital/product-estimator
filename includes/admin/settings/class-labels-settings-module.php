@@ -178,22 +178,22 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
     private function get_labels_for_category( $category ) {
         // Get saved labels from DB
         $saved_labels = get_option($this->option_name, []);
-        
+
         // Get default structure
         $default_labels = LabelsMigration::get_default_structure();
-        
+
         // If category doesn't exist in saved labels, use defaults
         if (!isset($saved_labels[$category])) {
             return $default_labels[$category] ?? [];
         }
-        
+
         // Merge default and saved labels - this ensures new labels are included
         // Default labels come first, then are overridden by any saved labels
         $merged_labels = array_merge(
             $default_labels[$category] ?? [],
             $saved_labels[$category] ?? []
         );
-        
+
         return $merged_labels;
     }
 
@@ -221,7 +221,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'remove_product' => 'Text for the remove product button',
                 'add_product' => 'Text for the add product button',
                 'edit_product' => 'Text for the edit product button',
-                'continue' => 'Text for the continue button in multi-step flows',
+                'continue' => 'Text for the continue button in multi-step flows and customer details dialog',
                 'suggested_products' => 'Text for the suggested products expand button',
                 'replace_product' => 'Text for the replace product button in selection dialog',
                 'add_room' => 'Text for the add room button in new room form',
@@ -233,6 +233,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'delete' => 'Text for the generic delete button across all interfaces',
                 'edit' => 'Text for the generic edit button across all interfaces',
                 'add' => 'Text for the generic add button (product lists, suggestion carousels)',
+                'remove' => 'Text for the generic remove button used to remove items from lists and collections',
                 'update' => 'Text for the update button when modifying records or settings',
                 'search' => 'Text for the search button in product search interfaces',
                 'filter' => 'Text for the filter button in product filtering interfaces',
@@ -246,6 +247,26 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'select_additional_product' => 'Text for button to select an additional product',
                 'selected_additional_product' => 'Text for button indicating an additional product is selected',
                 'add_product_and_room' => 'Text for button to add both product and room at once',
+                'back_to_products' => 'Text for button to return to product selection',
+                'view_details' => 'Text for button to view detailed product information',
+                'back_to_rooms' => 'Text for button to return to room selection',
+                'start_new_estimate' => 'Text for button to begin a new estimate',
+                'select_product' => 'Text for button to select a product',
+                'select_room' => 'Text for button to select a room',
+                'add_note' => 'Text for button to add a note to a product',
+                'submit' => 'Text for generic form submission button',
+                'more_options' => 'Text for button to show additional options',
+                'back' => 'Text for navigation back button',
+                'next' => 'Text for navigation next button',
+                'done' => 'Text for completion button in multi-step flows',
+                'select_all' => 'Text for button to select all items in a list',
+                'select_none' => 'Text for button to deselect all items in a list',
+                'toggle_details' => 'Text for button to show/hide additional details',
+                'add_to_room' => 'Text for button to add a product to a room',
+                'add_product_to_room' => 'Text for button to add a product to an existing room',
+                'replace_existing_product' => 'Text for button to replace an existing product',
+                'go_back_to_room_select' => 'Text for button to return to room selection in conflict dialog',
+                'add_room_and_product' => 'Text for button to create a new room and add product in one step',
             ],
             'forms' => [
                 'estimate_name' => 'Label for the estimate name field',
@@ -254,7 +275,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'customer_name' => 'Label for the customer name field',
                 'customer_phone' => 'Label for the customer phone field',
                 'customer_postcode' => 'Label for the customer postcode field',
-                'placeholder_name' => 'Placeholder text for name input',
+                'placeholder_name' => 'Placeholder text for customer name input field',
                 'placeholder_phone' => 'Placeholder text for phone input',
                 'placeholder_postcode' => 'Placeholder text for postcode input',
                 'placeholder_estimate_name' => 'Placeholder text for estimate name input',
@@ -264,7 +285,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'placeholder_room_name' => 'Placeholder text for room name input',
                 'placeholder_width' => 'Placeholder text for width input',
                 'placeholder_length' => 'Placeholder text for length input',
-                'product_quantity' => 'Label for the product quantity field',
+                'product_quantity' => 'Label for the product quantity field in product forms',
                 'notes' => 'Label for the additional notes field',
                 'quantity' => 'Label for quantity field in product forms',
                 'price' => 'Label for price display in product information',
@@ -273,16 +294,25 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'tax' => 'Label for tax amount in calculations',
                 'shipping' => 'Label for shipping costs in calculations',
                 'discount' => 'Label for discount amounts in calculations',
-                'room_dimensions' => 'Label for room dimensions section',
+                'room_dimensions' => 'Label for room dimensions section in room creation form',
                 'placeholder_search' => 'Placeholder text for search input fields',
                 'choose_estimate' => 'Label prompt for estimate selection dropdown',
                 'select_estimate_option' => 'Default option text in estimate dropdown',
                 'select_estimate' => 'Title for estimate selection form',
                 'select_room' => 'Title for room selection form',
+                'full_name' => 'Label for the full name field in customer details dialog',
+                'email_address' => 'Label for the email address field in customer details dialog',
+                'phone_number' => 'Label for the phone number field in customer details dialog',
+                'choose_room' => 'Label prompt for room selection dropdown',
+                'select_room_option' => 'Default option text in room dropdown',
+                'placeholder_width' => 'Placeholder text for room width input field',
+                'placeholder_length' => 'Placeholder text for room length input field',
             ],
             'messages' => [
-                'product_added' => 'Message shown when a product is added',
+                'product_added' => 'Success message shown when a product is successfully added to a room',
+                'product_added_message' => 'Message displayed after successfully adding a product to a room',
                 'confirm_delete' => 'Confirmation message for delete actions',
+                'confirm_product_remove' => 'Confirmation message shown when removing a product from a room',
                 'product_load_error' => 'Error message shown when products fail to load',
                 'room_load_error' => 'Error message shown when rooms fail to load',
                 'confirm_proceed' => 'Generic confirmation message for dialog prompts',
@@ -291,7 +321,6 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'estimate_deleted' => 'Message shown when an estimate is deleted',
                 'room_added' => 'Message shown when a room is added successfully',
                 'room_deleted' => 'Message shown when a room is deleted',
-                'loading_variations' => 'Message shown when product variations are loading',
                 'showing_results' => 'Message shown when displaying search results',
                 'product_removed' => 'Message shown when a product is removed from estimate',
                 'email_sent' => 'Message shown when email has been sent successfully',
@@ -300,6 +329,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'general_error' => 'Generic error message for unexpected issues',
                 'save_failed' => 'Error message when saving operation fails',
                 'invalid_email' => 'Validation error for invalid email addresses',
+                'invalid_phone' => 'Validation error for invalid phone numbers',
                 'required_field' => 'Validation error for required fields',
                 'network_error' => 'Error message when network connection fails or API requests fail',
                 'permission_denied' => 'Error message for insufficient permissions to perform an action',
@@ -321,6 +351,19 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'product_replaced_success' => 'Message shown when a product is successfully replaced',
                 'primary_product_conflict' => 'Message shown when a product conflicts with primary product selection',
                 'product_already_exists' => 'Message shown when a product already exists in the estimate',
+                'additional_information_required' => 'Default message when the customer details dialog opens',
+                'email_required_for_copy' => 'Message explaining why email is needed for copy requests',
+                'phone_required_for_sms' => 'Message explaining why phone number is needed for SMS requests',
+                'contact_email_details_required' => 'Message explaining why details are needed for email contact',
+                'contact_phone_details_required' => 'Message explaining why details are needed for phone contact',
+                'email_required_for_estimate' => 'Message explaining why email is needed for estimate viewing',
+                'contact_method_estimate_prompt' => 'Message asking the user how they want to receive their estimate',
+                'contact_method_prompt' => 'Message asking the user how they want to be contacted by the store',
+                'product_conflict' => 'Message displayed when a product conflicts with an existing product',
+                'confirm_product_remove_with_name' => 'Product removal confirmation with product name included',
+                'product_added_success' => 'Success message shown when a product is added to a room',
+                'room_created_with_product' => 'Success message when both room and product are created',
+                'estimate_removed' => 'Message shown when an estimate has been removed',
             ],
             'ui_elements' => [
                 'confirm_title' => 'Title text for confirmation dialogs',
@@ -344,9 +387,12 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'expand' => 'Text for expand button on collapsible sections',
                 'collapse' => 'Text for collapse button on expanded sections',
                 'loading' => 'Text shown during loading operations (spinners and progress indicators)',
+                'loading_variations' => 'Text shown while loading product variations in selection dialogs',
+                'loading_products' => 'Text shown while loading or searching for products',
                 'close_tooltip' => 'Text for tooltip close button (screen reader and aria)',
                 'notes_heading' => 'Heading for notes section in product tooltips and information panels',
                 'details_heading' => 'Heading for details section in product tooltips and information panels',
+                'no_notes' => 'Message shown when there are no notes for a product in the details view',
                 'no_results' => 'Message shown when search returns no results in product searches',
                 'empty_room' => 'Message shown when a room has no products added yet',
                 'empty_estimate' => 'Message shown when an estimate has no rooms added yet',
@@ -369,6 +415,41 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'primary_product_conflict_title' => 'Title for dialog when a product conflicts with primary product',
                 'product_already_exists_title' => 'Title for dialog when a product already exists in the estimate',
                 'add_new_room_title' => 'Title for the add new room form',
+                'complete_details_title' => 'Title for customer details collection dialog',
+                'email_details_required_title' => 'Title for email details collection dialog',
+                'phone_details_required_title' => 'Title for phone details collection dialog',
+                'contact_information_required_title' => 'Title for contact information collection dialog',
+                'contact_method_estimate_title' => 'Title for estimate delivery method selection dialog',
+                'contact_method_title' => 'Title for contact method selection dialog',
+                'product_added_title' => 'Title for product added success dialog',
+                'room_created_title' => 'Title for room created success dialog',
+                'success_title' => 'Generic title for success dialogs',
+                'dialog_title_product_added' => 'Title for product added dialog',
+                'dialog_title_product_removed' => 'Title for product removed dialog',
+                'dialog_title_product_replaced' => 'Title for product replaced dialog',
+                'dialog_title_estimate_removed' => 'Title for estimate removed dialog',
+                'dialog_title_delete_estimate' => 'Title for delete estimate confirmation dialog',
+                'dialog_title_estimate_saved' => 'Title for estimate saved dialog',
+                'remove_product_title' => 'Title for remove product confirmation dialog',
+                'remove_room_title' => 'Title for remove room confirmation dialog',
+                'remove_room_message' => 'Message shown in remove room confirmation dialog',
+                'product_conflict_title' => 'Title for product conflict dialog',
+                'select_estimate_title' => 'Title for estimate selection dialog',
+                'select_room_title' => 'Title for room selection dialog',
+                'no_estimates_available' => 'Message shown when no estimates are available',
+                'no_rooms_available' => 'Message shown when no rooms are available',
+                'details_toggle' => 'Text for button to show product details',
+                'details_toggle_hide' => 'Text for button to hide product details',
+                'includes_heading' => 'Heading for product inclusions section',
+                'no_includes' => 'Message shown when product has no inclusions',
+                'variation_options' => 'Title for product variation options section',
+                'price_range' => 'Label for product price range display',
+                'single_price' => 'Label for single product price display',
+                'per_unit' => 'Text for unit price indication',
+                'total_price' => 'Label for total price display',
+                'estimate_summary' => 'Title for estimate summary section',
+                'room_summary' => 'Title for room summary section',
+                'product_summary' => 'Title for product summary section',
             ],
             'pdf' => [
                 'title' => 'Title for the PDF document',
@@ -417,9 +498,8 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'add_product' => 'Room management, product actions',
                 'remove_product' => 'Product item, room management',
                 'edit_product' => 'Product item, product management',
-                'continue' => 'Multi-step forms, navigation',
+                'continue' => 'Multi-step forms, customer details dialog, navigation',
                 'suggested_products' => 'Room template, suggestions section',
-                'replace_product' => 'Product selection dialog, variant selection',
                 'add_room' => 'New room form, form submissions',
                 'add_to_cart' => 'Product detail, WooCommerce integration',
                 'show_more' => 'Collapsible content areas, expandable sections',
@@ -429,6 +509,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'delete' => 'Item removal interfaces, confirmation dialogs',
                 'edit' => 'Customer details, item editing interfaces',
                 'add' => 'Generic add buttons, item creation interfaces',
+                'remove' => 'Generic remove buttons used throughout the interface for item removal',
                 'update' => 'Form submission, record updates',
                 'search' => 'Search interfaces, product search',
                 'filter' => 'Product filtering, search results',
@@ -442,6 +523,26 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'select_additional_product' => 'Additional products section, selection button',
                 'selected_additional_product' => 'Additional products section, selected state button',
                 'add_product_and_room' => 'New room form, submission button',
+                'back_to_products' => 'Navigation, product selection flow',
+                'view_details' => 'Product item, details expansion button',
+                'back_to_rooms' => 'Navigation, room selection flow',
+                'start_new_estimate' => 'Estimate action menu, new estimate creation',
+                'select_product' => 'Product selection interface, prompt button',
+                'select_room' => 'Room selection interface, prompt button',
+                'add_note' => 'Product details, note addition button',
+                'submit' => 'Form submission, generic action button',
+                'more_options' => 'Product interface, additional options button',
+                'back' => 'Navigation, return to previous screen',
+                'next' => 'Navigation, proceed to next screen',
+                'done' => 'Form completion, finalization button',
+                'select_all' => 'Multi-select interfaces, selection control',
+                'select_none' => 'Multi-select interfaces, deselection control',
+                'toggle_details' => 'Product details, visibility toggle',
+                'add_to_room' => 'Product selection, room addition button',
+                'add_product_to_room' => 'Room management, product addition button',
+                'replace_existing_product' => 'Product conflict dialog, replacement option',
+                'go_back_to_room_select' => 'Product conflict dialog, cancel option',
+                'add_room_and_product' => 'New room flow, combined action button',
             ],
             'forms' => [
                 'estimate_name' => 'New estimate form, edit estimate form',
@@ -469,119 +570,199 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 'tax' => 'Estimate summary, price calculations',
                 'shipping' => 'Estimate summary, additional costs',
                 'discount' => 'Estimate summary, price reductions',
-                'room_dimensions' => 'Room form, dimensions section header',
-                'placeholder_search' => 'Search input field placeholder text',
-                'choose_estimate' => 'Estimate selection form, dropdown prompt',
-                'select_estimate_option' => 'Estimate dropdown, default option',
-                'select_estimate' => 'Estimate selection form, heading',
-                'select_room' => 'Room selection form, heading',
+                'room_dimensions' => 'Room form, dimensions section header in new room creation form',
+                'placeholder_search' => 'Search input field placeholder text in product search interfaces',
+                'choose_estimate' => 'Estimate selection form, dropdown prompt in estimate selection dialog',
+                'select_estimate_option' => 'Estimate dropdown, default option in estimate selection interfaces',
+                'select_estimate' => 'Estimate selection form, heading in estimate selection modal',
+                'select_room' => 'Room selection form, heading in room selection interfaces',
+                'full_name' => 'Customer details dialog, name field label in contact information forms',
+                'email_address' => 'Customer details dialog, email field label in customer details forms',
+                'phone_number' => 'Customer details dialog, phone field label in contact forms',
+                'choose_room' => 'Room selection dropdown, prompt text in room selection interfaces',
+                'select_room_option' => 'Room selection dropdown, default option shown in empty room dropdowns',
+                'placeholder_width' => 'Room dimensions form, width input field placeholder',
+                'placeholder_length' => 'Room dimensions form, length input field placeholder',
             ],
             'messages' => [
-                'product_added' => 'Product management notifications',
-                'confirm_delete' => 'Delete confirmation dialogs',
-                'product_load_error' => 'Product error template',
-                'room_load_error' => 'Room error template',
-                'confirm_proceed' => 'Generic confirmation dialogs',
-                'select_options' => 'Product selection dialog instructions',
-                'estimate_saved' => 'Estimate saved notification',
-                'estimate_deleted' => 'Estimate deletion notification',
-                'room_added' => 'Room creation notification',
-                'room_deleted' => 'Room deletion notification',
-                'loading_variations' => 'Product selection dialog loading state',
-                'showing_results' => 'Search results component',
-                'product_removed' => 'Notification after product removal',
-                'email_sent' => 'Email notification success message',
-                'settings_saved' => 'Settings page, save confirmation',
-                'room_created' => 'Room creation success notification',
-                'general_error' => 'Generic error notifications',
-                'save_failed' => 'Form submission error notification',
-                'invalid_email' => 'Form validation, email fields',
-                'required_field' => 'Form validation, required fields',
-                'network_error' => 'AJAX request error handling',
-                'permission_denied' => 'Access control error messages',
-                'confirm_remove_product' => 'Product removal confirmation dialog',
-                'confirm_delete_room' => 'Room deletion confirmation dialog',
-                'unsaved_changes' => 'Navigation warning, form state',
-                'min_length' => 'Form validation, text length check',
-                'max_length' => 'Form validation, text length check',
-                'invalid_format' => 'Form validation, format check',
-                'number_required' => 'Form validation, numeric fields',
-                'product_id_required' => 'AJAX handling, product data requests',
-                'product_not_found' => 'Product retrieval, error notifications',
-                'product_data_error' => 'AJAX requests, product data loading error',
-                'product_data_retrieved' => 'AJAX responses, product data success',
-                'pricing_helper_missing' => 'AJAX error handling, pricing calculation',
+                'product_added' => 'Product management notifications, success messages shown when adding products',
+                'product_added_message' => 'Product addition notification, displayed when successfully adding a product to a room',
+                'confirm_delete' => 'Delete confirmation dialogs, item removal flows',
+                'product_load_error' => 'Product error template, loading failure notifications',
+                'room_load_error' => 'Room error template, room loading failure notifications',
+                'confirm_proceed' => 'Generic confirmation dialogs, user action confirmations',
+                'select_options' => 'Product selection dialog instructions, variation selection',
+                'estimate_saved' => 'Estimate saved notification, success messages',
+                'estimate_deleted' => 'Estimate deletion notification, success messages',
+                'room_added' => 'Room creation notification, success dialogs',
+                'room_deleted' => 'Room deletion notification, success messages',
+                'showing_results' => 'Search results component, product listings',
+                'product_removed' => 'Notification after product removal, success messages',
+                'email_sent' => 'Email notification success message, confirmation dialogs',
+                'settings_saved' => 'Settings page, save confirmation messages',
+                'room_created' => 'Room creation success notification, confirmation dialogs',
+                'general_error' => 'Generic error notifications, fallback error messages',
+                'save_failed' => 'Form submission error notification, save operation failures',
+                'invalid_email' => 'Form validation, email fields validation errors',
+                'invalid_phone' => 'Form validation, phone number fields validation errors',
+                'required_field' => 'Form validation, empty required fields error message',
+                'network_error' => 'AJAX request error handling, connection failure notifications',
+                'permission_denied' => 'Access control error messages, authorization failures',
+                'confirm_remove_product' => 'Product removal confirmation dialog, deletion flows',
+                'confirm_product_remove' => 'Product removal confirmation dialog, displayed when removing products from rooms',
+                'confirm_delete_room' => 'Room deletion confirmation dialog, removal flows',
+                'confirm_delete_estimate' => 'Confirmation message shown when deleting an estimate from the list',
+                'product_add_error' => 'Error message shown when a product fails to be added to a room',
+                'product_remove_error' => 'Error message shown when a product cannot be removed from a room',
+                'unsaved_changes' => 'Navigation warning, form state change detection',
+                'min_length' => 'Form validation, text length validation for minimum requirements',
+                'max_length' => 'Form validation, text length validation for maximum limits',
+                'invalid_format' => 'Form validation, format validation for specific patterns',
+                'number_required' => 'Form validation, numeric fields input validation',
+                'product_id_required' => 'AJAX handling, product data requests validation',
+                'product_not_found' => 'Product retrieval, error notifications for missing products',
+                'product_data_error' => 'AJAX requests, product data loading error notifications',
+                'product_data_retrieved' => 'AJAX responses, product data success confirmations',
+                'pricing_helper_missing' => 'AJAX error handling, pricing calculation system errors',
                 'pricing_helper_file_missing' => 'AJAX error handling, file dependency errors',
-                'modal_open_error' => 'Modal system, error handling',
-                'replace_product_error' => 'Product replacement flows, error notifications',
-                'product_replaced_success' => 'Product replacement success notification',
-                'primary_product_conflict' => 'Product conflict warning dialog',
-                'product_already_exists' => 'Product duplicate warning dialog',
+                'modal_open_error' => 'Modal system, error handling for initialization failures',
+                'replace_product_error' => 'Product replacement flows, error notifications for failures',
+                'product_replaced_success' => 'Product replacement success notification, confirmation dialogs',
+                'primary_product_conflict' => 'Product conflict warning dialog, category conflict notifications',
+                'product_already_exists' => 'Product duplicate warning dialog, duplicate detection',
+                'additional_information_required' => 'Customer details dialog, default explanation message',
+                'email_required_for_copy' => 'Email request dialog, explanation message for email requirement',
+                'phone_required_for_sms' => 'SMS request dialog, explanation message for phone requirement',
+                'contact_email_details_required' => 'Email contact dialog, explanation message for contact details',
+                'contact_phone_details_required' => 'Phone contact dialog, explanation message for contact details',
+                'email_required_for_estimate' => 'Estimate viewing dialog, explanation message for email requirement',
+                'contact_method_estimate_prompt' => 'Estimate delivery dialog, instruction message for delivery options',
+                'contact_method_prompt' => 'Store contact dialog, instruction message for contact preferences',
+                'product_conflict' => 'Product conflict dialog, explanation message for product conflicts',
+                'confirm_product_remove_with_name' => 'Product removal dialog, confirmation message with product name',
+                'product_added_success' => 'Product addition dialog, success message for product additions',
+                'room_created_with_product' => 'Room and product creation dialog, success message for combined actions',
+                'estimate_removed' => 'Estimate removal notification, success message for estimate deletion',
             ],
             'ui_elements' => [
-                'confirm_title' => 'Confirmation dialog header',
-                'no_estimates' => 'Empty estimates template',
-                'no_rooms' => 'Empty rooms template',
-                'no_products' => 'Empty products template',
-                'price_notice' => 'Room item template, price disclaimer',
-                'rooms_heading' => 'Estimate view, rooms section',
-                'products_heading' => 'Room view, products section',
-                'select_product_options' => 'Product selection dialog header',
-                'create_new_estimate' => 'New estimate form heading',
-                'your_details' => 'Customer details section heading',
-                'saved_details' => 'Saved customer details heading',
-                'edit_your_details' => 'Edit customer details form heading',
-                'primary_product' => 'Room template, product image alt text',
-                'previous' => 'Carousel controls, navigation',
-                'next' => 'Carousel controls, navigation',
-                'previous_suggestions' => 'Suggestions carousel, navigation',
-                'next_suggestions' => 'Suggestions carousel, navigation',
-                'get_started' => 'Home page, onboarding process',
-                'expand' => 'Collapsible sections, UI controls',
-                'collapse' => 'Expanded sections, UI controls',
-                'loading' => 'Loading states, processing indicators',
-                'close_tooltip' => 'Tooltip component, close button',
-                'notes_heading' => 'Tooltip component, notes section',
-                'details_heading' => 'Tooltip component, details section',
-                'no_results' => 'Search results, empty state message',
-                'empty_room' => 'Room display, empty state message',
-                'empty_estimate' => 'Estimate display, empty state message',
-                'showing_results' => 'Search results, count indicator',
-                'page_of' => 'Pagination component, page indicator',
-                'sort_by' => 'Product listings, sorting control',
-                'filter_by' => 'Product listings, filtering control',
-                'search_results' => 'Search results page, heading',
-                'no_items' => 'Generic lists, empty state message',
-                'add_first_item' => 'Empty lists, call to action',
-                'learn_more' => 'Informational sections, additional details link',
-                'view_all' => 'Section with collapsed content, expansion link',
-                'hide_all' => 'Section with expanded content, collapse link',
-                'error_title' => 'Error dialog header, notification components',
-                'product_estimator_title' => 'Modal header, application title',
-                'modal_not_found' => 'Error handling, modal initialization',
-                'close' => 'Modal header, dialogs, accessibility labels',
-                'select_options' => 'Product variation dialog, selection prompts',
-                'product_replaced_title' => 'Product replacement success dialog, header',
-                'primary_product_conflict_title' => 'Product conflict dialog, header',
-                'product_already_exists_title' => 'Product already exists dialog, header',
-                'add_new_room_title' => 'New room form, heading',
+                'confirm_title' => 'Confirmation dialog header, displayed at the top of all confirmation dialogs',
+                'no_estimates' => 'Empty estimates template, shown when no estimates exist in the system',
+                'no_rooms' => 'Empty rooms template, displayed when an estimate contains no rooms',
+                'no_products' => 'Empty products template, shown when a room contains no products',
+                'price_notice' => 'Room item template, price disclaimer shown below product prices',
+                'rooms_heading' => 'Estimate view, rooms section heading at the top of the rooms list',
+                'products_heading' => 'Room view, products section heading above the product list',
+                'select_product_options' => 'Product selection dialog header, displayed when selecting product variations',
+                'create_new_estimate' => 'New estimate form heading, shown at the top of the estimate creation form',
+                'your_details' => 'Customer details section heading, displayed in customer information forms',
+                'saved_details' => 'Saved customer details heading, shown when displaying stored customer information',
+                'edit_your_details' => 'Edit customer details form heading, displayed when editing customer information',
+                'primary_product' => 'Room template, product image alt text for accessibility and screen readers',
+                'previous' => 'Carousel controls, navigation button for moving to previous items in carousels',
+                'next' => 'Carousel controls, navigation button for moving to next items in carousels',
+                'previous_suggestions' => 'Suggestions carousel, navigation button for previous suggestion items',
+                'next_suggestions' => 'Suggestions carousel, navigation button for next suggestion items',
+                'get_started' => 'Home page, onboarding process call-to-action for new users',
+                'expand' => 'Collapsible sections, UI control text for expanding collapsed content',
+                'collapse' => 'Expanded sections, UI control text for collapsing expanded content',
+                'loading' => 'Loading states, processing indicators shown during AJAX operations',
+                'loading_variations' => 'Product selection dialog, loading indicator when fetching variations',
+                'loading_products' => 'Product search interface, loading indicator when fetching products',
+                'close_tooltip' => 'Tooltip component, close button text for accessibility and screen readers',
+                'notes_heading' => 'Tooltip component, notes section heading in product information tooltips',
+                'details_heading' => 'Tooltip component, details section heading in product information tooltips',
+                'no_notes' => 'Product details panel, message shown when a product has no notes',
+                'no_results' => 'Search results, empty state message when product search returns no matches',
+                'empty_room' => 'Room display, empty state message when a room has no products added',
+                'empty_estimate' => 'Estimate display, empty state message when an estimate has no rooms added',
+                'showing_results' => 'Search results, count indicator showing number of results displayed',
+                'page_of' => 'Pagination component, page indicator showing current page and total pages',
+                'sort_by' => 'Product listings, sorting control label in product search interfaces',
+                'filter_by' => 'Product listings, filtering control label in product search interfaces',
+                'search_results' => 'Search results page, heading displayed above product search results',
+                'no_items' => 'Generic lists, empty state message used across various empty list states',
+                'add_first_item' => 'Empty lists, call to action prompt to add first item to an empty list',
+                'learn_more' => 'Informational sections, additional details link text for help content',
+                'view_all' => 'Section with collapsed content, expansion link text to show all items',
+                'hide_all' => 'Section with expanded content, collapse link text to hide expanded items',
+                'error_title' => 'Error dialog header, notification components for error messages',
+                'product_estimator_title' => 'Modal header, application title displayed at the top of the main modal',
+                'modal_not_found' => 'Error handling, modal initialization failure message',
+                'close' => 'Modal header, dialogs, accessibility labels for close buttons',
+                'select_options' => 'Product variation dialog, selection prompts for product options',
+                'product_replaced_title' => 'Product replacement success dialog, header for successful product replacements',
+                'primary_product_conflict_title' => 'Product conflict dialog, header for primary product category conflicts',
+                'product_already_exists_title' => 'Product already exists dialog, header for duplicate product warnings',
+                'product_exists_title' => 'Title shown in dialog when attempting to add a product that already exists in room',
+                'add_new_room_title' => 'New room form, heading displayed at the top of the room creation form',
+                'complete_details_title' => 'Customer details dialog, header for print/view estimate flows',
+                'email_details_required_title' => 'Customer details dialog, header for email delivery flows',
+                'phone_details_required_title' => 'Customer details dialog, header for SMS notification flows',
+                'contact_information_required_title' => 'Customer details dialog, header for store contact request flows',
+                'contact_method_estimate_title' => 'Contact method dialog, header for estimate delivery method selection',
+                'contact_method_title' => 'Contact method dialog, header for store contact method selection',
+                'product_added_title' => 'Product added dialog, success header when a product is added to a room',
+                'room_created_title' => 'Room created dialog, success header when a new room is created',
+                'success_title' => 'Generic success dialog, header used for general successful operations',
+                'dialog_title_product_added' => 'Product added dialog, header for product addition confirmation',
+                'dialog_title_product_removed' => 'Product removed dialog, header for product removal confirmation',
+                'dialog_title_product_replaced' => 'Product replaced dialog, header for product replacement confirmation',
+                'dialog_title_estimate_removed' => 'Estimate removed dialog, header for estimate deletion confirmation',
+                'dialog_title_delete_estimate' => 'Delete estimate dialog, confirmation header for estimate deletion',
+                'dialog_title_estimate_saved' => 'Estimate saved dialog, success header for estimate save confirmation',
+                'remove_product_title' => 'Remove product dialog, confirmation header for product removal',
+                'remove_room_title' => 'Remove room dialog, confirmation header for room deletion',
+                'product_conflict_title' => 'Product conflict dialog, header for product conflict resolution',
+                'product_exists_title' => 'Product already exists dialog, header for duplicate product detection',
+                'select_estimate_title' => 'Estimate selection dialog, header for the estimate selection interface',
+                'select_room_title' => 'Room selection dialog, header for the room selection interface',
+                'no_estimates_available' => 'Estimate selection dialog, empty state message when no estimates exist',
+                'no_rooms_available' => 'Room selection dialog, empty state message when no rooms exist',
+                'details_toggle' => 'Product details toggle, show state label for expanding product details',
+                'details_toggle_hide' => 'Product details toggle, hide state label for collapsing product details',
+                'includes_heading' => 'Product details panel, inclusions section heading for product inclusions',
+                'no_includes' => 'Product details panel, empty inclusions message when no inclusions exist',
+                'variation_options' => 'Product selection dialog, variations section heading for product options',
+                'price_range' => 'Product details, price range label for variable-priced products',
+                'single_price' => 'Product details, single price label for fixed-price products',
+                'per_unit' => 'Product pricing display, unit price indicator for unit-based pricing',
+                'total_price' => 'Product pricing display, total price label for calculated final prices',
+                'estimate_summary' => 'Estimate view, summary section heading for estimate overview',
+                'room_summary' => 'Room view, summary section heading for room overview',
+                'product_summary' => 'Product details, summary section heading for product overview',
+                'remove_room_message' => 'Remove room dialog, confirmation message for room deletion',
+                'product_details' => 'Product item, detailed information section heading shown when viewing product details',
+                'room' => 'Label for room in product context, used in room selection interfaces and headers',
+                'products' => 'Plural label for products in lists and headings throughout the interface',
+                'variations' => 'Label for product variations section in product selection interfaces',
+                'select_variation' => 'Label for variation selection prompt in variable product selection',
+                'add_to_room' => 'Label for button/action to add product to room in product selection flows',
+                'manage_estimate' => 'Label for estimate management section in estimate management interfaces',
+                'product_selection' => 'Label for product selection interface in product browsing flows',
+                'selected_rooms' => 'Label for list of selected rooms in room selection interfaces',
+                'modal_header_title' => 'Title for the modal header displayed at the top of the main modal',
+                'modal_close' => 'Label for modal close button in the modal header (accessibility text)',
+                'modal_not_found' => 'Error message displayed when the estimator modal cannot be loaded or found',
+                'close_tooltip' => 'Text for tooltip close button used by screen readers and accessibility tools',
+                'notes_heading' => 'Heading displayed at the top of the notes section in product information tooltips',
+                'details_heading' => 'Heading displayed at the top of the details section in product information tooltips',
             ],
             'pdf' => [
-                'title' => 'PDF document, main title header',
-                'customer_details' => 'PDF document, customer info section',
-                'estimate_summary' => 'PDF document, estimate summary section',
-                'price_range' => 'PDF document, price range label',
-                'from' => 'PDF document, minimum price label',
-                'to' => 'PDF document, maximum price label',
-                'date' => 'PDF document, date field label',
-                'page' => 'PDF document, page number label',
-                'of' => 'PDF document, page count indicator',
-                'company_name' => 'PDF document, company info header',
-                'company_phone' => 'PDF document, company contact info',
-                'company_email' => 'PDF document, company contact info',
-                'company_website' => 'PDF document, company contact info',
-                'footer_text' => 'PDF document, footer message',
-                'disclaimer' => 'PDF document, legal disclaimer text',
+                'title' => 'PDF document, main title header displayed at the top of each PDF document',
+                'customer_details' => 'PDF document, customer info section heading in the document header',
+                'estimate_summary' => 'PDF document, estimate summary section heading at the start of the summary',
+                'price_range' => 'PDF document, price range label for variable-priced products in PDF exports',
+                'from' => 'PDF document, minimum price label in price ranges for variable products',
+                'to' => 'PDF document, maximum price label in price ranges for variable products',
+                'date' => 'PDF document, date field label shown with the estimate creation date',
+                'page' => 'PDF document, page number label in the document footer pagination',
+                'of' => 'PDF document, page count indicator used between page numbers in pagination',
+                'company_name' => 'PDF document, company info header displayed in the document header',
+                'company_phone' => 'PDF document, company contact info shown in the document header',
+                'company_email' => 'PDF document, company contact info shown in the document header',
+                'company_website' => 'PDF document, company contact info shown in the document header',
+                'footer_text' => 'PDF document, footer message displayed at the bottom of each page',
+                'disclaimer' => 'PDF document, legal disclaimer text shown in the document footer',
             ],
             // Add more usage mappings
         ];
@@ -778,14 +959,14 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         // Get all default labels for this category to ensure we don't lose any new ones
         $default_labels = LabelsMigration::get_default_structure();
         $default_category_labels = $default_labels[$current_context_id] ?? [];
-        
+
         // First, add any default labels not in the saved options (preserved across saves)
         foreach ($default_category_labels as $key => $value) {
             if (!isset($new_options[$current_context_id][$key])) {
                 $new_options[$current_context_id][$key] = $value;
             }
         }
-        
+
         // Then process and sanitize the submitted data
         foreach ($category_data as $label_key => $label_value) {
             $new_options[$current_context_id][$label_key] = sanitize_text_field($label_value);
@@ -816,7 +997,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         // Get existing options to merge with
         $existing_options = get_option($this->option_name, []);
         $validated = $existing_options;
-        
+
         // Get default structure to ensure new labels are included
         $default_labels = LabelsMigration::get_default_structure();
 
@@ -830,10 +1011,10 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 if (!isset($validated[$category])) {
                     $validated[$category] = [];
                 }
-                
+
                 // Get default labels for this category
                 $default_category_labels = $default_labels[$category] ?? [];
-                
+
                 // First, add any default labels not in the existing options
                 foreach ($default_category_labels as $key => $value) {
                     if (!isset($validated[$category][$key])) {
@@ -978,41 +1159,41 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             // Get current labels and default structure
             $current_labels = get_option('product_estimator_labels', []);
             $default_labels = LabelsMigration::get_default_structure();
-            
+
             // Merge in a way that preserves new labels:
             // 1. Start with defaults (ensures all default labels exist)
             // 2. Override with existing saved labels (preserves customizations)
             // 3. Override with imported labels (applies the import)
             $merged_labels = [];
-            
+
             // Add all categories from defaults, current, and imported
             $all_categories = array_unique(array_merge(
                 array_keys($default_labels),
                 array_keys($current_labels),
                 array_keys($validated_labels)
             ));
-            
+
             foreach ($all_categories as $category) {
                 if (!isset($merged_labels[$category])) {
                     $merged_labels[$category] = [];
                 }
-                
+
                 // First add defaults
                 if (isset($default_labels[$category]) && is_array($default_labels[$category])) {
                     $merged_labels[$category] = array_merge($merged_labels[$category], $default_labels[$category]);
                 }
-                
+
                 // Then add current saved values
                 if (isset($current_labels[$category]) && is_array($current_labels[$category])) {
                     $merged_labels[$category] = array_merge($merged_labels[$category], $current_labels[$category]);
                 }
-                
+
                 // Finally override with imported values
                 if (isset($validated_labels[$category]) && is_array($validated_labels[$category])) {
                     $merged_labels[$category] = array_merge($merged_labels[$category], $validated_labels[$category]);
                 }
             }
-            
+
             // Update labels with the merged result
             update_option('product_estimator_labels', $merged_labels);
 

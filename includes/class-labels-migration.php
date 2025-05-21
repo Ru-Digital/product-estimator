@@ -38,7 +38,7 @@ class LabelsMigration {
 
         // Check if already migrated
         $version = get_option(self::VERSION_OPTION_NAME, '0');
-        if (version_compare($version, '2.0.15', '>=')) {
+        if (version_compare($version, '2.0.16', '>=')) {
             return; // Already migrated
         }
 
@@ -47,7 +47,7 @@ class LabelsMigration {
 
         // Save the new structure
         update_option(self::NEW_OPTION_NAME, $new_structure);
-        update_option(self::VERSION_OPTION_NAME, '2.0.15');
+        update_option(self::VERSION_OPTION_NAME, '2.0.16');
 
         // Clear any existing caches
         delete_transient('pe_frontend_labels_cache');
@@ -201,6 +201,7 @@ class LabelsMigration {
             'messages' => [
                 // Success messages
                 'product_added' => __('Product added successfully', 'product-estimator'),
+                'product_added_message' => __('Product has been successfully added to your room', 'product-estimator'),
                 'product_removed' => __('Product removed', 'product-estimator'),
                 'estimate_saved' => __('Estimate saved successfully', 'product-estimator'),
                 'estimate_removed' => __('This estimate has been removed successfully', 'product-estimator'),
@@ -376,14 +377,14 @@ class LabelsMigration {
         $default_structure = self::get_default_structure();
 
         update_option(self::NEW_OPTION_NAME, $default_structure);
-        update_option(self::VERSION_OPTION_NAME, '2.0.15');
+        update_option(self::VERSION_OPTION_NAME, '2.0.16');
     }
 
     /**
      * Update the labels version to refresh caches
      */
     public static function update_labels_version() {
-        update_option(self::VERSION_OPTION_NAME, '2.0.15');
+        update_option(self::VERSION_OPTION_NAME, '2.0.16');
         delete_transient('pe_frontend_labels_cache');
     }
 }

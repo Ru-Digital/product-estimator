@@ -235,13 +235,18 @@ class ModalManager {
       // Create missing containers if needed
       if (!this.loadingIndicator) {
         logger.warn('Loading indicator not found, creating one');
-        this.loadingIndicator = document.createElement('div');
-        this.loadingIndicator.className = 'product-estimator-modal-loading';
-        this.loadingIndicator.innerHTML = `
-          <div class="loading-spinner"></div>
-          <div class="loading-text">${labelManager.get('ui_elements.loading', 'Loading...')}</div>
-        `;
-        this.modal.appendChild(this.loadingIndicator);
+        
+        // Use the TemplateEngine to create the loading indicator
+        const loadingContainer = document.createElement('div');
+        loadingContainer.className = 'product-estimator-modal-loading';
+        
+        // Insert template content
+        TemplateEngine.insert('loading-placeholder-template', {
+          loadingText: labelManager.get('ui.components.loading.general', 'Loading...')
+        }, loadingContainer);
+        
+        this.modal.appendChild(loadingContainer);
+        this.loadingIndicator = loadingContainer;
       }
       
       logger.log('DOM elements initialized');

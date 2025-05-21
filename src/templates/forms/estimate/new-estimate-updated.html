@@ -1,0 +1,63 @@
+<template id="new-estimate-form-template">
+  <div id="new-estimate-form-wrapper">
+    <h2 data-label="ui.headings.create_estimate">Create New Estimate</h2>
+    <form id="new-estimate-form" method="post" data-has-email="false">
+      <div class="form-group">
+        <label for="estimate-name" data-label="forms.estimate.name.label">Estimate Name</label>
+        <input type="text" id="estimate-name" name="estimate_name" data-placeholder-label="forms.estimate.name.placeholder" placeholder="e.g. Home Renovation" required>
+      </div>
+
+      <div class="customer-details-section">
+        <h4 data-label="forms.customer.section_title">Your Details</h4>
+        <div class="form-group">
+          <label for="customer-postcode" data-label="forms.customer.postcode.label">Postcode</label>
+          <input type="text" id="customer-postcode" name="customer_postcode" data-placeholder-label="forms.customer.postcode.placeholder" placeholder="Your postcode" required>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" class="submit-btn create-estimate-btn" data-label="buttons.estimate.create_estimate">Create Estimate</button>
+        <button type="button" class="cancel-btn" data-form-type="estimate" data-label="buttons.core.cancel">Cancel</button>
+      </div>
+    </form>
+    
+    <div class="customer-details-display" style="display: none;">
+      <div class="customer-details-header">
+        <h4 data-label="forms.customer.use_saved">Your Saved Details</h4>
+        <div class="customer-details-actions">
+          <button type="button" class="edit-customer-details" id="edit-customer-details-btn" data-label="buttons.core.edit">Edit</button>
+        </div>
+      </div>
+      <div class="customer-details-content saved-customer-details">
+        <!-- Customer details will be inserted here -->
+      </div>
+      
+      <!-- Edit form (hidden by default) -->
+      <div class="customer-details-edit-form" style="display: none;">
+        <h4 data-label="forms.customer.section_title">Edit Your Details</h4>
+        <form id="customer-details-edit-form">
+          <div class="form-group">
+            <label for="edit-customer-name" data-label="forms.customer.name.label">Name</label>
+            <input type="text" id="edit-customer-name" name="customer_name" data-placeholder-label="forms.customer.name.placeholder" placeholder="Your name">
+          </div>
+          <div class="form-group">
+            <label for="edit-customer-email" data-label="forms.customer.email.label">Email</label>
+            <input type="email" id="edit-customer-email" name="customer_email" data-placeholder-label="forms.customer.email.placeholder" placeholder="Your email">
+          </div>
+          <div class="form-group">
+            <label for="edit-customer-phone" data-label="forms.customer.phone.label">Phone</label>
+            <input type="tel" id="edit-customer-phone" name="customer_phone" data-placeholder-label="forms.customer.phone.placeholder" placeholder="Your phone">
+          </div>
+          <div class="form-group">
+            <label for="edit-customer-postcode" data-label="forms.customer.postcode.label">Postcode</label>
+            <input type="text" id="edit-customer-postcode" name="customer_postcode" data-placeholder-label="forms.customer.postcode.placeholder" placeholder="Your postcode">
+          </div>
+          <div class="customer-details-edit-actions">
+            <button type="button" class="save-customer-details" id="save-customer-details-btn" data-label="buttons.core.save">Save Changes</button>
+            <button type="button" class="cancel-edit-customer-details" id="cancel-edit-customer-details-btn" data-label="buttons.core.cancel">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>

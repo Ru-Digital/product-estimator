@@ -1,24 +1,24 @@
 <template id="new-room-form-template">
   <div id="new-room-form-wrapper">
-    <h2>Add New Room</h2>
+    <h2 data-label="buttons.add_new_room">Add New Room</h2>
     <form id="new-room-form" method="post" data-estimate-id="" data-product-id="">
       <div class="form-group">
-        <label for="room-name">Room Name</label>
-        <input type="text" id="room-name" name="room_name" placeholder="e.g. Living Room" required>
+        <label for="room-name" data-label="forms.room_name">Room Name</label>
+        <input type="text" id="room-name" name="room_name" data-placeholder-label="forms.placeholder_room_name" placeholder="e.g. Living Room" required>
       </div>
       <div class="inline-group">
         <div class="form-group">
-          <label for="room-width">Width (m)</label>
-          <input type="number" id="room-width" name="room_width" placeholder="Width" required step="0.01" min="0.1">
+          <label for="room-width" data-label="forms.room_width">Width (m)</label>
+          <input type="number" id="room-width" name="room_width" data-placeholder-label="forms.placeholder_width" placeholder="Width" required step="0.01" min="0.1">
         </div>
         <div class="form-group">
-          <label for="room-length">Length (m)</label>
-          <input type="number" id="room-length" name="room_length" placeholder="Length" required step="0.01" min="0.1">
+          <label for="room-length" data-label="forms.room_length">Length (m)</label>
+          <input type="number" id="room-length" name="room_length" data-placeholder-label="forms.placeholder_length" placeholder="Length" required step="0.01" min="0.1">
         </div>
       </div>
       <div class="button-group">
-        <button type="submit" class="submit-btn">Add Room</button>
-        <button type="button" class="cancel-btn" data-form-type="room">Cancel</button>
+        <button type="submit" class="submit-btn" data-label="buttons.add_room">Add Room</button>
+        <button type="button" class="cancel-btn" data-form-type="room" data-label="buttons.cancel">Cancel</button>
       </div>
     </form>
   </div>

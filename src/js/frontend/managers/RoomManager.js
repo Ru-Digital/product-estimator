@@ -8,7 +8,7 @@
  * - Updating room totals
  */
 
-import { format, createLogger } from '@utils';
+import { format, createLogger, labelManager } from '@utils';
 
 import { loadEstimateData, saveEstimateData, addRoom, removeRoom } from '../EstimateStorage';
 import TemplateEngine from '../TemplateEngine';
@@ -149,6 +149,9 @@ class RoomManager {
           TemplateEngine.insert('room-selection-form-template', {
             estimateName: estimate.name || `Estimate #${estimate.id}`
           }, roomSelectionForm);
+          
+          // Explicitly process labels after template insertion
+          TemplateEngine.processLabels(roomSelectionForm);
 
           logger.log('Room selection form template inserted into wrapper.');
 
@@ -221,10 +224,11 @@ class RoomManager {
         // Clear existing options
         selectElement.innerHTML = '';
 
-        // Add default option using template
+        // Add default option using template with labelManager
         TemplateEngine.insert('select-option-template', {
           value: '',
-          text: '-- Select a room --'
+          text: labelManager.get('forms.select_room_option', '-- Select a room --'),
+          labelKey: 'forms.select_room_option'
         }, selectElement);
 
         // Add options for each room
@@ -242,10 +246,11 @@ class RoomManager {
           const submitButton = formElement.querySelector('button[type="submit"]');
           if (submitButton) submitButton.disabled = false;
         } else {
-          // No rooms available, show message using template
+          // No rooms available, show message using template with labelManager
           TemplateEngine.insert('select-option-template', {
             value: '',
-            text: 'No rooms available'
+            text: labelManager.get('ui_elements.no_rooms_available', 'No rooms available'),
+            labelKey: 'ui_elements.no_rooms_available'
           }, selectElement);
 
           // Disable the select element but keep buttons enabled for "Create New Room"
@@ -310,12 +315,12 @@ class RoomManager {
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 setTimeout(() => {
                   this.modalManager.confirmationDialog.show({
-                    title: 'Product Added',
-                    message: 'The product has been added to the selected room.',
+                    title: labelManager.get('ui_elements.product_added_title', 'Product Added'),
+                    message: labelManager.get('messages.product_added_success', 'The product has been added to the selected room.'),
                     type: 'product',
                     action: 'success',
                     showCancel: false,
-                    confirmText: 'OK'
+                    confirmText: labelManager.get('buttons.ok', 'OK')
                   });
                 }, 100); // Short delay to allow estimates list to render
               } else {
@@ -724,8 +729,7 @@ class RoomManager {
       // Render additional products with variations
       this.renderAdditionalProducts(room, roomElement);
 
-      // Render product upgrades for the room
-      this.renderRoomUpgrades(room, roomElement);
+      // Product upgrades feature has been removed
 
       // Initialize similar products for the room with a delay to ensure DOM is ready
       setTimeout(() => {
@@ -864,7 +868,9 @@ class RoomManager {
                 const button = variationElement.querySelector('.replace-product-in-room');
                 if (button) {
                   // Change button text based on selected state
-                  button.textContent = variation.selected === true ? 'Selected' : 'Select';
+                  button.textContent = variation.selected === true ? 
+                    labelManager.get('buttons.selected_additional_product', 'Selected') : 
+                    labelManager.get('buttons.select_additional_product', 'Select');
                   button.dataset.productId = variation.id;
                   button.dataset.estimateId = estimateId;
                   button.dataset.roomId = roomId;
@@ -960,11 +966,11 @@ class RoomManager {
         // Show error notification
         if (this.modalManager.confirmationDialog) {
           this.modalManager.confirmationDialog.show({
-            title: 'Error',
-            message: 'Failed to update the variation. Please try again.',
+            title: labelManager.get('ui_elements.error_title', 'Error'),
+            message: labelManager.get('messages.general_error', 'Failed to update the variation. Please try again.'),
             type: 'error',
             showCancel: false,
-            confirmText: 'OK'
+            confirmText: labelManager.get('buttons.ok', 'OK')
           });
         }
       });
@@ -1197,10 +1203,10 @@ class RoomManager {
         // Show confirmation dialog before removing
         if (this.modalManager && this.modalManager.confirmationDialog) {
           this.modalManager.confirmationDialog.show({
-            title: 'Remove Product',
-            message: `Are you sure you want to remove "${productName}" from this room?`,
-            confirmText: 'Remove',
-            cancelText: 'Cancel',
+            title: labelManager.get('ui_elements.remove_product_title', 'Remove Product'),
+            message: labelManager.format('messages.confirm_product_remove_with_name', { product_name: productName }, `Are you sure you want to remove "${productName}" from this room?`),
+            confirmText: labelManager.get('buttons.remove', 'Remove'),
+            cancelText: labelManager.get('buttons.cancel', 'Cancel'),
             type: 'product',
             action: 'delete',
             onConfirm: () => {
@@ -1221,226 +1227,7 @@ class RoomManager {
     });
   }
 
-  /**
-   * Render product upgrades for a room - no-op (feature removed)
-   * @param {object} room - The room data
-   * @param {HTMLElement} roomElement - The room element
-   */
-  renderRoomUpgrades(room, roomElement) {
-    return;
-    logger.log('Rendering room upgrades', { roomName: room.name });
-
-    // Get estimate and room IDs from the room element
-    const estimateId = roomElement.dataset.estimateId;
-    const roomId = roomElement.dataset.roomId;
-
-    if (!estimateId || !roomId) {
-      logger.error('Missing estimate or room ID on room element');
-      return;
-    }
-
-    // Find the upgrades container in the room element
-    const upgradesListContainer = roomElement.querySelector('.product-upgrades-list');
-    const upgradesContainer = roomElement.querySelector('.product-upgrades-container');
-
-    if (!upgradesListContainer) {
-      logger.warn('Product upgrades list container not found in room element');
-      return;
-    }
-
-    // Clear existing upgrades
-    upgradesListContainer.innerHTML = '';
-
-    // Collect all upgrades from all products in the room
-    let allUpgrades = [];
-
-    if (room.products && typeof room.products === 'object') {
-      Object.values(room.products).forEach(product => {
-        logger.log('Checking product for upgrades:', {
-          productId: product.id,
-          productName: product.name,
-          hasAdditionalProducts: !!product.additional_products,
-          additionalProductsCount: product.additional_products ? Object.keys(product.additional_products).length : 0
-        });
-
-        // Check if additional_products is an object (as in the localStorage data)
-        if (product.additional_products && typeof product.additional_products === 'object') {
-          // Iterate through additional products object
-          Object.values(product.additional_products).forEach((item, index) => {
-            logger.log(`Additional product:`, {
-              id: item.id,
-              name: item.name,
-              has_upgrades: item.has_upgrades,
-              upgrades: item.upgrades,
-              entire_item: item
-            });
-
-            // Check if this additional product has upgrades
-            if (item.has_upgrades && item.upgrades && item.upgrades.products && Array.isArray(item.upgrades.products)) {
-              logger.log(`Found ${item.upgrades.products.length} upgrades for ${item.name}`);
-
-              // Create upgrade sections for each additional product with upgrades
-              const upgradeSection = {
-                ...item.upgrades,
-                parent_product_id: item.id,
-                parent_product_name: item.name,
-                products: item.upgrades.products.map(upgradeProduct => ({
-                  ...upgradeProduct,
-                  room_id: roomId,
-                  estimate_id: estimateId,
-                  replace_product_id: item.id,
-                  pricing_method: upgradeProduct.pricing_method || 'fixed',
-                  parent_product_name: item.name
-                }))
-              };
-
-              allUpgrades.push(upgradeSection);
-            }
-          });
-        }
-      });
-    }
-
-    logger.log(`Found ${allUpgrades.length} upgrades for room ${room.name}`);
-
-    // If we have upgrades, show the container and render them
-    if (allUpgrades.length > 0) {
-      if (upgradesContainer) {
-        upgradesContainer.style.display = '';
-      }
-
-      // Render each upgrade section
-      allUpgrades.forEach(upgradeSection => {
-        logger.log('Rendering upgrade section:', {
-          title: upgradeSection.title,
-          description: upgradeSection.description,
-          productCount: upgradeSection.products ? upgradeSection.products.length : 0,
-          parentProduct: upgradeSection.parent_product_name
-        });
-
-        // Create a section container for each upgrade group
-        const sectionContainer = document.createElement('div');
-        sectionContainer.className = 'product-upgrades';
-        sectionContainer.setAttribute('data-product-id', upgradeSection.parent_product_id);
-
-        // Create the upgrade option container
-        const optionContainer = document.createElement('div');
-        optionContainer.className = 'product-upgrade-option';
-        optionContainer.setAttribute('data-upgrade-id', upgradeSection.parent_product_id);
-
-        // Add section title and description if available
-        if (upgradeSection.title) {
-          const titleElement = document.createElement('h6');
-          titleElement.className = 'upgrade-title';
-          titleElement.textContent = upgradeSection.title;
-          optionContainer.appendChild(titleElement);
-        }
-
-        if (upgradeSection.description) {
-          const descElement = document.createElement('p');
-          descElement.className = 'upgrade-description';
-          descElement.textContent = upgradeSection.description;
-          optionContainer.appendChild(descElement);
-        }
-
-        // Create tiles container structure
-        const tilesContainer = document.createElement('div');
-        tilesContainer.className = 'product-upgrade-tiles';
-        tilesContainer.setAttribute('data-upgrade-id', upgradeSection.parent_product_id);
-
-        // Create tiles wrapper
-        const tilesWrapper = document.createElement('div');
-        tilesWrapper.className = 'tiles-wrapper';
-
-        // Render each upgrade product in the section
-        if (upgradeSection.products && Array.isArray(upgradeSection.products)) {
-          upgradeSection.products.forEach(upgrade => {
-            const upgradeData = {
-              product_id: upgrade.id,
-              estimate_id: upgrade.estimate_id,
-              room_id: upgrade.room_id,
-              replace_product_id: upgrade.replace_product_id,
-              pricing_method: upgrade.pricing_method,
-              replace_type: 'product_upgrade',
-              name: upgrade.name,
-              product_name: upgrade.name,
-              price: upgrade.min_total || upgrade.price || 0,
-              product_price: format.currency(upgrade.min_total || upgrade.price || 0),
-              image: upgrade.image || '',
-              url: upgrade.url || '#',
-              parent_product_name: upgrade.parent_product_name
-            };
-
-            logger.log('Rendering upgrade product:', upgradeData);
-            TemplateEngine.insert('product-upgrade-item-template', upgradeData, tilesWrapper);
-          });
-        }
-
-        // Assemble the structure: tiles wrapper -> tiles container -> option container -> section container
-        tilesContainer.appendChild(tilesWrapper);
-        optionContainer.appendChild(tilesContainer);
-        sectionContainer.appendChild(optionContainer);
-        upgradesListContainer.appendChild(sectionContainer);
-      });
-
-      // Bind events for upgrade buttons
-      this.bindUpgradeButtons(upgradesListContainer);
-    } else {
-      // Hide the upgrades container if no upgrades
-      if (upgradesContainer) {
-        upgradesContainer.style.display = 'none';
-      }
-    }
-  }
-
-  /**
-   * Bind events for upgrade buttons - no-op (feature removed)
-   * @param {HTMLElement} upgradesContainer - The upgrades container
-   */
-  bindUpgradeButtons(upgradesContainer) {
-    return;
-    const upgradeButtons = upgradesContainer.querySelectorAll('.replace-product-in-room');
-
-    upgradeButtons.forEach(button => {
-      if (button._clickHandler) {
-        button.removeEventListener('click', button._clickHandler);
-      }
-
-      button._clickHandler = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const productId = button.dataset.productId;
-        const estimateId = button.dataset.estimateId;
-        const roomId = button.dataset.roomId;
-        const replaceProductId = button.dataset.replaceProductId;
-        const pricingMethod = button.dataset.pricingMethod;
-        const replaceType = button.dataset.replaceType;
-
-        logger.log('Upgrade button clicked', {
-          productId,
-          estimateId,
-          roomId,
-          replaceProductId,
-          pricingMethod,
-          replaceType
-        });
-
-        // Use the productManager to handle the replacement
-        if (this.modalManager.productManager) {
-          // Note: replaceProductInRoom expects: estimateId, roomId, oldProductId, newProductId
-          this.modalManager.productManager.replaceProductInRoom(
-            estimateId,
-            roomId,
-            replaceProductId,  // OLD product to replace
-            productId          // NEW product (the upgrade)
-          );
-        }
-      };
-
-      button.addEventListener('click', button._clickHandler);
-    });
-  }
+  // Product upgrades methods removed - feature no longer supported
 
   /**
    * Bind toggle functionality for includes section
@@ -1715,16 +1502,30 @@ class RoomManager {
         // Store estimate ID and product ID as data attributes on the form
         formElement.dataset.estimateId = estimateId;
 
+        // Get the submit button regardless of productId
+        const submitButton = formElement.querySelector('.submit-btn');
+        
         if (productId) {
           formElement.dataset.productId = productId;
 
           // Update the submit button text if we're in the add product flow
-          const submitButton = formElement.querySelector('.submit-btn');
           if (submitButton) {
-            submitButton.textContent = 'Add Room & Product';
+            submitButton.textContent = labelManager.get('buttons.add_room_and_product', 'Add Room & Product');
           }
         } else {
           delete formElement.dataset.productId;
+          
+          // Set default button text for regular room addition flow
+          if (submitButton) {
+            // Either use the label from the data-label attribute or set a default
+            if (submitButton.dataset.label) {
+              // Use imported labelManager
+              submitButton.textContent = labelManager.get('buttons.add_room', 'Add Room');
+            } else {
+              // Fallback text if no data-label attribute
+              submitButton.textContent = 'Add Room';
+            }
+          }
         }
 
         // Delegate form binding to the FormManager or bind events ourselves
@@ -1819,12 +1620,12 @@ class RoomManager {
                   if (this.modalManager && this.modalManager.confirmationDialog) {
                     setTimeout(() => {
                       this.modalManager.confirmationDialog.show({
-                        title: 'Room Created',
-                        message: 'The room has been created and the product has been added.',
+                        title: labelManager.get('ui_elements.room_created_title', 'Room Created'),
+                        message: labelManager.get('messages.room_created_with_product', 'The room has been created and the product has been added.'),
                         type: 'room',
                         action: 'success',
                         showCancel: false,
-                        confirmText: 'OK'
+                        confirmText: labelManager.get('buttons.ok', 'OK')
                       });
                     }, 100);
                   } else {
@@ -1860,12 +1661,12 @@ class RoomManager {
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 setTimeout(() => {
                   this.modalManager.confirmationDialog.show({
-                    title: 'Room Created',
-                    message: 'The room has been created.',
+                    title: labelManager.get('ui_elements.room_created_title', 'Room Created'),
+                    message: labelManager.get('messages.room_created', 'The room has been created.'),
                     type: 'room',
                     action: 'success',
                     showCancel: false,
-                    confirmText: 'OK'
+                    confirmText: labelManager.get('buttons.ok', 'OK')
                   });
                 }, 100);
               } else {
@@ -1884,12 +1685,12 @@ class RoomManager {
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 setTimeout(() => {
                   this.modalManager.confirmationDialog.show({
-                    title: 'Room Created',
-                    message: 'The room has been created.',
+                    title: labelManager.get('ui_elements.room_created_title', 'Room Created'),
+                    message: labelManager.get('messages.room_created', 'The room has been created.'),
                     type: 'room',
                     action: 'success',
                     showCancel: false,
-                    confirmText: 'OK'
+                    confirmText: labelManager.get('buttons.ok', 'OK')
                   });
                 }, 100);
               } else {
@@ -1899,12 +1700,12 @@ class RoomManager {
               // No estimate manager, show message and close
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 this.modalManager.confirmationDialog.show({
-                  title: 'Room Created',
-                  message: 'The room has been created.',
+                  title: labelManager.get('ui_elements.room_created_title', 'Room Created'),
+                  message: labelManager.get('messages.room_created', 'The room has been created.'),
                   type: 'room',
                   action: 'success',
                   showCancel: false,
-                  confirmText: 'OK',
+                  confirmText: labelManager.get('buttons.ok', 'OK'),
                   onConfirm: () => {
                     this.modalManager.closeModal();
                   }
@@ -2009,8 +1810,7 @@ class RoomManager {
       logger.error('ConfirmationDialog not available');
 
       // Fallback to native confirm if ConfirmationDialog isn't available
-      // TODO: Implement labels from localization system
-      if (confirm('Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.')) {
+      if (confirm(labelManager.get('ui_elements.remove_room_message', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'))) {
         this.performRoomRemoval(estimateId, roomId);
       }
       return;
@@ -2018,11 +1818,10 @@ class RoomManager {
 
     // Show the confirmation dialog using the dedicated component
     this.modalManager.confirmationDialog.show({
-      // TODO: Implement labels from localization system
-      title: 'Remove Room',
-      message: 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
+      title: labelManager.get('ui_elements.remove_room_title', 'Remove Room'),
+      message: labelManager.get('ui_elements.remove_room_message', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'),
+      confirmText: labelManager.get('buttons.delete', 'Delete'),
+      cancelText: labelManager.get('buttons.cancel', 'Cancel'),
       type: 'room',           // Specify the entity type (for proper styling)
       action: 'delete',       // Specify the action type (for proper styling)
       onConfirm: () => {
@@ -2125,9 +1924,9 @@ class RoomManager {
         // Show error message using ConfirmationDialog
         if (this.modalManager && this.modalManager.confirmationDialog) {
           this.modalManager.confirmationDialog.show({
-            title: 'Error',
-            message: 'Error removing room. Please try again.',
-            confirmText: 'OK',
+            title: labelManager.get('ui_elements.error_title', 'Error'),
+            message: labelManager.get('messages.general_error', 'Error removing room. Please try again.'),
+            confirmText: labelManager.get('buttons.ok', 'OK'),
             cancelText: false,
             onConfirm: () => {
               logger.log('Error dialog closed');
@@ -2135,7 +1934,7 @@ class RoomManager {
           });
         } else {
           // Fallback to modalManager.showError
-          this.modalManager.showError('Error removing room. Please try again.');
+          this.modalManager.showError(labelManager.get('messages.general_error', 'Error removing room. Please try again.'));
         }
 
         this.modalManager.hideLoading();
@@ -2323,8 +2122,7 @@ class RoomManager {
     const includesData = this.aggregateProductIncludes(room);
     this.renderRoomIncludes(includesData, roomElement, roomId, estimateId);
 
-    // Re-render the upgrades with updated room data
-    this.renderRoomUpgrades(room, roomElement);
+    // Product upgrades feature has been removed
 
     // If the room has products now, make sure similar products section is visible
     if (room.products && Object.keys(room.products).length > 0) {

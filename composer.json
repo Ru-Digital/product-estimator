@@ -38,6 +38,7 @@
         "classmap": [
             "includes/class-activator.php",
             "includes/class-feature-switches.php",
+            "includes/class-labels-migration.php",
             "includes/class-product-estimator.php",
             "includes/class-i18n.php",
             "includes/class-deactivator.php",
@@ -46,6 +47,7 @@
             "includes/class-customer-details.php",
             "includes/class-estimate-handler.php",
             "includes/class-pdf-route-handler.php",
+            "includes/class-labels-usage-analytics.php",
             "includes/frontend/class-frontend-base.php",
             "includes/frontend/class-shortcodes.php",
             "includes/frontend/class-script-handler.php",
@@ -64,6 +66,7 @@
             "includes/admin/class-customer-estimates-list-table.php",
             "includes/admin/class-csv-export-handler.php",
             "includes/admin/settings/interface-settings-module.php",
+            "includes/admin/settings/class-labels-analytics-dashboard.php",
             "includes/admin/settings/class-feature-switches-settings-module.php",
             "includes/admin/settings/class-settings-module-base.php",
             "includes/admin/settings/class-settings-module-with-tables-base.php",

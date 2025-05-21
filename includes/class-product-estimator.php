@@ -12,6 +12,10 @@ use RuDigital\ProductEstimator\Includes\Loader;
 use RuDigital\ProductEstimator\Includes\Admin\ProductEstimatorAdmin;
 use RuDigital\ProductEstimator\Includes\Admin\AdminScriptHandler;
 use RuDigital\ProductEstimator\Includes\FeatureSwitches;
+use RuDigital\ProductEstimator\Includes\LabelsUsageAnalytics;
+use RuDigital\ProductEstimator\Includes\LabelsDocumentationGenerator;
+use RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsAnalyticsDashboard;
+use RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsDocumentationPage;
 
 
 /**
@@ -89,6 +93,34 @@ class ProductEstimator {
      * @var FeatureSwitches
      */
     private $feature_switches;
+    
+    /**
+     * Labels Usage Analytics
+     *
+     * @var LabelsUsageAnalytics
+     */
+    private $labels_analytics;
+    
+    /**
+     * Labels Analytics Dashboard
+     *
+     * @var LabelsAnalyticsDashboard
+     */
+    private $labels_analytics_dashboard;
+    
+    /**
+     * Labels Documentation Generator
+     *
+     * @var LabelsDocumentationGenerator
+     */
+    private $labels_documentation_generator;
+    
+    /**
+     * Labels Documentation Page
+     *
+     * @var LabelsDocumentationPage
+     */
+    private $labels_documentation_page;
 
 
 
@@ -114,6 +146,49 @@ class ProductEstimator {
             // Handle error: LabelsFrontend class not found
             error_log("Product Estimator Error: LabelsFrontend class not found.");
         }
+        
+        // Initialize Labels Usage Analytics
+        if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-usage-analytics.php')) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-usage-analytics.php';
+            $this->labels_analytics = new LabelsUsageAnalytics($this->plugin_name, $this->version);
+            
+            // Make instance available globally
+            $GLOBALS['product_estimator_labels_analytics'] = $this->labels_analytics;
+            global $product_estimator;
+            $product_estimator = $this;
+            
+            // Initialize Labels Analytics Dashboard in admin
+            if (is_admin() && file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-analytics-dashboard.php')) {
+                require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-analytics-dashboard.php';
+                $this->labels_analytics_dashboard = new LabelsAnalyticsDashboard($this->plugin_name, $this->version, $this->labels_analytics);
+            }
+            
+            // Initialize Labels Documentation Generator and Page
+            if (is_admin() && $this->labels_frontend) {
+                // Initialize documentation generator
+                if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-documentation-generator.php')) {
+                    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-documentation-generator.php';
+                    $this->labels_documentation_generator = new LabelsDocumentationGenerator(
+                        $this->plugin_name, 
+                        $this->version, 
+                        $this->labels_frontend,
+                        $this->labels_analytics
+                    );
+                    
+                    // Initialize documentation page
+                    if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-documentation-page.php')) {
+                        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-documentation-page.php';
+                        $this->labels_documentation_page = new LabelsDocumentationPage(
+                            $this->plugin_name,
+                            $this->version,
+                            $this->labels_documentation_generator
+                        );
+                    }
+                }
+            }
+        } else {
+            error_log("Product Estimator Error: LabelsUsageAnalytics class file not found.");
+        }
 
         // Make sure this code is actually running
 //        require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-pdf-route-handler.php';
@@ -126,7 +201,6 @@ class ProductEstimator {
         // Add initialization on 'init' hook (early but not too early)
         add_action('init', array($this, 'initialize'), 20);
 
-        $this->load_templates();
     }
 
     private function initialize_feature_switches_and_set_global() { // Or your chosen method name
@@ -144,76 +218,6 @@ class ProductEstimator {
         } else {
             // ... error logging ...
         }
-    }
-
-
-    /**
-     * Load template files and register them with WordPress
-     */
-    public function load_templates() {
-        // Define template files to load
-        $templates = array(
-            'product-item-template' => 'templates/product-item.php',
-            'room-item-template' => 'templates/room-item.php',
-            'estimate-item-template' => 'templates/estimate-item.php',
-            'suggestion-item-template' => 'templates/suggestion-item.php',
-            'note-item-template' => 'templates/note-item.php',
-            'modal-messages' => 'templates/modal-messages.php',
-            'estimate-selection-template' => 'templates/estimate-selection-template.php',
-            'estimates-empty-template' => 'templates/estimates-empty-template.php',
-            'new-estimate-form-template' => 'templates/forms/new-estimate-form.php',
-            'new-room-form-template' => 'templates/forms/new-room-form.php',
-            'room-selection-form-template' => 'templates/forms/room-selection-form.php'
-        );
-
-        // Allow themes and plugins to modify the template paths
-        $templates = apply_filters('product_estimator_template_paths', $templates);
-
-        // Store loaded templates
-        $loaded_templates = array();
-
-        // Load each template
-        foreach ($templates as $template_id => $template_path) {
-            $full_path = PRODUCT_ESTIMATOR_PLUGIN_DIR . $template_path;
-
-            // Allow template overriding in theme
-            $theme_path = get_stylesheet_directory() . '/product-estimator/' . $template_path;
-            if (file_exists($theme_path)) {
-                $full_path = $theme_path;
-            }
-
-            if (file_exists($full_path)) {
-                // Start output buffering to capture template content
-                ob_start();
-                include $full_path;
-                $template_content = ob_get_clean();
-
-                // Extract template ID from content if not explicitly provided
-                if (preg_match('/<template\s+id="([^"]+)"/', $template_content, $matches)) {
-                    // Use ID from template if it exists
-                    $extracted_id = $matches[1];
-
-                    // If the extracted ID differs from the key, use the extracted ID
-                    if ($extracted_id !== $template_id) {
-                        $template_id = $extracted_id;
-                    }
-                }
-
-                $loaded_templates[$template_id] = $template_content;
-            }
-        }
-
-        // Allow themes and plugins to modify templates content
-        $loaded_templates = apply_filters('product_estimator_templates', $loaded_templates);
-
-        // Store templates for later use
-        add_action('wp_enqueue_scripts', function() use ($loaded_templates) {
-            wp_localize_script(
-                'product-estimator-main',
-                'productEstimatorTemplates',
-                $loaded_templates
-            );
-        }, 30); // Higher priority to ensure script is loaded first
     }
 
     /**
@@ -257,10 +261,7 @@ class ProductEstimator {
         // Initialize AJAX handler (already modified for lazy session loading)
         if (class_exists(AjaxHandler::class)) {
             require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-ajax-handler.php';
-            // Include CustomerDetails dependency if AjaxHandler uses it directly
-            if (class_exists(CustomerDetails::class)) {
-                require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-customer-details.php';
-            }
+
             $this->ajax_handler = new AjaxHandler();
         } else {
             error_log("Product Estimator Error: AjaxHandler class not found.");
@@ -460,5 +461,61 @@ class ProductEstimator {
         $products = get_posts($args);
 
         return $products;
+    }
+    
+    /**
+     * Get a component by name
+     *
+     * @since    2.3.0
+     * @access   public
+     * @param    string    $component_name    The component name.
+     * @return   object|null                  The component or null if not found.
+     */
+    public function get_component($component_name) {
+        switch ($component_name) {
+            case 'labels_frontend':
+                return $this->labels_frontend;
+            case 'labels_analytics':
+                return $this->labels_analytics;
+            case 'labels_documentation_generator':
+                return $this->labels_documentation_generator;
+            case 'feature_switches':
+                return $this->feature_switches;
+            case 'wc_integration':
+                return $this->wc_integration;
+            case 'netsuite_integration':
+                return $this->netsuite_integration;
+            case 'ajax_handler':
+                return $this->ajax_handler;
+            default:
+                return null;
+        }
+    }
+    
+    /**
+     * Get the plugin loader
+     *
+     * @since    2.3.0
+     * @access   public
+     * @return   object    The loader.
+     */
+    public function get_loader() {
+        return $this;
+    }
+    
+    /**
+     * Check if a feature is enabled
+     *
+     * @since    2.3.0
+     * @access   public
+     * @param    string    $feature_name    The feature name.
+     * @param    bool      $default         Default value if feature doesn't exist.
+     * @return   bool      Whether the feature is enabled.
+     */
+    public function is_feature_enabled($feature_name, $default = false) {
+        if ($this->feature_switches) {
+            return $this->feature_switches->get_feature($feature_name, $default);
+        }
+        return $default;
     }
 }

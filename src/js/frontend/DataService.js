@@ -6,7 +6,7 @@
  * Uses AjaxService for HTTP requests and EstimateStorage for local storage operations.
  */
 
-import { createLogger } from '@utils';
+import { createLogger, labelManager } from '@utils';
 
 import AjaxService from './AjaxService';
 import {
@@ -333,7 +333,7 @@ class DataService {
             (Array.isArray(room.products) && room.products.find(product => String(product.id) === productIdStr))) {
           logger.warn(`DataService: Product ID ${productId} already exists in room ${roomId} locally. Aborting.`);
           return Promise.reject({
-            message: this.config.i18n.product_already_exists || 'This product already exists in the selected room.',
+            message: labelManager.get('messages.product_already_exists', 'This product already exists in the selected room.'),
             data: { duplicate: true, estimate_id: estimateId, room_id: roomId }
           });
         }

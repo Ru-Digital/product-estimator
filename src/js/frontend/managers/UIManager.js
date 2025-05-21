@@ -8,7 +8,7 @@
  * - UI components
  */
 
-import { format, createLogger } from '@utils';
+import { format, createLogger, labelManager } from '@utils';
 
 import { InfiniteCarousel } from '../InfiniteCarousel';
 import ProductDetailsToggle from '../ProductDetailsToggle';
@@ -174,24 +174,15 @@ class UIManager {
       suggestionsContainer.style.display = 'none';
       toggleButton.classList.remove('expanded');
       
-      // Update icon
-      const iconElement = toggleButton.querySelector('.toggle-icon');
-      if (iconElement) {
-        iconElement.classList.remove('dashicons-arrow-up-alt2');
-        iconElement.classList.add('dashicons-arrow-down-alt2');
-      }
+      // Use template to update the toggle button's state
+      // Clear the button contents
+      toggleButton.innerHTML = '';
       
-      // Update text using template
+      // Use template to set new content
       const i18n = this.config.i18n || {};
-      if (i18n.showSuggestions) {
-        // Clear the button contents
-        toggleButton.innerHTML = '';
-        
-        // Use template to set new content
-        TemplateEngine.insert('toggle-button-show-template', {
-          buttonText: i18n.showSuggestions || 'Show Suggestions'
-        }, toggleButton);
-      }
+      TemplateEngine.insert('toggle-button-show-template', {
+        buttonText: i18n.showSuggestions || labelManager.get('buttons.show_suggestions', 'Show Suggestions')
+      }, toggleButton);
       
       logger.log('Suggestions hidden');
     } else {
@@ -200,24 +191,15 @@ class UIManager {
       suggestionsContainer.style.display = 'block';
       toggleButton.classList.add('expanded');
       
-      // Update icon
-      const iconElement = toggleButton.querySelector('.toggle-icon');
-      if (iconElement) {
-        iconElement.classList.remove('dashicons-arrow-down-alt2');
-        iconElement.classList.add('dashicons-arrow-up-alt2');
-      }
+      // Use template to update the toggle button's state
+      // Clear the button contents
+      toggleButton.innerHTML = '';
       
-      // Update text using template
+      // Use template to set new content
       const i18n = this.config.i18n || {};
-      if (i18n.hideSuggestions) {
-        // Clear the button contents
-        toggleButton.innerHTML = '';
-        
-        // Use template to set new content
-        TemplateEngine.insert('toggle-button-hide-template', {
-          buttonText: i18n.hideSuggestions || 'Hide Suggestions'
-        }, toggleButton);
-      }
+      TemplateEngine.insert('toggle-button-hide-template', {
+        buttonText: i18n.hideSuggestions || labelManager.get('buttons.hide_suggestions', 'Hide Suggestions')
+      }, toggleButton);
       
       // Initialize carousels if they exist
       this.initializeCarouselInContainer(suggestionsContainer);
@@ -299,8 +281,8 @@ class UIManager {
     if (!element) return null;
     
     try {
-      // Apply inline styles with !important to override any CSS rules
-      element.style.cssText += 'display: block !important; visibility: visible !important; opacity: 1 !important; height: auto !important;';
+      // Use a custom CSS class through the TemplateEngine for visibility
+      element.classList.add('force-visible');
       
       // Remove any hiding classes
       ['hidden', 'hide', 'invisible', 'd-none', 'display-none'].forEach(cls => {
@@ -321,15 +303,13 @@ class UIManager {
         
         const parentStyle = window.getComputedStyle(parent);
         if (parentStyle.display === 'none') {
-          parent.style.cssText += 'display: block !important;';
+          // Add the visibility class to parent elements rather than inline styles
+          parent.classList.add('force-visible');
         }
         parent = parent.parentElement;
       }
       
-      // Use jQuery as a fallback if available
-      if (typeof jQuery !== 'undefined') {
-        jQuery(element).show();
-      }
+      logger.log('Element visibility forced using CSS classes');
     } catch (error) {
       logger.error('Error forcing element visibility:', error);
     }
@@ -350,7 +330,9 @@ class UIManager {
       return this.forceElementVisibility(element);
     }
     
-    element.style.display = 'block';
+    // Use CSS classes instead of inline styles
+    element.classList.add('visible');
+    element.classList.remove('hidden');
     return element;
   }
   
@@ -362,7 +344,9 @@ class UIManager {
   hideElement(element) {
     if (!element) return null;
     
-    element.style.display = 'none';
+    // Use CSS classes instead of inline styles
+    element.classList.remove('visible', 'force-visible');
+    element.classList.add('hidden');
     return element;
   }
   
@@ -376,21 +360,19 @@ class UIManager {
     if (!element) return null;
     
     if (show === undefined) {
-      // Toggle current state
-      if (window.getComputedStyle(element).display === 'none') {
-        element.style.display = 'block';
+      // Toggle current state based on CSS classes
+      if (element.classList.contains('hidden')) {
+        return this.showElement(element);
       } else {
-        element.style.display = 'none';
+        return this.hideElement(element);
       }
     } else if (show) {
       // Force show
-      element.style.display = 'block';
+      return this.showElement(element);
     } else {
       // Force hide
-      element.style.display = 'none';
+      return this.hideElement(element);
     }
-    
-    return element;
   }
 }
 

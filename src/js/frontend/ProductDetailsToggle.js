@@ -3,7 +3,7 @@
  *
  * Handles the show/hide functionality for both similar products and product notes sections
  */
-import { createLogger } from '@utils';
+import { createLogger, labelManager } from '@utils';
 const logger = createLogger('ProductDetailsToggle');
 class ProductDetailsToggle {
   /**
@@ -742,7 +742,7 @@ class ProductDetailsToggle {
 
         // Use the hideIncludes text (since it's expanded) and arrow-up icon
         toggleButton.innerHTML = `
-        ${this.config.i18n.hideIncludes || 'Product Includes'}
+        ${this.config.i18n.hideIncludes}
         <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
       `;
 
@@ -833,11 +833,15 @@ class ProductDetailsToggle {
 const instance = new ProductDetailsToggle({
   debug: window.productEstimatorVars?.debug || false,
   i18n: {
-    showProducts: window.productEstimatorVars?.i18n?.showSimilarProducts || 'Similar Products',
-    hideProducts: window.productEstimatorVars?.i18n?.hideSimilarProducts || 'Similar Products',
-    showNotes: window.productEstimatorVars?.i18n?.showNotes || 'Product Notes',
-    hideNotes: window.productEstimatorVars?.i18n?.hideNotes || 'Product Notes',
-    loading: window.productEstimatorVars?.i18n?.loading || 'Loading...'
+    showProducts: labelManager.get('buttons.show_similar_products', 'Similar Products'),
+    hideProducts: labelManager.get('buttons.hide_similar_products', 'Similar Products'),
+    showNotes: labelManager.get('buttons.show_notes', 'Product Notes'),
+    hideNotes: labelManager.get('buttons.hide_notes', 'Product Notes'),
+    showIncludes: labelManager.get('buttons.show_includes', 'Product Includes'),
+    hideIncludes: labelManager.get('buttons.hide_includes', 'Product Includes'),
+    showSuggestions: labelManager.get('buttons.show_suggestions', 'Suggested Products'),
+    hideSuggestions: labelManager.get('buttons.hide_suggestions', 'Suggested Products'),
+    loading: labelManager.get('ui_elements.loading', 'Loading...')
   }
 });
 

@@ -20,6 +20,7 @@
 // Import utility classes (generates CSS output)
 
 @use 'utilities';      // Utility helper classes
+@use '_visibility';    // Visibility utility classes
 
 // Use modern @use syntax for all component styles
 
@@ -41,3 +42,5 @@
 @use 'AdditionalProducts';    // Additional products styles
 
 @use 'Tooltip';               // Tooltip styles
+
+@use 'components/AddToEstimateButton';  // Add to Estimate button styles for single product pages

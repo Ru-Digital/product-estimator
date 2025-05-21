@@ -12,9 +12,13 @@ import * as format from './format';
 import * as validation from './validation';
 import * as loggerModule from './logger';
 import * as dialogHelpers from './dialog-helpers';
+import * as labels from './labels';
 
 // Export individual modules for direct imports
-export { ajax, dom, format, validation, loggerModule, dialogHelpers };
+export { ajax, dom, format, validation, loggerModule, dialogHelpers, labels };
+
+// Export specific items from labels
+export { labelManager, LabelManager } from './labels';
 
 export const {
   log,

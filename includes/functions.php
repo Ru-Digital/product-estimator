@@ -12,6 +12,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Include label helper functions
+require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/functions-labels.php';
+
 /**
  * Get plugin settings with defaults
  *

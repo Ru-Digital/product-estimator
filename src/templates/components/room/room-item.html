@@ -4,17 +4,17 @@
       <div class="accordion-header room-item-header">
         <div class="room-image-wrapper">
           <img class="primary-product-image product-thumbnail"
-               src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Primary product"
+               src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-aria-label="ui_elements.primary_product" data-alt-label="ui_elements.primary_product" alt="Primary product"
                data-visible-if="has_primary_product">
         </div>
         <div class="room-details-wrapper">
           <div class="room-details">
             <div class="room-name-wrapper">
-              <span class="room-name"></span>
+              <span class="room-name" data-prefix-label="ui_elements.room"></span>
               <span class="primary-product-name"></span>
               <span class="room-dimensions"></span>
             </div>
-            <div class="room-price"></div>
+            <div class="room-price" data-prefix-label="ui_elements.products"></div>
           </div>
 
           <div class="price-graph-container">
@@ -25,7 +25,7 @@
           </div>
         </div>
         <div class="room-actions">
-          <button class="remove-room" data-estimate-id="" data-room-id="" title="Remove Room">
+          <button class="remove-room" data-estimate-id="" data-room-id="" data-title-label="buttons.remove_room" title="Remove Room" data-aria-label="buttons.remove_room">
             <span class="dashicons dashicons-trash"></span>
           </button>
         </div>
@@ -36,14 +36,14 @@
     <div class="accordion-content">
       <div class="room-empty-state" style="display: none;"></div>
       <button class="product-includes-toggle expanded">
-        <span>Product Includes</span>
+        <span data-label="buttons.product_includes">Product Includes</span>
         <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
       </button>
       <div class="includes-container visible">
         <div class="product-includes">
           <div class="product-includes-items"></div>
         </div>
-        <div class="price-notice">Prices are subject to check measures without notice</div>
+        <div class="price-notice" data-label="ui_elements.price_notice">Prices are subject to check measures without notice</div>
         <div class="additional-products-container" style="display: none;">
           <div class="additional-products-list">
           </div>
@@ -51,18 +51,18 @@
       </div>
 
       <button class="product-details-toggle similar-products-toggle expanded">
-        <span>Similar Products</span>
+        <span data-label="buttons.similar_products">Similar Products</span>
         <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span>
       </button>
       <div class="similar-products-container visible" data-room-id="">
         <div class="product-similar-products">
           <div class="suggestions-carousel similar-products-carousel">
-            <div class="suggestions-nav prev" aria-label="Previous">
+            <div class="suggestions-nav prev" data-aria-label="ui_elements.previous" data-title-label="ui_elements.previous" aria-label="Previous" title="Previous">
               <span class="dashicons dashicons-arrow-left-alt2"></span>
             </div>
             <div class="suggestions-container similar-products-list">
             </div>
-            <div class="suggestions-nav next" aria-label="Next">
+            <div class="suggestions-nav next" data-aria-label="ui_elements.next" data-title-label="ui_elements.next" aria-label="Next" title="Next">
               <span class="dashicons dashicons-arrow-right-alt2"></span>
             </div>
           </div>
@@ -70,15 +70,17 @@
       </div>
 
       <div class="product-suggestions" style="display: none;">
-        <button class="product-suggestions-toggle"> Suggested Products
-          <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span></button>
+        <button class="product-suggestions-toggle">
+          <span data-label="buttons.suggested_products">Suggested Products</span>
+          <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span>
+        </button>
 
         <div class="suggestions-container-wrapper">
           <div class="suggestions-carousel">
-            <div class="suggestions-nav prev" aria-label="Previous Suggestions">&#10094;</div>
+            <div class="suggestions-nav prev" data-aria-label="ui_elements.previous_suggestions" data-title-label="ui_elements.previous_suggestions" aria-label="Previous Suggestions" title="Previous Suggestions">&#10094;</div>
             <div class="suggestions-container">
             </div>
-            <div class="suggestions-nav next" aria-label="Next Suggestions">&#10095;</div>
+            <div class="suggestions-nav next" data-aria-label="ui_elements.next_suggestions" data-title-label="ui_elements.next_suggestions" aria-label="Next Suggestions" title="Next Suggestions">&#10095;</div>
           </div>
         </div>
       </div>

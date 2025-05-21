@@ -25,6 +25,15 @@ class Activator {
         self::upgrade_tables();
         self::check_requirements();
 //        self::run_composer_install();
+        
+        // Run labels migration if the class exists
+        if (class_exists('\\RuDigital\\ProductEstimator\\Includes\\LabelsMigration')) {
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-migration.php';
+            LabelsMigration::migrate();
+        }
+        
+        // Create or update feature switches
+        self::setup_feature_switches();
 
         // Set activation flag
         update_option('product_estimator_activated', true);
@@ -191,5 +200,42 @@ class Activator {
                 array('back_link' => true)
             );
         }
+    }
+    
+    /**
+     * Set up feature switches with default values
+     *
+     * @since    2.3.0
+     * @access   private
+     */
+    private static function setup_feature_switches() {
+        // Get existing feature switches or initialize empty array
+        $feature_switches = get_option('product_estimator_feature_switches', []);
+        
+        // Default feature switch values
+        $default_switches = [
+            'suggested_products_enabled' => true,
+            'similar_products_enabled' => true,
+            'product_additions_enabled' => true,
+            'label_analytics_enabled' => true, // Enable label analytics by default
+        ];
+        
+        // For existing installations, merge with defaults but don't overwrite existing values
+        $updated_switches = false;
+        
+        foreach ($default_switches as $key => $value) {
+            if (!isset($feature_switches[$key])) {
+                $feature_switches[$key] = $value;
+                $updated_switches = true;
+            }
+        }
+        
+        // Only update if changes were made
+        if ($updated_switches || empty($feature_switches)) {
+            update_option('product_estimator_feature_switches', $feature_switches);
+        }
+        
+        error_log("[Product Estimator] Feature switches configured. Label analytics is " . 
+                 (isset($feature_switches['label_analytics_enabled']) && $feature_switches['label_analytics_enabled'] ? 'enabled' : 'disabled'));
     }
 }

@@ -493,6 +493,41 @@
   }
 }
 
+/* 
+ * _visibility.scss
+ *
+ * Contains visibility utility classes for showing/hiding elements
+ * These classes are used by the UIManager to control element visibility
+ * without direct DOM manipulation.
+ */
+.visible {
+  display: block !important;
+  visibility: visible !important;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.force-visible {
+  display: block !important;
+  height: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.visible.d-flex {
+  display: flex !important;
+}
+
+.visible.d-inline {
+  display: inline !important;
+}
+
+.visible.d-inline-block {
+  display: inline-block !important;
+}
+
 /**
  * Main SCSS file for Product Estimator frontend styles
  *
@@ -1427,15 +1462,26 @@
   color: #999;
   cursor: pointer;
   display: flex;
+  font-size: 12px;
+  gap: 4px;
   justify-content: center;
-  padding: 4px;
+  padding: 4px 8px;
   position: absolute;
   right: 10px;
   transition: color 0.2s ease;
+  /* Show text on larger screens or when hovered */
+}
+.remove-product .remove-text {
+  display: none; /* Hide by default on small screens */
 }
 .remove-product:hover {
   background: transparent;
   color: #d63638;
+}
+@media screen and (min-width: 768px) {
+  .remove-product:hover .remove-text {
+    display: inline-block;
+  }
 }
 
 /* Form Styles */
@@ -4736,6 +4782,38 @@ button.replace-product-in-room.loading {
   left: -9px;
   position: absolute;
   top: -9px;
+}
+
+/**
+ * Styles for the "Add to Estimate" button on single product pages
+ */
+.single_add_to_estimator_button {
+  display: inline-block;
+  margin-left: 10px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  padding: 0.5em 1em;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.single_add_to_estimator_button:hover {
+  background-color: #e0e0e0;
+}
+.single_add_to_estimator_button.button.alt {
+  background-color: #f7f7f7;
+  border-color: #ccc;
+  color: #515151;
+}
+.single_add_to_estimator_button.button.alt:hover {
+  background-color: #ebe9eb;
+  border-color: #bbb;
+  color: #515151;
+}
+
+.woocommerce div.product form.cart .single_add_to_estimator_button {
+  margin-left: 10px;
+  vertical-align: middle;
 }
 
 /*# sourceMappingURL=product-estimator-frontend-bundled.css.map*/

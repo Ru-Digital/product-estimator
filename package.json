@@ -4,7 +4,7 @@
   "description": "WooCommerce Product Estimator Plugin",
   "main": "index.js",
   "scripts": {
-    "prebuild": "npm run lint:build",
+    "prebuild": "npm run lint:build && npm run verify:templates",
     "build": "webpack --mode=production",
     "predev": "node add-source-maps.js",
     "dev": "webpack --mode=development --watch & (fswatch -o src/styles | xargs -n1 -I{} node add-source-maps.js)",
@@ -17,6 +17,7 @@
     "lint": "npm run lint:js && npm run lint:scss",
     "lint:fix": "npm run lint:js -- --fix && npm run lint:scss -- --fix",
     "lint:build": "npm run lint > lint-report.txt || (echo 'Linting issues found. See lint-report.txt' && exit 0)",
+    "verify:templates": "node tools/verify-templates.js",
     "test:setup": "cd tests && npm install",
     "test:e2e": "cd tests && npm run test",
     "test:frontend": "cd tests && npm run test:frontend",

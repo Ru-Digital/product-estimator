@@ -2,12 +2,33 @@
 namespace RuDigital\ProductEstimator\Includes\Ajax;
 
 use RuDigital\ProductEstimator\Includes\Traits\EstimateDbHandler;
+use RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend;
 
 /**
  * Product-related AJAX handlers
  */
 class ProductAjaxHandler extends AjaxHandlerBase {
     use EstimateDbHandler;
+    
+    /**
+     * Labels manager
+     *
+     * @var LabelsFrontend
+     */
+    protected $labels;
+
+    /**
+     * Constructor
+     * 
+     * @param string $plugin_name The name of this plugin.
+     * @param string $version The version of this plugin.
+     */
+    public function __construct($plugin_name, $version) {
+        parent::__construct($plugin_name, $version);
+        
+        // Initialize labels manager
+        $this->labels = new LabelsFrontend($plugin_name, $version);
+    }
 
     /**
      * Register WordPress hooks for AJAX endpoints
@@ -29,7 +50,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
 
         if (!$variation_id) {
             wp_send_json_error([
-                'message' => __('Variation ID is required', 'product-estimator')
+                'message' => $this->labels->get('messages.variation_id_required', __('Variation ID is required', 'product-estimator'))
             ]);
             return;
         }
@@ -39,12 +60,12 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             $variation = wc_get_product($variation_id);
 
             if (!$variation || !$variation->is_type('variation')) {
-                throw new \Exception(__('Invalid variation', 'product-estimator'));
+                throw new \Exception($this->labels->get('messages.invalid_variation', __('Invalid variation', 'product-estimator')));
             }
 
             // Check if estimator is enabled for this variation
             if (!\RuDigital\ProductEstimator\Includes\Integration\WoocommerceIntegration::isEstimatorEnabled($variation_id)) {
-                throw new \Exception(__('Estimator not enabled for this variation', 'product-estimator'));
+                throw new \Exception($this->labels->get('messages.estimator_not_enabled', __('Estimator not enabled for this variation', 'product-estimator')));
             }
 
             // Get parent product ID
@@ -126,14 +147,14 @@ class ProductAjaxHandler extends AjaxHandlerBase {
 
 
         if (!$product_id) {
-            wp_send_json_error(['message' => __('Product ID is required', 'product-estimator')]);
+            wp_send_json_error(['message' => $this->labels->get_label('messages.product_id_required', __('Product ID is required', 'product-estimator'))]);
             return;
         }
 
         try {
             $product = wc_get_product($product_id);
             if (!$product) {
-                wp_send_json_error(['message' => __('Product not found', 'product-estimator')]);
+                wp_send_json_error(['message' => $this->labels->get_label('messages.product_not_found', __('Product not found', 'product-estimator'))]);
                 return;
             }
 
@@ -147,11 +168,11 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 if (file_exists($helper_path)) {
                     require_once $helper_path;
                     if (!function_exists('product_estimator_get_product_price')) {
-                        wp_send_json_error(['message' => __('Pricing helper function not available after include attempt.', 'product-estimator')]);
+                        wp_send_json_error(['message' => $this->labels->get_label('messages.pricing_helper_missing', __('Pricing helper function not available after include attempt.', 'product-estimator'))]);
                         return;
                     }
                 } else {
-                    wp_send_json_error(['message' => __('Pricing helper file not found.', 'product-estimator')]);
+                    wp_send_json_error(['message' => $this->labels->get_label('messages.pricing_helper_file_missing', __('Pricing helper file not found.', 'product-estimator'))]);
                     return;
                 }
             }
@@ -556,7 +577,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
             error_log('FINAL PRODUCT DATA: ' . print_r($product_data, true));
 
             wp_send_json_success([
-                'message' => __('Product data retrieved successfully', 'product-estimator'),
+                'message' => $this->labels->get_label('messages.product_data_retrieved', __('Product data retrieved successfully', 'product-estimator')),
                 'product_data' => $product_data
             ]);
 
@@ -566,7 +587,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
                 error_log('Trace: ' . $e->getTraceAsString());
             }
             wp_send_json_error([
-                'message' => __('An error occurred while retrieving product data', 'product-estimator'),
+                'message' => $this->labels->get_label('messages.product_data_error', __('An error occurred while retrieving product data', 'product-estimator')),
                 'error_detail' => $e->getMessage()
             ]);
         }
@@ -756,7 +777,7 @@ class ProductAjaxHandler extends AjaxHandlerBase {
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
 
         if (!$product_id) {
-            wp_send_json_error(['message' => __('Product ID is required', 'product-estimator')]);
+            wp_send_json_error(['message' => $this->labels->get_label('messages.product_id_required', __('Product ID is required', 'product-estimator'))]);
             return;
         }
 

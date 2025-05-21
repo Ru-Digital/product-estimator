@@ -128,7 +128,17 @@ class ScriptHandler {
                 'plugin_url' => PRODUCT_ESTIMATOR_PLUGIN_URL,
                 'estimator_url' => home_url('/estimator/'),
                 'debug' => defined('WP_DEBUG') && WP_DEBUG, // Pass debug mode to JS,
-                'featureSwitches' => $processed_feature_switches, // <-- Add this line
+                'featureSwitches' => $processed_feature_switches // <-- Add this line
+            )
+        );
+        
+        // Also send settings to match the format expected by labels.js
+        wp_localize_script(
+            $this->plugin_name,
+            'productEstimatorSettings',
+            array(
+                'labelAnalyticsEnabled' => isset($processed_feature_switches['label_analytics_enabled']) ? 
+                    $processed_feature_switches['label_analytics_enabled'] : true, // Default to enabled for now
                 'i18n' => array(
                     'loading' => __('Loading...', 'product-estimator'),
                     'error' => __('Error loading content. Please try again.', 'product-estimator'),
@@ -211,21 +221,72 @@ class ScriptHandler {
             ];
         }
 
+        // Get the label for Add to Estimate button from settings
+        $button_label = $this->get_add_to_estimate_button_label();
+
         // Add inline script with variation data
-        if (!empty($variation_data)) {
+        if (!empty($variation_data) || !empty($button_label)) {
             echo '<script type="text/javascript">
                 var product_estimator_variations = ' . wp_json_encode($variation_data) . ';
+                var add_to_estimate_button_label = ' . wp_json_encode($button_label) . ';
 
                 // Enhance the variation found event
                 jQuery(document).ready(function($) {
+                    // Set button text when available
+                    $(document).on("click", ".single_add_to_estimator_button", function() {
+                        // Trigger the estimator modal
+                        if (window.productEstimator && window.productEstimator.modal) {
+                            window.productEstimator.modal.open();
+                        }
+                    });
+
+                    // Handle variations
                     $("form.variations_form").on("found_variation", function(event, variation) {
                         if (variation && variation.variation_id && product_estimator_variations[variation.variation_id]) {
                             // Add estimator data to the variation object
                             variation.enable_estimator = product_estimator_variations[variation.variation_id].enable_estimator;
                         }
+                        
+                        // Update the button text for variations too
+                        if (add_to_estimate_button_label) {
+                            setTimeout(function() {
+                                $(".single_add_to_estimator_button").text(add_to_estimate_button_label);
+                            }, 100);
+                        }
                     });
+                    
+                    // Set the button text on page load
+                    if (add_to_estimate_button_label) {
+                        setTimeout(function() {
+                            $(".single_add_to_estimator_button").text(add_to_estimate_button_label);
+                        }, 500);
+                    }
                 });
             </script>';
         }
+    }
+    
+    /**
+     * Get the label for the Add to Estimate button
+     * 
+     * @since    2.0.0
+     * @access   private
+     * @return   string    Button label
+     */
+    private function get_add_to_estimate_button_label() {
+        // First try the specific single product version
+        $label = get_option('product_estimator_labels');
+        
+        if (is_array($label) && isset($label['buttons']['add_to_estimate_single_product'])) {
+            return $label['buttons']['add_to_estimate_single_product'];
+        }
+        
+        // Fallback to the regular version
+        if (is_array($label) && isset($label['buttons']['add_to_estimate'])) {
+            return $label['buttons']['add_to_estimate'];
+        }
+        
+        // Final fallback
+        return 'Add to Estimate';
     }
 }

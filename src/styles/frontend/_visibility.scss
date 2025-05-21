@@ -1,0 +1,36 @@
+/* 
+ * _visibility.scss
+ *
+ * Contains visibility utility classes for showing/hiding elements
+ * These classes are used by the UIManager to control element visibility
+ * without direct DOM manipulation.
+ */
+
+.visible {
+  display: block !important;
+  visibility: visible !important;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.force-visible {
+  display: block !important;
+  height: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+// Different display modes for various element types
+.visible.d-flex {
+  display: flex !important;
+}
+
+.visible.d-inline {
+  display: inline !important;
+}
+
+.visible.d-inline-block {
+  display: inline-block !important;
+}

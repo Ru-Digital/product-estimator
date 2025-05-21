@@ -6,7 +6,8 @@
  * specific responsibilities to specialized manager classes.
  */
 
-import { createLogger } from '@utils';
+import { createLogger, labelManager } from '@utils';
+import eventBus from '../core/EventBus';
 
 // Import services and utils first
 import { loadEstimateData, saveEstimateData, clearEstimateData } from '../EstimateStorage';
@@ -238,7 +239,7 @@ class ModalManager {
         this.loadingIndicator.className = 'product-estimator-modal-loading';
         this.loadingIndicator.innerHTML = `
           <div class="loading-spinner"></div>
-          <div class="loading-text">${this.config.i18n.loading || 'Loading...'}</div>
+          <div class="loading-text">${labelManager.get('ui_elements.loading', 'Loading...')}</div>
         `;
         this.modal.appendChild(this.loadingIndicator);
       }
@@ -423,11 +424,11 @@ class ModalManager {
                 // Show error dialog only for actual errors (not cancellation)
                 if (error.message !== 'Variation selection cancelled') {
                   this.confirmationDialog.show({
-                    title: 'Error',
-                    message: 'Unable to replace product. Please try again.',
+                    title: labelManager.get('ui_elements.error_title', 'Error'),
+                    message: labelManager.get('errors.replace_product_error', 'Unable to replace product. Please try again.'),
                     type: 'error',
                     showCancel: false,
-                    confirmText: 'OK'
+                    confirmText: labelManager.get('buttons.ok', 'OK')
                   });
                 }
               })
@@ -474,17 +475,20 @@ class ModalManager {
   showLoading() {
     if (!this.loadingIndicator) {
       logger.warn('Loading indicator not available - creating one');
-      // Try to initialize a loading indicator
+      // Try to initialize a loading indicator using TemplateEngine
       if (this.modal) {
-        const loadingIndicator = document.createElement('div');
-        loadingIndicator.className = 'product-estimator-modal-loading';
-        loadingIndicator.style.display = 'flex';
-        loadingIndicator.innerHTML = `
-          <div class="loading-spinner"></div>
-          <div class="loading-text">${this.config.i18n.loading || 'Loading...'}</div>
-        `;
-        this.modal.appendChild(loadingIndicator);
-        this.loadingIndicator = loadingIndicator;
+        // Create loading indicator using TemplateEngine
+        const loadingTemplateId = 'loading-placeholder-template';
+        const loadingContainer = document.createElement('div');
+        loadingContainer.className = 'product-estimator-modal-loading';
+        
+        // Insert template content
+        TemplateEngine.insert(loadingTemplateId, {
+          loadingText: labelManager.get('ui_elements.loading', 'Loading...')
+        }, loadingContainer);
+        
+        this.modal.appendChild(loadingContainer);
+        this.loadingIndicator = loadingContainer;
       } else {
         logger.error('Cannot create loading indicator - modal not available');
         return;
@@ -492,7 +496,12 @@ class ModalManager {
     }
     
     try {
-      this.loadingIndicator.style.display = 'flex';
+      // Use class-based visibility instead of inline styles
+      this.loadingIndicator.classList.add('visible');
+      this.loadingIndicator.classList.add('d-flex');
+      
+      // Emit loading started event
+      eventBus.emit('modal:loading:started', this.modal);
       
       // Set a safety timeout in case something goes wrong
       this._loadingTimeout = setTimeout(() => {
@@ -519,7 +528,12 @@ class ModalManager {
     }
     
     try {
-      this.loadingIndicator.style.display = 'none';
+      // Use class-based visibility instead of inline styles
+      this.loadingIndicator.classList.remove('visible', 'd-flex');
+      this.loadingIndicator.classList.add('hidden');
+      
+      // Emit loading ended event
+      eventBus.emit('modal:loading:ended', this.modal);
       
       // Clear the safety timeout
       if (this._loadingTimeout) {
@@ -570,6 +584,8 @@ class ModalManager {
    * @param {object} buttonConfig - Optional button configuration for reset
    */
   openModal(productId = null, forceListView = false, buttonConfig = null) {
+    // Emit modal opening event
+    eventBus.emit('modal:before:open', { productId, forceListView });
     logger.log('MODAL OPEN CALLED WITH:', {
       productId: productId,
       forceListView: forceListView,
@@ -595,7 +611,7 @@ class ModalManager {
     // Make sure modal exists and is initialized
     if (!this.modal) {
       logger.error('Cannot open modal - not found in DOM');
-      this.showError('Modal element not found. Please contact support.');
+      this.showError(labelManager.get('errors.modal_not_found', 'Modal element not found'));
       return;
     }
     
@@ -619,7 +635,7 @@ class ModalManager {
                 this.productSelectionDialog.show({
                   product: {
                     id: productId,
-                    name: variationData.productName || 'Select Product Options'
+                    name: variationData.productName || labelManager.get('ui_elements.select_options', 'Select Options')
                   },
                   variations: variationData.variations,
                   attributes: variationData.attributes,
@@ -674,7 +690,7 @@ class ModalManager {
     } catch (error) {
       logger.error('Error opening modal:', error);
       this.hideLoading();
-      this.showError('An error occurred opening the modal. Please try again.');
+      this.showError(labelManager.get('errors.modal_open_error', 'Error opening modal'));
     }
   }
   
@@ -709,6 +725,12 @@ class ModalManager {
       document.body.classList.add('modal-open');
       this.isOpen = true;
       
+      // Emit modal opened event
+      eventBus.emit('modal:opened', { 
+        productId: this.currentProductId,
+        forceListView: forceListView 
+      });
+      
       // Initialize carousels through UIManager
       if (this.uiManager) {
         setTimeout(() => {
@@ -737,7 +759,7 @@ class ModalManager {
     } catch (error) {
       logger.error('Error proceeding with modal open:', error);
       this.hideLoading();
-      this.showError('An error occurred opening the modal. Please try again.');
+      this.showError(labelManager.get('errors.modal_open_error', 'Error opening modal'));
     }
   }
   
@@ -746,6 +768,9 @@ class ModalManager {
    */
   closeModal() {
     if (!this.isOpen) return;
+    
+    // Emit before close event
+    eventBus.emit('modal:before:close', this.modal);
     
     // Debounce logic - prevent rapid open/close calls
     if (this._modalActionInProgress) {
@@ -787,9 +812,12 @@ class ModalManager {
       if (this.formManager) this.formManager.onModalClosed();
       if (this.uiManager) this.uiManager.onModalClosed();
       
-      // Dispatch modal closed event
-      const event = new CustomEvent('productEstimatorModalClosed');
-      document.dispatchEvent(event);
+      // Emit modal closed event through EventBus
+      eventBus.emit('modal:closed', this.modal);
+      
+      // Also dispatch DOM event for backwards compatibility
+      const domEvent = new CustomEvent('productEstimatorModalClosed');
+      document.dispatchEvent(domEvent);
     } catch (error) {
       logger.error('Error closing modal:', error);
     }
@@ -879,8 +907,9 @@ class ModalManager {
     if (!this.loadingIndicator) return;
     
     try {
-      // Force hide the loading indicator
-      this.loadingIndicator.style.display = 'none';
+      // Use class-based visibility instead of inline styles
+      this.loadingIndicator.classList.remove('visible', 'd-flex');
+      this.loadingIndicator.classList.add('hidden');
       
       // Reset loading start time
       this.loadingStartTime = 0;
@@ -890,6 +919,9 @@ class ModalManager {
         clearTimeout(this._loadingTimeout);
         this._loadingTimeout = null;
       }
+      
+      // Emit loading safety event
+      eventBus.emit('modal:loading:safety', this.modal);
       
       logger.log('Loading indicator forcibly hidden for safety');
     } catch (error) {

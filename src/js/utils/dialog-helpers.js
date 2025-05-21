@@ -7,6 +7,7 @@
 
 // Import directly from logger to avoid circular dependency
 import { createLogger } from './logger';
+import { labelManager } from './labels';
 
 const logger = createLogger('DialogHelpers');
 
@@ -25,10 +26,17 @@ export function showSuccessDialog(modalManager, message, type = 'default', onCon
     return false;
   }
 
+  // Get the appropriate title from labels if type-specific title exists
+  let dialogTitle = title;
+  const titleLabel = `ui_elements.dialog_title_${type}_saved`;
+  if (labelManager.exists(titleLabel)) {
+    dialogTitle = labelManager.get(titleLabel, title);
+  }
+
   modalManager.confirmationDialog.show({
-    title: title,
+    title: dialogTitle,
     message: message,
-    confirmText: 'OK',
+    confirmText: labelManager.get('buttons.ok', 'OK'),
     cancelText: false, // No cancel button
     action: 'success',
     type: type,
@@ -113,11 +121,18 @@ export function showDeleteConfirmDialog(modalManager, message, onConfirm, type =
     return false;
   }
 
+  // Get the appropriate title from labels if type-specific title exists
+  let dialogTitle = title;
+  const titleLabel = `ui_elements.dialog_title_delete_${type}`;
+  if (labelManager.exists(titleLabel)) {
+    dialogTitle = labelManager.get(titleLabel, title);
+  }
+
   modalManager.confirmationDialog.show({
-    title: title,
+    title: dialogTitle,
     message: message,
-    confirmText: 'Delete',
-    cancelText: 'Cancel',
+    confirmText: labelManager.get('buttons.delete', 'Delete'),
+    cancelText: labelManager.get('buttons.cancel', 'Cancel'),
     action: 'delete',
     type: type,
     showCancel: true,

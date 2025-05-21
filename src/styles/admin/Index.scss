@@ -28,10 +28,12 @@
 @use 'modules/GeneralSettings';
 
 /* These modules don't currently have custom styles, so we've commented them out
-   to reduce unnecessary imports. Uncomment them if you add styles to these files.
+   to reduce unnecessary imports. Uncomment them if you add styles to these files. */
 
-@use 'modules/FeatureSwitches';
 @use 'modules/LabelSettings';
+
+/*
+@use 'modules/FeatureSwitches';
 @use 'modules/NetsuiteSettings';
 @use 'modules/NotificationSettings';
 @use 'modules/PricingRules';

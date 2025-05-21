@@ -7,10 +7,28 @@ use RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend;
 
 /**
  * Storage-related AJAX handlers
- * 
+ *
  * Handles all database storage operations including estimates and customer contacts
  */
 class StorageAjaxHandler extends AjaxHandlerBase {
+    /**
+     * @var LabelsFrontend
+     */
+    private $labels;
+
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        parent::__construct();
+        global $product_estimator_plugin_info;
+        
+        // Get plugin name and version from global if available, or use defaults
+        $plugin_name = isset($product_estimator_plugin_info['name']) ? $product_estimator_plugin_info['name'] : 'product-estimator';
+        $version = isset($product_estimator_plugin_info['version']) ? $product_estimator_plugin_info['version'] : '2.0.0';
+        
+        $this->labels = new LabelsFrontend($plugin_name, $version);
+    }
     use EstimateDbHandler;
 
     /**
@@ -24,7 +42,7 @@ class StorageAjaxHandler extends AjaxHandlerBase {
         $this->register_ajax_endpoint('check_estimate_stored', 'check_estimate_stored');
         $this->register_ajax_endpoint('get_secure_pdf_url', 'get_secure_pdf_url');
         $this->register_ajax_endpoint('request_copy_estimate', 'request_copy_estimate');
-        
+
         // Customer contact endpoint
         $this->register_ajax_endpoint('request_store_contact', 'request_store_contact');
     }
@@ -55,7 +73,7 @@ class StorageAjaxHandler extends AjaxHandlerBase {
 
         // Get estimate data from POST request (sent from localStorage)
         $estimate_data = isset($_POST['estimate_data']) ? $_POST['estimate_data'] : null;
-        
+
         if (!$estimate_data) {
             wp_send_json_error([
                 'message' => __('Estimate data is required', 'product-estimator')
@@ -80,7 +98,7 @@ class StorageAjaxHandler extends AjaxHandlerBase {
                 error_log('Customer details: ' . print_r($customer_details, true));
                 error_log('Notes: ' . print_r($notes, true));
             }
-            
+
             $db_id = $this->storeOrUpdateEstimate($estimate_id, $customer_details, $notes, $estimate_data);
 
             if (!$db_id) {
@@ -88,7 +106,7 @@ class StorageAjaxHandler extends AjaxHandlerBase {
             }
 
             wp_send_json_success([
-                'message' => __('Estimate saved successfully', 'product-estimator'),
+                'message' => $this->labels->get('messages.estimate_saved', 'Estimate saved successfully'),
                 'estimate_id' => $db_id,
                 'session_id' => $estimate_id,
                 'is_update' => $this->getEstimateDbId($estimate_id) == $db_id
@@ -98,7 +116,7 @@ class StorageAjaxHandler extends AjaxHandlerBase {
                 error_log('Error in store_single_estimate: ' . $e->getMessage());
                 error_log('Trace: ' . $e->getTraceAsString());
             }
-            
+
             wp_send_json_error([
                 'message' => $e->getMessage()
             ]);
@@ -183,7 +201,7 @@ class StorageAjaxHandler extends AjaxHandlerBase {
         // 1. Generating the estimate PDF
         // 2. Sending an email with the PDF attachment
         // For now, return success
-        
+
         wp_send_json_success([
             'message' => __('Estimate copy request processed', 'product-estimator')
         ]);
@@ -198,7 +216,7 @@ class StorageAjaxHandler extends AjaxHandlerBase {
 
         // Get customer details
         $customer_details = isset($_POST['customer_details']) ? $_POST['customer_details'] : null;
-        
+
         if (!$customer_details) {
             wp_send_json_error([
                 'message' => __('Customer details required', 'product-estimator')

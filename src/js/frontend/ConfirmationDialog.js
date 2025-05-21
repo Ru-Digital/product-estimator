@@ -13,6 +13,7 @@
  */
 
 import { createLogger } from '@utils';
+import { labelManager } from '@utils/labels';
 
 import TemplateEngine from './TemplateEngine';
 
@@ -50,8 +51,8 @@ class ConfirmationDialog {
     this.show({
       title: title,
       message: message,
-      confirmText: 'Confirm',
-      cancelText: 'Cancel',
+      confirmText: labelManager.get('buttons.confirm', 'Confirm'),
+      cancelText: labelManager.get('buttons.cancel', 'Cancel'),
       action: 'default',
       onConfirm: onConfirm,
       onCancel: onCancel
@@ -92,6 +93,9 @@ class ConfirmationDialog {
     // Get references to the backdrop and dialog elements
     this.backdropElement = this.dialogContainer.querySelector('.pe-dialog-backdrop');
     this.dialog = this.dialogContainer.querySelector('.pe-confirmation-dialog');
+    
+    // Process labels in the dialog template
+    TemplateEngine.processLabels(this.dialogContainer);
 
     // Append the container to the body
     document.body.appendChild(this.dialogContainer);
@@ -235,7 +239,7 @@ class ConfirmationDialog {
     // If creation failed, use fallback
     if (!this.dialog || !this.backdropElement) {
       logger.error('Failed to create dialog elements');
-      const message = options.message || 'Are you sure?';
+      const message = options.message || labelManager.get('messages.confirm_proceed', 'Are you sure you want to proceed?');
       if (confirm(message)) {
         if (typeof options.onConfirm === 'function') {
           options.onConfirm();
@@ -252,11 +256,11 @@ class ConfirmationDialog {
     const i18n = window.productEstimatorVars?.i18n || {};
 
     const defaults = {
-      title: 'Confirm Action',
-      message: 'Are you sure you want to proceed?',
+      title: labelManager.get('ui_elements.confirm_title', 'Confirm Action'),
+      message: labelManager.get('messages.confirm_proceed', 'Are you sure you want to proceed?'),
       type: '', // product, room, estimate - entity type for context
-      confirmText: i18n.confirm || 'Confirm',
-      cancelText: i18n.cancel || 'Cancel',
+      confirmText: labelManager.get('buttons.confirm', i18n.confirm || 'Confirm'),
+      cancelText: labelManager.get('buttons.cancel', i18n.cancel || 'Cancel'),
       onConfirm: null,
       onCancel: null,
       action: 'default', // dialog type: 'default', 'success', 'warning', 'error', 'delete'
@@ -307,7 +311,7 @@ class ConfirmationDialog {
       if (settings.type === 'form' && settings.formFields) {
         // Create form container using template
         const formContainer = TemplateEngine.create('dialog-content-form-template', {
-          instruction: settings.message || ''
+          instruction: settings.message || labelManager.get('ui_elements.form_instructions', 'Please fill out the following information:')
         });
         
         // Get the form fields container
@@ -329,9 +333,9 @@ class ConfirmationDialog {
       } else if (settings.type === 'contact-selection') {
         // Create contact selection dialog using template
         const selectionContainer = TemplateEngine.create('dialog-contact-selection-template', {
-          message: settings.message || '',
-          emailButtonText: settings.emailButtonText || 'Email',
-          phoneButtonText: settings.phoneButtonText || 'Phone'
+          message: settings.message || labelManager.get('messages.contact_selection', 'How would you like to be contacted?'),
+          emailButtonText: settings.emailButtonText || labelManager.get('buttons.contact_email', 'Email'),
+          phoneButtonText: settings.phoneButtonText || labelManager.get('buttons.contact_phone', 'Phone')
         });
         
         messageEl.appendChild(selectionContainer);

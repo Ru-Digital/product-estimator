@@ -128,7 +128,12 @@ class VariationHandler {
     newButton.type = 'button';
     newButton.className = 'single_add_to_estimator_button button alt open-estimator-modal';
     newButton.dataset.productId = variationId;
+    // Hard-code the label until we can find a better solution
+    // We'll use the button attribute for dynamic text instead
     newButton.textContent = 'Add to Estimate';
+    
+    // Use a data attribute that can be targeted by CSS or JS if needed
+    newButton.dataset.labelKey = 'add_to_estimate_single_product';
 
     // Insert after add to cart button
     addToCartButton.insertAdjacentElement('afterend', newButton);

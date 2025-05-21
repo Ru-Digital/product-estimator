@@ -4,6 +4,41 @@
  * 
  * Run this from the browser while logged into the WordPress admin
  * wp-content/plugins/product-estimator/refresh-labels.php
+ * 
+ * Updated to version 2.0.12 to add missing button label:
+ * - Added buttons.add_room label for the "Add Room" button
+ * 
+ * Previously updated to version 2.0.11 to add missing form labels:
+ * - Added placeholder_width and placeholder_length labels for room dimensions
+ * - Added buttons.add_room_and_product for "Add Room & Product" button
+ * - Updated RoomManager.js to use labelManager.get() for "Add Room & Product" button
+ * 
+ * Previously updated to version 2.0.10 to fix product removal dialog labels:
+ * - Fixed direct product removal confirmations in ProductManager.js
+ * - Added proper labelManager.get() calls for dialog titles, messages, and buttons
+ * - Added additional product removal with name format in RoomManager.js
+ * - Added new label key: 'confirm_product_remove_with_name'
+ * - Removed experimental labelKey parameters which were not working
+ * 
+ * Previously updated to version 2.0.9 to fix confirmation dialog labels:
+ * - Modified ConfirmationDialog.js to process data-label attributes with TemplateEngine.processLabels()
+ * - This ensures labels like "Remove Product", "Cancel", "Remove" in dialogs use admin labels system
+ * 
+ * Previously updated to version 2.0.8 to add proper use of label manager for additional products buttons:
+ * - Now using labelManager.get('buttons.select_additional_product') for "Select" button
+ * - Now using labelManager.get('buttons.selected_additional_product') for "Selected" button
+ * - Fixed error message in variation selection to use labelManager
+ * 
+ * Previously updated to version 2.0.7 to add proper use of label manager for conflict dialog buttons:
+ * - Now using labelManager.get('buttons.replace_existing_product') for "Replace the existing product" button
+ * - Now using labelManager.get('buttons.go_back_to_room_select') for "Go back to room select" button
+ * - Fixed error message to use labelManager
+ * 
+ * Previously updated to version 2.0.6 to add dialog labels:
+ * - product_exists_title (in ui_elements): "Product Already Exists"
+ * - product_already_exists (in messages): "This product already exists in the selected room."
+ * 
+ * Also updated DataService.js to use labelManager instead of config.i18n
  */
 
 // Bootstrap WordPress

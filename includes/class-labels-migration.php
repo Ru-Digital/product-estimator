@@ -38,7 +38,7 @@ class LabelsMigration {
 
         // Check if already migrated
         $version = get_option(self::VERSION_OPTION_NAME, '0');
-        if (version_compare($version, '2.0.0', '>=')) {
+        if (version_compare($version, '2.0.15', '>=')) {
             return; // Already migrated
         }
 
@@ -47,7 +47,7 @@ class LabelsMigration {
 
         // Save the new structure
         update_option(self::NEW_OPTION_NAME, $new_structure);
-        update_option(self::VERSION_OPTION_NAME, '2.0.0');
+        update_option(self::VERSION_OPTION_NAME, '2.0.15');
 
         // Clear any existing caches
         delete_transient('pe_frontend_labels_cache');
@@ -109,6 +109,7 @@ class LabelsMigration {
                 'confirm' => __('Confirm', 'product-estimator'),
                 'cancel' => __('Cancel', 'product-estimator'),
                 'close' => __('Close', 'product-estimator'),
+                'continue' => __('Continue', 'product-estimator'),
                 'save' => __('Save', 'product-estimator'),
                 'delete' => __('Delete', 'product-estimator'),
                 'edit' => __('Edit', 'product-estimator'),
@@ -128,6 +129,7 @@ class LabelsMigration {
                 'request_contact' => __('Request contact from store', 'product-estimator'),
                 'add_new_room' => __('Add New Room', 'product-estimator'),
                 'add_product' => __('Add Product', 'product-estimator'),
+                'add_room' => __('Add Room', 'product-estimator'),
                 'edit_product' => __('Edit Product', 'product-estimator'),
                 'add_to_estimate' => __('Add to Estimate', 'product-estimator'),
                 'continue' => __('Continue', 'product-estimator'),
@@ -154,15 +156,25 @@ class LabelsMigration {
                 'select_none' => __('Select None', 'product-estimator'),
                 'toggle_details' => __('Toggle Details', 'product-estimator'),
                 'add_to_room' => __('Add to Room', 'product-estimator'),
+                'add_product_to_room' => __('Add Product to Room', 'product-estimator'),
+                'replace_existing_product' => __('Replace the existing product', 'product-estimator'),
+                'go_back_to_room_select' => __('Go back to room select', 'product-estimator'),
+                'add_to_estimate_single_product' => __('Add to Estimate', 'product-estimator'),
+                'add_room_and_product' => __('Add Room & Product', 'product-estimator'),
             ],
             'forms' => [
                 'estimate_name' => __('Estimate Name', 'product-estimator'),
                 'room_name' => __('Room Name', 'product-estimator'),
                 'room_dimensions' => __('Room Dimensions', 'product-estimator'),
+                'room_width' => __('Width (m)', 'product-estimator'),
+                'room_length' => __('Length (m)', 'product-estimator'),
                 'customer_name' => __('Customer Name', 'product-estimator'),
                 'customer_email' => __('Email Address', 'product-estimator'),
                 'customer_phone' => __('Phone Number', 'product-estimator'),
                 'customer_postcode' => __('Postcode', 'product-estimator'),
+                'full_name' => __('Full Name', 'product-estimator'),
+                'email_address' => __('Email Address', 'product-estimator'), 
+                'phone_number' => __('Phone Number', 'product-estimator'),
                 'notes' => __('Additional Notes', 'product-estimator'),
                 'quantity' => __('Quantity', 'product-estimator'),
                 'price' => __('Price', 'product-estimator'),
@@ -177,6 +189,14 @@ class LabelsMigration {
                 'placeholder_phone' => __('Your phone number', 'product-estimator'),
                 'placeholder_postcode' => __('Your postcode', 'product-estimator'),
                 'placeholder_search' => __('Search...', 'product-estimator'),
+                'placeholder_width' => __('Width', 'product-estimator'),
+                'placeholder_length' => __('Length', 'product-estimator'), 
+                'select_estimate' => __('Select an estimate', 'product-estimator'),
+                'select_room' => __('Select a room', 'product-estimator'),
+                'choose_estimate' => __('Choose an estimate:', 'product-estimator'),
+                'select_estimate_option' => __('-- Select an Estimate --', 'product-estimator'),
+                'choose_room' => __('Choose a room:', 'product-estimator'),
+                'select_room_option' => __('-- Select a Room --', 'product-estimator'),
             ],
             'messages' => [
                 // Success messages
@@ -194,11 +214,14 @@ class LabelsMigration {
                 'general_error' => __('An error occurred. Please try again.', 'product-estimator'),
                 'save_failed' => __('Failed to save. Please try again.', 'product-estimator'),
                 'invalid_email' => __('Please enter a valid email address', 'product-estimator'),
+                'invalid_phone' => __('Please enter a valid phone number', 'product-estimator'),
                 'required_field' => __('This field is required', 'product-estimator'),
                 'network_error' => __('Network error. Please check your connection.', 'product-estimator'),
                 'permission_denied' => __('You do not have permission to perform this action', 'product-estimator'),
                 'product_load_error' => __('Error loading products. Please try again.', 'product-estimator'),
                 'room_load_error' => __('Error loading rooms. Please try again.', 'product-estimator'),
+                'product_add_error' => __('Error adding product. Please try again.', 'product-estimator'),
+                'product_remove_error' => __('Could not identify the product to remove.', 'product-estimator'),
 
                 // Confirmation messages
                 'confirm_delete' => __('Are you sure you want to delete this?', 'product-estimator'),
@@ -208,6 +231,7 @@ class LabelsMigration {
                 'unsaved_changes' => __('You have unsaved changes. Are you sure you want to leave?', 'product-estimator'),
                 'confirm_proceed' => __('Are you sure you want to proceed?', 'product-estimator'),
                 'select_options' => __('Please select your options below:', 'product-estimator'),
+                'confirm_product_remove' => __('Are you sure you want to remove this product from the room?', 'product-estimator'),
 
                 // Validation messages
                 'min_length' => __('Minimum {min} characters required', 'product-estimator'),
@@ -218,11 +242,26 @@ class LabelsMigration {
                 // Dialog messages
                 'product_replaced_success' => __('The product has been successfully replaced in your estimate.', 'product-estimator'),
                 'primary_product_conflict' => __('This product conflicts with your primary product selection.', 'product-estimator'),
-                'product_already_exists' => __('This product already exists in your estimate.', 'product-estimator'),
+                'product_already_exists' => __('This product already exists in the selected room.', 'product-estimator'),
+                'product_added_success' => __('The product has been added to the selected room.', 'product-estimator'),
+                'room_created_with_product' => __('The room has been created and the product has been added.', 'product-estimator'),
+                'room_created' => __('The room has been created.', 'product-estimator'),
+                'additional_information_required' => __('Additional information is required to continue.', 'product-estimator'),
+                'email_required_for_copy' => __('An email address is required to send your estimate copy.', 'product-estimator'),
+                'phone_required_for_sms' => __('A phone number is required to send your estimate via SMS.', 'product-estimator'),
+                'contact_email_details_required' => __('Your details are required for our store to contact you via email.', 'product-estimator'),
+                'contact_phone_details_required' => __('Your details are required for our store to contact you via phone.', 'product-estimator'),
+                'email_required_for_estimate' => __('An email address is required to view your estimate.', 'product-estimator'),
+                'contact_method_estimate_prompt' => __('Please choose how you\'d prefer to receive your estimate:', 'product-estimator'),
+                'contact_method_prompt' => __('Please choose how you\'d prefer our store to contact you:', 'product-estimator'),
+                'product_conflict' => __('The {room_name} already contains "{existing_product}". Would you like to replace it with "{new_product}"?', 'product-estimator'),
+                'confirm_product_remove_with_name' => __('Are you sure you want to remove "{product_name}" from this room?', 'product-estimator'),
             ],
             'ui_elements' => [
                 'loading' => __('Loading...', 'product-estimator'),
                 'no_results' => __('No results found', 'product-estimator'),
+                'no_estimates_available' => __('No estimates available', 'product-estimator'),
+                'no_rooms_available' => __('No rooms available', 'product-estimator'),
                 'empty_room' => __('No products in this room', 'product-estimator'),
                 'empty_estimate' => __('No rooms in this estimate', 'product-estimator'),
                 'price_notice' => __('Prices are subject to check measures without notice', 'product-estimator'),
@@ -270,6 +309,7 @@ class LabelsMigration {
                 'dialog_title_product_added' => __('Product Added', 'product-estimator'),
                 'dialog_title_product_removed' => __('Product Removed', 'product-estimator'),
                 'dialog_title_product_replaced' => __('Product Replaced', 'product-estimator'),
+                'product_exists_title' => __('Product Already Exists', 'product-estimator'),
                 'product_replaced_title' => __('Product Replaced Successfully', 'product-estimator'),
                 'dialog_title_estimate_removed' => __('Estimate Removed', 'product-estimator'),
                 'dialog_title_delete_estimate' => __('Delete Estimate', 'product-estimator'),
@@ -290,6 +330,24 @@ class LabelsMigration {
                 'estimate_summary' => __('Estimate Summary', 'product-estimator'),
                 'room_summary' => __('Room Summary', 'product-estimator'),
                 'product_summary' => __('Product Summary', 'product-estimator'),
+                // New UI elements
+                'remove_product_title' => __('Remove Product', 'product-estimator'),
+                'remove_room_title' => __('Remove Room', 'product-estimator'),
+                'remove_room_message' => __('Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.', 'product-estimator'),
+                'product_conflict_title' => __('A flooring product already exists in the selected room', 'product-estimator'),
+                'product_exists_title' => __('Product Already Exists', 'product-estimator'),
+                'product_added_title' => __('Product Added', 'product-estimator'),
+                'room_created_title' => __('Room Created', 'product-estimator'),
+                'success_title' => __('Success', 'product-estimator'),
+                'error_title' => __('Error', 'product-estimator'),
+                'select_estimate_title' => __('Select an estimate', 'product-estimator'),
+                'select_room_title' => __('Select a room', 'product-estimator'),
+                'complete_details_title' => __('Complete Your Details', 'product-estimator'),
+                'email_details_required_title' => __('Email Details Required', 'product-estimator'),
+                'phone_details_required_title' => __('Phone Number Required', 'product-estimator'),
+                'contact_information_required_title' => __('Contact Information Required', 'product-estimator'),
+                'contact_method_estimate_title' => __('How would you like to receive your estimate?', 'product-estimator'),
+                'contact_method_title' => __('How would you like to be contacted?', 'product-estimator'),
             ],
             'pdf' => [
                 'title' => __('Product Estimate', 'product-estimator'),
@@ -318,6 +376,14 @@ class LabelsMigration {
         $default_structure = self::get_default_structure();
 
         update_option(self::NEW_OPTION_NAME, $default_structure);
-        update_option(self::VERSION_OPTION_NAME, '2.0.0');
+        update_option(self::VERSION_OPTION_NAME, '2.0.15');
+    }
+
+    /**
+     * Update the labels version to refresh caches
+     */
+    public static function update_labels_version() {
+        update_option(self::VERSION_OPTION_NAME, '2.0.15');
+        delete_transient('pe_frontend_labels_cache');
     }
 }

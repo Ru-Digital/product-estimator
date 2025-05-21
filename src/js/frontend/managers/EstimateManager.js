@@ -190,7 +190,9 @@ class EstimateManager {
       // Clear existing content first in case it was loaded before
       estimateSelectionWrapper.innerHTML = '';
       TemplateEngine.insert('estimate-selection-template', {}, estimateSelectionWrapper);
-      logger.log('Estimate selection template inserted into wrapper.');
+      // Process labels in the estimate selection template
+      TemplateEngine.processLabels(estimateSelectionWrapper);
+      logger.log('Estimate selection template inserted into wrapper and labels processed.');
 
       // Find the form wrapper
       const formWrapper = estimateSelectionWrapper.querySelector('#estimate-selection-form-wrapper');
@@ -247,19 +249,22 @@ class EstimateManager {
         // Clear existing options
         selectElement.innerHTML = '';
 
-        // Add default option
-        const defaultOption = document.createElement('option');
-        defaultOption.value = '';
-        defaultOption.textContent = '-- Select an estimate --';
-        selectElement.appendChild(defaultOption);
+        // Add default option using TemplateEngine with proper label
+        const defaultOptionText = labelManager.get('forms.select_estimate_option', '-- Select an Estimate --');
+        TemplateEngine.insert('select-option-template', {
+          value: '',
+          text: defaultOptionText,
+          labelKey: 'forms.select_estimate_option'
+        }, selectElement);
 
-        // Add options for each estimate
+        // Add options for each estimate using TemplateEngine
         if (estimates && estimates.length > 0) {
           estimates.forEach(estimate => {
-            const option = document.createElement('option');
-            option.value = estimate.id;
-            option.textContent = estimate.name || `Estimate #${estimate.id}`;
-            selectElement.appendChild(option);
+            const optionText = estimate.name || `Estimate #${estimate.id}`;
+            TemplateEngine.insert('select-option-template', {
+              value: estimate.id,
+              text: optionText
+            }, selectElement);
           });
 
           // Enable the select element and form buttons
@@ -267,11 +272,12 @@ class EstimateManager {
           const submitButton = formElement.querySelector('button[type="submit"]');
           if (submitButton) submitButton.disabled = false;
         } else {
-          // No estimates available, show message
-          const option = document.createElement('option');
-          option.value = '';
-          option.textContent = 'No estimates available';
-          selectElement.appendChild(option);
+          // No estimates available, show message using TemplateEngine
+          TemplateEngine.insert('select-option-template', {
+            value: '',
+            text: labelManager.get('ui_elements.no_estimates_available', 'No estimates available'),
+            labelKey: 'ui_elements.no_estimates_available'
+          }, selectElement);
 
           // Disable the select element and form buttons
           selectElement.disabled = true;

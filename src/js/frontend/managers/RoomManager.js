@@ -149,6 +149,9 @@ class RoomManager {
           TemplateEngine.insert('room-selection-form-template', {
             estimateName: estimate.name || `Estimate #${estimate.id}`
           }, roomSelectionForm);
+          
+          // Explicitly process labels after template insertion
+          TemplateEngine.processLabels(roomSelectionForm);
 
           logger.log('Room selection form template inserted into wrapper.');
 
@@ -221,10 +224,11 @@ class RoomManager {
         // Clear existing options
         selectElement.innerHTML = '';
 
-        // Add default option using template
+        // Add default option using template with labelManager
         TemplateEngine.insert('select-option-template', {
           value: '',
-          text: '-- Select a room --'
+          text: labelManager.get('forms.select_room_option', '-- Select a room --'),
+          labelKey: 'forms.select_room_option'
         }, selectElement);
 
         // Add options for each room
@@ -242,10 +246,11 @@ class RoomManager {
           const submitButton = formElement.querySelector('button[type="submit"]');
           if (submitButton) submitButton.disabled = false;
         } else {
-          // No rooms available, show message using template
+          // No rooms available, show message using template with labelManager
           TemplateEngine.insert('select-option-template', {
             value: '',
-            text: 'No rooms available'
+            text: labelManager.get('ui_elements.no_rooms_available', 'No rooms available'),
+            labelKey: 'ui_elements.no_rooms_available'
           }, selectElement);
 
           // Disable the select element but keep buttons enabled for "Create New Room"
@@ -310,12 +315,12 @@ class RoomManager {
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 setTimeout(() => {
                   this.modalManager.confirmationDialog.show({
-                    title: 'Product Added',
-                    message: 'The product has been added to the selected room.',
+                    title: labelManager.get('ui_elements.product_added_title', 'Product Added'),
+                    message: labelManager.get('messages.product_added_success', 'The product has been added to the selected room.'),
                     type: 'product',
                     action: 'success',
                     showCancel: false,
-                    confirmText: 'OK'
+                    confirmText: labelManager.get('buttons.ok', 'OK')
                   });
                 }, 100); // Short delay to allow estimates list to render
               } else {
@@ -863,7 +868,9 @@ class RoomManager {
                 const button = variationElement.querySelector('.replace-product-in-room');
                 if (button) {
                   // Change button text based on selected state
-                  button.textContent = variation.selected === true ? 'Selected' : 'Select';
+                  button.textContent = variation.selected === true ? 
+                    labelManager.get('buttons.selected_additional_product', 'Selected') : 
+                    labelManager.get('buttons.select_additional_product', 'Select');
                   button.dataset.productId = variation.id;
                   button.dataset.estimateId = estimateId;
                   button.dataset.roomId = roomId;
@@ -959,11 +966,11 @@ class RoomManager {
         // Show error notification
         if (this.modalManager.confirmationDialog) {
           this.modalManager.confirmationDialog.show({
-            title: 'Error',
-            message: 'Failed to update the variation. Please try again.',
+            title: labelManager.get('ui_elements.error_title', 'Error'),
+            message: labelManager.get('messages.general_error', 'Failed to update the variation. Please try again.'),
             type: 'error',
             showCancel: false,
-            confirmText: 'OK'
+            confirmText: labelManager.get('buttons.ok', 'OK')
           });
         }
       });
@@ -1196,10 +1203,10 @@ class RoomManager {
         // Show confirmation dialog before removing
         if (this.modalManager && this.modalManager.confirmationDialog) {
           this.modalManager.confirmationDialog.show({
-            title: 'Remove Product',
-            message: `Are you sure you want to remove "${productName}" from this room?`,
-            confirmText: 'Remove',
-            cancelText: 'Cancel',
+            title: labelManager.get('ui_elements.remove_product_title', 'Remove Product'),
+            message: labelManager.format('messages.confirm_product_remove_with_name', { product_name: productName }, `Are you sure you want to remove "${productName}" from this room?`),
+            confirmText: labelManager.get('buttons.remove', 'Remove'),
+            cancelText: labelManager.get('buttons.cancel', 'Cancel'),
             type: 'product',
             action: 'delete',
             onConfirm: () => {
@@ -1503,7 +1510,7 @@ class RoomManager {
 
           // Update the submit button text if we're in the add product flow
           if (submitButton) {
-            submitButton.textContent = 'Add Room & Product';
+            submitButton.textContent = labelManager.get('buttons.add_room_and_product', 'Add Room & Product');
           }
         } else {
           delete formElement.dataset.productId;
@@ -1613,12 +1620,12 @@ class RoomManager {
                   if (this.modalManager && this.modalManager.confirmationDialog) {
                     setTimeout(() => {
                       this.modalManager.confirmationDialog.show({
-                        title: 'Room Created',
-                        message: 'The room has been created and the product has been added.',
+                        title: labelManager.get('ui_elements.room_created_title', 'Room Created'),
+                        message: labelManager.get('messages.room_created_with_product', 'The room has been created and the product has been added.'),
                         type: 'room',
                         action: 'success',
                         showCancel: false,
-                        confirmText: 'OK'
+                        confirmText: labelManager.get('buttons.ok', 'OK')
                       });
                     }, 100);
                   } else {
@@ -1654,12 +1661,12 @@ class RoomManager {
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 setTimeout(() => {
                   this.modalManager.confirmationDialog.show({
-                    title: 'Room Created',
-                    message: 'The room has been created.',
+                    title: labelManager.get('ui_elements.room_created_title', 'Room Created'),
+                    message: labelManager.get('messages.room_created', 'The room has been created.'),
                     type: 'room',
                     action: 'success',
                     showCancel: false,
-                    confirmText: 'OK'
+                    confirmText: labelManager.get('buttons.ok', 'OK')
                   });
                 }, 100);
               } else {
@@ -1678,12 +1685,12 @@ class RoomManager {
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 setTimeout(() => {
                   this.modalManager.confirmationDialog.show({
-                    title: 'Room Created',
-                    message: 'The room has been created.',
+                    title: labelManager.get('ui_elements.room_created_title', 'Room Created'),
+                    message: labelManager.get('messages.room_created', 'The room has been created.'),
                     type: 'room',
                     action: 'success',
                     showCancel: false,
-                    confirmText: 'OK'
+                    confirmText: labelManager.get('buttons.ok', 'OK')
                   });
                 }, 100);
               } else {
@@ -1693,12 +1700,12 @@ class RoomManager {
               // No estimate manager, show message and close
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 this.modalManager.confirmationDialog.show({
-                  title: 'Room Created',
-                  message: 'The room has been created.',
+                  title: labelManager.get('ui_elements.room_created_title', 'Room Created'),
+                  message: labelManager.get('messages.room_created', 'The room has been created.'),
                   type: 'room',
                   action: 'success',
                   showCancel: false,
-                  confirmText: 'OK',
+                  confirmText: labelManager.get('buttons.ok', 'OK'),
                   onConfirm: () => {
                     this.modalManager.closeModal();
                   }
@@ -1803,8 +1810,7 @@ class RoomManager {
       logger.error('ConfirmationDialog not available');
 
       // Fallback to native confirm if ConfirmationDialog isn't available
-      // TODO: Implement labels from localization system
-      if (confirm('Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.')) {
+      if (confirm(labelManager.get('ui_elements.remove_room_message', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'))) {
         this.performRoomRemoval(estimateId, roomId);
       }
       return;
@@ -1812,11 +1818,10 @@ class RoomManager {
 
     // Show the confirmation dialog using the dedicated component
     this.modalManager.confirmationDialog.show({
-      // TODO: Implement labels from localization system
-      title: 'Remove Room',
-      message: 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.',
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
+      title: labelManager.get('ui_elements.remove_room_title', 'Remove Room'),
+      message: labelManager.get('ui_elements.remove_room_message', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'),
+      confirmText: labelManager.get('buttons.delete', 'Delete'),
+      cancelText: labelManager.get('buttons.cancel', 'Cancel'),
       type: 'room',           // Specify the entity type (for proper styling)
       action: 'delete',       // Specify the action type (for proper styling)
       onConfirm: () => {
@@ -1919,9 +1924,9 @@ class RoomManager {
         // Show error message using ConfirmationDialog
         if (this.modalManager && this.modalManager.confirmationDialog) {
           this.modalManager.confirmationDialog.show({
-            title: 'Error',
-            message: 'Error removing room. Please try again.',
-            confirmText: 'OK',
+            title: labelManager.get('ui_elements.error_title', 'Error'),
+            message: labelManager.get('messages.general_error', 'Error removing room. Please try again.'),
+            confirmText: labelManager.get('buttons.ok', 'OK'),
             cancelText: false,
             onConfirm: () => {
               logger.log('Error dialog closed');
@@ -1929,7 +1934,7 @@ class RoomManager {
           });
         } else {
           // Fallback to modalManager.showError
-          this.modalManager.showError('Error removing room. Please try again.');
+          this.modalManager.showError(labelManager.get('messages.general_error', 'Error removing room. Please try again.'));
         }
 
         this.modalManager.hideLoading();

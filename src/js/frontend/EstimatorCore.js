@@ -6,6 +6,7 @@
  */
 
 import { createLogger, closeMainPluginLogGroup } from '@utils'; // Make sure closeMainPluginLogGroup is imported
+import eventBus from './core/EventBus';
 
 import DataService from './DataService';
 import ModalManager from './managers/ModalManager';
@@ -114,6 +115,13 @@ class EstimatorCore {
         this.bindGlobalEvents();
         this.initialized = true;
         logger.log('initialized successfully');
+        
+        // Enable debug mode on EventBus in development
+        if (this.config.debug) {
+          eventBus.setDebug(true);
+        }
+        
+        // Emit core initialized event through both systems
         this.emit('core:initialized');
 
         logger.log('%c=== PRODUCT ESTIMATOR INITIALIZATION COMPLETE ===', 'background: #f0f0f0; color: #333; padding: 3px; border-radius: 3px;');
@@ -268,6 +276,10 @@ class EstimatorCore {
    * @returns {EstimatorCore} This instance for chaining
    */
   on(event, callback) {
+    // Use EventBus for new events
+    eventBus.on(event, callback);
+    
+    // Also maintain backward compatibility with the old event system
     if (!this.eventHandlers[event]) {
       this.eventHandlers[event] = [];
     }
@@ -282,6 +294,10 @@ class EstimatorCore {
    * @returns {EstimatorCore} This instance for chaining
    */
   emit(event, data) {
+    // Use EventBus for all events
+    eventBus.emit(event, data);
+    
+    // Also maintain backward compatibility with the old event system
     if (this.eventHandlers[event]) {
       this.eventHandlers[event].forEach(callback => callback(data));
     }

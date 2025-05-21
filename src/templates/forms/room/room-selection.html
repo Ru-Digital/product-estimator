@@ -1,10 +1,10 @@
 <template id="room-selection-form-template">
-  <h2 data-label="ui_elements.select_room">Select a Room</h2>
+  <h2 data-label="forms.select_room">Select a Room</h2>
   <form id="room-selection-form">
     <div class="form-group">
       <label for="room-dropdown" data-label="forms.choose_room">Choose a room:</label>
       <select id="room-dropdown" name="room_id" required>
-        <option value="" data-label="forms.select_room_option">-- Select a Room --</option>
+        <!-- Default option will be populated by RoomManager.loadRoomsForSelection -->
       </select>
     </div>
     <div class="form-actions">

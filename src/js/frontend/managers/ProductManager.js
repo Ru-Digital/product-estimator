@@ -262,8 +262,8 @@ class ProductManager {
               }, `The ${roomName} already contains "${error.existingProductName}". Would you like to replace it with "${error.newProductName}"?`),
               type: 'product',
               action: 'replace',
-              confirmText: 'Replace the existing product',
-              cancelText: 'Go back to room select',
+              confirmText: labelManager.get('buttons.replace_existing_product', 'Replace the existing product'),
+              cancelText: labelManager.get('buttons.go_back_to_room_select', 'Go back to room select'),
               additionalButtons: [{
                 text: labelManager.get('buttons.cancel', 'Cancel'),
                 callback: () => {
@@ -434,7 +434,6 @@ class ProductManager {
     
     // Show the confirmation dialog using the dedicated component
     this.modalManager.confirmationDialog.show({
-      // TODO: Implement labels from localization system
       title: labelManager.get('ui_elements.remove_product_title', 'Remove Product'),
       message: labelManager.get('messages.confirm_product_remove', 'Are you sure you want to remove this product from the room?'),
       confirmText: labelManager.get('buttons.delete', 'Delete'),
@@ -568,8 +567,8 @@ class ProductManager {
           // Show error message using ConfirmationDialog
           if (this.modalManager.confirmationDialog) {
             this.modalManager.confirmationDialog.show({
-              title: 'Error',
-              message: 'Error removing product. Please try again.',
+              title: labelManager.get('ui_elements.error_title', 'Error'),
+              message: labelManager.get('messages.product_remove_error', 'Error removing product. Please try again.'),
               type: 'product',
               action: 'error',
               showCancel: false,
@@ -664,8 +663,8 @@ class ProductManager {
           const confirmationDialog = this.modalManager.confirmationDialog;
           if (confirmationDialog) {
             confirmationDialog.show({
-              title: 'Error',
-              message: 'Error updating variation. Please try again.',
+              title: labelManager.get('ui_elements.error_title', 'Error'),
+              message: labelManager.get('messages.general_error', 'Error updating variation. Please try again.'),
               type: 'product',
               action: 'error',
               showCancel: false,
@@ -756,8 +755,8 @@ class ProductManager {
         // Show error dialog
         if (this.modalManager && this.modalManager.confirmationDialog) {
           this.modalManager.confirmationDialog.show({
-            title: 'Error',
-            message: 'Error replacing product. Please try again.',
+            title: labelManager.get('ui_elements.error_title', 'Error'),
+            message: labelManager.get('messages.general_error', 'Error replacing product. Please try again.'),
             type: 'product',
             action: 'error',
             showCancel: false,

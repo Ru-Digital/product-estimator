@@ -146,16 +146,19 @@ The current `ModalManager.js` file (4,298 lines) has grown too large and contain
 
 ### Phase 6: Broader Frontend Refactoring
 
-- ⬜ Create a central EventBus for communication between components
-- ⬜ Reorganize frontend directory structure into logical groups (core, managers, services, ui, utils)
+- ✅ Create a central EventBus for communication between components
+- ✅ Reorganize frontend directory structure into logical groups (core, managers, services, ui, utils)
 - ⬜ Extract UI components from business logic
 - ⬜ Refactor ProductDetailsToggle into UI component system
 - ⬜ Refactor SuggestionsCarousel into UI component system
 - ⬜ Improve EstimatorCore to better utilize manager pattern
 - ⬜ Standardize manager initialization and communication
 - ⬜ Implement more consistent error handling across all components
-- 🔄 Remove any direct DOM manipulation from business logic
+- ✅ Remove any direct DOM manipulation from business logic
   - ✅ Converted modal template to use TemplateEngine instead of direct DOM manipulation
+  - ✅ Added CSS-based visibility system to replace inline styles
+  - ✅ Updated UIManager to use CSS classes instead of direct style manipulation
+  - ✅ Implemented event-based communication through EventBus
 - ⬜ Update index.js to use the new architecture
 - ⬜ Enhance TemplateEngine to fully support handlebars-style templates across all components
   - ✅ Added handlebars placeholder processing with regex pattern replacement
@@ -198,6 +201,8 @@ The current `ModalManager.js` file (4,298 lines) has grown too large and contain
 **2023-06-01**: Completed Phase 5.5 by converting all manager classes to use TemplateEngine consistently. Converted RoomManager to use 'room-item-template' and 'room-error-template'. Updated ProductManager to use 'product-item-template' and created a new 'product-error-template'. Updated UIManager to use templates for toggle buttons by creating 'toggle-button-show-template' and 'toggle-button-hide-template'. Finally, converted FormManager to use 'form-error-template' for form error displays. All manager classes now consistently use TemplateEngine for UI rendering instead of direct HTML insertion, improving maintainability and consistency across the codebase.
 
 **2023-06-15**: Enhanced the TemplateEngine to support handlebars-style placeholders ({{variable}}) in templates. Added the processHandlebars method and created a recursive _processElementHandlebars function to handle placeholders in both attribute values and text content across elements. This fixed issues with templates like select-option-template where placeholders weren't being replaced with actual values. The enhancement now enables more declarative, handlebars-style syntax in all HTML templates, improving readability and making the templating system more intuitive for developers. This is the first step in a planned expansion of template capabilities to include conditional expressions and loop constructs.
+
+**2023-08-12**: Implemented a major improvement in the architecture with the addition of an EventBus system for component communication and a CSS-based visibility system. Updated UIManager to eliminate direct DOM manipulation, replacing inline styles with CSS classes. Created _visibility.scss with utility classes for showing/hiding elements without direct style manipulation. Updated the loading-placeholder-template and toggle button templates to use handlebar syntax. The EventBus implementation provides a pub/sub mechanism for decoupled component communication, reducing the need for direct DOM manipulation and improving maintainability. These changes mark significant progress on Phase 6 of the restructuring plan.
 
 ### Class Communication Pattern
 

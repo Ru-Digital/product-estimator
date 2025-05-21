@@ -93,6 +93,9 @@ class ConfirmationDialog {
     // Get references to the backdrop and dialog elements
     this.backdropElement = this.dialogContainer.querySelector('.pe-dialog-backdrop');
     this.dialog = this.dialogContainer.querySelector('.pe-confirmation-dialog');
+    
+    // Process labels in the dialog template
+    TemplateEngine.processLabels(this.dialogContainer);
 
     // Append the container to the body
     document.body.appendChild(this.dialogContainer);

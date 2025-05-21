@@ -10,6 +10,7 @@
 import { createLogger } from '@utils';
 import { loadCustomerDetails, saveCustomerDetails } from './CustomerStorage';
 import TemplateEngine from './TemplateEngine';
+import { labelManager } from '@utils/labels';
 // ConfirmationDialog is used via window.productEstimator.dialog or modalManager
 
 const logger = createLogger('EstimateActions');
@@ -285,8 +286,8 @@ class EstimateActions {
           title: this.getDialogTitle(action),
           message: instruction,
           formFields: formFields,
-          confirmText: 'Continue',
-          cancelText: 'Cancel',
+          confirmText: labelManager.get('buttons.continue', 'Continue'),
+          cancelText: labelManager.get('buttons.cancel', 'Cancel'),
           type: 'form',
           action: 'collect-details',
           showCancel: true,
@@ -371,18 +372,18 @@ class EstimateActions {
    */
   getDialogInstruction(action, missingFields) {
     if (action === 'request_copy_email') {
-      return 'An email address is required to send your estimate copy.';
+      return labelManager.get('messages.email_required_for_copy', 'An email address is required to send your estimate copy.');
     } else if (action === 'request_copy_sms') {
-      return 'A phone number is required to send your estimate via SMS.';
+      return labelManager.get('messages.phone_required_for_sms', 'A phone number is required to send your estimate via SMS.');
     } else if (action === 'request_contact_email') {
-      return 'Your details are required for our store to contact you via email.';
+      return labelManager.get('messages.contact_email_details_required', 'Your details are required for our store to contact you via email.');
     } else if (action === 'request_contact_phone') {
-      return 'Your details are required for our store to contact you via phone.';
+      return labelManager.get('messages.contact_phone_details_required', 'Your details are required for our store to contact you via phone.');
     } else if (missingFields.includes('email') && !missingFields.includes('name')) {
-      return 'An email address is required to view your estimate.';
+      return labelManager.get('messages.email_required_for_estimate', 'An email address is required to view your estimate.');
     }
     
-    return 'Additional information is required to continue.';
+    return labelManager.get('messages.additional_information_required', 'Additional information is required to continue.');
   }
 
   /**
@@ -401,20 +402,20 @@ class EstimateActions {
       const value = input ? input.value.trim() : '';
 
       if (!value) {
-        errorMessage = `${this.getFieldLabel(field)} is required`;
+        errorMessage = `${this.getFieldLabel(field)} ${labelManager.get('messages.required_field', 'is required')}`;
         isValid = false;
         break;
       }
 
       // Special validation for email and phone
       if (field === 'email' && !this.validateEmail(value)) {
-        errorMessage = 'Please enter a valid email address';
+        errorMessage = labelManager.get('messages.invalid_email', 'Please enter a valid email address');
         isValid = false;
         break;
       }
 
       if (field === 'phone' && !this.validatePhone(value)) {
-        errorMessage = 'Please enter a valid phone number';
+        errorMessage = labelManager.get('messages.invalid_phone', 'Please enter a valid phone number');
         isValid = false;
         break;
       }
@@ -435,15 +436,16 @@ class EstimateActions {
    * @returns {string} Dialog title
    */
   getDialogTitle(action) {
+    // Use label manager to get dialog titles with appropriate defaults
     const titles = {
-      'print': 'Complete Your Details',
-      'request_copy_email': 'Email Details Required',
-      'request_copy_sms': 'Phone Number Required',
-      'request_contact_email': 'Contact Information Required',
-      'request_contact_phone': 'Contact Information Required'
+      'print': labelManager.get('ui_elements.complete_details_title', 'Complete Your Details'),
+      'request_copy_email': labelManager.get('ui_elements.email_details_required_title', 'Email Details Required'),
+      'request_copy_sms': labelManager.get('ui_elements.phone_details_required_title', 'Phone Number Required'),
+      'request_contact_email': labelManager.get('ui_elements.contact_information_required_title', 'Contact Information Required'),
+      'request_contact_phone': labelManager.get('ui_elements.contact_information_required_title', 'Contact Information Required')
     };
 
-    return titles[action] || 'Complete Your Details';
+    return titles[action] || labelManager.get('ui_elements.complete_details_title', 'Complete Your Details');
   }
 
   /**
@@ -477,9 +479,9 @@ class EstimateActions {
    */
   getFieldLabel(field) {
     const labels = {
-      'name': 'Full Name',
-      'email': 'Email Address',
-      'phone': 'Phone Number'
+      'name': labelManager.get('forms.full_name', 'Full Name'),
+      'email': labelManager.get('forms.email_address', 'Email Address'),
+      'phone': labelManager.get('forms.phone_number', 'Phone Number')
     };
 
     return labels[field] || field.charAt(0).toUpperCase() + field.slice(1);
@@ -625,16 +627,16 @@ class EstimateActions {
    */
   showContactSelectionPrompt(estimateId, button, action = 'request_copy') {
     // Customize title and prompt based on the action
-    let title = 'How would you like to receive your estimate?';
-    let prompt = 'Please choose how you\'d prefer to receive your estimate:';
-    let emailBtnText = 'Email';
-    let phoneBtnText = 'SMS';
+    let title = labelManager.get('ui_elements.contact_method_estimate_title', 'How would you like to receive your estimate?');
+    let prompt = labelManager.get('messages.contact_method_estimate_prompt', 'Please choose how you\'d prefer to receive your estimate:');
+    let emailBtnText = labelManager.get('buttons.contact_email', 'Email');
+    let phoneBtnText = labelManager.get('buttons.contact_phone', 'SMS');
 
     if (action === 'request_contact') {
-      title = 'How would you like to be contacted?';
-      prompt = 'Please choose how you\'d prefer our store to contact you:';
-      emailBtnText = 'Email';
-      phoneBtnText = 'Phone';
+      title = labelManager.get('ui_elements.contact_method_title', 'How would you like to be contacted?');
+      prompt = labelManager.get('messages.contact_method_prompt', 'Please choose how you\'d prefer our store to contact you:');
+      emailBtnText = labelManager.get('buttons.contact_email', 'Email');
+      phoneBtnText = labelManager.get('buttons.contact_phone', 'Phone');
     }
 
     // Get the dialog instance
@@ -1044,11 +1046,11 @@ class EstimateActions {
   showMessage(message, _type = 'success', onConfirm = null) {
     if (window.productEstimator && window.productEstimator.dialog) {
       window.productEstimator.dialog.show({
-        title: 'Estimate Sent',
+        title: labelManager.get('ui_elements.success_title', 'Success'),
         message: message,
         type: 'estimate',
         action: 'confirm',
-        confirmText: 'OK',
+        confirmText: labelManager.get('buttons.ok', 'OK'),
         cancelText: null,
         onConfirm: () => {
           if (typeof onConfirm === 'function') {

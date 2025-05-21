@@ -252,6 +252,7 @@ class TemplateEngine {
   /**
    * Process labels in the element using data-label attributes
    * @param {Element|DocumentFragment} element - Element to process
+   * @public - This method is exposed for external use
    */
   processLabels(element) {
     // Process regular data-label attributes
@@ -292,13 +293,13 @@ class TemplateEngine {
         // Apply to text content
         el.textContent = labelValue;
         
-        // Remove the data-label attribute after processing
-        // This prevents double-processing but also means the labels won't
-        // be updated if the template is re-processed
-        el.removeAttribute('data-label');
-        if (formatParams) {
-          el.removeAttribute('data-label-params');
-        }
+        // Preserve data-label attribute to allow for re-processing and admin label updates
+        // Previously we were removing the data-label attribute which prevented the admin labels
+        // from working on elements that might need to be reprocessed
+        // el.removeAttribute('data-label');
+        // if (formatParams) {
+        //   el.removeAttribute('data-label-params');
+        // }
       }
     });
     

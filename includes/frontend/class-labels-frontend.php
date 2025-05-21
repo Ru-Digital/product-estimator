@@ -62,6 +62,8 @@ class LabelsFrontend extends FrontendBase {
         'buttons.email_estimate',
         'buttons.add_product',
         'buttons.add_room',
+        'buttons.add_to_estimate',
+        'buttons.add_to_estimate_single_product', // New label for single product page
         'forms.estimate_name',
         'messages.product_added',
         'messages.estimate_saved',

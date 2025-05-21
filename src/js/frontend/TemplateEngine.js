@@ -122,9 +122,34 @@ class TemplateEngine {
    * This method returns a DocumentFragment
    * @param {string} templateId - Template ID
    * @param {object} data - Data to populate the template with
+   * @param {string} context - Optional context information for usage tracking
    * @returns {DocumentFragment} The populated template content
    */
-  create(templateId, data = {}) {
+  create(templateId, data = {}, context = null) {
+    // Get caller information for context if not provided
+    if (!context) {
+      try {
+        const err = new Error();
+        const stackLines = err.stack.split('\n');
+        // Find the first line that doesn't include TemplateEngine.js
+        const callerLine = stackLines.find(line => 
+          line.includes('.js:') && !line.includes('TemplateEngine.js'));
+        
+        if (callerLine) {
+          // Extract file name from the line
+          const match = callerLine.match(/\/([^/]+\.js):/);
+          context = match ? match[1] : 'unknown';
+        } else {
+          context = 'unknown';
+        }
+      } catch (e) {
+        context = 'unknown';
+      }
+    }
+    
+    // Track template usage for dependency analysis
+    this.trackTemplateUsage(templateId, context);
+    
     const template = this.getTemplate(templateId); // Retrieve the <template> element
 
     if (!template) {
@@ -760,10 +785,31 @@ class TemplateEngine {
    * @param {object} data - Data to populate with
    * @param {Element|string} container - Container element or selector
    * @param {string} position - Insert position ('append', 'prepend', 'before', 'after', 'replace')
+   * @param {string} context - Optional context information for usage tracking
    * @returns {Element|DocumentFragment|null} The inserted element(s) or null if container not found
    */
-  insert(templateId, data, container, position = 'append') {
-    const element = this.create(templateId, data); // element is a DocumentFragment
+  insert(templateId, data, container, position = 'append', context = null) {
+    // Get caller context if not provided, similar to create method
+    if (!context) {
+      try {
+        const err = new Error();
+        const stackLines = err.stack.split('\n');
+        const callerLine = stackLines.find(line => 
+          line.includes('.js:') && !line.includes('TemplateEngine.js'));
+        
+        if (callerLine) {
+          const match = callerLine.match(/\/([^/]+\.js):/);
+          context = match ? match[1] : 'unknown';
+        } else {
+          context = 'unknown';
+        }
+      } catch (e) {
+        context = 'unknown';
+      }
+    }
+    
+    // Pass the context to create to track template usage
+    const element = this.create(templateId, data, context); // element is a DocumentFragment
 
     if (typeof container === 'string') {
       container = document.querySelector(container);
@@ -1054,27 +1100,133 @@ class TemplateEngine {
     });
   }
 
-  // Add to TemplateEngine.js
-  verifyTemplates() {
+  /**
+   * Verify all registered templates and their dependencies
+   * @param {Array} criticalTemplates - List of template IDs that are critical for the application
+   * @returns {Object} Verification results with success/error information
+   */
+  verifyTemplates(criticalTemplates = []) {
     logger.group('Template Verification');
+    
+    const results = {
+      registered: Object.keys(this.templates).length,
+      created: Object.keys(this.templateElements).length,
+      missing: [],
+      empty: [],
+      critical: {
+        total: criticalTemplates.length,
+        missing: []
+      }
+    };
 
     logger.log('Registered templates:', Object.keys(this.templates));
     logger.log('Template elements:', Object.keys(this.templateElements));
 
-    // Check note template specifically
-    if (this.templates['note-item-template']) {
-      logger.log('Note template HTML:', this.templates['note-item-template'].substring(0, 100) + '...');
-    } else {
-      logger.warn('Note template not registered!');
+    // Verify each registered template
+    Object.keys(this.templates).forEach(templateId => {
+      // Check if template HTML exists
+      if (!this.templates[templateId] || this.templates[templateId].trim() === '') {
+        logger.warn(`Template "${templateId}" has empty HTML content`);
+        results.empty.push(templateId);
+      }
+      
+      // Check if template element was created
+      if (!this.templateElements[templateId]) {
+        logger.warn(`Template element for "${templateId}" was not created`);
+        results.missing.push(templateId);
+        
+        // Check if this is a critical template
+        if (criticalTemplates.includes(templateId)) {
+          logger.error(`CRITICAL: Required template "${templateId}" is missing!`);
+          results.critical.missing.push(templateId);
+        }
+      }
+    });
+    
+    // Log verification summary
+    logger.log('Template verification results:', {
+      registered: results.registered,
+      created: results.created,
+      missingCount: results.missing.length,
+      emptyCount: results.empty.length,
+      criticalMissingCount: results.critical.missing.length
+    });
+    
+    // If critical templates are missing, log detailed error
+    if (results.critical.missing.length > 0) {
+      logger.error('Critical templates are missing, application may not function correctly:', 
+                   results.critical.missing);
     }
-
-    // Check if template element exists
-    if (this.templateElements['note-item-template']) {
-      logger.log('Note template element exists');
-    } else {
-      logger.warn('Note template element not created!');
+    
+    logger.groupEnd();
+    return results;
+  }
+  
+  /**
+   * Record template usage for dependency tracking
+   * @param {string} templateId - The ID of the template being used
+   * @param {string} context - The context where the template is being used (e.g., manager name)
+   */
+  trackTemplateUsage(templateId, context = 'unknown') {
+    if (!this._templateUsage) {
+      this._templateUsage = {};
     }
-
+    
+    if (!this._templateUsage[templateId]) {
+      this._templateUsage[templateId] = new Set();
+    }
+    
+    this._templateUsage[templateId].add(context);
+  }
+  
+  /**
+   * Get template usage statistics
+   * @returns {Object} Template usage data
+   */
+  getTemplateUsageStats() {
+    if (!this._templateUsage) {
+      return {};
+    }
+    
+    const usageStats = {};
+    
+    // Convert Sets to Arrays for easier serialization/display
+    Object.keys(this._templateUsage).forEach(templateId => {
+      usageStats[templateId] = Array.from(this._templateUsage[templateId]);
+    });
+    
+    return usageStats;
+  }
+  
+  /**
+   * Log template usage statistics
+   */
+  logTemplateUsage() {
+    logger.group('Template Usage Statistics');
+    
+    const usageStats = this.getTemplateUsageStats();
+    const templateIds = Object.keys(usageStats);
+    
+    if (templateIds.length === 0) {
+      logger.log('No template usage data recorded');
+      logger.groupEnd();
+      return;
+    }
+    
+    logger.log(`Usage data for ${templateIds.length} templates:`);
+    
+    // For each template, show where it's used
+    templateIds.forEach(templateId => {
+      const contexts = usageStats[templateId];
+      logger.log(`- "${templateId}" used in: ${contexts.join(', ')}`);
+    });
+    
+    // Find unused templates
+    const unusedTemplates = Object.keys(this.templates).filter(id => !usageStats[id]);
+    if (unusedTemplates.length > 0) {
+      logger.warn(`Found ${unusedTemplates.length} potentially unused templates:`, unusedTemplates);
+    }
+    
     logger.groupEnd();
   }
 

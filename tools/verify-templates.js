@@ -134,8 +134,11 @@ const verifyTemplates = (allTemplateFiles, registeredTemplates) => {
   console.log('\n--- Template Verification Results ---\n');
   
   registeredTemplates.forEach(template => {
+    // Normalize the path to use forward slashes
     const normalizedPath = template.path.replace(/\\/g, '/');
-    const fullPath = `${normalizedPath}.html`;
+    
+    // Don't add .html extension if it's already present
+    const fullPath = normalizedPath.endsWith('.html') ? normalizedPath : `${normalizedPath}.html`;
     
     if (templatePathMap[fullPath]) {
       console.log(`${colors.green}✓ Template ${template.id} -> ${fullPath}${colors.reset}`);
@@ -171,9 +174,11 @@ const verifyTemplates = (allTemplateFiles, registeredTemplates) => {
 
 // Check for templates not registered in template-loader.js
 const findUnregisteredTemplates = (allTemplateFiles, registeredTemplates) => {
-  const registeredPaths = registeredTemplates.map(t => 
-    path.join(TEMPLATES_DIR, `${t.path}.html`).replace(/\\/g, '/')
-  );
+  const registeredPaths = registeredTemplates.map(t => {
+    const normalizedPath = t.path.replace(/\\/g, '/');
+    const pathWithExtension = normalizedPath.endsWith('.html') ? normalizedPath : `${normalizedPath}.html`;
+    return path.join(TEMPLATES_DIR, pathWithExtension).replace(/\\/g, '/');
+  });
   
   const unregisteredFiles = allTemplateFiles.filter(file => {
     const normalizedPath = file.replace(/\\/g, '/');

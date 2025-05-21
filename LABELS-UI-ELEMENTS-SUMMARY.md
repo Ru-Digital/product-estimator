@@ -113,6 +113,8 @@ We've enhanced the label management system to automatically handle new label def
 
 3. **Import/Export Preservation**: The import/export functionality now intelligently merges imported labels with defaults, ensuring newly added labels aren't lost during import operations
 
+4. **Comprehensive Dialog Support**: All dialog titles, messages, and button texts are now managed through labels, including previously hardcoded messages like "Product Replaced Successfully" and "This estimate has been removed successfully"
+
 This improvement means that whenever developers add new labels to the system, they'll automatically appear in the admin interface without requiring any manual intervention or resets.
 
 ### Optional Reset Feature

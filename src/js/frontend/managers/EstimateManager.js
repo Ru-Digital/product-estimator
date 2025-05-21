@@ -825,7 +825,7 @@ class EstimateManager {
     // Show the confirmation dialog using the standardized dialog helper
     showDeleteConfirmDialog(
       this.modalManager,
-      labelManager.get('messages.estimate_delete_confirm', 'Are you sure you want to remove this estimate? This action cannot be undone.'),
+      labelManager.get('messages.confirm_delete_estimate', 'Are you sure you want to delete this estimate?'),
       () => {
         // User confirmed, remove the estimate
         logger.log('Confirm button clicked, proceeding with estimate removal');
@@ -854,7 +854,7 @@ class EstimateManager {
             // Show success message using the standardized dialog helper
             showSuccessDialog(
               this.modalManager, 
-              labelManager.get('messages.estimate_removed', 'The estimate has been removed successfully.'), 
+              labelManager.get('messages.estimate_removed', 'This estimate has been removed successfully.'), 
               'estimate', 
               () => logger.log('Success dialog closed')
             );
@@ -878,8 +878,7 @@ class EstimateManager {
       () => {
         // User cancelled, do nothing
         logger.log('Estimate removal cancelled by user');
-      },
-      'Remove Estimate'
+      }
     );
   }
 

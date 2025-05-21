@@ -93,6 +93,10 @@
    84:13  warning  Unexpected console statement  no-console
   100:13  warning  Unexpected console statement  no-console
 
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/TemplateEngine.js
+  1106:1  warning  Invalid JSDoc @returns type "Object"; prefer: "object"  jsdoc/check-types
+  1184:1  warning  Invalid JSDoc @returns type "Object"; prefer: "object"  jsdoc/check-types
+
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/Tooltip.js
    34:7   warning  Unexpected console statement                                             no-console
   155:17  warning  'key' is defined but never used. Allowed unused args must match /^_/u    no-unused-vars
@@ -212,6 +216,6 @@
   586:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
   608:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
 
-✖ 169 problems (4 errors, 165 warnings)
-  0 errors and 36 warnings potentially fixable with the `--fix` option.
+✖ 171 problems (4 errors, 167 warnings)
+  0 errors and 38 warnings potentially fixable with the `--fix` option.
 

@@ -183,6 +183,8 @@ class LabelsMigration {
                 'product_added' => __('Product added successfully', 'product-estimator'),
                 'product_removed' => __('Product removed', 'product-estimator'),
                 'estimate_saved' => __('Estimate saved successfully', 'product-estimator'),
+                'estimate_removed' => __('This estimate has been removed successfully', 'product-estimator'),
+                'estimate_deleted' => __('Estimate deleted successfully', 'product-estimator'),
                 'email_sent' => __('Email sent successfully', 'product-estimator'),
                 'settings_saved' => __('Settings saved successfully', 'product-estimator'),
                 'room_created' => __('Room created successfully', 'product-estimator'),
@@ -200,6 +202,7 @@ class LabelsMigration {
 
                 // Confirmation messages
                 'confirm_delete' => __('Are you sure you want to delete this?', 'product-estimator'),
+                'confirm_delete_estimate' => __('Are you sure you want to delete this estimate?', 'product-estimator'),
                 'confirm_remove_product' => __('Remove this product from the estimate?', 'product-estimator'),
                 'confirm_delete_room' => __('Delete this room and all its products?', 'product-estimator'),
                 'unsaved_changes' => __('You have unsaved changes. Are you sure you want to leave?', 'product-estimator'),
@@ -212,7 +215,7 @@ class LabelsMigration {
                 'invalid_format' => __('Invalid format', 'product-estimator'),
                 'number_required' => __('Please enter a valid number', 'product-estimator'),
                 
-                // New messages for dialogs
+                // Dialog messages
                 'product_replaced_success' => __('The product has been successfully replaced in your estimate.', 'product-estimator'),
                 'primary_product_conflict' => __('This product conflicts with your primary product selection.', 'product-estimator'),
                 'product_already_exists' => __('This product already exists in your estimate.', 'product-estimator'),
@@ -267,6 +270,10 @@ class LabelsMigration {
                 'dialog_title_product_added' => __('Product Added', 'product-estimator'),
                 'dialog_title_product_removed' => __('Product Removed', 'product-estimator'),
                 'dialog_title_product_replaced' => __('Product Replaced', 'product-estimator'),
+                'product_replaced_title' => __('Product Replaced Successfully', 'product-estimator'),
+                'dialog_title_estimate_removed' => __('Estimate Removed', 'product-estimator'),
+                'dialog_title_delete_estimate' => __('Delete Estimate', 'product-estimator'),
+                'dialog_title_estimate_saved' => __('Estimate Saved', 'product-estimator'),
                 'loading_variations' => __('Loading variations...', 'product-estimator'),
                 'loading_products' => __('Loading products...', 'product-estimator'),
                 'details_toggle' => __('Show Details', 'product-estimator'),

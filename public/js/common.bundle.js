@@ -1772,8 +1772,8 @@ var LabelManager = /*#__PURE__*/function () {
     // Local cache for processed labels
     this.cache = new Map();
 
-    // List of high-priority labels to preload
-    this.criticalLabels = ['buttons.save_estimate', 'buttons.print_estimate', 'buttons.email_estimate', 'buttons.add_product', 'buttons.add_room', 'forms.estimate_name', 'messages.product_added', 'messages.estimate_saved', 'messages.room_added'];
+    // List of high-priority labels to preload (hierarchical structure)
+    this.criticalLabels = ['estimate_management.estimate_actions.buttons.save_button.label', 'estimate_management.estimate_actions.buttons.print_button.label', 'estimate_management.estimate_actions.buttons.request_copy_button.label', 'estimate_management.create_new_estimate_form.fields.estimate_name_field.label', 'room_management.add_new_room_form.buttons.add_button.label', 'room_management.add_new_room_form.fields.room_name_field.label', 'customer_details.customer_details_form.fields.customer_name_field.label', 'customer_details.customer_details_form.fields.customer_email_field.label', 'common_ui.general_actions.buttons.save_button.label', 'common_ui.general_actions.buttons.cancel_button.label', 'common_ui.confirmation_dialogs.buttons.confirm_button.label'];
 
     // Analytics configuration
     this.analytics = {
@@ -1827,9 +1827,9 @@ var LabelManager = /*#__PURE__*/function () {
     }
 
     /**
-     * Get a label value using dot notation with client-side caching
+     * Get a label value using hierarchical dot notation with client-side caching
      * 
-     * @param {string} key - Label key (e.g., 'buttons.save_estimate')
+     * @param {string} key - Label key (hierarchical path e.g., 'estimate_management.estimate_actions.buttons.save_button.label')
      * @param {string} defaultValue - Default value if label not found
      * @returns {string} Label value or default
      */
@@ -1874,7 +1874,7 @@ var LabelManager = /*#__PURE__*/function () {
         return _value2;
       }
 
-      // Standard dot notation lookup
+      // Hierarchical dot notation lookup
       var keys = key.split('.');
       var value = this.labels;
       var _iterator = _createForOfIteratorHelper(keys),
@@ -2101,29 +2101,6 @@ var LabelManager = /*#__PURE__*/function () {
     }
 
     /**
-     * Get a label with fallback to legacy key format
-     * 
-     * @param {string} oldKey - Old label key format
-     * @returns {string} Label value
-     */
-  }, {
-    key: "getLegacy",
-    value: function getLegacy(oldKey) {
-      // Map old keys to new format
-      var mapping = {
-        'label_print_estimate': 'buttons.print_estimate',
-        'label_save_estimate': 'buttons.save_estimate',
-        'label_similar_products': 'buttons.similar_products',
-        'label_product_includes': 'buttons.product_includes',
-        'label_estimate_name': 'forms.estimate_name',
-        'alert_add_product_success': 'messages.product_added'
-        // Add more mappings as needed
-      };
-      var newKey = mapping[oldKey] || oldKey;
-      return this.get(newKey, oldKey);
-    }
-
-    /**
      * Update DOM elements with labels
      * Looks for elements with data-label attributes
      * 
@@ -2260,9 +2237,12 @@ var LabelManager = /*#__PURE__*/function () {
       return {
         version: this.version,
         totalLabels: this.countLabels(),
-        categories: Object.keys(this.labels).filter(function (k) {
-          return k !== '_version' && k !== '_flat';
-        }),
+        hierarchicalStructure: {
+          categories: Object.keys(this.labels).filter(function (k) {
+            return k !== '_version' && k !== '_flat';
+          }),
+          subcategoryCounts: this.getSubcategoryCounts()
+        },
         missingLabels: this.findMissingLabels(),
         cacheSize: this.cache.size,
         criticalLabelsLoaded: this.criticalLabels.every(function (key) {
@@ -2279,6 +2259,29 @@ var LabelManager = /*#__PURE__*/function () {
           }, 0)
         }
       };
+    }
+
+    /**
+     * Get subcategory counts for each category
+     * 
+     * @private
+     * @returns {Object} Counts by category
+     */
+  }, {
+    key: "getSubcategoryCounts",
+    value: function getSubcategoryCounts() {
+      var _this5 = this;
+      var counts = {};
+      Object.keys(this.labels).forEach(function (category) {
+        // Skip special keys
+        if (category.startsWith('_')) {
+          return;
+        }
+        if ((0,_babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_1__["default"])(_this5.labels[category]) === 'object') {
+          counts[category] = Object.keys(_this5.labels[category]).length;
+        }
+      });
+      return counts;
     }
 
     /**
@@ -2385,11 +2388,11 @@ var LabelManager = /*#__PURE__*/function () {
   }, {
     key: "preloadCriticalLabels",
     value: function preloadCriticalLabels() {
-      var _this5 = this;
+      var _this6 = this;
       // Preload each critical label into cache
       this.criticalLabels.forEach(function (key) {
-        if (!_this5.cache.has(key)) {
-          _this5.get(key);
+        if (!_this6.cache.has(key)) {
+          _this6.get(key);
         }
       });
       if (window.productEstimatorDebug) {
@@ -2427,12 +2430,12 @@ var LabelManager = /*#__PURE__*/function () {
   }, {
     key: "findMissingLabels",
     value: function findMissingLabels() {
-      var _this6 = this;
+      var _this7 = this;
       var missing = [];
       var labelElements = document.querySelectorAll('[data-label]');
       labelElements.forEach(function (element) {
         var labelKey = element.dataset.label;
-        if (!_this6.exists(labelKey)) {
+        if (!_this7.exists(labelKey)) {
           missing.push(labelKey);
         }
       });

@@ -23,7 +23,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
 
     // Log that the LabelSettingsModule is being constructed
     logger.log('LabelSettingsModule constructor called');
-    
+
     // Initialize label management properties
     this.bulkEditItems = [];
   }
@@ -45,24 +45,33 @@ class LabelSettingsModule extends VerticalTabbedModule {
     // Bind events for label management functionality
     // Export functionality
     this.$('#export-labels').on('click', this.handleExport.bind(this));
-    
+
     // Import functionality
     this.$('#import-labels').on('click', () => this.$('#import-file').click());
     this.$('#import-file').on('change', this.handleImport.bind(this));
-    
-    
+
+
     // Reset category
     this.$('#reset-category-defaults').on('click', this.handleResetCategory.bind(this));
-    
+
+    // Search functionality
+    this.$('#label-search').on('input', this.handleSearch.bind(this));
+    this.$('#label-search').on('keypress', (e) => {
+      if (e.which === 13) { // Enter key
+        e.preventDefault();
+        this.handleSearch(e);
+      }
+    });
+
     // Bulk edit
     this.$(document).on('click', '.bulk-edit-trigger', this.handleBulkEditTrigger.bind(this));
     this.$('#apply-bulk-edits').on('click', this.handleBulkUpdate.bind(this));
     this.$('#cancel-bulk-edit').on('click', this.cancelBulkEdit.bind(this));
-    
+
     // Preview updates for V3 hierarchical structure
     this.$('.regular-text[id^="estimate_management_"], .regular-text[id^="room_management_"], .regular-text[id^="customer_details_"], .regular-text[id^="product_management_"], .regular-text[id^="common_ui_"], .regular-text[id^="modal_system_"], .regular-text[id^="search_and_filters_"], .regular-text[id^="pdf_generation_"]')
       .on('input', this.updatePreview.bind(this));
-      
+
     logger.log('Label management events bound successfully');
   }
 
@@ -74,17 +83,17 @@ class LabelSettingsModule extends VerticalTabbedModule {
     logger.log('Labels tab activated');
     this.initializePreview();
   }
-  
+
   /**
    * Handle exporting labels to JSON
    */
   handleExport() {
     logger.log('Export button clicked');
-    
+
     // Use the managementNonce from this module
     const nonce = this.settings.managementNonce || this.settings.nonce;
     logger.log('Using nonce for export:', nonce);
-    
+
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl,
       data: {
@@ -102,7 +111,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
       this.showNotice('Export failed: ' + (error.message || 'Unknown error'), 'error');
     });
   }
-  
+
   /**
    * Handle importing labels from JSON file
    */
@@ -110,21 +119,21 @@ class LabelSettingsModule extends VerticalTabbedModule {
     logger.log('Import button clicked');
     const file = e.target.files[0];
     if (!file) return;
-    
+
     const confirmMessage = this.settings.i18n.confirmImport || 'This will replace all existing labels. Are you sure?';
     if (!confirm(confirmMessage)) {
       jQuery('#import-file').val('');
       return;
     }
-    
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const importData = event.target.result;
-      
+
       // Use managementNonce first, then fall back to regular nonce
       const nonce = this.settings.managementNonce || this.settings.nonce;
       logger.log('Using nonce for import:', nonce);
-      
+
       ajax.ajaxRequest({
         url: this.settings.ajaxUrl,
         data: {
@@ -147,11 +156,11 @@ class LabelSettingsModule extends VerticalTabbedModule {
         jQuery('#import-file').val('');
       });
     };
-    
+
     reader.readAsText(file);
   }
-  
-  
+
+
   /**
    * Handle reset category to defaults
    */
@@ -159,7 +168,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
     // Valid categories list - must match what's defined in PHP (V3 hierarchical structure)
     const validCategories = [
       'estimate_management',
-      'room_management', 
+      'room_management',
       'customer_details',
       'product_management',
       'common_ui',
@@ -167,17 +176,17 @@ class LabelSettingsModule extends VerticalTabbedModule {
       'search_and_filters',
       'pdf_generation'
     ];
-    
+
     // Try multiple selector strategies to find the active category
     let currentCategory = null;
-    
+
     // Strategy 1: Use the form's data attribute in the visible panel (most reliable)
     const $activeForm = jQuery('.pe-vtabs-tab-panel:visible form.pe-vtabs-tab-form, .vertical-tab-content:visible form');
     if ($activeForm.length) {
       currentCategory = $activeForm.data('sub-tab-id');
       logger.log('Reset category: Found active category from form data attribute:', currentCategory);
     }
-    
+
     // Strategy 2: Check visible content panel ID
     if (!currentCategory || !validCategories.includes(currentCategory)) {
       const $visiblePanel = jQuery('.pe-vtabs-tab-panel:visible, .vertical-tab-content:visible');
@@ -186,7 +195,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
         logger.log('Reset category: Found active category from visible panel:', currentCategory);
       }
     }
-    
+
     // Strategy 3: Look for navigation item with active class
     if (!currentCategory || !validCategories.includes(currentCategory)) {
       // First try data-tab attribute
@@ -194,7 +203,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
       if ($activeNavItem.length) {
         currentCategory = $activeNavItem.data('tab');
         logger.log('Reset category: Found active category from nav item data-tab:', currentCategory);
-        
+
         // If not found in data-tab, try data-vertical-tab-id
         if (!currentCategory) {
           currentCategory = $activeNavItem.data('vertical-tab-id');
@@ -202,7 +211,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
         }
       }
     }
-    
+
     // Strategy 4: Check active link elements in navigation
     if (!currentCategory || !validCategories.includes(currentCategory)) {
       const $activeLink = jQuery('.pe-vtabs-nav-item.active a, .tab-item.active a, .pe-vtabs-nav a.active');
@@ -211,7 +220,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
         logger.log('Reset category: Found active category from active link data-tab:', currentCategory);
       }
     }
-    
+
     // Strategy 5: Extract from URL in active link href
     if (!currentCategory || !validCategories.includes(currentCategory)) {
       const $activeLink = jQuery('.pe-vtabs-nav-item.active a, .tab-item.active a');
@@ -224,24 +233,24 @@ class LabelSettingsModule extends VerticalTabbedModule {
         }
       }
     }
-    
+
     // Strategy 6: Fallback to URL parameter
     if (!currentCategory || !validCategories.includes(currentCategory)) {
       const urlParams = new URLSearchParams(window.location.search);
       currentCategory = urlParams.get('sub_tab');
       logger.log('Reset category: Found active category from URL param:', currentCategory);
     }
-    
+
     // Validate that we have a valid category
     if (!currentCategory || !validCategories.includes(currentCategory)) {
       logger.error(`Reset category: Invalid category "${currentCategory}". Must be one of: ${validCategories.join(', ')}`);
-      
+
       // If we found a category but it's invalid, try to automatically determine the correct category
       if (currentCategory) {
         // Try to extract a valid category from URL
         const urlParams = new URLSearchParams(window.location.search);
         const tabParam = urlParams.get('tab');
-        
+
         if (tabParam === 'labels') {
           // If we're on the labels tab, default to 'estimate_management' category
           currentCategory = 'estimate_management';
@@ -253,17 +262,17 @@ class LabelSettingsModule extends VerticalTabbedModule {
         return; // Can't proceed without a category at all
       }
     }
-    
+
     const confirmMessage = this.settings.i18n.resetConfirm || 'Are you sure you want to reset this category to default values?';
     if (!confirm(confirmMessage)) {
       logger.log('Reset category: User canceled the operation');
       return;
     }
-    
+
     // Use managementNonce first, then fall back to regular nonce
     const nonce = this.settings.managementNonce || this.settings.nonce;
     logger.log('Reset category: Using nonce:', nonce);
-    
+
     logger.log('Reset category: Making AJAX request for category:', currentCategory);
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl,
@@ -276,7 +285,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
     .then(data => {
       logger.log('Reset category response:', data);
       this.showNotice(data.message || 'Category reset to defaults successfully. Page will refresh to show changes.', 'success');
-      
+
       // Update the form fields in the UI
       if (data.labels) {
         logger.log('Reset category: Updating', Object.keys(data.labels).length, 'labels');
@@ -290,7 +299,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
             logger.warn(`Reset category: Field not found for ${selector}`);
           }
         });
-        
+
         // Schedule a page refresh after a short delay to show the changes
         setTimeout(() => {
           logger.log('Refreshing page to show updated labels');
@@ -305,7 +314,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
       this.showNotice('Reset failed: ' + (error.message || 'Unknown error'), 'error');
     });
   }
-  
+
   /**
    * Handle bulk edit trigger button
    */
@@ -315,12 +324,12 @@ class LabelSettingsModule extends VerticalTabbedModule {
     const path = $button.data('path');
     const category = $button.data('category');
     const key = $button.data('key');
-    
+
     // Find the input field
     const $input = jQuery(`#${category}_${key}`);
     if ($input.length) {
       const currentValue = $input.val();
-      
+
       // Add to bulk edit items
       const existingIndex = this.bulkEditItems.findIndex(item => item.path === path);
       if (existingIndex === -1) {
@@ -332,26 +341,26 @@ class LabelSettingsModule extends VerticalTabbedModule {
           key: key
         });
       }
-      
+
       this.showBulkEditSection();
     }
   }
-  
+
   /**
    * Show bulk edit section
    */
   showBulkEditSection() {
     const $section = jQuery('.label-bulk-edit-section');
     const $container = jQuery('#bulk-edit-items');
-    
+
     $container.empty();
-    
+
     this.bulkEditItems.forEach((item, index) => {
       const $item = jQuery(`
         <div class="bulk-edit-item" data-index="${index}">
           <label>${item.path}</label>
-          <input type="text" class="bulk-edit-value regular-text" 
-                 value="${item.newValue}" 
+          <input type="text" class="bulk-edit-value regular-text"
+                 value="${item.newValue}"
                  data-index="${index}" />
           <button type="button" class="button-link remove-bulk-item" data-index="${index}">
             Remove
@@ -360,47 +369,47 @@ class LabelSettingsModule extends VerticalTabbedModule {
       `);
       $container.append($item);
     });
-    
+
     // Bind events for bulk edit items
     jQuery('.bulk-edit-value').on('input', (e) => {
       const index = jQuery(e.target).data('index');
       this.bulkEditItems[index].newValue = e.target.value;
     });
-    
+
     jQuery('.remove-bulk-item').on('click', (e) => {
       const index = jQuery(e.target).data('index');
       this.bulkEditItems.splice(index, 1);
-      
+
       if (this.bulkEditItems.length === 0) {
         this.cancelBulkEdit();
       } else {
         this.showBulkEditSection();
       }
     });
-    
+
     $section.show();
   }
-  
+
   /**
    * Handle bulk update button
    */
   handleBulkUpdate() {
     const updates = {};
-    
+
     this.bulkEditItems.forEach(item => {
       if (item.newValue !== item.originalValue) {
         updates[item.path] = item.newValue;
       }
     });
-    
+
     if (Object.keys(updates).length === 0) {
       this.showNotice('No changes to apply', 'info');
       return;
     }
-    
+
     // Use managementNonce first, then fall back to regular nonce
     const nonce = this.settings.managementNonce || this.settings.nonce;
-    
+
     ajax.ajaxRequest({
       url: this.settings.ajaxUrl,
       data: {
@@ -412,13 +421,13 @@ class LabelSettingsModule extends VerticalTabbedModule {
     .then(data => {
       logger.log('Bulk update response:', data);
       this.showNotice(this.settings.i18n.bulkUpdateSuccess || 'Labels updated successfully.', 'success');
-      
+
       // Update the actual input fields
       this.bulkEditItems.forEach(item => {
         const $input = jQuery(`#${item.category}_${item.key}`);
         $input.val(item.newValue);
       });
-      
+
       this.cancelBulkEdit();
     })
     .catch(error => {
@@ -426,7 +435,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
       this.showNotice(this.settings.i18n.bulkUpdateError || 'Error updating labels.', 'error');
     });
   }
-  
+
   /**
    * Cancel bulk edit
    */
@@ -435,7 +444,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
     jQuery('.label-bulk-edit-section').hide();
     jQuery('#bulk-edit-items').empty();
   }
-  
+
   /**
    * Initialize preview functionality
    */
@@ -446,13 +455,13 @@ class LabelSettingsModule extends VerticalTabbedModule {
         const $input = jQuery(element);
         const labelId = $input.attr('id');
         const preview = this.getPreviewForLabel(labelId);
-        
+
         if (preview) {
           $input.after(`<div class="label-preview-text">Preview: <em>${preview}</em></div>`);
         }
       });
   }
-  
+
   /**
    * Update preview text as user types
    */
@@ -460,12 +469,12 @@ class LabelSettingsModule extends VerticalTabbedModule {
     const $input = jQuery(e.target);
     const value = $input.val();
     const $preview = $input.next('.label-preview-text');
-    
+
     if ($preview.length) {
       $preview.find('em').text(value);
     }
   }
-  
+
   /**
    * Get preview text for a specific label
    */
@@ -475,23 +484,258 @@ class LabelSettingsModule extends VerticalTabbedModule {
       'estimate_management_estimate_actions_buttons_save': 'Button text shown when saving',
       'estimate_management_estimate_actions_buttons_print': 'Button text for printing',
       'estimate_management_create_new_estimate_form_estimate_name_field_label': 'Form field label',
-      
-      // Room Management previews  
+
+      // Room Management previews
       'room_management_add_new_room_form_room_name_field_label': 'Room name form field label',
-      
+
       // Customer Details previews
       'customer_details_customer_details_form_customer_name_field_label': 'Customer name form field label',
-      
+
       // Common UI previews
       'common_ui_confirmation_dialogs_buttons_confirm': 'Confirmation dialog button text',
       'common_ui_general_actions_buttons_save': 'General save button text',
-      
+
       // Add more preview mappings as needed
     };
-    
+
     return previewMap[labelId] || null;
   }
-  
+
+  /**
+   * Handle search functionality
+   */
+  handleSearch(e) {
+    const searchTerm = e.target.value.toLowerCase().trim();
+    const $resultsContainer = this.$('#label-search-results');
+
+    logger.log('Search term:', searchTerm);
+
+    if (searchTerm.length < 2) {
+      $resultsContainer.empty();
+      this.clearSearchHighlights();
+      return;
+    }
+
+    // Find all matching labels
+    const results = this.searchLabels(searchTerm);
+
+    // Display results
+    this.displaySearchResults(results, searchTerm);
+
+    // Highlight matching fields in the current view
+    this.highlightSearchMatches(searchTerm);
+  }
+
+  /**
+   * Search through all labels for matching terms
+   */
+  searchLabels(searchTerm) {
+    const results = [];
+    const $allInputs = this.$('.regular-text[data-path]');
+
+    $allInputs.each((index, input) => {
+      const $input = jQuery(input);
+      const path = $input.data('path');
+      const value = $input.val();
+      const label = $input.closest('.form-field').find('.field-label').text();
+
+      // Search in path, label, and value
+      if (path.toLowerCase().includes(searchTerm) ||
+          value.toLowerCase().includes(searchTerm) ||
+          label.toLowerCase().includes(searchTerm)) {
+
+        results.push({
+          path: path,
+          label: label,
+          value: value,
+          input: $input
+        });
+      }
+    });
+
+    return results;
+  }
+
+  /**
+   * Display search results in the sidebar
+   */
+  displaySearchResults(results, searchTerm) {
+    const $resultsContainer = this.$('#label-search-results');
+    $resultsContainer.empty();
+
+    if (results.length === 0) {
+      $resultsContainer.html(`
+        <div class="search-no-results">
+          ${this.settings.i18n.searchNoResults || 'No labels found matching your search.'}
+        </div>
+      `);
+      return;
+    }
+
+    // Add results count
+    const countText = this.settings.i18n.searchResultsCount || '%d labels found.';
+    $resultsContainer.append(`
+      <div class="search-results-count">
+        ${countText.replace('%d', results.length)}
+      </div>
+    `);
+
+    // Add each result
+    results.forEach(result => {
+      const $resultItem = jQuery(`
+        <div class="search-result-item">
+          <div class="path">${this.highlightText(result.path, searchTerm)}</div>
+          <div class="label">${this.highlightText(result.label, searchTerm)}</div>
+          <div class="value">${this.highlightText(result.value, searchTerm)}</div>
+          <button type="button" class="button-link go-to" data-path="${result.path}">Go to field</button>
+        </div>
+      `);
+
+      $resultsContainer.append($resultItem);
+    });
+
+    // Bind click handlers for "Go to field" buttons
+    $resultsContainer.find('.go-to').on('click', (e) => {
+      const path = jQuery(e.target).data('path');
+      this.goToField(path);
+    });
+  }
+
+  /**
+   * Highlight search term in text
+   */
+  highlightText(text, searchTerm) {
+    if (!text || !searchTerm) return text;
+
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    return text.replace(regex, '<span class="label-search-highlight">$1</span>');
+  }
+
+  /**
+   * Highlight matching fields in the current view
+   */
+  highlightSearchMatches(searchTerm) {
+    this.clearSearchHighlights();
+
+    if (searchTerm.length < 2) return;
+
+    const $visibleInputs = this.$('.pe-vtabs-tab-panel:visible .regular-text[data-path]');
+
+    $visibleInputs.each((index, input) => {
+      const $input = jQuery(input);
+      const $wrapper = $input.closest('.form-field');
+      const path = $input.data('path');
+      const value = $input.val();
+      const label = $wrapper.find('.field-label').text();
+
+      if (path.toLowerCase().includes(searchTerm) ||
+          value.toLowerCase().includes(searchTerm) ||
+          label.toLowerCase().includes(searchTerm)) {
+
+        $wrapper.addClass('search-match');
+      }
+    });
+  }
+
+  /**
+   * Clear search highlights
+   */
+  clearSearchHighlights() {
+    this.$('.search-match').removeClass('search-match');
+    this.$('.label-search-highlight').removeClass('label-search-highlight');
+  }
+
+  /**
+   * Navigate to a specific field
+   */
+  goToField(path) {
+    logger.log('Going to field with path:', path);
+
+    // Determine which category this field belongs to
+    const pathParts = path.split('.');
+    let category = pathParts[0];
+
+    // Map path prefixes to categories
+    const categoryMap = {
+      'create_new_estimate_form': 'estimate_management',
+      'estimate_selection': 'estimate_management',
+      'estimate_actions': 'estimate_management',
+      'estimate_display': 'estimate_management',
+      'add_new_room_form': 'room_management',
+      'room_selection_form': 'room_management',
+      'room_actions': 'room_management',
+      'room_display': 'room_management',
+      'room_navigation': 'room_management',
+      'customer_details_form': 'customer_details',
+      'general_validation': 'customer_details',
+      'confirmation_dialogs': 'common_ui',
+      'general_actions': 'common_ui',
+      'navigation': 'common_ui',
+      'loading_states': 'common_ui',
+      'error_handling': 'common_ui',
+      'validation': 'common_ui'
+    };
+
+    category = categoryMap[pathParts[0]] || pathParts[0];
+    logger.log('Mapped category:', category);
+
+    // Try multiple selectors to find the correct tab
+    let $categoryTab = this.$(`.pe-vtabs-nav-item[data-tab="${category}"]`);
+
+    if (!$categoryTab.length) {
+      // Try alternative selectors
+      $categoryTab = this.$(`.pe-vtabs-nav-item[data-tabid="${category}"]`);
+    }
+
+    if (!$categoryTab.length) {
+      // Try finding the link inside the nav item
+      $categoryTab = this.$(`.pe-vtabs-nav-item a[data-tab="${category}"]`).closest('.pe-vtabs-nav-item');
+    }
+
+    if ($categoryTab.length) {
+      logger.log('Found category tab, switching to:', category);
+
+      // Get the link inside the tab for clicking
+      const $tabLink = $categoryTab.find('a').first();
+      if ($tabLink.length) {
+        $tabLink[0].click();
+      } else {
+        $categoryTab[0].click();
+      }
+
+      // Wait for tab switch, then scroll to field
+      setTimeout(() => {
+        // Find the input with this path after tab switch
+        const $input = this.$(`[data-path="${path}"]`);
+
+        if (!$input.length) {
+          logger.warn('Field not found for path after tab switch:', path);
+          return;
+        }
+
+        logger.log('Scrolling to field:', path);
+        $input[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        $input.focus();
+
+        // Temporarily highlight the field
+        const $wrapper = $input.closest('.form-field');
+        $wrapper.addClass('search-target');
+        setTimeout(() => {
+          $wrapper.removeClass('search-target');
+        }, 2000);
+      }, 300); // Increased timeout to allow tab switch to complete
+    } else {
+      logger.warn('Category tab not found for category:', category);
+
+      // If we can't find the tab, try to go to the field anyway
+      const $input = this.$(`[data-path="${path}"]`);
+      if ($input.length) {
+        $input[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        $input.focus();
+      }
+    }
+  }
+
   /**
    * Download JSON data as a file
    */

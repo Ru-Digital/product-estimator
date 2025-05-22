@@ -481,6 +481,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             $result .= '[' . $part . ']';
         }
 
+        error_log('DEBUG path_to_brackets: input="' . $path . '" output="' . $result . '"');
         return $result;
     }
 
@@ -499,7 +500,9 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         $current_value = $this->get_value_from_path($options, $field_path, $args['default'] ?? '');
 
         // Field name for nested structure based on brackets notation
-        $field_name = $this->option_name . '[' . $args['field_id'] . ']';
+        // Include the category in the field name structure
+        $category = $args['category'] ?? '';
+        $field_name = $this->option_name . '[' . $category . '][' . $args['field_id'] . ']';
 
         // Calculate indentation based on depth
         $indent_style = $depth > 0 ? 'margin-left: ' . ($depth * 20) . 'px;' : '';
@@ -1286,7 +1289,37 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         }
 
         // Set the value at the final location
-        $current[$path_parts[count($path_parts) - 1]] = sanitize_text_field($value);
+        $final_key = $path_parts[count($path_parts) - 1];
+
+        if (is_array($value)) {
+            // Recursively sanitize array values
+            $current[$final_key] = $this->sanitize_array_recursively($value);
+        } else {
+            // Sanitize scalar values
+            $current[$final_key] = sanitize_text_field($value);
+        }
+    }
+
+    /**
+     * Recursively sanitize array values
+     *
+     * @param array $array Array to sanitize
+     * @return array Sanitized array
+     */
+    private function sanitize_array_recursively($array) {
+        $sanitized = [];
+
+        foreach ($array as $key => $value) {
+            $clean_key = sanitize_key($key);
+
+            if (is_array($value)) {
+                $sanitized[$clean_key] = $this->sanitize_array_recursively($value);
+            } else {
+                $sanitized[$clean_key] = sanitize_text_field($value);
+            }
+        }
+
+        return $sanitized;
     }
 
     /**
@@ -1637,28 +1670,28 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
         // Get default structure for this category
         $defaults = $this->get_default_v3_admin_structure();
-        
+
         // Ensure defaults is an array
         if (!is_array($defaults)) {
             error_log('ERROR: Default structure is not an array: ' . gettype($defaults));
             wp_send_json_error(__('Invalid default structure', 'product-estimator'));
         }
-        
+
         // Check if category exists in defaults
         if (!isset($defaults[$category])) {
             error_log('ERROR: Category "' . $category . '" not found. Available: ' . implode(', ', array_keys($defaults)));
             wp_send_json_error(__('Category not found in default structure: ' . $category, 'product-estimator'));
         }
-        
+
         $default_category = $defaults[$category];
 
         // Get current options
         $options = get_option($this->option_name, []);
-        
+
         // Ensure options is an array
         if (!is_array($options)) {
             error_log('ERROR: Options is not an array: ' . gettype($options) . ' for option: ' . $this->option_name);
-            
+
             // Try to handle different data formats
             if (is_string($options)) {
                 // First try JSON decode

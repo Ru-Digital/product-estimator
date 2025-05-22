@@ -11,17 +11,19 @@ export class LabelManager {
         // Local cache for processed labels
         this.cache = new Map();
         
-        // List of high-priority labels to preload
+        // List of high-priority labels to preload (hierarchical structure)
         this.criticalLabels = [
-            'buttons.save_estimate',
-            'buttons.print_estimate',
-            'buttons.email_estimate',
-            'buttons.add_product',
-            'buttons.add_room',
-            'forms.estimate_name',
-            'messages.product_added',
-            'messages.estimate_saved',
-            'messages.room_added'
+            'estimate_management.estimate_actions.buttons.save_button.label',
+            'estimate_management.estimate_actions.buttons.print_button.label',
+            'estimate_management.estimate_actions.buttons.request_copy_button.label',
+            'estimate_management.create_new_estimate_form.fields.estimate_name_field.label',
+            'room_management.add_new_room_form.buttons.add_button.label',
+            'room_management.add_new_room_form.fields.room_name_field.label',
+            'customer_details.customer_details_form.fields.customer_name_field.label',
+            'customer_details.customer_details_form.fields.customer_email_field.label',
+            'common_ui.general_actions.buttons.save_button.label',
+            'common_ui.general_actions.buttons.cancel_button.label',
+            'common_ui.confirmation_dialogs.buttons.confirm_button.label'
         ];
         
         // Analytics configuration
@@ -72,9 +74,9 @@ export class LabelManager {
     }
 
     /**
-     * Get a label value using dot notation with client-side caching
+     * Get a label value using hierarchical dot notation with client-side caching
      * 
-     * @param {string} key - Label key (e.g., 'buttons.save_estimate')
+     * @param {string} key - Label key (hierarchical path e.g., 'estimate_management.estimate_actions.buttons.save_button.label')
      * @param {string} defaultValue - Default value if label not found
      * @returns {string} Label value or default
      */
@@ -119,7 +121,7 @@ export class LabelManager {
             return value;
         }
         
-        // Standard dot notation lookup
+        // Hierarchical dot notation lookup
         const keys = key.split('.');
         let value = this.labels;
         
@@ -326,27 +328,6 @@ export class LabelManager {
         return this.get(key, null) !== null;
     }
 
-    /**
-     * Get a label with fallback to legacy key format
-     * 
-     * @param {string} oldKey - Old label key format
-     * @returns {string} Label value
-     */
-    getLegacy(oldKey) {
-        // Map old keys to new format
-        const mapping = {
-            'label_print_estimate': 'buttons.print_estimate',
-            'label_save_estimate': 'buttons.save_estimate',
-            'label_similar_products': 'buttons.similar_products',
-            'label_product_includes': 'buttons.product_includes',
-            'label_estimate_name': 'forms.estimate_name',
-            'alert_add_product_success': 'messages.product_added',
-            // Add more mappings as needed
-        };
-        
-        const newKey = mapping[oldKey] || oldKey;
-        return this.get(newKey, oldKey);
-    }
 
     /**
      * Update DOM elements with labels
@@ -476,7 +457,10 @@ export class LabelManager {
         return {
             version: this.version,
             totalLabels: this.countLabels(),
-            categories: Object.keys(this.labels).filter(k => k !== '_version' && k !== '_flat'),
+            hierarchicalStructure: {
+                categories: Object.keys(this.labels).filter(k => k !== '_version' && k !== '_flat'),
+                subcategoryCounts: this.getSubcategoryCounts(),
+            },
             missingLabels: this.findMissingLabels(),
             cacheSize: this.cache.size,
             criticalLabelsLoaded: this.criticalLabels.every(key => this.cache.has(key)),
@@ -489,6 +473,29 @@ export class LabelManager {
                 totalUsageCounts: Object.values(this.analytics.counts).reduce((sum, count) => sum + count, 0)
             }
         };
+    }
+    
+    /**
+     * Get subcategory counts for each category
+     * 
+     * @private
+     * @returns {Object} Counts by category
+     */
+    getSubcategoryCounts() {
+        const counts = {};
+        
+        Object.keys(this.labels).forEach(category => {
+            // Skip special keys
+            if (category.startsWith('_')) {
+                return;
+            }
+            
+            if (typeof this.labels[category] === 'object') {
+                counts[category] = Object.keys(this.labels[category]).length;
+            }
+        });
+        
+        return counts;
     }
     
     /**

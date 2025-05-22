@@ -50,24 +50,24 @@ class LabelsFrontend extends FrontendBase {
     private static $memory_cache = null;
     
     /**
-     * Frequently used labels cache
+     * Frequently used labels cache (hierarchical structure)
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   private
      * @var      array $frequent_labels Frequently used labels
      */
     private $frequent_labels = [
-        'buttons.save_estimate',
-        'buttons.print_estimate',
-        'buttons.email_estimate',
-        'buttons.add_product',
-        'buttons.add_room',
-        'buttons.add_to_estimate',
-        'buttons.add_to_estimate_single_product', // New label for single product page
-        'forms.estimate_name',
-        'messages.product_added',
-        'messages.estimate_saved',
-        'messages.room_added'
+        'estimate_management.estimate_actions.buttons.save_button.label',
+        'estimate_management.estimate_actions.buttons.print_button.label',
+        'estimate_management.estimate_actions.buttons.request_copy_button.label',
+        'estimate_management.create_new_estimate_form.fields.estimate_name_field.label',
+        'room_management.add_new_room_form.buttons.add_button.label',
+        'room_management.add_new_room_form.fields.room_name_field.label',
+        'customer_details.customer_details_form.fields.customer_name_field.label',
+        'customer_details.customer_details_form.fields.customer_email_field.label',
+        'common_ui.general_actions.buttons.save_button.label',
+        'common_ui.general_actions.buttons.cancel_button.label',
+        'common_ui.confirmation_dialogs.buttons.confirm_button.label'
     ];
 
     /**
@@ -197,6 +197,52 @@ class LabelsFrontend extends FrontendBase {
     }
     
     /**
+     * Create flattened structure for performance
+     * 
+     * @since    3.0.0
+     * @access   private
+     * @param    array    $hierarchical_labels    Hierarchical labels array
+     * @return   array                           Flattened labels array
+     */
+    private function create_flat_structure($hierarchical_labels) {
+        $flat_labels = [];
+        
+        foreach ($hierarchical_labels as $category => $items) {
+            // Skip special keys
+            if (strpos($category, '_') === 0) {
+                continue;
+            }
+            
+            if (is_array($items)) {
+                $this->flatten_category($category, $items, $flat_labels);
+            }
+        }
+        
+        return $flat_labels;
+    }
+    
+    /**
+     * Recursively flatten a category and its subcategories
+     * 
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $path           Current path in dot notation
+     * @param    array     $items          Items to flatten
+     * @param    array     &$flat_labels   Reference to flattened output
+     */
+    private function flatten_category($path, $items, &$flat_labels) {
+        foreach ($items as $key => $value) {
+            if (is_array($value)) {
+                // This is a subcategory, recurse
+                $this->flatten_category("{$path}.{$key}", $value, $flat_labels);
+            } else {
+                // This is a leaf node (actual label)
+                $flat_labels["{$path}.{$key}"] = $value;
+            }
+        }
+    }
+    
+    /**
      * Optimize label structure for performance
      *
      * @since    2.0.0
@@ -224,11 +270,11 @@ class LabelsFrontend extends FrontendBase {
     }
 
     /**
-     * Get a single label value
+     * Get a single label value with hierarchical support
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
-     * @param    string    $key        Label key (supports dot notation: category.label_key)
+     * @param    string    $key        Label key (hierarchical dot notation)
      * @param    string    $default    Default value if label not found
      * @return   string    The label value
      */
@@ -240,7 +286,7 @@ class LabelsFrontend extends FrontendBase {
             $labels = $this->get_all_labels_with_cache();
         }
         
-        // Support dot notation
+        // All labels use hierarchical dot notation
         $keys = explode('.', $key);
         $value = $labels;
         
@@ -290,17 +336,18 @@ class LabelsFrontend extends FrontendBase {
     }
 
     /**
-     * Get all frontend labels for localization
+     * Get all frontend labels for localization (hierarchical structure)
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      * @return   array     All labels formatted for frontend use
      */
     public function get_all_frontend_labels() {
         $all_labels = $this->get_all_labels_with_cache();
         
-        // We can return all labels or filter specific ones
-        // For now, return all labels
+        // All labels are hierarchical - create flattened version for performance
+        $all_labels['_flat'] = $this->create_flat_structure($all_labels);
+        
         return $all_labels;
     }
 
@@ -324,29 +371,6 @@ class LabelsFrontend extends FrontendBase {
         );
     }
 
-    /**
-     * Get a label by old key format (for backwards compatibility)
-     *
-     * @since    2.0.0
-     * @access   public
-     * @param    string    $old_key    Old label key format
-     * @return   string    Label value
-     */
-    public function get_label_legacy($old_key) {
-        // Map old keys to new format
-        $mapping = [
-            'label_print_estimate' => 'buttons.print_estimate',
-            'label_save_estimate' => 'buttons.save_estimate',
-            'label_similar_products' => 'buttons.similar_products',
-            'label_product_includes' => 'buttons.product_includes',
-            'label_estimate_name' => 'forms.estimate_name',
-            'alert_add_product_success' => 'messages.product_added',
-            // Add more mappings as needed
-        ];
-        
-        $new_key = $mapping[$old_key] ?? $old_key;
-        return $this->get_label($new_key, $old_key);
-    }
 
     /**
      * Get PDF footer contact details

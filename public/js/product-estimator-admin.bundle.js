@@ -3751,6 +3751,16 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
       // Reset category
       this.$('#reset-category-defaults').on('click', this.handleResetCategory.bind(this));
 
+      // Search functionality
+      this.$('#label-search').on('input', this.handleSearch.bind(this));
+      this.$('#label-search').on('keypress', function (e) {
+        if (e.which === 13) {
+          // Enter key
+          e.preventDefault();
+          _this2.handleSearch(e);
+        }
+      });
+
       // Bulk edit
       this.$(document).on('click', '.bulk-edit-trigger', this.handleBulkEditTrigger.bind(this));
       this.$('#apply-bulk-edits').on('click', this.handleBulkUpdate.bind(this));
@@ -4037,7 +4047,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
       var $container = jQuery('#bulk-edit-items');
       $container.empty();
       this.bulkEditItems.forEach(function (item, index) {
-        var $item = jQuery("\n        <div class=\"bulk-edit-item\" data-index=\"".concat(index, "\">\n          <label>").concat(item.path, "</label>\n          <input type=\"text\" class=\"bulk-edit-value regular-text\" \n                 value=\"").concat(item.newValue, "\" \n                 data-index=\"").concat(index, "\" />\n          <button type=\"button\" class=\"button-link remove-bulk-item\" data-index=\"").concat(index, "\">\n            Remove\n          </button>\n        </div>\n      "));
+        var $item = jQuery("\n        <div class=\"bulk-edit-item\" data-index=\"".concat(index, "\">\n          <label>").concat(item.path, "</label>\n          <input type=\"text\" class=\"bulk-edit-value regular-text\"\n                 value=\"").concat(item.newValue, "\"\n                 data-index=\"").concat(index, "\" />\n          <button type=\"button\" class=\"button-link remove-bulk-item\" data-index=\"").concat(index, "\">\n            Remove\n          </button>\n        </div>\n      "));
         $container.append($item);
       });
 
@@ -4155,7 +4165,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
         'estimate_management_estimate_actions_buttons_save': 'Button text shown when saving',
         'estimate_management_estimate_actions_buttons_print': 'Button text for printing',
         'estimate_management_create_new_estimate_form_estimate_name_field_label': 'Form field label',
-        // Room Management previews  
+        // Room Management previews
         'room_management_add_new_room_form_room_name_field_label': 'Room name form field label',
         // Customer Details previews
         'customer_details_customer_details_form_customer_name_field_label': 'Customer name form field label',
@@ -4166,6 +4176,225 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
         // Add more preview mappings as needed
       };
       return previewMap[labelId] || null;
+    }
+
+    /**
+     * Handle search functionality
+     */
+  }, {
+    key: "handleSearch",
+    value: function handleSearch(e) {
+      var searchTerm = e.target.value.toLowerCase().trim();
+      var $resultsContainer = this.$('#label-search-results');
+      logger.log('Search term:', searchTerm);
+      if (searchTerm.length < 2) {
+        $resultsContainer.empty();
+        this.clearSearchHighlights();
+        return;
+      }
+
+      // Find all matching labels
+      var results = this.searchLabels(searchTerm);
+
+      // Display results
+      this.displaySearchResults(results, searchTerm);
+
+      // Highlight matching fields in the current view
+      this.highlightSearchMatches(searchTerm);
+    }
+
+    /**
+     * Search through all labels for matching terms
+     */
+  }, {
+    key: "searchLabels",
+    value: function searchLabels(searchTerm) {
+      var results = [];
+      var $allInputs = this.$('.regular-text[data-path]');
+      $allInputs.each(function (index, input) {
+        var $input = jQuery(input);
+        var path = $input.data('path');
+        var value = $input.val();
+        var label = $input.closest('.form-field').find('.field-label').text();
+
+        // Search in path, label, and value
+        if (path.toLowerCase().includes(searchTerm) || value.toLowerCase().includes(searchTerm) || label.toLowerCase().includes(searchTerm)) {
+          results.push({
+            path: path,
+            label: label,
+            value: value,
+            input: $input
+          });
+        }
+      });
+      return results;
+    }
+
+    /**
+     * Display search results in the sidebar
+     */
+  }, {
+    key: "displaySearchResults",
+    value: function displaySearchResults(results, searchTerm) {
+      var _this9 = this;
+      var $resultsContainer = this.$('#label-search-results');
+      $resultsContainer.empty();
+      if (results.length === 0) {
+        $resultsContainer.html("\n        <div class=\"search-no-results\">\n          ".concat(this.settings.i18n.searchNoResults || 'No labels found matching your search.', "\n        </div>\n      "));
+        return;
+      }
+
+      // Add results count
+      var countText = this.settings.i18n.searchResultsCount || '%d labels found.';
+      $resultsContainer.append("\n      <div class=\"search-results-count\">\n        ".concat(countText.replace('%d', results.length), "\n      </div>\n    "));
+
+      // Add each result
+      results.forEach(function (result) {
+        var $resultItem = jQuery("\n        <div class=\"search-result-item\">\n          <div class=\"path\">".concat(_this9.highlightText(result.path, searchTerm), "</div>\n          <div class=\"label\">").concat(_this9.highlightText(result.label, searchTerm), "</div>\n          <div class=\"value\">").concat(_this9.highlightText(result.value, searchTerm), "</div>\n          <button type=\"button\" class=\"button-link go-to\" data-path=\"").concat(result.path, "\">Go to field</button>\n        </div>\n      "));
+        $resultsContainer.append($resultItem);
+      });
+
+      // Bind click handlers for "Go to field" buttons
+      $resultsContainer.find('.go-to').on('click', function (e) {
+        var path = jQuery(e.target).data('path');
+        _this9.goToField(path);
+      });
+    }
+
+    /**
+     * Highlight search term in text
+     */
+  }, {
+    key: "highlightText",
+    value: function highlightText(text, searchTerm) {
+      if (!text || !searchTerm) return text;
+      var regex = new RegExp("(".concat(searchTerm, ")"), 'gi');
+      return text.replace(regex, '<span class="label-search-highlight">$1</span>');
+    }
+
+    /**
+     * Highlight matching fields in the current view
+     */
+  }, {
+    key: "highlightSearchMatches",
+    value: function highlightSearchMatches(searchTerm) {
+      this.clearSearchHighlights();
+      if (searchTerm.length < 2) return;
+      var $visibleInputs = this.$('.pe-vtabs-tab-panel:visible .regular-text[data-path]');
+      $visibleInputs.each(function (index, input) {
+        var $input = jQuery(input);
+        var $wrapper = $input.closest('.form-field');
+        var path = $input.data('path');
+        var value = $input.val();
+        var label = $wrapper.find('.field-label').text();
+        if (path.toLowerCase().includes(searchTerm) || value.toLowerCase().includes(searchTerm) || label.toLowerCase().includes(searchTerm)) {
+          $wrapper.addClass('search-match');
+        }
+      });
+    }
+
+    /**
+     * Clear search highlights
+     */
+  }, {
+    key: "clearSearchHighlights",
+    value: function clearSearchHighlights() {
+      this.$('.search-match').removeClass('search-match');
+      this.$('.label-search-highlight').removeClass('label-search-highlight');
+    }
+
+    /**
+     * Navigate to a specific field
+     */
+  }, {
+    key: "goToField",
+    value: function goToField(path) {
+      var _this0 = this;
+      logger.log('Going to field with path:', path);
+
+      // Determine which category this field belongs to
+      var pathParts = path.split('.');
+      var category = pathParts[0];
+
+      // Map path prefixes to categories
+      var categoryMap = {
+        'create_new_estimate_form': 'estimate_management',
+        'estimate_selection': 'estimate_management',
+        'estimate_actions': 'estimate_management',
+        'estimate_display': 'estimate_management',
+        'add_new_room_form': 'room_management',
+        'room_selection_form': 'room_management',
+        'room_actions': 'room_management',
+        'room_display': 'room_management',
+        'room_navigation': 'room_management',
+        'customer_details_form': 'customer_details',
+        'general_validation': 'customer_details',
+        'confirmation_dialogs': 'common_ui',
+        'general_actions': 'common_ui',
+        'navigation': 'common_ui',
+        'loading_states': 'common_ui',
+        'error_handling': 'common_ui',
+        'validation': 'common_ui'
+      };
+      category = categoryMap[pathParts[0]] || pathParts[0];
+      logger.log('Mapped category:', category);
+
+      // Try multiple selectors to find the correct tab
+      var $categoryTab = this.$(".pe-vtabs-nav-item[data-tab=\"".concat(category, "\"]"));
+      if (!$categoryTab.length) {
+        // Try alternative selectors
+        $categoryTab = this.$(".pe-vtabs-nav-item[data-tabid=\"".concat(category, "\"]"));
+      }
+      if (!$categoryTab.length) {
+        // Try finding the link inside the nav item
+        $categoryTab = this.$(".pe-vtabs-nav-item a[data-tab=\"".concat(category, "\"]")).closest('.pe-vtabs-nav-item');
+      }
+      if ($categoryTab.length) {
+        logger.log('Found category tab, switching to:', category);
+
+        // Get the link inside the tab for clicking
+        var $tabLink = $categoryTab.find('a').first();
+        if ($tabLink.length) {
+          $tabLink[0].click();
+        } else {
+          $categoryTab[0].click();
+        }
+
+        // Wait for tab switch, then scroll to field
+        setTimeout(function () {
+          // Find the input with this path after tab switch
+          var $input = _this0.$("[data-path=\"".concat(path, "\"]"));
+          if (!$input.length) {
+            logger.warn('Field not found for path after tab switch:', path);
+            return;
+          }
+          logger.log('Scrolling to field:', path);
+          $input[0].scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+          $input.focus();
+
+          // Temporarily highlight the field
+          var $wrapper = $input.closest('.form-field');
+          $wrapper.addClass('search-target');
+          setTimeout(function () {
+            $wrapper.removeClass('search-target');
+          }, 2000);
+        }, 300); // Increased timeout to allow tab switch to complete
+      } else {
+        logger.warn('Category tab not found for category:', category);
+
+        // If we can't find the tab, try to go to the field anyway
+        var $input = this.$("[data-path=\"".concat(path, "\"]"));
+        if ($input.length) {
+          $input[0].scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+          $input.focus();
+        }
+      }
     }
 
     /**

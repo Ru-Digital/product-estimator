@@ -95,19 +95,8 @@ if (file_exists($functions_file)) {
     // return;
 }
 
-// Load hierarchical labels integration if enabled
-if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'enable-hierarchical-labels.php')) {
-    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'enable-hierarchical-labels.php';
-}
-
-// Load frontend hierarchical labels integration if enabled
-if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'enable-frontend-hierarchical-labels.php')) {
-    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'enable-frontend-hierarchical-labels.php';
-}
-
-// Note: Hierarchical labels are now enabled by default via enable-hierarchical-labels.php
-// No need for manual activation - V3 field-grouped structure is applied automatically
-// --- END MODIFICATION ---
+// Note: Hierarchical labels are fully integrated via LabelsStructure class
+// V3 hierarchical structure is the default implementation
 
 /**
  * The code that runs during plugin activation.

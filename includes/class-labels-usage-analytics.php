@@ -336,17 +336,63 @@ class LabelsUsageAnalytics {
         if (is_array($labels)) {
             foreach ($labels as $key => $value) {
                 // Skip internal keys
-                if ($key === '_version' || $key === '_flat') {
+                if ($key === '_version' || $key === '_flat' || strpos($key, '_') === 0) {
                     continue;
                 }
                 
                 $current_key = $prefix ? $prefix . '.' . $key : $key;
                 
                 if (is_array($value)) {
-                    $this->flatten_labels($value, $keys, $current_key);
+                    // Check if this is a label definition (has actual label values)
+                    if ($this->is_label_definition($value)) {
+                        // Extract actual label keys from this definition
+                        $this->extract_label_keys($value, $keys, $current_key);
+                    } else {
+                        // This is a category, recurse deeper
+                        $this->flatten_labels($value, $keys, $current_key);
+                    }
                 } else if (is_string($value)) {
                     $keys[] = $current_key;
                 }
+            }
+        }
+    }
+    
+    /**
+     * Check if an array represents a label definition
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    array     $array   Array to check
+     * @return   bool               True if this looks like a label definition
+     */
+    private function is_label_definition($array) {
+        // Label definitions contain keys like 'label', 'text', 'placeholder', 'validation', 'default_option'
+        $label_keys = ['label', 'text', 'placeholder', 'validation', 'default_option'];
+        return !empty(array_intersect(array_keys($array), $label_keys));
+    }
+    
+    /**
+     * Extract actual label keys from a label definition
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    array     $definition  Label definition array
+     * @param    array     &$keys       Output keys array
+     * @param    string    $base_path   Base path for this definition
+     */
+    private function extract_label_keys($definition, &$keys, $base_path) {
+        // Extract keys for actual label values
+        foreach (['label', 'text', 'placeholder', 'default_option'] as $value_key) {
+            if (isset($definition[$value_key])) {
+                $keys[] = $base_path . '.' . $value_key;
+            }
+        }
+        
+        // Handle validation messages
+        if (isset($definition['validation']) && is_array($definition['validation'])) {
+            foreach ($definition['validation'] as $validation_key => $validation_value) {
+                $keys[] = $base_path . '.validation.' . $validation_key;
             }
         }
     }

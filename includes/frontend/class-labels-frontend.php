@@ -493,6 +493,88 @@ class LabelsFrontend extends FrontendBase {
     }
 
     /**
+     * Get a label with analytics tracking
+     *
+     * @since    3.0.0
+     * @access   public
+     * @param    string    $key        Label key in hierarchical dot notation
+     * @param    string    $default    Default value if label not found
+     * @return   string    The label value
+     */
+    public function get($key, $default = '') {
+        $value = $this->get_label($key, $default);
+        
+        // Record analytics if available
+        $this->record_label_access($key);
+        
+        return $value;
+    }
+    
+    /**
+     * Format a label with replacements and analytics tracking
+     *
+     * @since    3.0.0
+     * @access   public
+     * @param    string    $key            Label key
+     * @param    array     $replacements   Key-value pairs for replacements
+     * @param    string    $default        Default value if label not found
+     * @return   string    Formatted label
+     */
+    public function format($key, $replacements = [], $default = '') {
+        $value = $this->format_label($key, $replacements, $default);
+        
+        // Record analytics if available
+        $this->record_label_access($key);
+        
+        return $value;
+    }
+    
+    /**
+     * Record label access for analytics tracking
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $key    Label key
+     */
+    private function record_label_access($key) {
+        // Check if analytics is available
+        global $product_estimator;
+        
+        if (!isset($product_estimator) || !method_exists($product_estimator, 'get_loader')) {
+            return;
+        }
+        
+        $loader = $product_estimator->get_loader();
+        $analytics = $loader->get_component('labels_usage_analytics');
+        
+        if ($analytics && method_exists($analytics, 'record_access')) {
+            // Get current context
+            $context = $this->get_current_context();
+            $analytics->record_access($key, $context);
+        }
+    }
+    
+    /**
+     * Get current context for analytics
+     *
+     * @since    3.0.0
+     * @access   private
+     * @return   string    Current context
+     */
+    private function get_current_context() {
+        if (is_admin()) {
+            $screen = get_current_screen();
+            return $screen ? 'admin_' . $screen->id : 'admin';
+        }
+        
+        if (isset($_SERVER['REQUEST_URI'])) {
+            return 'frontend_' . sanitize_text_field($_SERVER['REQUEST_URI']);
+        }
+        
+        return 'unknown';
+    }
+
+    /**
      * Check if a label exists
      *
      * @since    3.0.0

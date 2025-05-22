@@ -39,9 +39,9 @@ class LabelSettingsModule extends VerticalTabbedModule {
     logger.log('LabelSettingsModule moduleInit called');
 
     // Fix section header table structure immediately when module loads
-    setTimeout(() => {
+
       this.fixSectionHeaderTableStructure();
-    }, 500);
+
   }
 
   /**
@@ -103,9 +103,8 @@ class LabelSettingsModule extends VerticalTabbedModule {
     logger.log('Initializing UI components');
 
     // Fix section header table structure to use colspan (with delay to ensure DOM is ready)
-    setTimeout(() => {
       this.fixSectionHeaderTableStructure();
-    }, 100);
+
 
     // Initialize hierarchical sections
     this.initializeHierarchicalSections();

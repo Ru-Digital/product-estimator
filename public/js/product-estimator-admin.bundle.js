@@ -3065,14 +3065,12 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   return (0,_babel_runtime_helpers_createClass__WEBPACK_IMPORTED_MODULE_2__["default"])(LabelSettingsModule, [{
     key: "moduleInit",
     value: function moduleInit() {
-      var _this2 = this;
       _superPropGet(LabelSettingsModule, "moduleInit", this, 3)([]);
       logger.log('LabelSettingsModule moduleInit called');
 
       // Fix section header table structure immediately when module loads
-      setTimeout(function () {
-        _this2.fixSectionHeaderTableStructure();
-      }, 500);
+
+      this.fixSectionHeaderTableStructure();
     }
 
     /**
@@ -3082,7 +3080,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "bindModuleSpecificEvents",
     value: function bindModuleSpecificEvents() {
-      var _this3 = this;
+      var _this2 = this;
       _superPropGet(LabelSettingsModule, "bindModuleSpecificEvents", this, 3)([]);
       if (!this.$container || !this.$container.length) {
         logger.warn('Container not found, cannot bind label-specific events');
@@ -3096,7 +3094,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
 
       // Import functionality
       this.$('#import-labels').on('click', function () {
-        return _this3.$('#import-file').click();
+        return _this2.$('#import-file').click();
       });
       this.$('#import-file').on('change', this.handleImport.bind(this));
 
@@ -3137,13 +3135,10 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "initializeUI",
     value: function initializeUI() {
-      var _this4 = this;
       logger.log('Initializing UI components');
 
       // Fix section header table structure to use colspan (with delay to ensure DOM is ready)
-      setTimeout(function () {
-        _this4.fixSectionHeaderTableStructure();
-      }, 100);
+      this.fixSectionHeaderTableStructure();
 
       // Initialize hierarchical sections
       this.initializeHierarchicalSections();
@@ -3156,7 +3151,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "initializeHierarchicalSections",
     value: function initializeHierarchicalSections() {
-      var _this5 = this;
+      var _this3 = this;
       logger.log('Initializing hierarchical sections');
 
       // Handle both main section headers (depth 0) and subcategory headings
@@ -3188,18 +3183,18 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
           var shouldBeExpanded = true; // Start everything expanded for better UX
 
           if (shouldBeExpanded) {
-            _this5.expandedSections.add(path);
+            _this3.expandedSections.add(path);
             $heading.addClass('expanded');
             $heading.find('.expand-indicator').text('▼ ');
           } else {
             // Ensure collapsed state is properly set
-            _this5.expandedSections["delete"](path);
+            _this3.expandedSections["delete"](path);
             $heading.removeClass('expanded');
             $heading.find('.expand-indicator').text('▶ ');
           }
 
           // Update visibility based on initial state - this will properly hide/show fields
-          _this5.updateSectionVisibility(path, shouldBeExpanded);
+          _this3.updateSectionVisibility(path, shouldBeExpanded);
         }
       });
 
@@ -3237,7 +3232,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "addExpandCollapseButtons",
     value: function addExpandCollapseButtons() {
-      var _this6 = this;
+      var _this4 = this;
       this.$('.pe-vtabs-tab-panel, .vertical-tab-content').each(function (_, panel) {
         var $panel = jQuery(panel);
         var $subcategoryHeadings = $panel.find('.pe-label-subcategory-heading');
@@ -3249,15 +3244,15 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
           var $heading = $panel.find('h2, h3').first();
           if ($heading.length) {
             var $buttonContainer = jQuery('<div class="section-toggle-buttons"></div>');
-            var $expandButton = jQuery("<button type=\"button\" class=\"button expand-all-button\">\n            ".concat(_this6.settings.i18n.expandAll || 'Expand All Sections', "\n          </button>"));
-            var $collapseButton = jQuery("<button type=\"button\" class=\"button collapse-all-button\">\n            ".concat(_this6.settings.i18n.collapseAll || 'Collapse All Sections', "\n          </button>"));
+            var $expandButton = jQuery("<button type=\"button\" class=\"button expand-all-button\">\n            ".concat(_this4.settings.i18n.expandAll || 'Expand All Sections', "\n          </button>"));
+            var $collapseButton = jQuery("<button type=\"button\" class=\"button collapse-all-button\">\n            ".concat(_this4.settings.i18n.collapseAll || 'Collapse All Sections', "\n          </button>"));
             $buttonContainer.append($expandButton).append($collapseButton);
             $heading.after($buttonContainer);
             $expandButton.on('click', function () {
-              return _this6.expandAllSections($panel);
+              return _this4.expandAllSections($panel);
             });
             $collapseButton.on('click', function () {
-              return _this6.collapseAllSections($panel);
+              return _this4.collapseAllSections($panel);
             });
           }
         }
@@ -3271,14 +3266,14 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "expandAllSections",
     value: function expandAllSections($panel) {
-      var _this7 = this;
+      var _this5 = this;
       var $headings = $panel.find('.pe-label-subcategory-heading, .pe-main-section-header');
       $headings.each(function (_, heading) {
         var $heading = jQuery(heading);
         var path = $heading.next('.pe-label-subcategory-data').data('path');
         if (path) {
-          _this7.expandedSections.add(path);
-          _this7.updateSectionVisibility(path, true);
+          _this5.expandedSections.add(path);
+          _this5.updateSectionVisibility(path, true);
         }
       });
     }
@@ -3290,14 +3285,14 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "collapseAllSections",
     value: function collapseAllSections($panel) {
-      var _this8 = this;
+      var _this6 = this;
       var $headings = $panel.find('.pe-label-subcategory-heading, .pe-main-section-header');
       $headings.each(function (_, heading) {
         var $heading = jQuery(heading);
         var path = $heading.next('.pe-label-subcategory-data').data('path');
         if (path) {
-          _this8.expandedSections["delete"](path);
-          _this8.updateSectionVisibility(path, false);
+          _this6.expandedSections["delete"](path);
+          _this6.updateSectionVisibility(path, false);
         }
       });
     }
@@ -3333,7 +3328,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "expandNestedSections",
     value: function expandNestedSections(mainSectionPath) {
-      var _this9 = this;
+      var _this7 = this;
       logger.log("Expanding nested sections for: ".concat(mainSectionPath));
 
       // Find all subcategory headings that are children of this main section
@@ -3347,8 +3342,8 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
         var nestedPath = $heading.next('.pe-label-subcategory-data').data('path') || $heading.data('path');
         if (nestedPath) {
           logger.log("Expanding nested section: ".concat(nestedPath));
-          _this9.expandedSections.add(nestedPath);
-          _this9.updateSectionVisibility(nestedPath, true, true);
+          _this7.expandedSections.add(nestedPath);
+          _this7.updateSectionVisibility(nestedPath, true, true);
         }
       });
     }
@@ -3360,7 +3355,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "collapseNestedSections",
     value: function collapseNestedSections(mainSectionPath) {
-      var _this0 = this;
+      var _this8 = this;
       logger.log("Collapsing nested sections for: ".concat(mainSectionPath));
 
       // Find all subcategory headings that are children of this main section
@@ -3374,8 +3369,8 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
         var nestedPath = $heading.next('.pe-label-subcategory-data').data('path') || $heading.data('path');
         if (nestedPath) {
           logger.log("Collapsing nested section: ".concat(nestedPath));
-          _this0.expandedSections["delete"](nestedPath);
-          _this0.updateSectionVisibility(nestedPath, false, true);
+          _this8.expandedSections["delete"](nestedPath);
+          _this8.updateSectionVisibility(nestedPath, false, true);
         }
       });
     }
@@ -3541,7 +3536,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "handleExport",
     value: function handleExport() {
-      var _this1 = this;
+      var _this9 = this;
       logger.log('Export button clicked');
 
       // Use the managementNonce from this module
@@ -3555,11 +3550,11 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
         }
       }).then(function (data) {
         logger.log('Export response:', data);
-        _this1.downloadJSON(data.filename, data.data);
-        _this1.showNotice(_this1.settings.i18n.exportSuccess || 'Labels exported successfully.', 'success');
+        _this9.downloadJSON(data.filename, data.data);
+        _this9.showNotice(_this9.settings.i18n.exportSuccess || 'Labels exported successfully.', 'success');
       })["catch"](function (error) {
         logger.error('Export failed:', error);
-        _this1.showNotice('Export failed: ' + (error.message || 'Unknown error'), 'error');
+        _this9.showNotice('Export failed: ' + (error.message || 'Unknown error'), 'error');
       });
     }
 
@@ -3570,7 +3565,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "handleImport",
     value: function handleImport(e) {
-      var _this10 = this;
+      var _this0 = this;
       logger.log('Import button clicked');
       var file = e.target.files[0];
       if (!file) return;
@@ -3584,10 +3579,10 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
         var importData = event.target.result;
 
         // Use managementNonce first, then fall back to regular nonce
-        var nonce = _this10.settings.managementNonce || _this10.settings.nonce;
+        var nonce = _this0.settings.managementNonce || _this0.settings.nonce;
         logger.log('Using nonce for import:', nonce);
         _utils__WEBPACK_IMPORTED_MODULE_7__.ajax.ajaxRequest({
-          url: _this10.settings.ajaxUrl,
+          url: _this0.settings.ajaxUrl,
           data: {
             action: 'pe_import_labels',
             nonce: nonce,
@@ -3595,14 +3590,14 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
           }
         }).then(function (data) {
           logger.log('Import response:', data);
-          _this10.showNotice(data.message || 'Labels imported successfully.', 'success');
+          _this0.showNotice(data.message || 'Labels imported successfully.', 'success');
           // Reload page to show imported labels
           setTimeout(function () {
             return location.reload();
           }, 1500);
         })["catch"](function (error) {
           logger.error('Import failed:', error);
-          _this10.showNotice(error.message || _this10.settings.i18n.importError || 'Error importing labels.', 'error');
+          _this0.showNotice(error.message || _this0.settings.i18n.importError || 'Error importing labels.', 'error');
         })["finally"](function () {
           jQuery('#import-file').val('');
         });
@@ -3616,7 +3611,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "handleResetCategory",
     value: function handleResetCategory() {
-      var _this11 = this;
+      var _this1 = this;
       // Valid categories list - must match what's defined in PHP (V3 hierarchical structure)
       var validCategories = ['estimate_management', 'room_management', 'customer_details', 'product_management', 'common_ui', 'modal_system', 'search_and_filters', 'pdf_generation'];
 
@@ -3723,7 +3718,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
         }
       }).then(function (data) {
         logger.log('Reset category response:', data);
-        _this11.showNotice(data.message || 'Category reset to defaults successfully. Page will refresh to show changes.', 'success');
+        _this1.showNotice(data.message || 'Category reset to defaults successfully. Page will refresh to show changes.', 'success');
 
         // Update the form fields in the UI
         if (data.labels) {
@@ -3752,7 +3747,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
         }
       })["catch"](function (error) {
         logger.error('Reset category failed:', error);
-        _this11.showNotice('Reset failed: ' + (error.message || 'Unknown error'), 'error');
+        _this1.showNotice('Reset failed: ' + (error.message || 'Unknown error'), 'error');
       });
     }
 
@@ -3797,7 +3792,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "showBulkEditSection",
     value: function showBulkEditSection() {
-      var _this12 = this;
+      var _this10 = this;
       var $section = jQuery('.label-bulk-edit-section');
       var $container = jQuery('#bulk-edit-items');
       $container.empty();
@@ -3809,15 +3804,15 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
       // Bind events for bulk edit items
       jQuery('.bulk-edit-value').on('input', function (e) {
         var index = jQuery(e.target).data('index');
-        _this12.bulkEditItems[index].newValue = e.target.value;
+        _this10.bulkEditItems[index].newValue = e.target.value;
       });
       jQuery('.remove-bulk-item').on('click', function (e) {
         var index = jQuery(e.target).data('index');
-        _this12.bulkEditItems.splice(index, 1);
-        if (_this12.bulkEditItems.length === 0) {
-          _this12.cancelBulkEdit();
+        _this10.bulkEditItems.splice(index, 1);
+        if (_this10.bulkEditItems.length === 0) {
+          _this10.cancelBulkEdit();
         } else {
-          _this12.showBulkEditSection();
+          _this10.showBulkEditSection();
         }
       });
       $section.show();
@@ -3829,7 +3824,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "handleBulkUpdate",
     value: function handleBulkUpdate() {
-      var _this13 = this;
+      var _this11 = this;
       var updates = {};
       this.bulkEditItems.forEach(function (item) {
         if (item.newValue !== item.originalValue) {
@@ -3852,17 +3847,17 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
         }
       }).then(function (data) {
         logger.log('Bulk update response:', data);
-        _this13.showNotice(_this13.settings.i18n.bulkUpdateSuccess || 'Labels updated successfully.', 'success');
+        _this11.showNotice(_this11.settings.i18n.bulkUpdateSuccess || 'Labels updated successfully.', 'success');
 
         // Update the actual input fields
-        _this13.bulkEditItems.forEach(function (item) {
+        _this11.bulkEditItems.forEach(function (item) {
           var $input = jQuery("#".concat(item.category, "_").concat(item.key));
           $input.val(item.newValue);
         });
-        _this13.cancelBulkEdit();
+        _this11.cancelBulkEdit();
       })["catch"](function (error) {
         logger.error('Bulk update failed:', error);
-        _this13.showNotice(_this13.settings.i18n.bulkUpdateError || 'Error updating labels.', 'error');
+        _this11.showNotice(_this11.settings.i18n.bulkUpdateError || 'Error updating labels.', 'error');
       });
     }
 
@@ -3883,12 +3878,12 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "initializePreview",
     value: function initializePreview() {
-      var _this14 = this;
+      var _this12 = this;
       // Add preview functionality for labels (V3 hierarchical structure)
       jQuery('.regular-text[id^="estimate_management_"], .regular-text[id^="room_management_"], .regular-text[id^="customer_details_"], .regular-text[id^="product_management_"], .regular-text[id^="common_ui_"], .regular-text[id^="modal_system_"], .regular-text[id^="search_and_filters_"], .regular-text[id^="pdf_generation_"]').each(function (index, element) {
         var $input = jQuery(element);
         var labelId = $input.attr('id');
-        var preview = _this14.getPreviewForLabel(labelId);
+        var preview = _this12.getPreviewForLabel(labelId);
         if (preview) {
           $input.after("<div class=\"label-preview-text\">Preview: <em>".concat(preview, "</em></div>"));
         }
@@ -3942,7 +3937,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "handleSearch",
     value: function handleSearch(e) {
-      var _this15 = this;
+      var _this13 = this;
       var searchTerm = e.target.value.trim().toLowerCase();
       var $resultsContainer = jQuery('#label-search-results');
       if (searchTerm.length < 2) {
@@ -3957,7 +3952,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
         var path = $input.data('path');
         var value = $input.val().toLowerCase();
         if (path.toLowerCase().includes(searchTerm) || value.includes(searchTerm)) {
-          _this15.searchResults.push({
+          _this13.searchResults.push({
             path: path,
             value: $input.val(),
             element: $input
@@ -3977,8 +3972,8 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
 
       // Add results to container
       this.searchResults.forEach(function (result) {
-        var highlightedPath = _this15.highlightSearchTerm(result.path, searchTerm);
-        var highlightedValue = _this15.highlightSearchTerm(result.value, searchTerm);
+        var highlightedPath = _this13.highlightSearchTerm(result.path, searchTerm);
+        var highlightedValue = _this13.highlightSearchTerm(result.value, searchTerm);
         var $resultItem = jQuery("\n        <div class=\"search-result-item\">\n          <div class=\"path\">".concat(highlightedPath, "</div>\n          <div class=\"value\">").concat(highlightedValue, "</div>\n          <a href=\"#\" class=\"go-to\" data-path=\"").concat(result.path, "\">Go to this label</a>\n        </div>\n      "));
         $resultsContainer.append($resultItem);
       });
@@ -3987,7 +3982,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
       $resultsContainer.find('.go-to').on('click', function (e) {
         e.preventDefault();
         var path = jQuery(e.currentTarget).data('path');
-        _this15.goToLabelField(path);
+        _this13.goToLabelField(path);
       });
       $resultsContainer.show();
     }
@@ -4013,7 +4008,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "goToLabelField",
     value: function goToLabelField(path) {
-      var _this16 = this;
+      var _this14 = this;
       logger.log("DEBUG: goToLabelField called with path: ".concat(path));
 
       // First, determine which tab this field is in
@@ -4030,7 +4025,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
 
       // Wait a moment for tab to switch before continuing
       setTimeout(function () {
-        _this16.expandSectionsAndNavigateToField(path, pathParts);
+        _this14.expandSectionsAndNavigateToField(path, pathParts);
       }, 300);
     }
 
@@ -4042,7 +4037,7 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
   }, {
     key: "expandSectionsAndNavigateToField",
     value: function expandSectionsAndNavigateToField(path, pathParts) {
-      var _this17 = this;
+      var _this15 = this;
       logger.log("DEBUG: expandSectionsAndNavigateToField called with path: ".concat(path));
 
       // Ensure all parent sections are expanded, including the section containing the field
@@ -4054,15 +4049,15 @@ var LabelSettingsModule = /*#__PURE__*/function (_VerticalTabbedModule) {
           // This is the field name, but we should expand its parent section
           // The parent section path is currentPath (already built from previous parts)
           if (currentPath) {
-            _this17.expandedSections.add(currentPath);
-            _this17.updateSectionVisibility(currentPath, true);
+            _this15.expandedSections.add(currentPath);
+            _this15.updateSectionVisibility(currentPath, true);
             logger.log("DEBUG: Expanding field container section: ".concat(currentPath));
           }
           return;
         }
         currentPath = currentPath ? "".concat(currentPath, ".").concat(part) : part;
-        _this17.expandedSections.add(currentPath);
-        _this17.updateSectionVisibility(currentPath, true);
+        _this15.expandedSections.add(currentPath);
+        _this15.updateSectionVisibility(currentPath, true);
         logger.log("DEBUG: Expanding parent section: ".concat(currentPath));
       });
 

@@ -207,9 +207,21 @@ class LabelsUsageAnalytics {
         $count = 0;
         foreach ($batch as $item) {
             if (isset($item['key'])) {
-                $context = isset($item['page']) ? $item['page'] : '';
-                if ($this->record_access($item['key'], $context)) {
+                // Check if this label exists in our structure
+                if ($this->is_missing_label($item['key'])) {
+                    // This is a missing label - record it as such
+                    $default_text = isset($item['defaultText']) ? $item['defaultText'] : '';
+                    $stack_trace = isset($item['stackTrace']) ? $item['stackTrace'] : '';
+                    $page = isset($item['page']) ? $item['page'] : '';
+                    
+                    $this->record_missing_label($item['key'], $default_text, $stack_trace, $page);
                     $count++;
+                } else {
+                    // Regular label access - label exists in structure
+                    $context = isset($item['page']) ? $item['page'] : '';
+                    if ($this->record_access($item['key'], $context)) {
+                        $count++;
+                    }
                 }
             }
         }
@@ -230,6 +242,7 @@ class LabelsUsageAnalytics {
             'last_access' => [],
             'contexts' => [],
             'page_usage' => [],
+            'missing_labels' => [],
             'last_updated' => current_time('mysql')
         ];
 
@@ -316,10 +329,167 @@ class LabelsUsageAnalytics {
         $accessed_keys = array_keys($analytics['access_counts']);
         
         // Flatten the label hierarchy to get all keys
+        // Remove the flat structure to get only hierarchical keys
+        $labels_without_flat = $all_labels;
+        unset($labels_without_flat['_flat']);
+        unset($labels_without_flat['_version']);
+        unset($labels_without_flat['_legacy']);
+        
         $all_keys = [];
-        $this->flatten_labels($all_labels, $all_keys);
+        $this->flatten_labels($labels_without_flat, $all_keys);
         
         return array_diff($all_keys, $accessed_keys);
+    }
+
+    /**
+     * Get missing labels tracked by analytics
+     *
+     * @since    3.0.0
+     * @access   public
+     * @return   array    Array of missing label data
+     */
+    public function get_missing_labels() {
+        $analytics = $this->get_analytics_data();
+        
+        // Get missing labels from stored analytics data
+        $missing_labels = isset($analytics['missing_labels']) ? $analytics['missing_labels'] : [];
+        
+        // Sort by count (most frequently missing first)
+        uasort($missing_labels, function($a, $b) {
+            return $b['count'] - $a['count'];
+        });
+        
+        return $missing_labels;
+    }
+
+    /**
+     * Check if a label key is missing from our label structure
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $key    The label key to check
+     * @return   bool      True if the label is missing from structure
+     */
+    private function is_missing_label($key) {
+        global $product_estimator;
+        
+        if (!isset($product_estimator) || !method_exists($product_estimator, 'get_loader')) {
+            return false; // Can't determine, assume it exists
+        }
+        
+        $loader = $product_estimator->get_loader();
+        $labels_frontend = $loader->get_component('labels_frontend');
+        
+        if (!$labels_frontend || !method_exists($labels_frontend, 'get_all_labels_with_cache')) {
+            return false; // Can't determine, assume it exists
+        }
+        
+        $all_labels = $labels_frontend->get_all_labels_with_cache();
+        
+        // Remove the _flat structure for missing label detection
+        // We only want to check the new hierarchical structure
+        if (isset($all_labels['_flat'])) {
+            unset($all_labels['_flat']);
+        }
+        
+        // Check if the key exists in the hierarchical structure
+        $exists = $this->label_exists_in_structure($all_labels, $key);
+        $is_missing = !$exists;
+        
+        return $is_missing;
+    }
+
+    /**
+     * Check if a label key exists in the label structure
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    array     $labels    Labels structure
+     * @param    string    $key       Dot-notation key to check
+     * @return   bool      True if the label exists
+     */
+    private function label_exists_in_structure($labels, $key) {
+        // For missing labels analytics, we want to check ONLY the new hierarchical structure
+        // This will properly identify old flat keys as "missing" and encourage migration to new structure
+        // Do NOT check the flattened structure (_flat) here - that's legacy compatibility
+        
+        // Check hierarchical structure only
+        $parts = explode('.', $key);
+        $current = $labels;
+        
+        foreach ($parts as $part) {
+            if (isset($current[$part])) {
+                $current = $current[$part];
+            } else {
+                return false;
+            }
+        }
+        
+        // Check if we found a string value (actual label) vs an array (category)
+        return is_string($current);
+    }
+
+    /**
+     * Record a missing label
+     *
+     * @since    3.0.0
+     * @access   public
+     * @param    string    $key           The missing label key
+     * @param    string    $default_text  The default text used
+     * @param    string    $stack_trace   Stack trace for debugging
+     * @param    string    $page         Page where label was accessed
+     */
+    public function record_missing_label($key, $default_text = '', $stack_trace = '', $page = '') {
+        $analytics = $this->get_analytics_data();
+        
+        // Initialize missing_labels array if it doesn't exist
+        if (!isset($analytics['missing_labels'])) {
+            $analytics['missing_labels'] = [];
+        }
+        
+        $now = current_time('mysql');
+        
+        if (isset($analytics['missing_labels'][$key])) {
+            // Update existing missing label
+            $analytics['missing_labels'][$key]['count']++;
+            $analytics['missing_labels'][$key]['last_seen'] = $now;
+            
+            // Track alternative default texts
+            if ($analytics['missing_labels'][$key]['default_text'] !== $default_text) {
+                if (!isset($analytics['missing_labels'][$key]['alternative_defaults'])) {
+                    $analytics['missing_labels'][$key]['alternative_defaults'] = [];
+                }
+                $analytics['missing_labels'][$key]['alternative_defaults'][] = $default_text;
+                $analytics['missing_labels'][$key]['alternative_defaults'] = array_unique($analytics['missing_labels'][$key]['alternative_defaults']);
+            }
+        } else {
+            // Record new missing label
+            $analytics['missing_labels'][$key] = [
+                'key' => $key,
+                'default_text' => $default_text,
+                'stack_trace' => $stack_trace,
+                'first_seen' => $now,
+                'last_seen' => $now,
+                'count' => 1,
+                'page' => $page
+            ];
+        }
+        
+        // Update the analytics data
+        $analytics['last_updated'] = $now;
+        $this->save_analytics_data($analytics);
+    }
+
+    /**
+     * Save analytics data to database
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    array    $analytics    Analytics data to save
+     * @return   bool     Success status
+     */
+    private function save_analytics_data($analytics) {
+        return update_option($this->option_name, $analytics);
     }
 
     /**

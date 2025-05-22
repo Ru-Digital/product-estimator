@@ -117,6 +117,18 @@ class ScriptHandler {
         }
 
 
+        // Get labels debug mode status
+        $labels_debug_mode = false;
+        if (defined('PRODUCT_ESTIMATOR_LABELS_DEBUG') && PRODUCT_ESTIMATOR_LABELS_DEBUG) {
+            $labels_debug_mode = true;
+        } elseif (get_option('product_estimator_labels_debug_mode', false)) {
+            $labels_debug_mode = true;
+        } elseif (isset($_GET['pe_labels_debug']) && $_GET['pe_labels_debug'] === '1') {
+            $labels_debug_mode = true;
+        } elseif (is_user_logged_in() && get_user_meta(get_current_user_id(), 'pe_labels_debug', true)) {
+            $labels_debug_mode = true;
+        }
+
         // Localize the script with your data
         wp_localize_script(
             $this->plugin_name,
@@ -128,6 +140,7 @@ class ScriptHandler {
                 'plugin_url' => PRODUCT_ESTIMATOR_PLUGIN_URL,
                 'estimator_url' => home_url('/estimator/'),
                 'debug' => defined('WP_DEBUG') && WP_DEBUG, // Pass debug mode to JS,
+                'labelsDebug' => $labels_debug_mode, // Pass labels debug mode to JS
                 'featureSwitches' => $processed_feature_switches // <-- Add this line
             )
         );

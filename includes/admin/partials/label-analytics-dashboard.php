@@ -24,10 +24,25 @@
                 <ul>
                     <li><strong><?php echo esc_html__('Total Tracked Labels', 'product-estimator'); ?>:</strong> <?php echo esc_html($report['total_tracked']); ?></li>
                     <li><strong><?php echo esc_html__('Unused Labels', 'product-estimator'); ?>:</strong> <?php echo esc_html($report['unused_count']); ?></li>
+                    <li><strong><?php echo esc_html__('Missing Labels', 'product-estimator'); ?>:</strong> <span style="color: <?php echo count($missing_labels) > 0 ? '#d63638' : '#00a32a'; ?>"><?php echo esc_html(count($missing_labels)); ?></span></li>
                     <li><strong><?php echo esc_html__('Last Reset', 'product-estimator'); ?>:</strong> <?php echo esc_html($report['last_reset'] ? date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($report['last_reset'])) : __('Never', 'product-estimator')); ?></li>
                     <li><strong><?php echo esc_html__('Last Update', 'product-estimator'); ?>:</strong> <?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($report['last_updated']))); ?></li>
                 </ul>
             </div>
+            
+            <?php if (count($missing_labels) > 0): ?>
+            <div class="analytics-card migration-status">
+                <h3><?php echo esc_html__('Label Migration Status', 'product-estimator'); ?></h3>
+                <div class="migration-info">
+                    <p><strong><?php echo esc_html__('Action Required:', 'product-estimator'); ?></strong> <?php echo esc_html__('Your application is using old flat-structure label keys that need to be migrated to the new hierarchical format.', 'product-estimator'); ?></p>
+                    <ul>
+                        <li><?php printf(esc_html__('%d old label keys need migration', 'product-estimator'), count($missing_labels)); ?></li>
+                        <li><?php printf(esc_html__('%d new hierarchical labels available', 'product-estimator'), count($unused_labels)); ?></li>
+                    </ul>
+                    <p><em><?php echo esc_html__('See the Missing Labels section below to identify which keys need updating in your code.', 'product-estimator'); ?></em></p>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
         
         <div class="analytics-charts">
@@ -73,7 +88,7 @@
             
             <div class="table-container">
                 <h3><?php echo esc_html__('Unused Labels', 'product-estimator'); ?></h3>
-                <p><?php echo esc_html__('These labels are defined but not tracked in usage analytics. They might be unused or have zero usage since analytics was enabled.', 'product-estimator'); ?></p>
+                <p><?php echo esc_html__('These labels exist in the new hierarchical structure but have never been accessed. This typically indicates new labels that need to be implemented or old features that are no longer used.', 'product-estimator'); ?></p>
                 
                 <?php if (!empty($unused_labels)): ?>
                     <?php if (count($unused_labels) > 50): ?>
@@ -101,6 +116,74 @@
                 <?php else: ?>
                     <div class="notice notice-info inline">
                         <p><?php echo esc_html__('No unused labels detected yet or all labels are already being tracked. Enable the Label Analytics feature switch and use the application to collect more data.', 'product-estimator'); ?></p>
+                    </div>
+                <?php endif; ?>
+            </div>
+            
+            <div class="table-container">
+                <h3><?php echo esc_html__('Missing Labels', 'product-estimator'); ?></h3>
+                <p><?php echo esc_html__('These are label keys being used in the code that do not exist in the new hierarchical label structure. This typically shows old flat-structure keys that need to be migrated to the new hierarchical format.', 'product-estimator'); ?></p>
+                
+                <?php if (!empty($missing_labels)): ?>
+                    <?php if (count($missing_labels) > 50): ?>
+                        <p class="notice notice-warning">
+                            <?php printf(esc_html__('Showing 50 of %d missing labels. Export to CSV for complete list.', 'product-estimator'), count($missing_labels)); ?>
+                        </p>
+                    <?php endif; ?>
+                    
+                    <table class="widefat striped">
+                        <thead>
+                            <tr>
+                                <th><?php echo esc_html__('Label Key', 'product-estimator'); ?></th>
+                                <th><?php echo esc_html__('Default Text Used', 'product-estimator'); ?></th>
+                                <th><?php echo esc_html__('Usage Count', 'product-estimator'); ?></th>
+                                <th><?php echo esc_html__('Source Location', 'product-estimator'); ?></th>
+                                <th><?php echo esc_html__('First/Last Seen', 'product-estimator'); ?></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach (array_slice($missing_labels, 0, 50) as $key => $data): ?>
+                                <tr>
+                                    <td>
+                                        <code><?php echo esc_html($data['key']); ?></code>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($data['default_text'])): ?>
+                                            <em><?php echo esc_html($data['default_text']); ?></em>
+                                            <?php if (!empty($data['alternative_defaults'])): ?>
+                                                <br><small><strong>Alt defaults:</strong> <?php echo esc_html(implode(', ', array_slice($data['alternative_defaults'], 0, 3))); ?>
+                                                <?php if (count($data['alternative_defaults']) > 3): ?>
+                                                    (and <?php echo count($data['alternative_defaults']) - 3; ?> more)
+                                                <?php endif; ?>
+                                                </small>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="description"><?php echo esc_html__('No default text', 'product-estimator'); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="count-badge"><?php echo esc_html($data['count']); ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($data['stack_trace'])): ?>
+                                            <code class="source-location"><?php echo esc_html($data['stack_trace']); ?></code>
+                                        <?php else: ?>
+                                            <span class="description"><?php echo esc_html__('No source info', 'product-estimator'); ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            <strong><?php echo esc_html__('First:', 'product-estimator'); ?></strong> <?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($data['first_seen']))); ?><br>
+                                            <strong><?php echo esc_html__('Last:', 'product-estimator'); ?></strong> <?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($data['last_seen']))); ?>
+                                        </small>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div class="notice notice-success inline">
+                        <p><?php echo esc_html__('No missing labels detected! All requested label keys exist in the label structure.', 'product-estimator'); ?></p>
                     </div>
                 <?php endif; ?>
             </div>
@@ -196,6 +279,71 @@
     .table-container {
         margin-bottom: 20px;
     }
+}
+
+/* Missing Labels Panel Styles */
+.count-badge {
+    background: #2271b1;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.source-location {
+    font-size: 11px;
+    color: #666;
+    background: #f5f5f5;
+    padding: 2px 4px;
+    border-radius: 2px;
+    display: block;
+    word-break: break-all;
+    max-width: 200px;
+}
+
+.table-container td code {
+    background: #f1f1f1;
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-size: 12px;
+}
+
+.table-container td em {
+    color: #666;
+    font-style: italic;
+}
+
+.table-container .description {
+    color: #999;
+    font-style: italic;
+}
+
+.missing-labels-summary {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+/* Migration Status Card */
+.migration-status {
+    background: #fff3cd !important;
+    border: 1px solid #ffc107 !important;
+}
+
+.migration-info p {
+    margin: 10px 0;
+}
+
+.migration-info ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.migration-info li {
+    margin: 5px 0;
 }
 </style>
 

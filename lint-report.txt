@@ -17,23 +17,23 @@
   327:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/admin/modules/LabelSettingsModule.js
-   150:15  warning  'pathParts' is assigned a value but never used  no-unused-vars
-   476:13  warning  '$tr' is assigned a value but never used        no-unused-vars
-   532:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
-   532:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
-   736:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
-   736:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
-   884:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
-   884:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
-   896:3   warning  Missing JSDoc @returns declaration              jsdoc/require-returns
-   898:1   warning  Missing JSDoc @param "labelId" description      jsdoc/require-param-description
-   898:1   warning  Missing JSDoc @param "labelId" type             jsdoc/require-param-type
-   925:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
-   925:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
-  1113:1   warning  Missing JSDoc @param "filename" description     jsdoc/require-param-description
-  1113:1   warning  Missing JSDoc @param "filename" type            jsdoc/require-param-type
-  1114:1   warning  Missing JSDoc @param "data" description         jsdoc/require-param-description
-  1114:1   warning  Missing JSDoc @param "data" type                jsdoc/require-param-type
+   149:15  warning  'pathParts' is assigned a value but never used  no-unused-vars
+   475:13  warning  '$tr' is assigned a value but never used        no-unused-vars
+   531:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
+   531:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
+   735:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
+   735:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
+   883:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
+   883:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
+   895:3   warning  Missing JSDoc @returns declaration              jsdoc/require-returns
+   897:1   warning  Missing JSDoc @param "labelId" description      jsdoc/require-param-description
+   897:1   warning  Missing JSDoc @param "labelId" type             jsdoc/require-param-type
+   924:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
+   924:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
+  1112:1   warning  Missing JSDoc @param "filename" description     jsdoc/require-param-description
+  1112:1   warning  Missing JSDoc @param "filename" type            jsdoc/require-param-type
+  1113:1   warning  Missing JSDoc @param "data" description         jsdoc/require-param-description
+  1113:1   warning  Missing JSDoc @param "data" type                jsdoc/require-param-type
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/examples/using-labels.js
    16:1   warning  Unexpected console statement                         no-console
@@ -190,10 +190,12 @@
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/labels.js
-  154:17  warning  Unexpected console statement  no-console
-  298:21  warning  Unexpected console statement  no-console
-  303:17  warning  Unexpected console statement  no-console
-  668:13  warning  Unexpected console statement  no-console
+   64:13  warning  Unexpected console statement                                           no-console
+  164:17  warning  Unexpected console statement                                           no-console
+  366:21  warning  Unexpected console statement                                           no-console
+  371:17  warning  Unexpected console statement                                           no-console
+  744:53  warning  'key' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  902:13  warning  Unexpected console statement                                           no-console
 
-✖ 150 problems (4 errors, 146 warnings)
+✖ 152 problems (4 errors, 148 warnings)
 

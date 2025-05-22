@@ -1744,9 +1744,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   LabelManager: () => (/* binding */ LabelManager),
 /* harmony export */   labelManager: () => (/* binding */ labelManager)
 /* harmony export */ });
-/* harmony import */ var _babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/slicedToArray */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
-/* harmony import */ var _babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/helpers/typeof */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
-/* harmony import */ var _babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babel/runtime/helpers/toConsumableArray */ "./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js");
+/* harmony import */ var _babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/typeof */ "./node_modules/@babel/runtime/helpers/esm/typeof.js");
+/* harmony import */ var _babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/helpers/toConsumableArray */ "./node_modules/@babel/runtime/helpers/esm/toConsumableArray.js");
+/* harmony import */ var _babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! @babel/runtime/helpers/slicedToArray */ "./node_modules/@babel/runtime/helpers/esm/slicedToArray.js");
 /* harmony import */ var _babel_runtime_helpers_classCallCheck__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! @babel/runtime/helpers/classCallCheck */ "./node_modules/@babel/runtime/helpers/esm/classCallCheck.js");
 /* harmony import */ var _babel_runtime_helpers_createClass__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! @babel/runtime/helpers/createClass */ "./node_modules/@babel/runtime/helpers/esm/createClass.js");
 
@@ -1771,6 +1771,9 @@ var LabelManager = /*#__PURE__*/function () {
     this.labels = window.productEstimatorLabels || {};
     this.version = this.labels._version || '3.0.0';
 
+    // Debug mode detection - check multiple sources like PHP version
+    this.debugMode = this.isDebugModeEnabled();
+
     // Local cache for processed labels
     this.cache = new Map();
 
@@ -1793,7 +1796,9 @@ var LabelManager = /*#__PURE__*/function () {
         hierarchicalHits: 0,
         startTime: Date.now(),
         performanceMarks: []
-      }
+      },
+      // Missing labels tracking
+      missingLabels: new Map() // key -> {key, defaultText, stackTrace, firstSeen, count}
     };
 
     // Set up analytics batch sending timer if enabled
@@ -1803,6 +1808,11 @@ var LabelManager = /*#__PURE__*/function () {
 
     // Preload critical labels
     this.preloadCriticalLabels();
+
+    // Log debug mode status
+    if (this.debugMode && window.productEstimatorDebug) {
+      console.log('[LabelManager] Debug mode enabled - labels will show debug information');
+    }
   }
 
   /**
@@ -1847,7 +1857,7 @@ var LabelManager = /*#__PURE__*/function () {
         // Record cache hit for performance metrics
         if (this.analytics.enabled) {
           this.analytics._lookups.hits++;
-          this.trackUsage(key);
+          this.trackUsage(key, 'cache', '');
         }
         var _value = this.cache.get(key);
         this.recordLabelLookupPerformance(key, startTime, true);
@@ -1918,17 +1928,20 @@ var LabelManager = /*#__PURE__*/function () {
         lookupType = 'missing';
       }
 
-      // Cache the result for next time
-      this.cache.set(key, value);
+      // Apply debug formatting if enabled
+      var formattedValue = this.formatLabelWithDebug(value, key, lookupType);
+
+      // Cache the result for next time (cache the formatted value)
+      this.cache.set(key, formattedValue);
 
       // Track usage analytics
       if (this.analytics.enabled) {
-        this.trackUsage(key, lookupType);
+        this.trackUsage(key, lookupType, defaultValue);
       }
 
       // Record performance timing
       this.recordLabelLookupPerformance(key, startTime, false, lookupType);
-      return value;
+      return formattedValue;
     }
 
     /**
@@ -2012,11 +2025,13 @@ var LabelManager = /*#__PURE__*/function () {
      * @private
      * @param {string} key - Label key
      * @param {string} lookupType - Type of lookup performed
+     * @param {string} defaultText - Default text used (if any)
      */
   }, {
     key: "trackUsage",
     value: function trackUsage(key) {
       var lookupType = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+      var defaultText = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
       // Increment local count
       if (!this.analytics.counts[key]) {
         this.analytics.counts[key] = 0;
@@ -2026,17 +2041,66 @@ var LabelManager = /*#__PURE__*/function () {
       // Update timestamp
       this.analytics.timestamps[key] = Date.now();
 
+      // Get stack trace for debugging (server will determine if label is actually missing)
+      var stackTrace = defaultText ? this.getStackTrace() : '';
+
       // Add to pending batch
       this.analytics.pendingBatch.push({
         key: key,
         timestamp: Date.now(),
         page: window.location.pathname,
-        lookupType: lookupType || undefined
+        lookupType: lookupType || undefined,
+        defaultText: defaultText || undefined,
+        stackTrace: stackTrace || undefined
       });
 
       // Send batch if threshold reached
       if (this.analytics.pendingBatch.length >= this.analytics.batchSize) {
         this.sendAnalyticsBatch();
+      }
+    }
+
+    /**
+     * Get a clean stack trace for debugging purposes
+     * @private
+     * @returns {string} Formatted stack trace with source locations
+     */
+  }, {
+    key: "getStackTrace",
+    value: function getStackTrace() {
+      try {
+        var error = new Error();
+        var stack = error.stack;
+        if (!stack) {
+          return 'No stack trace available';
+        }
+
+        // Parse stack trace to find the most relevant caller
+        var lines = stack.split('\n');
+        var relevantLines = lines.slice(1) // Skip the "Error" line
+        .filter(function (line) {
+          // Filter out our internal label methods and browser internals
+          return !line.includes('LabelManager') && !line.includes('labels.js') && !line.includes('webpack') && !line.includes('chrome-extension') && !line.includes('<anonymous>') && line.includes('.js');
+        }).slice(0, 3); // Take top 3 relevant lines
+
+        if (relevantLines.length > 0) {
+          return relevantLines.map(function (line) {
+            // Extract file and line number from stack trace
+            var match = line.match(/(?:at\s+)?(?:.*?\s+)?\(?(.+\.js):(\d+):(\d+)\)?/);
+            if (match) {
+              var _match = (0,_babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_2__["default"])(match, 4),
+                file = _match[1],
+                lineNum = _match[2],
+                colNum = _match[3];
+              var fileName = file.split('/').pop(); // Get just filename
+              return "".concat(fileName, ":").concat(lineNum, ":").concat(colNum);
+            }
+            return line.trim();
+          }).join(' → ');
+        }
+        return 'Unknown source location';
+      } catch (e) {
+        return 'Error capturing stack trace';
       }
     }
 
@@ -2053,7 +2117,7 @@ var LabelManager = /*#__PURE__*/function () {
       }
 
       // Clone the pending batch and clear it
-      var batch = (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_2__["default"])(this.analytics.pendingBatch);
+      var batch = (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_1__["default"])(this.analytics.pendingBatch);
       this.analytics.pendingBatch = [];
 
       // Send via fetch API
@@ -2085,6 +2149,147 @@ var LabelManager = /*#__PURE__*/function () {
     }
 
     /**
+     * Check if debug mode is enabled
+     * Checks multiple sources similar to PHP implementation
+     * @returns {boolean} True if debug mode is enabled
+     */
+  }, {
+    key: "isDebugModeEnabled",
+    value: function isDebugModeEnabled() {
+      // 1. URL parameter (temporary testing) - highest priority
+      var urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('pe_labels_debug') && urlParams.get('pe_labels_debug') === '1') {
+        return true;
+      }
+
+      // 2. Global debug flag set by PHP
+      if (window.productEstimatorVars && window.productEstimatorVars.labelsDebug) {
+        return true;
+      }
+
+      // 3. General debug mode
+      if (window.productEstimatorVars && window.productEstimatorVars.debug) {
+        return true;
+      }
+
+      // 4. Local storage (for persistent debugging during development)
+      if (localStorage.getItem('pe_labels_debug') === '1') {
+        return true;
+      }
+
+      // 5. Global debug flag
+      if (window.productEstimatorDebug) {
+        return true;
+      }
+      return false;
+    }
+
+    /**
+     * Format a label with debug information if debug mode is enabled
+     * Mirrors the PHP format_label_with_debug method
+     * @param {string} labelValue - The actual label value
+     * @param {string} labelKey - The label key/path for debugging
+     * @param {string} lookupType - How the label was found (optional)
+     * @returns {string} Formatted label (with or without debug info)
+     */
+  }, {
+    key: "formatLabelWithDebug",
+    value: function formatLabelWithDebug(labelValue, labelKey) {
+      var lookupType = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
+      if (!this.debugMode) {
+        return labelValue;
+      }
+
+      // Add debug information - mirror PHP format
+      var debugInfo = "[DEBUG: ".concat(labelKey, "]");
+
+      // Add lookup type info if available
+      if (lookupType) {
+        debugInfo += "[".concat(lookupType.toUpperCase(), "]");
+      }
+
+      // Different formatting based on content
+      if (!labelValue || labelValue === '') {
+        return debugInfo + '[EMPTY LABEL]';
+      }
+      return debugInfo + labelValue;
+    }
+
+    /**
+     * Get a raw label value without debug formatting
+     * Used internally for processing before applying debug format
+     * @param {string} key - Label key
+     * @param {string} defaultValue - Default value if label not found
+     * @returns {string} Raw label value
+     */
+  }, {
+    key: "getRawLabel",
+    value: function getRawLabel(key) {
+      var defaultValue = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
+      // Temporarily disable debug mode to get raw value
+      var originalDebugMode = this.debugMode;
+      this.debugMode = false;
+
+      // Check if we have a cached raw value
+      var rawCacheKey = "_raw_".concat(key);
+      if (this.cache.has(rawCacheKey)) {
+        this.debugMode = originalDebugMode;
+        return this.cache.get(rawCacheKey);
+      }
+
+      // Get the raw value using the same logic as get() but without debug formatting
+      var value = null;
+
+      // 1. Check hierarchical path
+      if (key.split('.').length >= 3) {
+        value = this.getDeepValue(this.labels, key.split('.'));
+      }
+
+      // 2. Check flattened structure
+      if (value === null && this.labels._flat && this.labels._flat[key] !== undefined) {
+        value = this.labels._flat[key];
+      }
+
+      // 3. Standard hierarchical lookup
+      if (value === null) {
+        var keys = key.split('.');
+        var current = this.labels;
+        var _iterator3 = _createForOfIteratorHelper(keys),
+          _step3;
+        try {
+          for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+            var k = _step3.value;
+            if (current && current[k] !== undefined) {
+              current = current[k];
+            } else {
+              current = null;
+              break;
+            }
+          }
+        } catch (err) {
+          _iterator3.e(err);
+        } finally {
+          _iterator3.f();
+        }
+        if (current !== null) {
+          value = current;
+        }
+      }
+
+      // Use default if nothing found
+      if (value === null) {
+        value = defaultValue;
+      }
+
+      // Cache the raw value
+      this.cache.set(rawCacheKey, value);
+
+      // Restore debug mode
+      this.debugMode = originalDebugMode;
+      return value;
+    }
+
+    /**
      * Format a label with replacements
      * @param {string} key - Label key
      * @param {object} replacements - Key-value pairs for replacements
@@ -2096,13 +2301,16 @@ var LabelManager = /*#__PURE__*/function () {
     value: function format(key) {
       var replacements = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
       var defaultValue = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : '';
-      // The get() method will already track usage
-      var label = this.get(key, defaultValue);
+      // Get the raw label without debug formatting first
+      var label = this.getRawLabel(key, defaultValue);
 
       // Replace placeholders like {name} with actual values
       Object.keys(replacements).forEach(function (placeholder) {
         label = label.replace(new RegExp("{".concat(placeholder, "}"), 'g'), replacements[placeholder]);
       });
+
+      // Apply debug formatting after replacement
+      var formattedLabel = this.formatLabelWithDebug(label, key, 'formatted');
 
       // Track as a formatted usage (with special context)
       if (this.analytics.enabled) {
@@ -2120,7 +2328,7 @@ var LabelManager = /*#__PURE__*/function () {
           this.sendAnalyticsBatch();
         }
       }
-      return label;
+      return formattedLabel;
     }
 
     /**
@@ -2268,7 +2476,7 @@ var LabelManager = /*#__PURE__*/function () {
               key: fullKey,
               value: value
             });
-          } else if ((0,_babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_1__["default"])(value) === 'object' && value !== null) {
+          } else if ((0,_babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_0__["default"])(value) === 'object' && value !== null) {
             _searchRecursive(value, fullKey);
           }
         });
@@ -2327,9 +2535,44 @@ var LabelManager = /*#__PURE__*/function () {
             return sum + count;
           }, 0),
           hierarchicalHits: this.analytics._lookups.hierarchicalHits,
-          lookupTypes: this.getLookupTypeStats()
+          lookupTypes: this.getLookupTypeStats(),
+          missingLabelsTracked: this.getMissingLabelsData()
         }
       };
+    }
+
+    /**
+     * Get missing labels data for analytics
+     * @returns {Array} Array of missing label objects with details
+     */
+  }, {
+    key: "getMissingLabelsData",
+    value: function getMissingLabelsData() {
+      var missingData = [];
+      this.analytics.missingLabels.forEach(function (data, key) {
+        var entry = {
+          key: data.key,
+          defaultText: data.defaultText,
+          stackTrace: data.stackTrace,
+          count: data.count,
+          firstSeen: new Date(data.firstSeen).toISOString(),
+          lastSeen: new Date(data.lastSeen).toISOString(),
+          page: data.page,
+          url: data.url
+        };
+
+        // Add alternative defaults if they exist
+        if (data.alternativeDefaults && data.alternativeDefaults.size > 0) {
+          entry.alternativeDefaults = Array.from(data.alternativeDefaults);
+        }
+        missingData.push(entry);
+      });
+
+      // Sort by count (most frequently missing first)
+      missingData.sort(function (a, b) {
+        return b.count - a.count;
+      });
+      return missingData;
     }
 
     /**
@@ -2347,7 +2590,7 @@ var LabelManager = /*#__PURE__*/function () {
         if (category.startsWith('_')) {
           return;
         }
-        if ((0,_babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_1__["default"])(_this5.labels[category]) === 'object') {
+        if ((0,_babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_0__["default"])(_this5.labels[category]) === 'object') {
           counts[category] = Object.keys(_this5.labels[category]).length;
         }
       });
@@ -2391,7 +2634,7 @@ var LabelManager = /*#__PURE__*/function () {
       }); // Sort by count descending
 
       return entries.slice(0, limit).map(function (_ref) {
-        var _ref2 = (0,_babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_0__["default"])(_ref, 2),
+        var _ref2 = (0,_babel_runtime_helpers_slicedToArray__WEBPACK_IMPORTED_MODULE_2__["default"])(_ref, 2),
           key = _ref2[0],
           count = _ref2[1];
         return {
@@ -2430,7 +2673,7 @@ var LabelManager = /*#__PURE__*/function () {
           totalTime: labelResources.reduce(function (sum, res) {
             return sum + res.duration;
           }, 0),
-          maxTime: Math.max.apply(Math, (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_2__["default"])(labelResources.map(function (res) {
+          maxTime: Math.max.apply(Math, (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_1__["default"])(labelResources.map(function (res) {
             return res.duration;
           }))),
           avgTime: labelResources.reduce(function (sum, res) {
@@ -2507,7 +2750,7 @@ var LabelManager = /*#__PURE__*/function () {
           var value = obj[key];
           if (typeof value === 'string') {
             count++;
-          } else if ((0,_babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_1__["default"])(value) === 'object' && value !== null) {
+          } else if ((0,_babel_runtime_helpers_typeof__WEBPACK_IMPORTED_MODULE_0__["default"])(value) === 'object' && value !== null) {
             _countRecursive(value);
           }
         });
@@ -2532,7 +2775,7 @@ var LabelManager = /*#__PURE__*/function () {
           missing.push(labelKey);
         }
       });
-      return (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_2__["default"])(new Set(missing)); // Remove duplicates
+      return (0,_babel_runtime_helpers_toConsumableArray__WEBPACK_IMPORTED_MODULE_1__["default"])(new Set(missing)); // Remove duplicates
     }
   }]);
 }();

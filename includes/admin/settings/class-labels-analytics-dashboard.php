@@ -119,6 +119,7 @@ class LabelsAnalyticsDashboard {
         $report = $this->analytics->get_usage_report();
         $most_used = $this->analytics->get_most_used_labels(20);
         $unused_labels = $this->analytics->get_unused_labels();
+        $missing_labels = $this->analytics->get_missing_labels();
 
         // Add colors for chart
         $colors = [

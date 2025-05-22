@@ -267,13 +267,14 @@ class LabelsFrontend extends FrontendBase {
     }
     
     /**
-     * Create flattened structure for performance
+     * [REMOVED] Create flattened structure for v1/v2 compatibility
      * 
-     * @since    3.0.0
+     * @since    3.0.0 - DEPRECATED: Removed to force migration to hierarchical structure
      * @access   private
      * @param    array    $hierarchical_labels    Hierarchical labels array
      * @return   array                           Flattened labels array
      */
+    /* COMMENTED OUT - REMOVED FOR V1/V2 MIGRATION
     private function create_flat_structure($hierarchical_labels) {
         $flat_labels = [];
         
@@ -290,16 +291,18 @@ class LabelsFrontend extends FrontendBase {
         
         return $flat_labels;
     }
+    */
     
     /**
-     * Recursively flatten a category and its subcategories
+     * [REMOVED] Recursively flatten a category for v1/v2 compatibility
      * 
-     * @since    3.0.0
+     * @since    3.0.0 - DEPRECATED: Removed to force migration to hierarchical structure
      * @access   private
      * @param    string    $path           Current path in dot notation
      * @param    array     $items          Items to flatten
      * @param    array     &$flat_labels   Reference to flattened output
      */
+    /* COMMENTED OUT - REMOVED FOR V1/V2 MIGRATION
     private function flatten_category($path, $items, &$flat_labels) {
         foreach ($items as $key => $value) {
             if (is_array($value)) {
@@ -311,6 +314,7 @@ class LabelsFrontend extends FrontendBase {
             }
         }
     }
+    */
     
     /**
      * Optimize label structure for performance
@@ -321,9 +325,8 @@ class LabelsFrontend extends FrontendBase {
      * @return   array    Optimized labels
      */
     private function optimize_label_structure($labels) {
-        // Create flattened access paths for performance
-        $labels['_flat'] = $this->create_flat_structure($labels);
-        
+        // Removed: flat structure creation for v1/v2 compatibility
+        // Old keys will now show as missing labels to encourage migration
         return $labels;
     }
 
@@ -344,17 +347,8 @@ class LabelsFrontend extends FrontendBase {
             $labels = $this->get_all_labels_with_cache();
         }
         
-        // First check if we have a cached flat version of this key
-        if (isset($this->flat_labels[$key])) {
-            return $this->format_label_with_debug($this->flat_labels[$key], $key);
-        }
-        
-        // Check if key exists in flattened structure (performance optimization)
-        if (isset($labels['_flat']) && isset($labels['_flat'][$key])) {
-            $value = $labels['_flat'][$key];
-            $this->flat_labels[$key] = $value; // Cache for future
-            return $this->format_label_with_debug($value, $key);
-        }
+        // Removed: flat structure compatibility
+        // Old v1/v2 keys will now return default value to encourage migration
         
         // Try hierarchical dot notation lookup
         $keys = explode('.', $key);
@@ -446,10 +440,8 @@ class LabelsFrontend extends FrontendBase {
     public function get_all_frontend_labels() {
         $all_labels = $this->get_all_labels_with_cache();
         
-        // Ensure we have flattened version for JavaScript compatibility
-        if (!isset($all_labels['_flat'])) {
-            $all_labels['_flat'] = $this->create_flat_structure($all_labels);
-        }
+        // Removed: flat structure creation for v1/v2 compatibility
+        // JavaScript will now only receive hierarchical structure
         
         return $all_labels;
     }
@@ -703,7 +695,8 @@ class LabelsFrontend extends FrontendBase {
     public function get_template_labels() {
         $all_labels = $this->get_all_frontend_labels();
         
-        // Return the flattened structure for easier access in templates
-        return $all_labels['_flat'] ?? [];
+        // Removed: flat structure usage - templates should use hierarchical paths
+        // Return empty array to force migration to hierarchical keys
+        return [];
     }
 }

@@ -1,8 +1,8 @@
 /**
  * Enhanced Label Manager utility for handling hierarchical labels in the frontend
  *
- * Consolidated version combining both v2 and v3 label functionality
- * Supports both legacy flat structure and new hierarchical structure
+ * v3.0 hierarchical structure only - legacy v1/v2 compatibility removed
+ * Old keys will show as missing labels to encourage migration to new structure
  * @since 3.0.0
  */
 export class LabelManager {
@@ -86,9 +86,9 @@ export class LabelManager {
     }
 
     /**
-     * Get a label value with enhanced support for hierarchical paths
-     * Supports both v2 flat structure and v3 hierarchical structure
-     * @param {string} key - Label key (supports both v2 and v3 formats)
+     * Get a label value with hierarchical path support
+     * Only supports v3 hierarchical structure - old v1/v2 keys will return default
+     * @param {string} key - Label key in hierarchical dot notation format
      * @param {string} defaultValue - Default value if label not found
      * @returns {string} Label value or default
      */
@@ -131,11 +131,8 @@ export class LabelManager {
             }
         }
         
-        // 2. Check if we can find it in the flattened structure (v2 compatibility)
-        if (value === null && this.labels._flat && this.labels._flat[key] !== undefined) {
-            value = this.labels._flat[key];
-            lookupType = 'flattened';
-        }
+        // Removed: v2 flat structure compatibility
+        // Old v2 keys will now show as missing labels to encourage migration
         
         // 3. Standard hierarchical dot notation lookup
         if (value === null) {

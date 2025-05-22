@@ -31,12 +31,12 @@
    10:1  warning  There should be at least one empty line between import groups                   import/order
    11:1  warning  `@utils` import should occur before import of `../common/VerticalTabbedModule`  import/order
   106:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-  300:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-  447:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-  460:3  warning  Missing JSDoc @returns declaration                                              jsdoc/require-returns
-  460:3  warning  Missing JSDoc @param "labelId" declaration                                      jsdoc/require-param
-  475:3  warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
-  475:3  warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
+  309:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  456:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  469:3  warning  Missing JSDoc @returns declaration                                              jsdoc/require-returns
+  469:3  warning  Missing JSDoc @param "labelId" declaration                                      jsdoc/require-param
+  495:3  warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
+  495:3  warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/examples/using-labels.js
     4:1   warning  Expected only 0 line after block description         jsdoc/tag-lines

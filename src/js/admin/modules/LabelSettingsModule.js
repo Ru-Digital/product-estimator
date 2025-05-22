@@ -16,7 +16,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
   constructor() {
     super({
       mainTabId: 'labels',
-      defaultSubTabId: 'buttons',
+      defaultSubTabId: 'estimate_management',
       ajaxActionPrefix: 'save_labels',
       localizedDataName: 'labelSettings'
     });
@@ -59,8 +59,8 @@ class LabelSettingsModule extends VerticalTabbedModule {
     this.$('#apply-bulk-edits').on('click', this.handleBulkUpdate.bind(this));
     this.$('#cancel-bulk-edit').on('click', this.cancelBulkEdit.bind(this));
     
-    // Preview updates
-    this.$('.regular-text[id^="buttons_"], .regular-text[id^="forms_"], .regular-text[id^="messages_"], .regular-text[id^="ui_elements_"], .regular-text[id^="pdf_"]')
+    // Preview updates for V3 hierarchical structure
+    this.$('.regular-text[id^="estimate_management_"], .regular-text[id^="room_management_"], .regular-text[id^="customer_details_"], .regular-text[id^="product_management_"], .regular-text[id^="common_ui_"], .regular-text[id^="modal_system_"], .regular-text[id^="search_and_filters_"], .regular-text[id^="pdf_generation_"]')
       .on('input', this.updatePreview.bind(this));
       
     logger.log('Label management events bound successfully');
@@ -156,8 +156,17 @@ class LabelSettingsModule extends VerticalTabbedModule {
    * Handle reset category to defaults
    */
   handleResetCategory() {
-    // Valid categories list - must match what's defined in PHP
-    const validCategories = ['buttons', 'forms', 'messages', 'ui_elements', 'pdf'];
+    // Valid categories list - must match what's defined in PHP (V3 hierarchical structure)
+    const validCategories = [
+      'estimate_management',
+      'room_management', 
+      'customer_details',
+      'product_management',
+      'common_ui',
+      'modal_system',
+      'search_and_filters',
+      'pdf_generation'
+    ];
     
     // Try multiple selector strategies to find the active category
     let currentCategory = null;
@@ -234,9 +243,9 @@ class LabelSettingsModule extends VerticalTabbedModule {
         const tabParam = urlParams.get('tab');
         
         if (tabParam === 'labels') {
-          // If we're on the labels tab, default to 'buttons' category
-          currentCategory = 'buttons';
-          logger.log('Reset category: Defaulting to "buttons" category');
+          // If we're on the labels tab, default to 'estimate_management' category
+          currentCategory = 'estimate_management';
+          logger.log('Reset category: Defaulting to "estimate_management" category');
         } else {
           return; // Can't proceed without a valid category
         }
@@ -431,8 +440,8 @@ class LabelSettingsModule extends VerticalTabbedModule {
    * Initialize preview functionality
    */
   initializePreview() {
-    // Add preview functionality for labels
-    jQuery('.regular-text[id^="buttons_"], .regular-text[id^="forms_"], .regular-text[id^="messages_"], .regular-text[id^="ui_elements_"], .regular-text[id^="pdf_"]')
+    // Add preview functionality for labels (V3 hierarchical structure)
+    jQuery('.regular-text[id^="estimate_management_"], .regular-text[id^="room_management_"], .regular-text[id^="customer_details_"], .regular-text[id^="product_management_"], .regular-text[id^="common_ui_"], .regular-text[id^="modal_system_"], .regular-text[id^="search_and_filters_"], .regular-text[id^="pdf_generation_"]')
       .each((index, element) => {
         const $input = jQuery(element);
         const labelId = $input.attr('id');
@@ -462,10 +471,21 @@ class LabelSettingsModule extends VerticalTabbedModule {
    */
   getPreviewForLabel(labelId) {
     const previewMap = {
-      'buttons_save_estimate': 'Button text shown when saving',
-      'buttons_print_estimate': 'Button text for printing',
-      'forms_estimate_name': 'Form field label',
-      'messages_product_added': 'Success message after adding product',
+      // Estimate Management previews
+      'estimate_management_estimate_actions_buttons_save': 'Button text shown when saving',
+      'estimate_management_estimate_actions_buttons_print': 'Button text for printing',
+      'estimate_management_create_new_estimate_form_estimate_name_field_label': 'Form field label',
+      
+      // Room Management previews  
+      'room_management_add_new_room_form_room_name_field_label': 'Room name form field label',
+      
+      // Customer Details previews
+      'customer_details_customer_details_form_customer_name_field_label': 'Customer name form field label',
+      
+      // Common UI previews
+      'common_ui_confirmation_dialogs_buttons_confirm': 'Confirmation dialog button text',
+      'common_ui_general_actions_buttons_save': 'General save button text',
+      
       // Add more preview mappings as needed
     };
     

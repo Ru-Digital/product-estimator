@@ -1434,7 +1434,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
 
             // Get current labels and default structure
             $current_labels = get_option('product_estimator_labels', []);
-            $default_labels = $this->hierarchical_structure;
+            $default_labels = $this->get_default_v3_admin_structure();
 
             // Deep merge the structures
             $merged_labels = [];
@@ -1636,11 +1636,52 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         }
 
         // Get default structure for this category
-        $defaults = $this->hierarchical_structure;
-        $default_category = $defaults[$category] ?? [];
+        $defaults = $this->get_default_v3_admin_structure();
+        
+        // Ensure defaults is an array
+        if (!is_array($defaults)) {
+            error_log('ERROR: Default structure is not an array: ' . gettype($defaults));
+            wp_send_json_error(__('Invalid default structure', 'product-estimator'));
+        }
+        
+        // Check if category exists in defaults
+        if (!isset($defaults[$category])) {
+            error_log('ERROR: Category "' . $category . '" not found. Available: ' . implode(', ', array_keys($defaults)));
+            wp_send_json_error(__('Category not found in default structure: ' . $category, 'product-estimator'));
+        }
+        
+        $default_category = $defaults[$category];
 
         // Get current options
         $options = get_option($this->option_name, []);
+        
+        // Ensure options is an array
+        if (!is_array($options)) {
+            error_log('ERROR: Options is not an array: ' . gettype($options) . ' for option: ' . $this->option_name);
+            
+            // Try to handle different data formats
+            if (is_string($options)) {
+                // First try JSON decode
+                $decoded = json_decode($options, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    error_log('INFO: Successfully decoded JSON string to array');
+                    $options = $decoded;
+                } else {
+                    // Try PHP unserialize (WordPress sometimes stores serialized data)
+                    $unserialized = @unserialize($options);
+                    if ($unserialized !== false && is_array($unserialized)) {
+                        error_log('INFO: Successfully unserialized PHP string to array');
+                        $options = $unserialized;
+                    } else {
+                        error_log('INFO: Could not decode string data, creating empty array');
+                        $options = [];
+                    }
+                }
+            } else {
+                error_log('INFO: Unknown data type, creating empty array');
+                $options = [];
+            }
+        }
 
         // Reset the specific category to defaults
         $options[$category] = $default_category;
@@ -1669,10 +1710,12 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         return [
             'estimate_management' => [
                 'create_new_estimate_form' => [
-                    'estimate_name_field' => [
-                        'label' => __('Estimate Name', 'product-estimator'),
-                        'placeholder' => __('Enter estimate name', 'product-estimator'),
-                        'validation_required' => __('Estimate name is required', 'product-estimator'),
+                    'fields' => [
+                        'estimate_name_field' => [
+                            'label' => __('Estimate Name', 'product-estimator'),
+                            'placeholder' => __('Enter estimate name', 'product-estimator'),
+                            'validation_required' => __('Estimate name is required', 'product-estimator'),
+                        ],
                     ],
                     'buttons' => [
                         'create_button' => [
@@ -1686,9 +1729,11 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                     ],
                 ],
                 'estimate_selection' => [
-                    'estimate_choice_field' => [
-                        'label' => __('Choose an estimate:', 'product-estimator'),
-                        'options' => __('-- Select an Estimate --', 'product-estimator'),
+                    'fields' => [
+                        'estimate_choice_field' => [
+                            'label' => __('Choose an estimate:', 'product-estimator'),
+                            'options' => __('-- Select an Estimate --', 'product-estimator'),
+                        ],
                     ],
                     'buttons' => [
                         'start_new_button' => [
@@ -1751,35 +1796,37 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             ],
             'room_management' => [
                 'add_new_room_form' => [
-                    'room_name_field' => [
-                        'label' => __('Room Name', 'product-estimator'),
-                        'placeholder' => __('Enter room name', 'product-estimator'),
-                        'validation' => [
-                            'required' => __('Room name is required', 'product-estimator'),
-                            'min_length' => __('Room name must be at least 2 characters', 'product-estimator'),
+                    'fields' => [
+                        'room_name_field' => [
+                            'label' => __('Room Name', 'product-estimator'),
+                            'placeholder' => __('Enter room name', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Room name is required', 'product-estimator'),
+                                'min_length' => __('Room name must be at least 2 characters', 'product-estimator'),
+                            ],
                         ],
-                    ],
-                    'room_width_field' => [
-                        'label' => __('Room Width', 'product-estimator'),
-                        'placeholder' => __('Width (m)', 'product-estimator'),
-                        'validation' => [
-                            'number_required' => __('Please enter a valid number', 'product-estimator'),
-                            'positive_number' => __('Width must be a positive number', 'product-estimator'),
+                        'room_width_field' => [
+                            'label' => __('Room Width', 'product-estimator'),
+                            'placeholder' => __('Width (m)', 'product-estimator'),
+                            'validation' => [
+                                'number_required' => __('Please enter a valid number', 'product-estimator'),
+                                'positive_number' => __('Width must be a positive number', 'product-estimator'),
+                            ],
                         ],
-                    ],
-                    'room_length_field' => [
-                        'label' => __('Room Length', 'product-estimator'),
-                        'placeholder' => __('Length (m)', 'product-estimator'),
-                        'validation' => [
-                            'number_required' => __('Please enter a valid number', 'product-estimator'),
-                            'positive_number' => __('Length must be a positive number', 'product-estimator'),
+                        'room_length_field' => [
+                            'label' => __('Room Length', 'product-estimator'),
+                            'placeholder' => __('Length (m)', 'product-estimator'),
+                            'validation' => [
+                                'number_required' => __('Please enter a valid number', 'product-estimator'),
+                                'positive_number' => __('Length must be a positive number', 'product-estimator'),
+                            ],
                         ],
-                    ],
-                    'room_dimensions_field' => [
-                        'label' => __('Room Dimensions', 'product-estimator'),
-                        'placeholder' => __('e.g., 4m x 3m', 'product-estimator'),
-                        'validation' => [
-                            'valid_format' => __('Please enter dimensions in format like "4m x 3m"', 'product-estimator'),
+                        'room_dimensions_field' => [
+                            'label' => __('Room Dimensions', 'product-estimator'),
+                            'placeholder' => __('e.g., 4m x 3m', 'product-estimator'),
+                            'validation' => [
+                                'valid_format' => __('Please enter dimensions in format like "4m x 3m"', 'product-estimator'),
+                            ],
                         ],
                     ],
                     'buttons' => [
@@ -1803,11 +1850,13 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                     ],
                 ],
                 'room_selection_form' => [
-                    'room_choice_field' => [
-                        'label' => __('Choose a room:', 'product-estimator'),
-                        'options' => __('-- Select a Room --', 'product-estimator'),
-                        'validation' => [
-                            'room_required' => __('Please select a room', 'product-estimator'),
+                    'fields' => [
+                        'room_choice_field' => [
+                            'label' => __('Choose a room:', 'product-estimator'),
+                            'options' => __('-- Select a Room --', 'product-estimator'),
+                            'validation' => [
+                                'room_required' => __('Please select a room', 'product-estimator'),
+                            ],
                         ],
                     ],
                     'buttons' => [
@@ -1869,35 +1918,37 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             ],
             'customer_details' => [
                 'customer_details_form' => [
-                    'customer_name_field' => [
-                        'label' => __('Your Name', 'product-estimator'),
-                        'placeholder' => __('Enter your name', 'product-estimator'),
-                        'validation' => [
-                            'required' => __('Name is required', 'product-estimator'),
+                    'fields' => [
+                        'customer_name_field' => [
+                            'label' => __('Your Name', 'product-estimator'),
+                            'placeholder' => __('Enter your name', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Name is required', 'product-estimator'),
+                            ],
                         ],
-                    ],
-                    'customer_email_field' => [
-                        'label' => __('Email Address', 'product-estimator'),
-                        'placeholder' => __('Enter your email', 'product-estimator'),
-                        'validation' => [
-                            'invalid_email' => __('Please enter a valid email address', 'product-estimator'),
-                            'email_required' => __('Email is required', 'product-estimator'),
+                        'customer_email_field' => [
+                            'label' => __('Email Address', 'product-estimator'),
+                            'placeholder' => __('Enter your email', 'product-estimator'),
+                            'validation' => [
+                                'invalid_email' => __('Please enter a valid email address', 'product-estimator'),
+                                'email_required' => __('Email is required', 'product-estimator'),
+                            ],
                         ],
-                    ],
-                    'customer_phone_field' => [
-                        'label' => __('Phone Number', 'product-estimator'),
-                        'placeholder' => __('Enter your phone', 'product-estimator'),
-                        'validation' => [
-                            'invalid_phone' => __('Please enter a valid phone number', 'product-estimator'),
-                            'phone_required' => __('Phone is required', 'product-estimator'),
+                        'customer_phone_field' => [
+                            'label' => __('Phone Number', 'product-estimator'),
+                            'placeholder' => __('Enter your phone', 'product-estimator'),
+                            'validation' => [
+                                'invalid_phone' => __('Please enter a valid phone number', 'product-estimator'),
+                                'phone_required' => __('Phone is required', 'product-estimator'),
+                            ],
                         ],
-                    ],
-                    'customer_postcode_field' => [
-                        'label' => __('Postcode', 'product-estimator'),
-                        'placeholder' => __('Enter your postcode', 'product-estimator'),
-                        'validation' => [
-                            'postcode_required' => __('Postcode is required', 'product-estimator'),
-                            'invalid_postcode' => __('Please enter a valid postcode', 'product-estimator'),
+                        'customer_postcode_field' => [
+                            'label' => __('Postcode', 'product-estimator'),
+                            'placeholder' => __('Enter your postcode', 'product-estimator'),
+                            'validation' => [
+                                'postcode_required' => __('Postcode is required', 'product-estimator'),
+                                'invalid_postcode' => __('Please enter a valid postcode', 'product-estimator'),
+                            ],
                         ],
                     ],
                     'buttons' => [

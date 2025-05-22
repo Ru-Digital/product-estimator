@@ -27,8 +27,10 @@
    892:3   warning  Missing JSDoc @returns declaration                                              jsdoc/require-returns
    892:3   warning  Missing JSDoc @param "labelId" declaration                                      jsdoc/require-param
    918:3   warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-  1047:3   warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
-  1047:3   warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
+  1029:1   warning  Invalid JSDoc @param "pathParts" type "array"; prefer: "Array"                  jsdoc/check-types
+  1029:1   warning  The type 'array' is undefined                                                   jsdoc/no-undefined-types
+  1105:3   warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
+  1105:3   warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/examples/using-labels.js
     4:1   warning  Expected only 0 line after block description         jsdoc/tag-lines
@@ -268,6 +270,6 @@
   593:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
   615:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
 
-✖ 217 problems (4 errors, 213 warnings)
-  0 errors and 77 warnings potentially fixable with the `--fix` option.
+✖ 219 problems (4 errors, 215 warnings)
+  0 errors and 78 warnings potentially fixable with the `--fix` option.
 

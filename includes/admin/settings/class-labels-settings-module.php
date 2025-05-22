@@ -117,7 +117,8 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             $labels,
             $vertical_tab_id,
             $page_slug_for_wp_api,
-            $current_section_id
+            $current_section_id,
+            $vertical_tab_id  // Start the path with the vertical tab ID
         );
     }
 

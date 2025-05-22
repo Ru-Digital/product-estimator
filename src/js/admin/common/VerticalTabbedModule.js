@@ -312,7 +312,81 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     }
   }
 
+  /**
+   * Get the currently active sub-tab ID
+   * @returns {string|null} The currently active sub-tab ID or null if none found
+   */
+  getCurrentSubTabId() {
+    if (!this.$container || !this.$container.length) {
+      logger.log(`DEBUG getCurrentSubTabId: No container`);
+      return null;
+    }
+
+    // Use shared selectors from settings with fallbacks
+    const navSelector = this.settings.selectors.verticalTabNav || '.pe-vtabs-nav-list, .vertical-tabs-nav';
+    const navItemSelector = this.settings.selectors.verticalTabNavItem || '.pe-vtabs-nav-item, .tab-item';
+
+    const $verticalTabsNav = this.$container.find(navSelector);
+    const $activeNavItem = $verticalTabsNav.find(`${navItemSelector}.active`);
+    
+    logger.log(`DEBUG getCurrentSubTabId: Found nav: ${$verticalTabsNav.length}, active items: ${$activeNavItem.length}`);
+
+    if ($activeNavItem.length) {
+      const $activeLink = $activeNavItem.find('a');
+      logger.log(`DEBUG getCurrentSubTabId: Found active link: ${$activeLink.length}`);
+      
+      if ($activeLink.length) {
+        // Try to get the tab ID from data-tab attribute
+        let tabId = $activeLink.attr('data-tab');
+        const href = $activeLink.attr('href') || '';
+        const linkText = $activeLink.text().trim();
+        
+        logger.log(`DEBUG getCurrentSubTabId: Link text: "${linkText}", data-tab: "${tabId}", href: "${href}"`);
+        
+        if (!tabId) {
+          // Fall back to extracting from href
+          const subTabMatch = href.match(/[?&]sub_tab=([^&#]*)/i);
+          if (subTabMatch && subTabMatch[1]) {
+            tabId = decodeURIComponent(subTabMatch[1].replace(/\+/g, ' '));
+            logger.log(`DEBUG getCurrentSubTabId: Extracted from href: "${tabId}"`);
+          }
+        }
+        
+        logger.log(`DEBUG getCurrentSubTabId: Final tabId: "${tabId}"`);
+        return tabId || null;
+      }
+    } else {
+      // Debug: show all nav items and their states
+      const $allNavItems = $verticalTabsNav.find(navItemSelector);
+      logger.log(`DEBUG getCurrentSubTabId: All nav items (${$allNavItems.length}):`);
+      $allNavItems.each((i, item) => {
+        const $item = jQuery(item);
+        const $link = $item.find('a');
+        const classes = $item.attr('class') || '';
+        const linkText = $link.text().trim();
+        const isActive = $item.hasClass('active');
+        logger.log(`  - "${linkText}": classes="${classes}", active=${isActive}`);
+      });
+    }
+    
+    return null;
+  }
+
+  /**
+   * Activate a specific sub-tab by ID
+   * @param {string} subTabId - The sub-tab ID to activate
+   */
+  activateSubTab(subTabId) {
+    logger.log(`DEBUG: activateSubTab called with: ${subTabId}`);
+    logger.log(`DEBUG: Container exists: ${!!this.$container?.length}`);
+    logger.log(`DEBUG: Settings tab_id: ${this.settings.tab_id}`);
+    
+    this.showVerticalTab(subTabId, true);
+  }
+
   showVerticalTab(subTabId, updateHistory = true) {
+    logger.log(`DEBUG: showVerticalTab called with: ${subTabId}, updateHistory: ${updateHistory}`);
+    
     if (!this.$container || !this.settings.tab_id || !subTabId) {
       logger.warn('VerticalTabbedModule: Cannot show vertical tab due to missing container, mainTabId, or subTabId.', {
         containerExists: !!this.$container?.length,
@@ -329,12 +403,29 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
 
     const $verticalTabsNav = this.$container.find(navSelector);
     const $verticalTabContents = this.$container.find(contentSelector);
+    
+    logger.log(`DEBUG: Found nav elements: ${$verticalTabsNav.length}`);
+    logger.log(`DEBUG: Found content elements: ${$verticalTabContents.length}`);
+    logger.log(`DEBUG: Using nav selector: ${navSelector}`);
+    logger.log(`DEBUG: Using nav item selector: ${navItemSelector}`);
 
     // Remove active class from all nav items
     $verticalTabsNav.find(navItemSelector).removeClass('active');
 
     // Find the tab link directly using data attribute
     let $activeLink = $verticalTabsNav.find(`a[data-tab="${subTabId}"]`);
+    logger.log(`DEBUG: Found link with data-tab="${subTabId}": ${$activeLink.length}`);
+
+    // Debug: show all available tabs
+    const $allTabLinks = $verticalTabsNav.find('a');
+    logger.log(`DEBUG: Available tabs:`);
+    $allTabLinks.each((i, link) => {
+      const $link = jQuery(link);
+      const dataTab = $link.attr('data-tab');
+      const href = $link.attr('href') || '';
+      const text = $link.text().trim();
+      logger.log(`  - "${text}": data-tab="${dataTab}", href="${href}"`);
+    });
 
     // If not found, try other ways to find the link
     if (!$activeLink.length) {
@@ -359,10 +450,14 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
 
     // Now add active class to the parent li of the found link
     if ($activeLink.length) {
-      $activeLink.closest(navItemSelector).addClass('active');
+      const $navItem = $activeLink.closest(navItemSelector);
+      logger.log(`DEBUG: Found nav item to activate: ${$navItem.length}, classes before: ${$navItem.attr('class')}`);
+      $navItem.addClass('active');
+      logger.log(`DEBUG: Nav item classes after activation: ${$navItem.attr('class')}`);
     } else {
       // No active link found - this is OK if this is the initial load
       // and we'll select the default tab
+      logger.log(`DEBUG: No active link found for tab: ${subTabId}`);
     }
 
     // Hide and deactivate all tab content panels
@@ -385,7 +480,9 @@ class VerticalTabbedModule extends ProductEstimatorSettings {
     }
 
     if ($activeContentPanel.length) {
+      logger.log(`DEBUG: Activating content panel with ID: ${$activeContentPanel.attr('id')} and classes: ${$activeContentPanel.attr('class')}`);
       $activeContentPanel.show().addClass('active');
+      logger.log(`DEBUG: Content panel after activation - display: ${$activeContentPanel.css('display')}, classes: ${$activeContentPanel.attr('class')}`);
     } else {
       // No matching content panel found with direct ID - try partial matches
 

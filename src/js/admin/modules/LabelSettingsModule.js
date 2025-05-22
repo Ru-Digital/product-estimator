@@ -1002,28 +1002,77 @@ class LabelSettingsModule extends VerticalTabbedModule {
    * @param {string} path - The path to the field
    */
   goToLabelField(path) {
+    logger.log(`DEBUG: goToLabelField called with path: ${path}`);
+    
     // First, determine which tab this field is in
     const pathParts = path.split('.');
-    const category = pathParts[0];
+    const verticalTabId = pathParts[0]; // This should be the vertical tab ID (e.g., 'estimate_management')
+    const currentTabId = this.getCurrentSubTabId();
     
-    // Switch to the correct tab if needed
-    if (this.getCurrentSubTabId() !== category) {
-      this.activateSubTab(category);
-    }
+    logger.log(`DEBUG: Path parts: ${JSON.stringify(pathParts)}`);
+    logger.log(`DEBUG: Vertical tab ID: ${verticalTabId}`);
+    logger.log(`DEBUG: Current tab ID: ${currentTabId}`);
     
-    // Ensure all parent sections are expanded
+    // Always try to switch to the correct tab (force it to ensure proper state)
+    logger.log(`DEBUG: Switching from tab '${currentTabId}' to tab '${verticalTabId}'`);
+    this.activateSubTab(verticalTabId);
+    
+    // Wait a moment for tab to switch before continuing
+    setTimeout(() => {
+      this.expandSectionsAndNavigateToField(path, pathParts);
+    }, 300);
+  }
+  
+  /**
+   * Expand sections and navigate to field after tab switch
+   * @param {string} path - The full path to the field
+   * @param {array} pathParts - The path split into parts
+   */
+  expandSectionsAndNavigateToField(path, pathParts) {
+    logger.log(`DEBUG: expandSectionsAndNavigateToField called with path: ${path}`);
+    
+    // Ensure all parent sections are expanded, including the section containing the field
     let currentPath = '';
     pathParts.forEach((part, index) => {
-      if (index === pathParts.length - 1) return; // Skip the last part (field name)
+      // Skip only if this is the actual field name (last part)
+      // We want to expand the section that contains the field
+      if (index === pathParts.length - 1) {
+        // This is the field name, but we should expand its parent section
+        // The parent section path is currentPath (already built from previous parts)
+        if (currentPath) {
+          this.expandedSections.add(currentPath);
+          this.updateSectionVisibility(currentPath, true);
+          logger.log(`DEBUG: Expanding field container section: ${currentPath}`);
+        }
+        return;
+      }
       
       currentPath = currentPath ? `${currentPath}.${part}` : part;
       this.expandedSections.add(currentPath);
       this.updateSectionVisibility(currentPath, true);
+      logger.log(`DEBUG: Expanding parent section: ${currentPath}`);
     });
     
     // Find and highlight the field
     const $field = jQuery(`input[data-path="${path}"]`);
+    logger.log(`DEBUG: Looking for field with path: ${path}, found: ${$field.length}`);
+    
     if ($field.length) {
+      // Additional step: ensure the immediate section containing this field is expanded
+      // Find the closest section heading above this field
+      const $fieldWrapper = $field.closest('.pe-label-field-wrapper');
+      if ($fieldWrapper.length) {
+        const $parentSection = $fieldWrapper.prevAll('.pe-label-subcategory-heading, .pe-main-section-header').first();
+        if ($parentSection.length) {
+          const sectionPath = $parentSection.next('.pe-label-subcategory-data').data('path') || $parentSection.data('path');
+          if (sectionPath && !this.expandedSections.has(sectionPath)) {
+            logger.log(`DEBUG: Expanding immediate parent section for field: ${sectionPath}`);
+            this.expandedSections.add(sectionPath);
+            this.updateSectionVisibility(sectionPath, true);
+          }
+        }
+      }
+      
       // Scroll to the field
       jQuery('html, body').animate({
         scrollTop: $field.offset().top - 100
@@ -1040,6 +1089,15 @@ class LabelSettingsModule extends VerticalTabbedModule {
       // Close search results
       jQuery('#label-search-results').hide();
       jQuery('#label-search').val('');
+    } else {
+      logger.warn(`DEBUG: Field with path "${path}" not found`);
+      
+      // Debug: let's see what fields actually exist
+      const allFields = jQuery('input[data-path]');
+      logger.log(`DEBUG: All available fields:`);
+      allFields.each((i, field) => {
+        logger.log(`  - ${jQuery(field).data('path')}`);
+      });
     }
   }
 

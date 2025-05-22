@@ -154,7 +154,17 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                     // Register each property of the field (label, placeholder, validation_*, etc.)
                     foreach ($value as $prop_key => $prop_value) {
                         $prop_path = $field_path . '.' . $prop_key;
-                        $this->register_label_field($vertical_tab_id, $prop_key, $prop_value, $prop_path, $page_slug, $section_id, $depth + 1);
+                        
+                        // Handle validation arrays specially
+                        if ($prop_key === 'validation' && is_array($prop_value)) {
+                            // Register each validation rule as a separate field
+                            foreach ($prop_value as $validation_key => $validation_value) {
+                                $validation_path = $prop_path . '.' . $validation_key;
+                                $this->register_label_field($vertical_tab_id, $validation_key, $validation_value, $validation_path, $page_slug, $section_id, $depth + 1);
+                            }
+                        } else {
+                            $this->register_label_field($vertical_tab_id, $prop_key, $prop_value, $prop_path, $page_slug, $section_id, $depth + 1);
+                        }
                     }
                 } else {
                     // It's a nested category - add subheading and process nested labels

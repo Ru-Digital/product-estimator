@@ -1828,20 +1828,33 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                     'room_name_field' => [
                         'label' => __('Room Name', 'product-estimator'),
                         'placeholder' => __('Enter room name', 'product-estimator'),
-                        'validation_required' => __('Room name is required', 'product-estimator'),
+                        'validation' => [
+                            'required' => __('Room name is required', 'product-estimator'),
+                            'min_length' => __('Room name must be at least 2 characters', 'product-estimator'),
+                        ],
                     ],
                     'room_width_field' => [
                         'label' => __('Room Width', 'product-estimator'),
                         'placeholder' => __('Width (m)', 'product-estimator'),
-                        'validation_number_required' => __('Please enter a valid number', 'product-estimator'),
+                        'validation' => [
+                            'number_required' => __('Please enter a valid number', 'product-estimator'),
+                            'positive_number' => __('Width must be a positive number', 'product-estimator'),
+                        ],
                     ],
                     'room_length_field' => [
                         'label' => __('Room Length', 'product-estimator'),
                         'placeholder' => __('Length (m)', 'product-estimator'),
-                        'validation_number_required' => __('Please enter a valid number', 'product-estimator'),
+                        'validation' => [
+                            'number_required' => __('Please enter a valid number', 'product-estimator'),
+                            'positive_number' => __('Length must be a positive number', 'product-estimator'),
+                        ],
                     ],
                     'room_dimensions_field' => [
                         'label' => __('Room Dimensions', 'product-estimator'),
+                        'placeholder' => __('e.g., 4m x 3m', 'product-estimator'),
+                        'validation' => [
+                            'valid_format' => __('Please enter dimensions in format like "4m x 3m"', 'product-estimator'),
+                        ],
                     ],
                     'buttons' => [
                         'add_button' => [
@@ -1867,6 +1880,9 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                     'room_choice_field' => [
                         'label' => __('Choose a room:', 'product-estimator'),
                         'options' => __('-- Select a Room --', 'product-estimator'),
+                        'validation' => [
+                            'room_required' => __('Please select a room', 'product-estimator'),
+                        ],
                     ],
                     'buttons' => [
                         'select_button' => [
@@ -1955,6 +1971,18 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                         'placeholder' => __('Enter your postcode', 'product-estimator'),
                         'validation' => [
                             'postcode_required' => __('Postcode is required', 'product-estimator'),
+                            'invalid_postcode' => __('Please enter a valid postcode', 'product-estimator'),
+                        ],
+                    ],
+                    'buttons' => [
+                        'contact_email_button' => [
+                            'label' => __('Email', 'product-estimator'),
+                        ],
+                        'contact_phone_button' => [
+                            'label' => __('Phone', 'product-estimator'),
+                        ],
+                        'request_contact_button' => [
+                            'label' => __('Request contact from store', 'product-estimator'),
                         ],
                     ],
                     'headings' => [
@@ -1967,15 +1995,23 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                         'edit_details_heading' => [
                             'text' => __('Edit Your Details', 'product-estimator'),
                         ],
-                    ],
-                ],
-                'contact_methods' => [
-                    'buttons' => [
-                        'contact_email_button' => [
-                            'label' => __('Email', 'product-estimator'),
+                        'customer_details_heading' => [
+                            'text' => __('Customer Details', 'product-estimator'),
                         ],
-                        'contact_phone_button' => [
-                            'label' => __('Phone', 'product-estimator'),
+                        'email_details_heading' => [
+                            'text' => __('Email Details Required', 'product-estimator'),
+                        ],
+                        'phone_details_heading' => [
+                            'text' => __('Phone Details Required', 'product-estimator'),
+                        ],
+                        'contact_information_heading' => [
+                            'text' => __('Contact Information Required', 'product-estimator'),
+                        ],
+                        'contact_method_estimate_heading' => [
+                            'text' => __('Choose Contact Method', 'product-estimator'),
+                        ],
+                        'contact_method_heading' => [
+                            'text' => __('Contact Method', 'product-estimator'),
                         ],
                     ],
                     'messages' => [
@@ -1985,15 +2021,6 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                         'contact_method_message' => [
                             'text' => __('How would you like to be contacted?', 'product-estimator'),
                         ],
-                    ],
-                ],
-                'contact_actions' => [
-                    'buttons' => [
-                        'request_contact_button' => [
-                            'label' => __('Request contact from store', 'product-estimator'),
-                        ],
-                    ],
-                    'messages' => [
                         'email_sent_message' => [
                             'text' => __('Email sent successfully', 'product-estimator'),
                         ],
@@ -2162,28 +2189,6 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                         ],
                         'select_room_heading' => [
                             'text' => __('Select Room', 'product-estimator'),
-                        ],
-                    ],
-                ],
-                'customer_dialogs' => [
-                    'headings' => [
-                        'customer_details_heading' => [
-                            'text' => __('Customer Details', 'product-estimator'),
-                        ],
-                        'email_details_heading' => [
-                            'text' => __('Email Details Required', 'product-estimator'),
-                        ],
-                        'phone_details_heading' => [
-                            'text' => __('Phone Details Required', 'product-estimator'),
-                        ],
-                        'contact_information_heading' => [
-                            'text' => __('Contact Information Required', 'product-estimator'),
-                        ],
-                        'contact_method_estimate_heading' => [
-                            'text' => __('Choose Contact Method', 'product-estimator'),
-                        ],
-                        'contact_method_heading' => [
-                            'text' => __('Contact Method', 'product-estimator'),
                         ],
                     ],
                 ],

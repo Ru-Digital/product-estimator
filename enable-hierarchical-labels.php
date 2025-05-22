@@ -134,17 +134,17 @@ function enable_hierarchical_labels_module($settings_manager) {
             // Can't actually remove it from the manager, but we can register
             // our hierarchical module which will override it
             
-            // Make sure the hierarchical module is loaded
-            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-settings-module-hierarchical.php';
+            // Make sure the labels module is loaded
+            require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/admin/settings/class-labels-settings-module.php';
             
-            // Create the hierarchical module
-            $hierarchical_module = new RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsSettingsModuleHierarchical(
+            // Create the labels module
+            $labels_module = new RuDigital\ProductEstimator\Includes\Admin\Settings\LabelsSettingsModule(
                 'product-estimator',
-                '2.5.0'
+                '3.0.0'
             );
             
-            // Register the hierarchical module (this will replace the standard one)
-            $settings_manager->register_module($hierarchical_module);
+            // Register the labels module (this will replace the standard one)
+            $settings_manager->register_module($labels_module);
             
             // Add JavaScript data flag to indicate hierarchical mode is active
             add_filter('product_estimator_admin_script_data', 'add_hierarchical_labels_flag');

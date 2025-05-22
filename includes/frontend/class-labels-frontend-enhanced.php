@@ -47,6 +47,89 @@ class LabelsFrontendEnhanced extends LabelsFrontend {
         
         // Initialize the path mapping
         $this->init_path_mapping();
+        
+        // Check if debug mode is enabled
+        $this->debug_mode = $this->is_debug_mode_enabled();
+    }
+
+    /**
+     * Check if debug mode is enabled
+     * 
+     * @since    2.5.0
+     * @access   private
+     * @return   bool    True if debug mode is enabled
+     */
+    private function is_debug_mode_enabled() {
+        // Check multiple ways to enable debug mode
+        
+        // 1. WordPress constant (most permanent)
+        if (defined('PRODUCT_ESTIMATOR_LABELS_DEBUG') && PRODUCT_ESTIMATOR_LABELS_DEBUG) {
+            return true;
+        }
+        
+        // 2. WordPress option (admin toggleable)
+        if (get_option('product_estimator_labels_debug_mode', false)) {
+            return true;
+        }
+        
+        // 3. URL parameter (temporary testing)
+        if (isset($_GET['pe_labels_debug']) && $_GET['pe_labels_debug'] === '1') {
+            return true;
+        }
+        
+        // 4. User meta (per-user debugging - useful for admins)
+        if (is_user_logged_in() && get_user_meta(get_current_user_id(), 'pe_labels_debug', true)) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Enable debug mode
+     * 
+     * @since    2.5.0
+     * @access   public
+     */
+    public function enable_debug_mode() {
+        $this->debug_mode = true;
+        update_option('product_estimator_labels_debug_mode', true);
+    }
+
+    /**
+     * Disable debug mode
+     * 
+     * @since    2.5.0
+     * @access   public
+     */
+    public function disable_debug_mode() {
+        $this->debug_mode = false;
+        update_option('product_estimator_labels_debug_mode', false);
+    }
+
+    /**
+     * Format a label with debug information if debug mode is enabled
+     * 
+     * @since    2.5.0
+     * @access   private
+     * @param    string    $label_value    The actual label value
+     * @param    string    $label_key      The label key/path for debugging  
+     * @return   string                    Formatted label (with or without debug info)
+     */
+    private function format_label_with_debug($label_value, $label_key) {
+        if (!$this->debug_mode) {
+            return $label_value;
+        }
+        
+        // Add debug information
+        $debug_info = "[DEBUG: {$label_key}]";
+        
+        // Different formatting based on content
+        if (empty($label_value)) {
+            return $debug_info . '[EMPTY LABEL]';
+        }
+        
+        return $debug_info . $label_value;
     }
 
     /**
@@ -506,7 +589,7 @@ class LabelsFrontendEnhanced extends LabelsFrontend {
     public function get_label_by_path($path, $default = '') {
         // First check if we have a cached flat version of this path
         if (isset($this->flat_labels[$path])) {
-            return $this->flat_labels[$path];
+            return $this->format_label_with_debug($this->flat_labels[$path], $path);
         }
         
         // Get the labels
@@ -519,7 +602,7 @@ class LabelsFrontendEnhanced extends LabelsFrontend {
         $current = $labels;
         foreach ($parts as $part) {
             if (!isset($current[$part])) {
-                return $default;
+                return $this->format_label_with_debug($default, $path . '[NOT FOUND]');
             }
             $current = $current[$part];
         }
@@ -528,10 +611,10 @@ class LabelsFrontendEnhanced extends LabelsFrontend {
         if (is_string($current)) {
             // Cache for future lookups
             $this->flat_labels[$path] = $current;
-            return $current;
+            return $this->format_label_with_debug($current, $path);
         }
         
-        return $default;
+        return $this->format_label_with_debug($default, $path . '[NOT STRING]');
     }
     
     /**
@@ -555,7 +638,8 @@ class LabelsFrontendEnhanced extends LabelsFrontend {
         }
         
         // No mapping found, fall back to legacy method
-        return parent::get_label($category, $key, $default);
+        $legacy_result = parent::get_label($category, $key, $default);
+        return $this->format_label_with_debug($legacy_result, $path . '[LEGACY]');
     }
     
     /**

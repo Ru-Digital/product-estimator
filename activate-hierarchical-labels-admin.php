@@ -131,103 +131,241 @@ function backup_existing_labels_admin() {
 
 // Convert flat structure to hierarchical
 function convert_to_hierarchical_structure_admin($flat_labels) {
-    // Define mapping from flat categories to hierarchical paths
+    // Define mapping from flat categories to UI component-based hierarchical paths (V3)
+    // PHASE 1: Core Components - Field-Grouped Structure
     $mapping = [
         'buttons' => [
-            'save_estimate' => 'estimate.buttons.save',
-            'print_estimate' => 'estimate.buttons.print',
-            'create_new_estimate' => 'estimate.buttons.create',
-            'delete_estimate' => 'estimate.buttons.delete',
-            'confirm' => 'common.buttons.confirm',
-            'cancel' => 'common.buttons.cancel',
-            'contact_email' => 'customer.buttons.contact_email',
-            'contact_phone' => 'customer.buttons.contact_phone',
-            'remove_room' => 'room.buttons.delete',
-            'request_contact' => 'customer.buttons.request_contact',
-            'request_copy' => 'estimate.buttons.request_copy',
-            'add_new_room' => 'room.buttons.add',
-            'create_estimate' => 'estimate.buttons.create',
-            'save_changes' => 'common.buttons.save',
-            'add_to_estimate' => 'product.buttons.add_to_estimate',
-            'add_to_estimate_single_product' => 'product.buttons.add_to_estimate_single',
-            'remove_product' => 'product.buttons.remove',
+            // === ESTIMATE MANAGEMENT ===
+            // Create New Estimate Form
+            'create_new_estimate' => 'estimate_management.create_new_estimate_form.buttons.create',
+            'create_estimate' => 'estimate_management.create_new_estimate_form.buttons.create',
+            
+            // Estimate Actions
+            'save_estimate' => 'estimate_management.estimate_actions.buttons.save',
+            'print_estimate' => 'estimate_management.estimate_actions.buttons.print',
+            'delete_estimate' => 'estimate_management.estimate_actions.buttons.delete',
+            'request_copy' => 'estimate_management.estimate_actions.buttons.request_copy',
+            'start_new_estimate' => 'estimate_management.estimate_selection.buttons.start_new',
+            
+            // === ROOM MANAGEMENT ===
+            // Add New Room Form
+            'add_new_room' => 'room_management.add_new_room_form.buttons.add',
+            'add_room' => 'room_management.add_new_room_form.buttons.add',
+            'add_room_and_product' => 'room_management.add_new_room_form.buttons.add_with_product',
+            'add_product_and_room' => 'room_management.add_new_room_form.buttons.add_with_product',
+            
+            // Room Selection Form
+            'select_room' => 'room_management.room_selection_form.buttons.select',
+            'go_back_to_room_select' => 'room_management.room_selection_form.buttons.back_to_select',
+            
+            // Room Actions
+            'remove_room' => 'room_management.room_actions.buttons.delete',
+            
+            // Room Navigation
+            'back_to_rooms' => 'room_management.room_navigation.buttons.back_to_list',
+            
+            // === CUSTOMER DETAILS ===
+            // Contact Methods
+            'contact_email' => 'customer_details.contact_methods.buttons.contact_email',
+            'contact_phone' => 'customer_details.contact_methods.buttons.contact_phone',
+            
+            // Contact Actions
+            'request_contact' => 'customer_details.contact_actions.buttons.request_contact',
+            
+            // === COMMON UI (Phase 1 - Core Only) ===
+            'confirm' => 'common_ui.confirmation_dialogs.buttons.confirm',
+            'cancel' => 'common_ui.confirmation_dialogs.buttons.cancel',
+            'close' => 'common_ui.general_actions.buttons.close',
+            'save' => 'common_ui.general_actions.buttons.save',
+            'save_changes' => 'common_ui.general_actions.buttons.save_changes',
+            'delete' => 'common_ui.general_actions.buttons.delete',
+            'edit' => 'common_ui.general_actions.buttons.edit',
+            'add' => 'common_ui.general_actions.buttons.add',
+            'remove' => 'common_ui.general_actions.buttons.remove',
+            'continue' => 'common_ui.navigation.buttons.continue',
+            'back' => 'common_ui.navigation.buttons.back',
+            'ok' => 'common_ui.confirmation_dialogs.buttons.ok',
+            
+            // === PRODUCTS (Phase 2 - Placeholder for now) ===
             'add_product' => 'product.buttons.add',
+            'remove_product' => 'product.buttons.remove',
             'edit_product' => 'product.buttons.edit',
-            'continue' => 'common.buttons.continue',
-            'suggested_products' => 'product.buttons.suggested',
-            'replace_product' => 'product.buttons.replace',
-            'add_room' => 'room.buttons.add',
-            'add_to_cart' => 'product.buttons.add_to_cart',
-            'show_more' => 'ui.buttons.show_more',
-            'show_less' => 'ui.buttons.show_less',
-            'close' => 'common.buttons.close',
-            'save' => 'common.buttons.save',
-            'delete' => 'common.buttons.delete',
-            'edit' => 'common.buttons.edit',
-            'add' => 'common.buttons.add',
-            'remove' => 'common.buttons.remove',
-            'update' => 'common.buttons.update',
-            'search' => 'ui.buttons.search',
-            'filter' => 'ui.buttons.filter',
-            'reset' => 'common.buttons.reset',
-            'apply' => 'common.buttons.apply',
-            'additional_products' => 'product.buttons.additional',
-            'ok' => 'common.buttons.ok',
-            'upgrade' => 'product.buttons.upgrade',
+            'add_to_estimate' => 'product.buttons.add_to_estimate',
         ],
         'forms' => [
-            'estimate_name' => 'estimate.forms.name',
-            'customer_email' => 'customer.forms.email',
-            'placeholder_email' => 'customer.forms.email_placeholder',
-            'customer_name' => 'customer.forms.name',
-            'customer_phone' => 'customer.forms.phone',
-            'customer_postcode' => 'customer.forms.postcode',
-            'placeholder_name' => 'customer.forms.name_placeholder',
-            'placeholder_phone' => 'customer.forms.phone_placeholder',
-            'placeholder_postcode' => 'customer.forms.postcode_placeholder',
-            'placeholder_estimate_name' => 'estimate.forms.name_placeholder',
-            'room_name' => 'room.forms.name',
-            'room_width' => 'room.forms.width',
-            'room_length' => 'room.forms.length',
-            'placeholder_room_name' => 'room.forms.name_placeholder',
-            'placeholder_width' => 'room.forms.width_placeholder',
-            'placeholder_length' => 'room.forms.length_placeholder',
+            // === ESTIMATE MANAGEMENT - FIELD GROUPED ===
+            // Create New Estimate Form - Estimate Name Field
+            'estimate_name' => 'estimate_management.create_new_estimate_form.estimate_name_field.label',
+            'placeholder_estimate_name' => 'estimate_management.create_new_estimate_form.estimate_name_field.placeholder',
+            
+            // Estimate Selection - Estimate Choice Field
+            'choose_estimate' => 'estimate_management.estimate_selection.estimate_choice_field.label',
+            'select_estimate_option' => 'estimate_management.estimate_selection.estimate_choice_field.options',
+            
+            // === ROOM MANAGEMENT - FIELD GROUPED ===
+            // Add New Room Form - Room Name Field
+            'room_name' => 'room_management.add_new_room_form.room_name_field.label',
+            'placeholder_room_name' => 'room_management.add_new_room_form.room_name_field.placeholder',
+            
+            // Add New Room Form - Room Width Field
+            'room_width' => 'room_management.add_new_room_form.room_width_field.label',
+            'placeholder_width' => 'room_management.add_new_room_form.room_width_field.placeholder',
+            
+            // Add New Room Form - Room Length Field
+            'room_length' => 'room_management.add_new_room_form.room_length_field.label',
+            'placeholder_length' => 'room_management.add_new_room_form.room_length_field.placeholder',
+            
+            // Add New Room Form - Room Dimensions Field
+            'room_dimensions' => 'room_management.add_new_room_form.room_dimensions_field.label',
+            
+            // Room Selection Form - Room Choice Field
+            'choose_room' => 'room_management.room_selection_form.room_choice_field.label',
+            'select_room_option' => 'room_management.room_selection_form.room_choice_field.options',
+            
+            // === CUSTOMER DETAILS - FIELD GROUPED ===
+            // Customer Details Form - Customer Name Field
+            'customer_name' => 'customer_details.customer_details_form.customer_name_field.label',
+            'full_name' => 'customer_details.customer_details_form.customer_name_field.label',
+            'placeholder_name' => 'customer_details.customer_details_form.customer_name_field.placeholder',
+            
+            // Customer Details Form - Customer Email Field
+            'customer_email' => 'customer_details.customer_details_form.customer_email_field.label',
+            'email_address' => 'customer_details.customer_details_form.customer_email_field.label',
+            'placeholder_email' => 'customer_details.customer_details_form.customer_email_field.placeholder',
+            
+            // Customer Details Form - Customer Phone Field
+            'customer_phone' => 'customer_details.customer_details_form.customer_phone_field.label',
+            'phone_number' => 'customer_details.customer_details_form.customer_phone_field.label',
+            'placeholder_phone' => 'customer_details.customer_details_form.customer_phone_field.placeholder',
+            
+            // Customer Details Form - Customer Postcode Field
+            'customer_postcode' => 'customer_details.customer_details_form.customer_postcode_field.label',
+            'placeholder_postcode' => 'customer_details.customer_details_form.customer_postcode_field.placeholder',
+            
+            // === PRODUCTS (Phase 2 - Placeholder) ===
             'product_quantity' => 'product.forms.quantity',
             'notes' => 'product.forms.notes',
             'quantity' => 'product.forms.quantity',
+            
+            // === PRICING (Phase 2 - Placeholder) ===
             'price' => 'product.pricing.price',
             'total' => 'product.pricing.total',
         ],
         'messages' => [
+            // === ESTIMATE MANAGEMENT MESSAGES ===
+            // Estimate Actions
+            'estimate_saved' => 'estimate_management.estimate_actions.messages.saved',
+            'estimate_deleted' => 'estimate_management.estimate_actions.messages.deleted',
+            'estimate_removed' => 'estimate_management.estimate_actions.messages.removed',
+            
+            // Estimate Selection
+            'no_estimates_available' => 'estimate_management.estimate_selection.messages.no_estimates_available',
+            
+            // === ROOM MANAGEMENT MESSAGES ===
+            // Add New Room Form
+            'room_added' => 'room_management.add_new_room_form.messages.added',
+            'room_created' => 'room_management.add_new_room_form.messages.created',
+            'room_created_with_product' => 'room_management.add_new_room_form.messages.created_with_product',
+            
+            // Room Actions
+            'room_deleted' => 'room_management.room_actions.messages.deleted',
+            'room_load_error' => 'room_management.room_actions.messages.load_error',
+            
+            // Room Selection
+            'no_rooms_available' => 'room_management.room_selection_form.messages.no_rooms_available',
+            
+            // === CUSTOMER DETAILS MESSAGES ===
+            // Customer Email Field Validation
+            'invalid_email' => 'customer_details.customer_details_form.customer_email_field.validation.invalid_email',
+            'email_required' => 'customer_details.customer_details_form.customer_email_field.validation.email_required',
+            
+            // Customer Phone Field Validation
+            'invalid_phone' => 'customer_details.customer_details_form.customer_phone_field.validation.invalid_phone',
+            'phone_required' => 'customer_details.customer_details_form.customer_phone_field.validation.phone_required',
+            
+            // Customer Name Field Validation
+            'name_required' => 'customer_details.customer_details_form.customer_name_field.validation.required',
+            
+            // Contact Actions
+            'email_sent' => 'customer_details.contact_actions.messages.email_sent',
+            
+            // General Validation
+            'additional_information_required' => 'customer_details.general_validation.messages.details_required',
+            'email_required_for_copy' => 'customer_details.general_validation.messages.email_required',
+            'phone_required_for_sms' => 'customer_details.general_validation.messages.phone_required',
+            'contact_email_details_required' => 'customer_details.general_validation.messages.email_details_required',
+            'contact_phone_details_required' => 'customer_details.general_validation.messages.phone_details_required',
+            'email_required_for_estimate' => 'customer_details.general_validation.messages.email_required_for_estimate',
+            'contact_method_estimate_prompt' => 'customer_details.contact_methods.messages.contact_method_estimate',
+            'contact_method_prompt' => 'customer_details.contact_methods.messages.contact_method',
+            
+            // === COMMON UI MESSAGES ===
+            'confirm_delete' => 'common_ui.confirmation_dialogs.messages.confirm_delete',
+            'confirm_proceed' => 'common_ui.confirmation_dialogs.messages.confirm',
+            'settings_saved' => 'common_ui.general_actions.messages.settings_saved',
+            'general_error' => 'common_ui.error_handling.messages.error',
+            'save_failed' => 'common_ui.error_handling.messages.save_failed',
+            'required_field' => 'common_ui.validation.messages.required_field',
+            'network_error' => 'common_ui.error_handling.messages.network_error',
+            'permission_denied' => 'common_ui.error_handling.messages.permission_denied',
+            
+            // === PRODUCTS (Phase 2 - Placeholder) ===
             'product_added' => 'product.messages.added',
             'product_added_message' => 'product.messages.added_details',
-            'confirm_delete' => 'common.messages.confirm_delete',
             'confirm_product_remove' => 'product.messages.confirm_remove',
             'product_load_error' => 'product.messages.load_error',
-            'room_load_error' => 'room.messages.load_error',
-            'confirm_proceed' => 'common.messages.confirm',
             'select_options' => 'product.messages.select_options',
-            'estimate_saved' => 'estimate.messages.saved',
-            'estimate_deleted' => 'estimate.messages.deleted',
-            'room_added' => 'room.messages.added',
-            'room_deleted' => 'room.messages.deleted',
-            'showing_results' => 'ui.search.results_count',
             'product_removed' => 'product.messages.removed',
-            'email_sent' => 'customer.messages.email_sent',
+            
+            // === SEARCH (Phase 2 - Placeholder) ===
+            'showing_results' => 'ui.search.results_count',
         ],
         'ui_elements' => [
-            'confirm_title' => 'modal.headings.confirmation',
-            'no_estimates' => 'estimate.messages.empty',
-            'no_rooms' => 'room.messages.empty',
+            // === ESTIMATE MANAGEMENT UI ===
+            // Create New Estimate Form
+            'create_new_estimate' => 'estimate_management.create_new_estimate_form.headings.create',
+            
+            // Estimate Selection
+            'select_estimate' => 'estimate_management.estimate_selection.headings.select',
+            
+            // Estimate Display
+            'no_estimates' => 'estimate_management.estimate_display.messages.empty',
+            'rooms_heading' => 'estimate_management.estimate_display.headings.rooms',
+            'estimate_summary' => 'estimate_management.estimate_display.headings.summary',
+            
+            // === ROOM MANAGEMENT UI ===
+            // Room Selection Form
+            'select_room' => 'room_management.room_selection_form.headings.select',
+            
+            // Room Display
+            'no_rooms' => 'room_management.room_display.messages.empty',
+            'products_heading' => 'room_management.room_display.headings.products',
+            'room_summary' => 'room_management.room_display.headings.summary',
+            
+            // === CUSTOMER DETAILS UI ===
+            // Customer Details Form
+            'your_details' => 'customer_details.customer_details_form.headings.details',
+            'saved_details' => 'customer_details.customer_details_form.headings.saved_details',
+            'edit_your_details' => 'customer_details.customer_details_form.headings.edit_details',
+            
+            // === MODAL SYSTEM UI ===
+            'confirm_title' => 'modal_system.confirmation_dialogs.headings.confirmation',
+            'product_added_title' => 'modal_system.product_dialogs.headings.product_added',
+            'remove_product_title' => 'modal_system.product_dialogs.headings.remove_product',
+            'add_new_room_title' => 'modal_system.room_dialogs.headings.add_room',
+            'error_title' => 'modal_system.error_dialogs.headings.error',
+            'success_title' => 'modal_system.success_dialogs.headings.success',
+            
+            // === COMMON UI ===
+            'loading' => 'common_ui.loading_states.messages.generic',
+            'get_started' => 'common_ui.general_labels.labels.get_started',
+            'expand' => 'common_ui.display_controls.buttons.expand',
+            'collapse' => 'common_ui.display_controls.buttons.collapse',
+            
+            // === PRODUCTS (Phase 2 - Placeholder) ===
             'no_products' => 'product.messages.empty',
             'price_notice' => 'product.pricing.notice',
-            'rooms_heading' => 'estimate.headings.rooms',
-            'products_heading' => 'room.headings.products',
             'select_product_options' => 'product.headings.options',
-            'create_new_estimate' => 'estimate.headings.create',
-            'your_details' => 'customer.headings.details',
-            'saved_details' => 'customer.headings.saved_details',
-            'edit_your_details' => 'customer.headings.edit_details',
             'primary_product' => 'product.labels.primary',
         ],
         'pdf' => [

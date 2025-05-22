@@ -25,52 +25,52 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         $this->section_id = 'labels_settings_section';
         $this->section_title = __( 'Manage Labels', 'product-estimator' );
 
-        // Define the main categories that will appear as vertical tabs
+        // Define the main categories that will appear as vertical tabs (V3 Field-Grouped Structure)
         $this->label_categories = [
-            'common' => [
-                'id' => 'common',
-                'title' => __( 'Common', 'product-estimator' ),
-                'description' => __( 'Common labels used throughout the estimator.', 'product-estimator' ),
+            'estimate_management' => [
+                'id' => 'estimate_management',
+                'title' => __( 'Estimate Management', 'product-estimator' ),
+                'description' => __( 'Labels for estimate creation, selection, and actions.', 'product-estimator' ),
             ],
-            'estimate' => [
-                'id' => 'estimate',
-                'title' => __( 'Estimate', 'product-estimator' ),
-                'description' => __( 'Labels related to estimate creation and management.', 'product-estimator' ),
+            'room_management' => [
+                'id' => 'room_management', 
+                'title' => __( 'Room Management', 'product-estimator' ),
+                'description' => __( 'Labels for room forms, selection, and actions.', 'product-estimator' ),
             ],
-            'room' => [
-                'id' => 'room',
-                'title' => __( 'Room', 'product-estimator' ),
-                'description' => __( 'Labels for room creation and management.', 'product-estimator' ),
+            'customer_details' => [
+                'id' => 'customer_details',
+                'title' => __( 'Customer Details', 'product-estimator' ),
+                'description' => __( 'Labels for customer forms and contact methods.', 'product-estimator' ),
             ],
-            'product' => [
-                'id' => 'product',
-                'title' => __( 'Product', 'product-estimator' ),
-                'description' => __( 'Labels for product selection and management.', 'product-estimator' ),
+            'product_management' => [
+                'id' => 'product_management',
+                'title' => __( 'Product Management', 'product-estimator' ),
+                'description' => __( 'Labels for product selection and management (Phase 2).', 'product-estimator' ),
             ],
-            'customer' => [
-                'id' => 'customer',
-                'title' => __( 'Customer', 'product-estimator' ),
-                'description' => __( 'Labels for customer details and management.', 'product-estimator' ),
+            'common_ui' => [
+                'id' => 'common_ui',
+                'title' => __( 'Common UI', 'product-estimator' ),
+                'description' => __( 'Common buttons, dialogs, and UI elements.', 'product-estimator' ),
             ],
-            'ui' => [
-                'id' => 'ui',
-                'title' => __( 'UI', 'product-estimator' ),
-                'description' => __( 'User interface labels and text.', 'product-estimator' ),
-            ],
-            'modal' => [
-                'id' => 'modal',
-                'title' => __( 'Modal', 'product-estimator' ),
+            'modal_system' => [
+                'id' => 'modal_system',
+                'title' => __( 'Modal System', 'product-estimator' ),
                 'description' => __( 'Labels for modal dialogs and popups.', 'product-estimator' ),
             ],
-            'pdf' => [
-                'id' => 'pdf',
-                'title' => __( 'PDF', 'product-estimator' ),
+            'search_and_filters' => [
+                'id' => 'search_and_filters',
+                'title' => __( 'Search & Filters', 'product-estimator' ),
+                'description' => __( 'Labels for search controls and filtering (Phase 2).', 'product-estimator' ),
+            ],
+            'pdf_generation' => [
+                'id' => 'pdf_generation',
+                'title' => __( 'PDF Generation', 'product-estimator' ),
                 'description' => __( 'Labels specific to PDF generation.', 'product-estimator' ),
             ],
         ];
 
-        // Load the hierarchical structure from the migration class
-        $this->hierarchical_structure = LabelsMigration::get_hierarchical_structure();
+        // Load the current V3 hierarchical structure from database
+        $this->hierarchical_structure = $this->get_current_v3_structure();
     }
 
     public function register_hooks() {
@@ -132,24 +132,44 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
      * @param int    $depth         Current depth in hierarchy
      */
     protected function register_hierarchical_fields($labels, $vertical_tab_id, $page_slug, $section_id, $parent_path = '', $depth = 0) {
+        $has_fields_heading = false;
+        
         foreach ($labels as $key => $value) {
             // Generate the field path
             $field_path = $parent_path ? $parent_path . '.' . $key : $key;
 
-            // If the value is an array, it's a nested category
+            // If the value is an array, it could be a nested category or a field with properties
             if (is_array($value)) {
-                // Add a subheading for this subcategory
-                $this->add_subcategory_heading($key, $field_path, $page_slug, $section_id, $depth);
+                // Check if this is a field with properties (has label, placeholder, validation_*, etc.)
+                if ($this->is_field_with_properties($value)) {
+                    // Add "Fields" heading before the first field if we haven't already
+                    if (!$has_fields_heading && $depth === 1) {
+                        $this->add_fields_section_heading($page_slug, $section_id, $depth);
+                        $has_fields_heading = true;
+                    }
+                    
+                    // Add a field heading first
+                    $this->add_field_heading($key, $field_path, $page_slug, $section_id, $depth);
+                    
+                    // Register each property of the field (label, placeholder, validation_*, etc.)
+                    foreach ($value as $prop_key => $prop_value) {
+                        $prop_path = $field_path . '.' . $prop_key;
+                        $this->register_label_field($vertical_tab_id, $prop_key, $prop_value, $prop_path, $page_slug, $section_id, $depth + 1);
+                    }
+                } else {
+                    // It's a nested category - add subheading and process nested labels
+                    $this->add_subcategory_heading($key, $field_path, $page_slug, $section_id, $depth);
 
-                // Process the nested labels
-                $this->register_hierarchical_fields(
-                    $value,
-                    $vertical_tab_id,
-                    $page_slug,
-                    $section_id,
-                    $field_path,
-                    $depth + 1
-                );
+                    // Process the nested labels
+                    $this->register_hierarchical_fields(
+                        $value,
+                        $vertical_tab_id,
+                        $page_slug,
+                        $section_id,
+                        $field_path,
+                        $depth + 1
+                    );
+                }
             } else {
                 // It's a leaf node (actual label value)
                 $this->register_label_field(
@@ -163,6 +183,97 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                 );
             }
         }
+    }
+
+    /**
+     * Check if an array represents a field with properties rather than a category
+     *
+     * @param array $value The array to check
+     * @return bool True if it's a field with properties
+     */
+    private function is_field_with_properties($value) {
+        // Check for common field properties
+        $field_properties = ['label', 'placeholder', 'description'];
+        
+        // Check for validation properties
+        $has_validation = false;
+        foreach ($value as $key => $val) {
+            if (strpos($key, 'validation_') === 0) {
+                $has_validation = true;
+                break;
+            }
+        }
+        
+        // Check if it has any field properties
+        $has_field_properties = false;
+        foreach ($field_properties as $property) {
+            if (isset($value[$property])) {
+                $has_field_properties = true;
+                break;
+            }
+        }
+        
+        return $has_field_properties || $has_validation;
+    }
+
+
+    /**
+     * Add a "Fields" section heading
+     *
+     * @param string $page_slug  The page slug for WordPress API
+     * @param string $section_id The current section ID
+     * @param int    $depth      Current depth in hierarchy
+     */
+    protected function add_fields_section_heading($page_slug, $section_id, $depth) {
+        // Create a unique ID for this heading
+        $heading_id = 'fields_section_heading_' . $section_id;
+
+        // Register a custom field for the heading
+        add_settings_field(
+            $heading_id,
+            '', // No label needed
+            [$this, 'render_fields_section_heading'],
+            $page_slug,
+            $section_id,
+            [
+                'heading_text' => 'Fields',
+                'depth' => $depth - 1, // Make it appear at the parent level
+                'is_fields_section' => true,
+            ]
+        );
+    }
+
+    /**
+     * Add a field heading for a field with properties
+     *
+     * @param string $key        The field key
+     * @param string $field_path The full path to this field
+     * @param string $page_slug  The page slug for WordPress API
+     * @param string $section_id The current section ID
+     * @param int    $depth      Current depth in hierarchy
+     */
+    protected function add_field_heading($key, $field_path, $page_slug, $section_id, $depth) {
+        // Format the field key for display - remove '_field' suffix if present
+        $display_name = str_replace('_field', '', $key);
+        $display_name = ucwords(str_replace('_', ' ', $display_name));
+
+        // Create a unique ID for this heading
+        $heading_id = 'field_heading_' . sanitize_key($field_path);
+
+        // Register a custom field for the heading
+        add_settings_field(
+            $heading_id,
+            '', // No label needed
+            [$this, 'render_field_heading'],
+            $page_slug,
+            $section_id,
+            [
+                'heading_text' => $display_name,
+                'field_path' => $field_path,
+                'depth' => $depth,
+                'is_field' => true,
+            ]
+        );
     }
 
     /**
@@ -246,6 +357,49 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
     }
 
     /**
+     * Render a "Fields" section heading
+     *
+     * @param array $args The arguments for the heading
+     */
+    public function render_fields_section_heading($args) {
+        $heading_text = $args['heading_text'] ?? 'Fields';
+        $depth = $args['depth'] ?? 0;
+
+        // Calculate indentation based on depth
+        $indent_style = $depth > 0 ? 'margin-left: ' . ($depth * 20) . 'px;' : '';
+
+        // Use the same styling as subcategory headings (like "Buttons")
+        echo '<div class="pe-label-subcategory-heading depth-' . esc_attr($depth) . '" style="' . esc_attr($indent_style) . '">';
+        echo '<h4>' . esc_html($heading_text) . '</h4>';
+        echo '</div>';
+
+        // Add a data attribute for JavaScript interaction
+        echo '<div class="pe-label-subcategory-data" data-path="fields" style="display:none;"></div>';
+    }
+
+    /**
+     * Render a field heading (for fields with properties)
+     *
+     * @param array $args The arguments for the heading
+     */
+    public function render_field_heading($args) {
+        $heading_text = $args['heading_text'] ?? '';
+        $depth = $args['depth'] ?? 0;
+        $field_path = $args['field_path'] ?? '';
+
+        // Calculate indentation based on depth
+        $indent_style = $depth > 0 ? 'margin-left: ' . ($depth * 20) . 'px;' : '';
+
+        // Use a distinct styling for field headings
+        echo '<div class="pe-field-heading depth-' . esc_attr($depth) . '" style="' . esc_attr($indent_style) . '">';
+        echo '<h4 class="pe-field-heading-title">' . esc_html($heading_text) . '</h4>';
+        echo '</div>';
+
+        // Add a data attribute for JavaScript interaction
+        echo '<div class="pe-field-heading-data" data-path="' . esc_attr($field_path) . '" style="display:none;"></div>';
+    }
+
+    /**
      * Render a subcategory heading
      *
      * @param array $args The arguments for the heading
@@ -258,13 +412,20 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         // Calculate indentation based on depth
         $indent_style = $depth > 0 ? 'margin-left: ' . ($depth * 20) . 'px;' : '';
 
-        // Different heading levels based on depth
-        $heading_tag = $depth === 0 ? 'h3' : 'h4';
-        $heading_class = 'pe-label-subcategory-heading depth-' . $depth;
+        // Use section header for main categories, regular headings for subcategories
+        if ($depth === 0) {
+            echo '<div class="section-header" style="' . esc_attr($indent_style) . '">';
+            echo esc_html($heading_text);
+            echo '</div>';
+        } else {
+            // Different heading levels based on depth
+            $heading_tag = 'h4';
+            $heading_class = 'pe-label-subcategory-heading depth-' . $depth;
 
-        echo '<' . $heading_tag . ' class="' . esc_attr($heading_class) . '" style="' . esc_attr($indent_style) . '">';
-        echo esc_html($heading_text);
-        echo '</' . $heading_tag . '>';
+            echo '<' . $heading_tag . ' class="' . esc_attr($heading_class) . '" style="' . esc_attr($indent_style) . '">';
+            echo esc_html($heading_text);
+            echo '</' . $heading_tag . '>';
+        }
 
         // Add a data attribute for JavaScript interaction
         echo '<div class="pe-label-subcategory-data" data-path="' . esc_attr($field_path) . '" style="display:none;"></div>';
@@ -302,6 +463,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         $field_path = $args['field_path'] ?? '';
         $depth = $args['depth'] ?? 0;
 
+
         // Get the current value with fallback to default
         $current_value = $this->get_value_from_path($options, $field_path, $args['default'] ?? '');
 
@@ -311,28 +473,51 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         // Calculate indentation based on depth
         $indent_style = $depth > 0 ? 'margin-left: ' . ($depth * 20) . 'px;' : '';
 
-        // Create wrapper with indentation
-        echo '<div class="pe-label-field-wrapper depth-' . esc_attr($depth) . '" style="' . esc_attr($indent_style) . '">';
+        // Create enhanced wrapper with better structure
+        echo '<div class="form-field pe-label-field-wrapper depth-' . esc_attr($depth) . '" style="' . esc_attr($indent_style) . '">';
+
+        // Field label
+        echo '<label class="field-label" for="' . esc_attr($args['id']) . '">';
+        echo esc_html($args['label'] ?? ucfirst(str_replace('_', ' ', $field_path)));
+        echo '</label>';
 
         // Path indicator to show hierarchy
         if ($depth > 0) {
-            echo '<div class="pe-label-path-indicator">';
-            echo '<code>' . esc_html($field_path) . '</code>';
+            echo '<div class="field-meta">';
+            echo '<div class="field-key">' . esc_html($field_path) . '</div>';
             echo '</div>';
         }
 
-        // Render the field
+        // Input group
+        echo '<div class="field-input-group">';
         echo '<input type="text" id="' . esc_attr($args['id']) . '" name="' . esc_attr($field_name) . '" value="' . esc_attr($current_value) . '" class="regular-text" data-path="' . esc_attr($field_path) . '" />';
+        echo '</div>';
 
         // Add description if provided
         if (!empty($args['description'])) {
-            echo '<p class="description">' . esc_html($args['description']) . '</p>';
+            echo '<div class="field-description">' . esc_html($args['description']) . '</div>';
         }
 
-        // Add usage info
+
+        // Add usage info in meta box
+        echo '<div class="field-meta">';
         $this->render_label_usage($args['category'], $field_path);
+        echo '</div>';
 
         echo '</div>';
+    }
+
+
+
+    /**
+     * Get all registered fields (helper method)
+     *
+     * @return array Array of all registered fields
+     */
+    private function get_all_registered_fields() {
+        // This would need to be implemented to return all registered fields
+        // For now, return empty array as we're focusing on the structure change
+        return [];
     }
 
     /**
@@ -1495,5 +1680,325 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
             'category' => $category,
             'labels' => $options[$category]
         ]);
+    }
+
+    /**
+     * Get the current V3 field-grouped structure from database
+     * 
+     * @return array Current V3 hierarchical structure
+     */
+    private function get_current_v3_structure() {
+        // Get the current labels from database (should be V3 structure now)
+        $current_labels = get_option('product_estimator_labels', []);
+        
+        // If we have V3 structure, return it
+        if (!empty($current_labels) && $this->is_v3_structure($current_labels)) {
+            return $current_labels;
+        }
+        
+        // If no V3 structure or empty, return default V3 structure
+        return $this->get_default_v3_admin_structure();
+    }
+
+    /**
+     * Check if labels are in V3 field-grouped structure
+     * 
+     * @param array $labels The labels to check
+     * @return bool True if V3 structure
+     */
+    private function is_v3_structure($labels) {
+        // V3 structure has top-level keys like estimate_management, room_management, customer_details
+        return isset($labels['estimate_management']) || 
+               isset($labels['room_management']) || 
+               isset($labels['customer_details']);
+    }
+
+    /**
+     * Get default V3 field-grouped structure for admin display
+     * 
+     * @return array Default V3 structure
+     */
+    private function get_default_v3_admin_structure() {
+        return [
+            'estimate_management' => [
+                'create_new_estimate_form' => [
+                    'estimate_name_field' => [
+                        'label' => __('Estimate Name', 'product-estimator'),
+                        'placeholder' => __('Enter estimate name', 'product-estimator'),
+                        'validation_required' => __('Estimate name is required', 'product-estimator'),
+                    ],
+                    'buttons' => [
+                        'create' => __('Create Estimate', 'product-estimator'),
+                    ],
+                    'headings' => [
+                        'create' => __('Create New Estimate', 'product-estimator'),
+                    ],
+                ],
+                'estimate_selection' => [
+                    'estimate_choice_field' => [
+                        'label' => __('Choose an estimate:', 'product-estimator'),
+                        'options' => __('-- Select an Estimate --', 'product-estimator'),
+                    ],
+                    'buttons' => [
+                        'start_new' => __('Start New Estimate', 'product-estimator'),
+                    ],
+                    'headings' => [
+                        'select' => __('Select an estimate', 'product-estimator'),
+                    ], 
+                    'messages' => [
+                        'no_estimates_available' => __('No estimates available', 'product-estimator'),
+                    ],
+                ],
+                'estimate_actions' => [
+                    'buttons' => [
+                        'save' => __('Save Estimate', 'product-estimator'),
+                        'print' => __('Print Estimate', 'product-estimator'),
+                        'delete' => __('Delete Estimate', 'product-estimator'),
+                        'request_copy' => __('Request a Copy', 'product-estimator'),
+                    ],
+                    'messages' => [
+                        'saved' => __('Estimate saved successfully', 'product-estimator'),
+                        'deleted' => __('Estimate deleted successfully', 'product-estimator'),
+                        'removed' => __('This estimate has been removed successfully', 'product-estimator'),
+                    ],
+                ],
+                'estimate_display' => [
+                    'headings' => [
+                        'rooms' => __('Rooms', 'product-estimator'),
+                        'summary' => __('Estimate Summary', 'product-estimator'),
+                    ],
+                    'messages' => [
+                        'empty' => __('No rooms in this estimate', 'product-estimator'),
+                    ],
+                ],
+            ],
+            'room_management' => [
+                'add_new_room_form' => [
+                    'room_name_field' => [
+                        'label' => __('Room Name', 'product-estimator'),
+                        'placeholder' => __('Enter room name', 'product-estimator'),
+                        'validation_required' => __('Room name is required', 'product-estimator'),
+                    ],
+                    'room_width_field' => [
+                        'label' => __('Room Width', 'product-estimator'),
+                        'placeholder' => __('Width (m)', 'product-estimator'),
+                        'validation_number_required' => __('Please enter a valid number', 'product-estimator'),
+                    ],
+                    'room_length_field' => [
+                        'label' => __('Room Length', 'product-estimator'),
+                        'placeholder' => __('Length (m)', 'product-estimator'),
+                        'validation_number_required' => __('Please enter a valid number', 'product-estimator'),
+                    ],
+                    'room_dimensions_field' => [
+                        'label' => __('Room Dimensions', 'product-estimator'),
+                    ],
+                    'buttons' => [
+                        'add' => __('Add Room', 'product-estimator'),
+                        'add_with_product' => __('Add Room & Product', 'product-estimator'),
+                    ],
+                    'messages' => [
+                        'added' => __('Room added successfully', 'product-estimator'),
+                        'created' => __('Room created successfully', 'product-estimator'),
+                        'created_with_product' => __('Room and product added successfully', 'product-estimator'),
+                    ],
+                ],
+                'room_selection_form' => [
+                    'room_choice_field' => [
+                        'label' => __('Choose a room:', 'product-estimator'),
+                        'options' => __('-- Select a Room --', 'product-estimator'),
+                    ],
+                    'buttons' => [
+                        'select' => __('Select Room', 'product-estimator'),
+                        'back_to_select' => __('Back to Room Selection', 'product-estimator'),
+                    ],
+                    'headings' => [
+                        'select' => __('Select a room', 'product-estimator'),
+                    ],
+                    'messages' => [
+                        'no_rooms_available' => __('No rooms available', 'product-estimator'),
+                    ],
+                ],
+                'room_actions' => [
+                    'buttons' => [
+                        'delete' => __('Remove Room', 'product-estimator'),
+                    ],
+                    'messages' => [
+                        'deleted' => __('Room deleted successfully', 'product-estimator'),
+                        'load_error' => __('Error loading room data', 'product-estimator'),
+                    ],
+                ],
+                'room_display' => [
+                    'headings' => [
+                        'products' => __('Products', 'product-estimator'),
+                        'summary' => __('Room Summary', 'product-estimator'),
+                    ],
+                    'messages' => [
+                        'empty' => __('No products in this room', 'product-estimator'),
+                    ],
+                ],
+                'room_navigation' => [
+                    'buttons' => [
+                        'back_to_list' => __('Back to Rooms', 'product-estimator'),
+                    ],
+                ],
+            ],
+            'customer_details' => [
+                'customer_details_form' => [
+                    'customer_name_field' => [
+                        'label' => __('Your Name', 'product-estimator'),
+                        'placeholder' => __('Enter your name', 'product-estimator'),
+                        'validation' => [
+                            'required' => __('Name is required', 'product-estimator'),
+                        ],
+                    ],
+                    'customer_email_field' => [
+                        'label' => __('Email Address', 'product-estimator'),
+                        'placeholder' => __('Enter your email', 'product-estimator'),
+                        'validation' => [
+                            'invalid_email' => __('Please enter a valid email address', 'product-estimator'),
+                            'email_required' => __('Email is required', 'product-estimator'),
+                        ],
+                    ],
+                    'customer_phone_field' => [
+                        'label' => __('Phone Number', 'product-estimator'),
+                        'placeholder' => __('Enter your phone', 'product-estimator'),
+                        'validation' => [
+                            'invalid_phone' => __('Please enter a valid phone number', 'product-estimator'),
+                            'phone_required' => __('Phone is required', 'product-estimator'),
+                        ],
+                    ],
+                    'customer_postcode_field' => [
+                        'label' => __('Postcode', 'product-estimator'),
+                        'placeholder' => __('Enter your postcode', 'product-estimator'),
+                        'validation' => [
+                            'postcode_required' => __('Postcode is required', 'product-estimator'),
+                        ],
+                    ],
+                    'headings' => [
+                        'details' => __('Your Details', 'product-estimator'),
+                        'saved_details' => __('Saved Details', 'product-estimator'),
+                        'edit_details' => __('Edit Your Details', 'product-estimator'),
+                    ],
+                ],
+                'contact_methods' => [
+                    'buttons' => [
+                        'contact_email' => __('Email', 'product-estimator'),
+                        'contact_phone' => __('Phone', 'product-estimator'),
+                    ],
+                    'messages' => [
+                        'contact_method_estimate' => __('How would you like to receive your estimate?', 'product-estimator'),
+                        'contact_method' => __('How would you like to be contacted?', 'product-estimator'),
+                    ],
+                ],
+                'contact_actions' => [
+                    'buttons' => [
+                        'request_contact' => __('Request contact from store', 'product-estimator'),
+                    ],
+                    'messages' => [
+                        'email_sent' => __('Email sent successfully', 'product-estimator'),
+                    ],
+                ],
+                'general_validation' => [
+                    'messages' => [
+                        'details_required' => __('Please provide your contact details', 'product-estimator'),
+                        'email_required' => __('Email is required for this action', 'product-estimator'),
+                        'phone_required' => __('Phone is required for SMS notifications', 'product-estimator'),
+                        'email_details_required' => __('Please provide your email details', 'product-estimator'),
+                        'phone_details_required' => __('Please provide your phone details', 'product-estimator'),
+                        'email_required_for_estimate' => __('Email is required to receive your estimate', 'product-estimator'),
+                    ],
+                ],
+            ],
+            'common_ui' => [
+                'confirmation_dialogs' => [
+                    'buttons' => [
+                        'confirm' => __('Confirm', 'product-estimator'),
+                        'cancel' => __('Cancel', 'product-estimator'),
+                        'ok' => __('OK', 'product-estimator'),
+                    ],
+                    'messages' => [
+                        'confirm_delete' => __('Are you sure you want to delete this?', 'product-estimator'),
+                        'confirm' => __('Are you sure you want to proceed?', 'product-estimator'),
+                    ],
+                ],
+                'general_actions' => [
+                    'buttons' => [
+                        'close' => __('Close', 'product-estimator'),
+                        'save' => __('Save', 'product-estimator'),
+                        'save_changes' => __('Save Changes', 'product-estimator'),
+                        'delete' => __('Delete', 'product-estimator'),
+                        'edit' => __('Edit', 'product-estimator'),
+                        'add' => __('Add', 'product-estimator'),
+                        'remove' => __('Remove', 'product-estimator'),
+                    ],
+                    'messages' => [
+                        'settings_saved' => __('Settings saved successfully', 'product-estimator'),
+                    ],
+                ],
+                'navigation' => [
+                    'buttons' => [
+                        'continue' => __('Continue', 'product-estimator'),
+                        'back' => __('Back', 'product-estimator'),
+                    ],
+                ],
+                'loading_states' => [
+                    'messages' => [
+                        'generic' => __('Loading...', 'product-estimator'),
+                    ],
+                ],
+                'error_handling' => [
+                    'messages' => [
+                        'error' => __('An error occurred. Please try again.', 'product-estimator'),
+                        'save_failed' => __('Failed to save. Please try again.', 'product-estimator'),
+                        'network_error' => __('Network error. Please check your connection.', 'product-estimator'),
+                        'permission_denied' => __('You do not have permission to perform this action', 'product-estimator'),
+                    ],
+                ],
+                'validation' => [
+                    'messages' => [
+                        'required_field' => __('This field is required', 'product-estimator'),
+                        'min_length' => __('Minimum {min} characters required', 'product-estimator'),
+                        'max_length' => __('Maximum {max} characters allowed', 'product-estimator'),
+                        'invalid_format' => __('Invalid format', 'product-estimator'),
+                        'number_required' => __('Please enter a valid number', 'product-estimator'),
+                    ],
+                ],
+            ],
+            'modal_system' => [
+                'confirmation_dialogs' => [
+                    'headings' => [
+                        'confirmation' => __('Confirm Action', 'product-estimator'),
+                    ],
+                ],
+                'error_dialogs' => [
+                    'headings' => [
+                        'error' => __('Error', 'product-estimator'),
+                    ],
+                ],
+                'success_dialogs' => [
+                    'headings' => [
+                        'success' => __('Success', 'product-estimator'),
+                    ],
+                ],
+                'room_dialogs' => [
+                    'headings' => [
+                        'add_room' => __('Add New Room', 'product-estimator'),
+                        'room_created' => __('Room Created', 'product-estimator'),
+                        'remove_room' => __('Remove Room', 'product-estimator'),
+                        'select_room' => __('Select Room', 'product-estimator'),
+                    ],
+                ],
+                'customer_dialogs' => [
+                    'headings' => [
+                        'customer_details' => __('Customer Details', 'product-estimator'),
+                        'email_details' => __('Email Details Required', 'product-estimator'),
+                        'phone_details' => __('Phone Details Required', 'product-estimator'),
+                        'contact_information' => __('Contact Information Required', 'product-estimator'),
+                        'contact_method_estimate' => __('Choose Contact Method', 'product-estimator'),
+                        'contact_method' => __('Contact Method', 'product-estimator'),
+                    ],
+                ],
+            ],
+        ];
     }
 }

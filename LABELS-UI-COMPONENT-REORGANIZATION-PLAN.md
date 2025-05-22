@@ -279,10 +279,10 @@ pdf_generation/
 
 ## Implementation Steps
 
-### Phase 1: Update Mapping Structure
-1. Update the `convert_to_hierarchical_structure_admin()` function with the new mapping
-2. Test the mapping with a few sample labels
-3. Verify the hierarchical structure is created correctly
+### Phase 1: Update Mapping Structure ✅ COMPLETED  
+1. ✅ Updated the `convert_to_hierarchical_structure_admin()` function with the new mapping
+2. 🔄 Test the mapping with a few sample labels
+3. 🔄 Verify the hierarchical structure is created correctly
 
 ### Phase 2: Update Admin UI
 1. Update the hierarchical labels settings module to handle deeper nesting

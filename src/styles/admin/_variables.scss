@@ -37,6 +37,7 @@ $row-border-color: #f0f0f1;
 $separator-color: #dcdcde;
 $light-separator-color: #e0e0e0;
 $input-border-color: #8c8f94;
+$input-focus-border-color: $primary-color;
 
 // Shadows
 $shadow-color: rgb(0, 0, 0, 0.04);
@@ -46,6 +47,26 @@ $max-input-width: 450px;
 $container-max-width: 1200px;
 $nav-width: 200px;
 $sidebar-width: 280px;
+
+// Typography
+$font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+$font-family-mono: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+$font-size-base: 14px;
+$font-size-sm: 13px;
+$font-size-xs: 12px;
+$font-size-lg: 16px;
+$font-size-xl: 18px;
+$line-height-base: 1.5;
+$line-height-tight: 1.3;
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+$spacing-xxl: 24px;
+$spacing-xxxl: 32px;
 
 // Other
 $button-background: #f6f7f7;

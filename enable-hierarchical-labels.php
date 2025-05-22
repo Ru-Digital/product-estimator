@@ -14,17 +14,120 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Enable hierarchical labels by default for unreleased plugin
+add_action('init', 'enable_hierarchical_labels_by_default', 1);
+
+/**
+ * Enable hierarchical labels by default since this is an unreleased plugin
+ */
+function enable_hierarchical_labels_by_default() {
+    // For unreleased plugin, always enable V3 field-grouped hierarchical labels
+    if (get_option('product_estimator_labels_hierarchical', null) === null) {
+        update_option('product_estimator_labels_hierarchical', true);
+        update_option('product_estimator_labels_version', '3.0.0'); // V3 field-grouped structure
+        update_option('product_estimator_labels_structure', 'ui_component');
+        
+        // Apply the V3 structure immediately
+        migrate_to_v3_structure();
+    }
+}
+
+/**
+ * Apply V3 field-grouped structure to existing labels
+ */
+function migrate_to_v3_structure() {
+    $current_labels = get_option('product_estimator_labels', []);
+    
+    // If no existing labels or already V3 structure, apply default V3 structure
+    if (empty($current_labels) || !is_v1_flat_structure($current_labels)) {
+        $v3_structure = get_default_v3_structure();
+        update_option('product_estimator_labels', $v3_structure);
+        return;
+    }
+    
+    // Convert V1 flat structure to V3 field-grouped structure
+    require_once __DIR__ . '/activate-hierarchical-labels-admin.php';
+    $v3_labels = convert_to_hierarchical_structure_admin($current_labels);
+    update_option('product_estimator_labels', $v3_labels);
+}
+
+/**
+ * Check if labels are in V1 flat structure
+ */
+function is_v1_flat_structure($labels) {
+    return isset($labels['buttons']) || isset($labels['forms']) || isset($labels['messages']);
+}
+
+/**
+ * Get default V3 field-grouped structure
+ */
+function get_default_v3_structure() {
+    return [
+        'estimate_management' => [
+            'create_new_estimate_form' => [
+                'estimate_name_field' => [
+                    'label' => __('Estimate Name', 'product-estimator'),
+                    'placeholder' => __('Enter estimate name', 'product-estimator'),
+                ],
+                'buttons' => [
+                    'create' => __('Create Estimate', 'product-estimator'),
+                ],
+            ],
+            'estimate_actions' => [
+                'buttons' => [
+                    'save' => __('Save Estimate', 'product-estimator'),
+                    'print' => __('Print Estimate', 'product-estimator'), 
+                    'delete' => __('Delete Estimate', 'product-estimator'),
+                ],
+            ],
+        ],
+        'room_management' => [
+            'add_new_room_form' => [
+                'room_name_field' => [
+                    'label' => __('Room Name', 'product-estimator'),
+                    'placeholder' => __('Enter room name', 'product-estimator'),
+                ],
+                'buttons' => [
+                    'add' => __('Add Room', 'product-estimator'),
+                ],
+            ],
+        ],
+        'customer_details' => [
+            'customer_details_form' => [
+                'customer_email_field' => [
+                    'label' => __('Email Address', 'product-estimator'), 
+                    'placeholder' => __('Enter your email', 'product-estimator'),
+                    'validation' => [
+                        'invalid_email' => __('Please enter a valid email address', 'product-estimator'),
+                        'email_required' => __('Email is required', 'product-estimator'),
+                    ],
+                ],
+            ],
+        ],
+        'common_ui' => [
+            'confirmation_dialogs' => [
+                'buttons' => [
+                    'confirm' => __('Confirm', 'product-estimator'),
+                    'cancel' => __('Cancel', 'product-estimator'),
+                ],
+            ],
+        ],
+    ];
+}
+
 // Hook into the settings modules registration
 add_action('product_estimator_register_settings_modules', 'enable_hierarchical_labels_module', 20);
 
 /**
- * Replace the standard labels module with the hierarchical version if enabled
+ * Replace the standard labels module with the hierarchical version 
  * 
  * @param SettingsManager $settings_manager The settings manager instance
  */
 function enable_hierarchical_labels_module($settings_manager) {
-    // Check if hierarchical labels are enabled
-    if (get_option('product_estimator_labels_hierarchical', false)) {
+    // Always use hierarchical labels for unreleased plugin
+    $hierarchical_enabled = true; // get_option('product_estimator_labels_hierarchical', true);
+    
+    if ($hierarchical_enabled) {
         // First, remove the standard labels module if it exists
         $modules = $settings_manager->get_modules();
         if (isset($modules['labels'])) {

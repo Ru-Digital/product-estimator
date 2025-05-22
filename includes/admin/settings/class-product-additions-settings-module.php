@@ -212,10 +212,6 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         // with direct property access
         $suggested_products_enabled = ($features && isset($features->suggested_products_enabled) && $features->suggested_products_enabled === true);
 
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('suggested_products_enabled value: ' . ($suggested_products_enabled ? 'true' : 'false'));
-        }
-
         // Only include suggest_products_by_category if the feature is enabled
         if ($suggested_products_enabled) {
             $labels['suggest_products_by_category'] = __('Suggest Products when Category', 'product-estimator');
@@ -276,7 +272,7 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
     {
         // Enqueue Select2 JS
         wp_enqueue_script('select2', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js', array('jquery'), '4.1.0-rc.0', true);
-        
+
         // Enqueue WordPress color picker if we're on this module's page
         wp_enqueue_script('wp-color-picker');
 
@@ -310,7 +306,7 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
             array(),
             '4.1.0-rc.0'
         );
-        
+
         // Enqueue WordPress color picker style
         wp_enqueue_style('wp-color-picker');
     }
@@ -662,7 +658,7 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 }
             }
         }
-        
+
         // Ensure color fields have defaults if not set
         for ($i = 1; $i <= 5; $i++) {
             $colour_key = 'option_colour_' . $i;
@@ -979,11 +975,11 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
         $sanitized_data['product_id'] = isset($raw_item_data['product_id']) ? absint($raw_item_data['product_id']) : 0;
         // Note Text (string)
         $sanitized_data['note_text'] = isset($raw_item_data['note_text']) ? sanitize_textarea_field(trim($raw_item_data['note_text'])) : '';
-        
+
         // New fields for auto-add product sections
         $sanitized_data['section_title'] = isset($raw_item_data['section_title']) ? sanitize_text_field(trim($raw_item_data['section_title'])) : '';
         $sanitized_data['section_description'] = isset($raw_item_data['section_description']) ? sanitize_textarea_field(trim($raw_item_data['section_description'])) : '';
-        
+
         // Option colours
         for ($i = 1; $i <= 5; $i++) {
             $colour_key = 'option_colour_' . $i;
@@ -1056,19 +1052,19 @@ final class ProductAdditionsSettingsModule extends SettingsModuleWithTableBase i
                 $response_item['product_name_display'] = $product->get_formatted_name();
             }
         }
-        
+
         // Include new fields if relation type is auto_add_by_category
         if ($saved_item['relation_type'] === 'auto_add_by_category') {
             $response_item['section_title'] = $saved_item['section_title'] ?? '';
             $response_item['section_description'] = $saved_item['section_description'] ?? '';
-            
+
             // Include color options
             for ($i = 1; $i <= 5; $i++) {
                 $colour_key = 'option_colour_' . $i;
                 $response_item[$colour_key] = $saved_item[$colour_key] ?? '#000000';
             }
         }
-        
+
         return $response_item;
     }
 

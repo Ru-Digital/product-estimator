@@ -87,7 +87,14 @@
             </div>
             
             <div class="table-container">
-                <h3><?php echo esc_html__('Unused Labels', 'product-estimator'); ?></h3>
+                <div class="table-header-with-actions">
+                    <h3><?php echo esc_html__('Unused Labels', 'product-estimator'); ?></h3>
+                    <?php if (!empty($unused_labels)): ?>
+                    <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['page' => 'product-estimator-label-analytics', 'export' => 'unused-labels-csv'], admin_url('admin.php')), 'export_unused_labels_csv')); ?>" class="button button-secondary">
+                        <?php echo esc_html__('Export Unused Labels', 'product-estimator'); ?>
+                    </a>
+                    <?php endif; ?>
+                </div>
                 <p><?php echo esc_html__('These labels exist in the new hierarchical structure but have never been accessed. This typically indicates new labels that need to be implemented or old features that are no longer used.', 'product-estimator'); ?></p>
                 
                 <?php if (!empty($unused_labels)): ?>
@@ -121,7 +128,14 @@
             </div>
             
             <div class="table-container">
-                <h3><?php echo esc_html__('Missing Labels', 'product-estimator'); ?></h3>
+                <div class="table-header-with-actions">
+                    <h3><?php echo esc_html__('Missing Labels', 'product-estimator'); ?></h3>
+                    <?php if (!empty($missing_labels)): ?>
+                    <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['page' => 'product-estimator-label-analytics', 'export' => 'missing-labels-csv'], admin_url('admin.php')), 'export_missing_labels_csv')); ?>" class="button button-primary">
+                        <?php echo esc_html__('Export Missing Labels', 'product-estimator'); ?>
+                    </a>
+                    <?php endif; ?>
+                </div>
                 <p><?php echo esc_html__('These are label keys being used in the code that do not exist in the new hierarchical label structure. This typically shows old flat-structure keys that need to be migrated to the new hierarchical format.', 'product-estimator'); ?></p>
                 
                 <?php if (!empty($missing_labels)): ?>
@@ -279,6 +293,18 @@
     .table-container {
         margin-bottom: 20px;
     }
+}
+
+/* Table Header with Actions */
+.table-header-with-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.table-header-with-actions h3 {
+    margin: 0;
 }
 
 /* Missing Labels Panel Styles */

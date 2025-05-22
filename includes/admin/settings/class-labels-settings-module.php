@@ -82,6 +82,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         add_action('wp_ajax_pe_import_labels', [$this, 'ajax_import_labels']);
         add_action('wp_ajax_pe_bulk_update_labels', [$this, 'ajax_bulk_update_labels']);
         add_action('wp_ajax_pe_reset_category_labels', [$this, 'ajax_reset_category_labels']);
+        add_action('wp_ajax_pe_clear_label_caches', [$this, 'ajax_clear_label_caches']);
     }
 
     public function render_section_description() {
@@ -483,7 +484,6 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             $result .= '[' . $part . ']';
         }
 
-        error_log('DEBUG path_to_brackets: input="' . $path . '" output="' . $result . '"');
         return $result;
     }
 
@@ -683,6 +683,9 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 <input type="file" id="import-file" style="display: none;" accept=".json" />
                 <button type="button" class="button" id="reset-category-defaults">
                     <?php esc_html_e( 'Reset Category to Defaults', 'product-estimator' ); ?>
+                </button>
+                <button type="button" class="button button-secondary" id="clear-label-caches">
+                    <?php esc_html_e( 'Clear Label Caches', 'product-estimator' ); ?>
                 </button>
             </div>
 
@@ -1330,5 +1333,125 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             'category' => $category,
             'labels' => $options[$category]
         ]);
+    }
+
+    /**
+     * Clear all label caches via AJAX
+     */
+    public function ajax_clear_label_caches() {
+        // Verify nonce for security
+        if (!wp_verify_nonce($_POST['nonce'], 'pe_labels_management')) {
+            wp_send_json_error(['message' => __('Invalid nonce', 'product-estimator')]);
+            return;
+        }
+
+        // Check user permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(['message' => __('Insufficient permissions', 'product-estimator')]);
+            return;
+        }
+
+        $cleared_caches = [];
+        $errors = [];
+
+        try {
+            // Get current labels version for cache key generation
+            $version = get_option('product_estimator_labels_version', '3.0.0');
+
+            // Clear all known label cache keys
+            $cache_keys_to_clear = [
+                'pe_frontend_labels_' . $version,
+                'pe_frontend_labels_3.0.0',
+                'pe_frontend_labels_2.3.0',
+                'pe_frontend_labels_2.0.0',
+                'pe_frontend_frequent_labels',
+                'pe_frontend_labels_cache',
+                'product_estimator_labels_cache',
+                'product_estimator_frontend_labels'
+            ];
+
+            foreach ($cache_keys_to_clear as $key) {
+                $deleted = delete_transient($key);
+                $cleared_caches[] = [
+                    'key' => $key,
+                    'cleared' => $deleted
+                ];
+            }
+
+            // Clear object cache if available
+            if (function_exists('wp_cache_flush')) {
+                wp_cache_flush();
+                $cleared_caches[] = [
+                    'key' => 'wp_cache_flush',
+                    'cleared' => true
+                ];
+            }
+
+            // Access labels frontend and clear its cache
+            global $product_estimator;
+            if (isset($product_estimator) && method_exists($product_estimator, 'get_loader')) {
+                $loader = $product_estimator->get_loader();
+                $labels_frontend = $loader->get_component('labels_frontend');
+
+                if ($labels_frontend && method_exists($labels_frontend, 'invalidate_cache')) {
+                    $labels_frontend->invalidate_cache();
+                    $cleared_caches[] = [
+                        'key' => 'labels_frontend_cache',
+                        'cleared' => true
+                    ];
+                }
+            }
+
+            // Remove _flat structure from main labels option if present
+            $labels_option = get_option('product_estimator_labels', []);
+            $had_flat = false;
+            if (is_array($labels_option) && isset($labels_option['_flat'])) {
+                unset($labels_option['_flat']);
+                update_option('product_estimator_labels', $labels_option);
+                $had_flat = true;
+                $cleared_caches[] = [
+                    'key' => 'removed_flat_structure',
+                    'cleared' => true
+                ];
+            }
+
+            // Clear old analytics data that contains v1/v2 key usage from before compatibility removal
+            $analytics_cleared = delete_option('product_estimator_label_analytics');
+            $analytics_reset_cleared = delete_option('product_estimator_label_analytics_last_reset');
+
+            $cleared_caches[] = [
+                'key' => 'analytics_data_cleared',
+                'cleared' => $analytics_cleared
+            ];
+
+            if ($analytics_reset_cleared) {
+                $cleared_caches[] = [
+                    'key' => 'analytics_reset_data_cleared',
+                    'cleared' => true
+                ];
+            }
+
+            // Force cache busting by updating version
+            $new_version = '3.0.' . time();
+            update_option('product_estimator_labels_version', $new_version);
+            $cleared_caches[] = [
+                'key' => 'labels_version_updated',
+                'cleared' => true,
+                'new_version' => $new_version
+            ];
+
+            wp_send_json_success([
+                'message' => __('Label caches cleared successfully', 'product-estimator'),
+                'cleared_caches' => $cleared_caches,
+                'had_flat_structure' => $had_flat,
+                'new_version' => $new_version
+            ]);
+
+        } catch (Exception $e) {
+            wp_send_json_error([
+                'message' => __('Error clearing caches: ', 'product-estimator') . $e->getMessage(),
+                'cleared_caches' => $cleared_caches
+            ]);
+        }
     }
 }

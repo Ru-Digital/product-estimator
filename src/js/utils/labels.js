@@ -98,14 +98,18 @@ export class LabelManager {
         
         // Check cache first for the fastest retrieval
         if (this.cache.has(key)) {
+            const cachedData = this.cache.get(key);
+            const value = cachedData.value || cachedData; // Support both old format and new format
+            const originalLookupType = cachedData.lookupType || 'cache'; // Default to 'cache' for old entries
+            
             // Record cache hit for performance metrics
             if (this.analytics.enabled) {
                 this.analytics._lookups.hits++;
-                this.trackUsage(key, 'cache', '');
+                // Use original lookup type for analytics, not 'cache'
+                this.trackUsage(key, originalLookupType, cachedData.defaultValue || '');
             }
             
-            const value = this.cache.get(key);
-            this.recordLabelLookupPerformance(key, startTime, true);
+            this.recordLabelLookupPerformance(key, startTime, true, originalLookupType);
             return value;
         }
         
@@ -118,58 +122,52 @@ export class LabelManager {
         let value = null;
         let lookupType = '';
         
-        // 1. Check if this is a hierarchical path (3+ levels)
-        if (key.split('.').length >= 3) {
-            // This is likely a v3 hierarchical path
+        // Check if the key exists in the structure WITHOUT returning default values
+        // This ensures we can properly detect missing labels vs found labels
+        const keyExistsResult = this.getDeepValue(this.labels, key.split('.'), '__STRUCTURE_CHECK__');
+        const keyExists = keyExistsResult !== '__STRUCTURE_CHECK__';
+        
+        // Debug logging for problematic keys
+        if (key.startsWith('buttons.') || key.startsWith('ui_elements.') || key.startsWith('actions.')) {
+            console.log('DEBUG Label Lookup:', {
+                key: key,
+                keyParts: key.split('.'),
+                keyExistsResult: keyExistsResult,
+                keyExists: keyExists,
+                firstPart: key.split('.')[0]
+            });
+        }
+        
+        if (keyExists) {
+            // Key exists - get the actual value
             value = this.getDeepValue(this.labels, key.split('.'));
-            
-            if (value !== null) {
-                lookupType = 'hierarchical';
-                if (this.analytics.enabled) {
-                    this.analytics._lookups.hierarchicalHits++;
-                }
+            lookupType = 'hierarchical';
+            if (this.analytics.enabled) {
+                this.analytics._lookups.hierarchicalHits++;
             }
-        }
-        
-        // Removed: v2 flat structure compatibility
-        // Old v2 keys will now show as missing labels to encourage migration
-        
-        // 3. Standard hierarchical dot notation lookup
-        if (value === null) {
-            const keys = key.split('.');
-            let current = this.labels;
+        } else {
+            // Key does not exist in structure - this is a missing label
+            value = defaultValue;
+            lookupType = 'missing';
             
-            for (const k of keys) {
-                if (current && current[k] !== undefined) {
-                    current = current[k];
-                } else {
-                    current = null;
-                    break;
-                }
-            }
-            
-            if (current !== null) {
-                value = current;
-                lookupType = 'standard';
-            }
-        }
-        
-        // If we still don't have a value, use the default
-        if (value === null) {
             // Log missing label in development
             if (window.productEstimatorDebug) {
                 console.warn(`Label not found: ${key}`);
             }
-            
-            value = defaultValue;
-            lookupType = 'missing';
         }
+        
+        // Removed: v2 flat structure compatibility and duplicate hierarchical lookup
+        // Old v2 keys will now show as missing labels to encourage migration
         
         // Apply debug formatting if enabled
         const formattedValue = this.formatLabelWithDebug(value, key, lookupType);
         
-        // Cache the result for next time (cache the formatted value)
-        this.cache.set(key, formattedValue);
+        // Cache the result for next time with metadata to preserve lookup type
+        this.cache.set(key, {
+            value: formattedValue,
+            lookupType: lookupType,
+            defaultValue: defaultValue
+        });
         
         // Track usage analytics
         if (this.analytics.enabled) {
@@ -191,6 +189,14 @@ export class LabelManager {
      * @returns {any} The value or null if not found
      */
     getDeepValue(obj, parts, defaultValue = null) {
+        // Enforce v3 category validation - first part must be a valid category
+        const validCategories = ['estimate_management', 'room_management', 'customer_details', 'product_management', 'common_ui', 'modal_system', 'search_and_filters', 'pdf_generation'];
+        
+        if (parts.length === 0 || !validCategories.includes(parts[0])) {
+            // This is likely an old v1/v2 key that doesn't start with a valid v3 category
+            return defaultValue;
+        }
+        
         let current = obj;
         
         for (const part of parts) {
@@ -254,17 +260,19 @@ export class LabelManager {
      * @param {string} defaultText - Default text used (if any)
      */
     trackUsage(key, lookupType = '', defaultText = '') {
-        // Increment local count
-        if (!this.analytics.counts[key]) {
-            this.analytics.counts[key] = 0;
+        // Only increment local count for found labels, not missing ones
+        if (lookupType !== 'missing') {
+            if (!this.analytics.counts[key]) {
+                this.analytics.counts[key] = 0;
+            }
+            this.analytics.counts[key]++;
+            
+            // Update timestamp
+            this.analytics.timestamps[key] = Date.now();
         }
-        this.analytics.counts[key]++;
         
-        // Update timestamp
-        this.analytics.timestamps[key] = Date.now();
-        
-        // Get stack trace for debugging (server will determine if label is actually missing)
-        const stackTrace = defaultText ? this.getStackTrace() : '';
+        // Get stack trace for debugging - always capture for missing labels
+        const stackTrace = (lookupType === 'missing' || defaultText) ? this.getStackTrace() : '';
         
         // Add to pending batch
         this.analytics.pendingBatch.push({
@@ -590,17 +598,6 @@ export class LabelManager {
         const labelElements = container.querySelectorAll('[data-label]');
         const containerInfo = container === document ? 'document' : container.id || container.tagName;
         
-        if (this.analytics.enabled) {
-            // Track batch update with metadata
-            this.analytics.pendingBatch.push({
-                key: 'dom_update',
-                timestamp: Date.now(),
-                page: window.location.pathname,
-                context: 'updateDOM',
-                container: containerInfo,
-                count: labelElements.length
-            });
-        }
         
         labelElements.forEach(element => {
             const labelKey = element.dataset.label;
@@ -619,24 +616,12 @@ export class LabelManager {
             } else {
                 element.textContent = label;
             }
-            
-            // Track DOM update specifically (with element info)
-            if (this.analytics.enabled) {
-                this.analytics.pendingBatch.push({
-                    key: labelKey,
-                    timestamp: Date.now(),
-                    page: window.location.pathname,
-                    context: 'dom',
-                    element: element.tagName,
-                    container: containerInfo
-                });
-                
-                // Send batch if threshold reached
-                if (this.analytics.pendingBatch.length >= this.analytics.batchSize) {
-                    this.sendAnalyticsBatch();
-                }
-            }
         });
+        
+        // Send analytics batch if threshold reached during DOM updates
+        if (this.analytics.enabled && this.analytics.pendingBatch.length >= this.analytics.batchSize) {
+            this.sendAnalyticsBatch();
+        }
     }
 
     /**

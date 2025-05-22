@@ -80,20 +80,20 @@ class LabelsUsageAnalytics {
         // Register AJAX endpoints
         add_action('wp_ajax_pe_record_label_analytics', [$this, 'ajax_record_label_analytics']);
         add_action('wp_ajax_nopriv_pe_record_label_analytics', [$this, 'ajax_record_label_analytics']);
-        
+
         // Initialize default analytics data structure if it doesn't exist
         $this->initialize_analytics_data();
     }
-    
+
     /**
      * Initialize analytics data structure if it doesn't exist
-     * 
+     *
      * @since    2.3.0
      * @access   private
      */
     private function initialize_analytics_data() {
         $analytics = get_option($this->option_name, null);
-        
+
         if ($analytics === null) {
             $default = [
                 'access_counts' => [],
@@ -102,7 +102,7 @@ class LabelsUsageAnalytics {
                 'page_usage' => [],
                 'last_updated' => current_time('mysql')
             ];
-            
+
             update_option($this->option_name, $default);
         }
     }
@@ -207,13 +207,29 @@ class LabelsUsageAnalytics {
         $count = 0;
         foreach ($batch as $item) {
             if (isset($item['key'])) {
-                // Check if this label exists in our structure
-                if ($this->is_missing_label($item['key'])) {
+                // Check if frontend already determined this is a missing label
+                // Frontend has the updated v3 validation logic, so trust its determination
+                $lookup_type = isset($item['lookupType']) ? $item['lookupType'] : '';
+                
+                // For old v2 keys with missing lookupType, check if they should be treated as missing
+                if (empty($lookup_type)) {
+                    $key_parts = explode('.', $item['key']);
+                    $first_part = isset($key_parts[0]) ? $key_parts[0] : '';
+                    $valid_categories = ['estimate_management', 'room_management', 'customer_details', 'product_management', 'common_ui', 'modal_system', 'search_and_filters', 'pdf_generation'];
+                    
+                    // If key doesn't start with valid v3 category, treat as missing
+                    if (!in_array($first_part, $valid_categories)) {
+                        $lookup_type = 'missing';
+                    }
+                }
+                
+                
+                if ($lookup_type === 'missing' || $this->is_missing_label($item['key'])) {
                     // This is a missing label - record it as such
                     $default_text = isset($item['defaultText']) ? $item['defaultText'] : '';
                     $stack_trace = isset($item['stackTrace']) ? $item['stackTrace'] : '';
                     $page = isset($item['page']) ? $item['page'] : '';
-                    
+
                     $this->record_missing_label($item['key'], $default_text, $stack_trace, $page);
                     $count++;
                 } else {
@@ -298,7 +314,7 @@ class LabelsUsageAnalytics {
      */
     public function get_most_used_labels($limit = 10) {
         $analytics = $this->get_analytics_data();
-        
+
         arsort($analytics['access_counts']);
         return array_slice($analytics['access_counts'], 0, $limit, true);
     }
@@ -311,33 +327,57 @@ class LabelsUsageAnalytics {
      * @return   array     Unused labels
      */
     public function get_unused_labels() {
+        // Try multiple approaches to get the labels
+        $all_labels = null;
+        
+        // Approach 1: Try global product_estimator
         global $product_estimator;
-        
-        if (!isset($product_estimator) || !method_exists($product_estimator, 'get_loader')) {
-            return [];
+        if (isset($product_estimator) && method_exists($product_estimator, 'get_loader')) {
+            $loader = $product_estimator->get_loader();
+            $labels_frontend = $loader->get_component('labels_frontend');
+            if ($labels_frontend && method_exists($labels_frontend, 'get_all_labels_with_cache')) {
+                $all_labels = $labels_frontend->get_all_labels_with_cache();
+            }
         }
         
-        $loader = $product_estimator->get_loader();
-        $labels_frontend = $loader->get_component('labels_frontend');
-        
-        if (!$labels_frontend || !method_exists($labels_frontend, 'get_all_labels_with_cache')) {
-            return [];
+        // Approach 2: Try getting labels from WordPress options (if they're cached there)
+        if (!$all_labels) {
+            $cached_labels = get_option('product_estimator_labels_cache');
+            if ($cached_labels && is_array($cached_labels)) {
+                $all_labels = $cached_labels;
+            }
         }
         
-        $all_labels = $labels_frontend->get_all_labels_with_cache();
+        // Approach 3: Try direct instantiation (last resort)
+        if (!$all_labels) {
+            try {
+                $labels_frontend = new \RuDigital\ProductEstimator\Includes\Frontend\LabelsFrontend('product-estimator', '1.0.0');
+                if (method_exists($labels_frontend, 'get_all_labels_with_cache')) {
+                    $all_labels = $labels_frontend->get_all_labels_with_cache();
+                }
+            } catch (Exception $e) {
+                // Silent fallback
+            }
+        }
+        
+        if (!$all_labels) {
+            return [];
+        }
+
         $analytics = $this->get_analytics_data();
         $accessed_keys = array_keys($analytics['access_counts']);
-        
+
         // Flatten the label hierarchy to get all keys
         // Remove the flat structure to get only hierarchical keys
         $labels_without_flat = $all_labels;
         unset($labels_without_flat['_flat']);
         unset($labels_without_flat['_version']);
         unset($labels_without_flat['_legacy']);
-        
+
         $all_keys = [];
         $this->flatten_labels($labels_without_flat, $all_keys);
-        
+
+
         return array_diff($all_keys, $accessed_keys);
     }
 
@@ -350,15 +390,15 @@ class LabelsUsageAnalytics {
      */
     public function get_missing_labels() {
         $analytics = $this->get_analytics_data();
-        
+
         // Get missing labels from stored analytics data
         $missing_labels = isset($analytics['missing_labels']) ? $analytics['missing_labels'] : [];
-        
+
         // Sort by count (most frequently missing first)
         uasort($missing_labels, function($a, $b) {
             return $b['count'] - $a['count'];
         });
-        
+
         return $missing_labels;
     }
 
@@ -370,32 +410,32 @@ class LabelsUsageAnalytics {
      * @param    string    $key    The label key to check
      * @return   bool      True if the label is missing from structure
      */
-    private function is_missing_label($key) {
+    public function is_missing_label($key) {
         global $product_estimator;
-        
+
         if (!isset($product_estimator) || !method_exists($product_estimator, 'get_loader')) {
             return false; // Can't determine, assume it exists
         }
-        
+
         $loader = $product_estimator->get_loader();
         $labels_frontend = $loader->get_component('labels_frontend');
-        
+
         if (!$labels_frontend || !method_exists($labels_frontend, 'get_all_labels_with_cache')) {
             return false; // Can't determine, assume it exists
         }
-        
+
         $all_labels = $labels_frontend->get_all_labels_with_cache();
-        
+
         // Remove the _flat structure for missing label detection
         // We only want to check the new hierarchical structure
         if (isset($all_labels['_flat'])) {
             unset($all_labels['_flat']);
         }
-        
+
         // Check if the key exists in the hierarchical structure
         $exists = $this->label_exists_in_structure($all_labels, $key);
         $is_missing = !$exists;
-        
+
         return $is_missing;
     }
 
@@ -412,11 +452,20 @@ class LabelsUsageAnalytics {
         // For missing labels analytics, we want to check ONLY the new hierarchical structure
         // This will properly identify old flat keys as "missing" and encourage migration to new structure
         // Do NOT check the flattened structure (_flat) here - that's legacy compatibility
-        
+
         // Check hierarchical structure only
         $parts = explode('.', $key);
         $current = $labels;
-        
+
+        // First part must be a valid v3 top-level category
+        // Old v2 keys like "buttons.cancel" should NOT match even if there's a buttons section somewhere
+        $valid_categories = ['estimate_management', 'room_management', 'customer_details', 'product_management', 'common_ui', 'modal_system', 'search_and_filters', 'pdf_generation'];
+
+        if (empty($parts) || !in_array($parts[0], $valid_categories)) {
+            // This is likely an old v1/v2 key that doesn't start with a valid v3 category
+            return false;
+        }
+
         foreach ($parts as $part) {
             if (isset($current[$part])) {
                 $current = $current[$part];
@@ -424,7 +473,7 @@ class LabelsUsageAnalytics {
                 return false;
             }
         }
-        
+
         // Check if we found a string value (actual label) vs an array (category)
         return is_string($current);
     }
@@ -441,19 +490,19 @@ class LabelsUsageAnalytics {
      */
     public function record_missing_label($key, $default_text = '', $stack_trace = '', $page = '') {
         $analytics = $this->get_analytics_data();
-        
+
         // Initialize missing_labels array if it doesn't exist
         if (!isset($analytics['missing_labels'])) {
             $analytics['missing_labels'] = [];
         }
-        
+
         $now = current_time('mysql');
-        
+
         if (isset($analytics['missing_labels'][$key])) {
             // Update existing missing label
             $analytics['missing_labels'][$key]['count']++;
             $analytics['missing_labels'][$key]['last_seen'] = $now;
-            
+
             // Track alternative default texts
             if ($analytics['missing_labels'][$key]['default_text'] !== $default_text) {
                 if (!isset($analytics['missing_labels'][$key]['alternative_defaults'])) {
@@ -474,7 +523,7 @@ class LabelsUsageAnalytics {
                 'page' => $page
             ];
         }
-        
+
         // Update the analytics data
         $analytics['last_updated'] = $now;
         $this->save_analytics_data($analytics);
@@ -509,9 +558,9 @@ class LabelsUsageAnalytics {
                 if ($key === '_version' || $key === '_flat' || strpos($key, '_') === 0) {
                     continue;
                 }
-                
+
                 $current_key = $prefix ? $prefix . '.' . $key : $key;
-                
+
                 if (is_array($value)) {
                     // Check if this is a label definition (has actual label values)
                     if ($this->is_label_definition($value)) {
@@ -527,7 +576,7 @@ class LabelsUsageAnalytics {
             }
         }
     }
-    
+
     /**
      * Check if an array represents a label definition
      *
@@ -541,7 +590,7 @@ class LabelsUsageAnalytics {
         $label_keys = ['label', 'text', 'placeholder', 'validation', 'default_option'];
         return !empty(array_intersect(array_keys($array), $label_keys));
     }
-    
+
     /**
      * Extract actual label keys from a label definition
      *
@@ -558,7 +607,7 @@ class LabelsUsageAnalytics {
                 $keys[] = $base_path . '.' . $value_key;
             }
         }
-        
+
         // Handle validation messages
         if (isset($definition['validation']) && is_array($definition['validation'])) {
             foreach ($definition['validation'] as $validation_key => $validation_value) {
@@ -603,7 +652,7 @@ class LabelsUsageAnalytics {
     public function get_usage_report() {
         $analytics = $this->get_analytics_data();
         $unused = $this->get_unused_labels();
-        
+
         return [
             'most_used' => $this->get_most_used_labels(20),
             'unused_count' => count($unused),
@@ -623,16 +672,16 @@ class LabelsUsageAnalytics {
     public function ajax_record_label_analytics() {
         // Verify nonce
         check_ajax_referer('product_estimator_nonce', 'nonce');
-        
+
         // Parse data
         $data = [];
         if (isset($_POST['data']) && !empty($_POST['data'])) {
             $data = json_decode(stripslashes($_POST['data']), true);
         }
-        
+
         // Record batch
         $count = $this->record_batch($data);
-        
+
         wp_send_json_success([
             'processed' => $count,
             'success' => true

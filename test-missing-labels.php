@@ -41,17 +41,21 @@ $test_keys = [
     'ui_elements.loading',
     'buttons.show_similar_products', 
     'buttons.save',
+    'buttons.cancel',
     'buttons.add_to_room',
     'forms.room_name',
-    'forms.estimate_name'
+    'forms.estimate_name',
+    'actions.core.cancel',
+    'dialogs.titles.confirmation',
+    'messages.confirm_proceed'
 ];
 
-echo "Testing old flat keys (should be MISSING):\n";
+echo "Testing old v1/v2 keys (should be MISSING):\n";
 echo "==========================================\n";
 
 foreach ($test_keys as $key) {
     $is_missing = $analytics->is_missing_label($key);
-    echo sprintf("Key: %-30s | Missing: %s\n", $key, $is_missing ? 'YES' : 'NO');
+    echo sprintf("Key: %-35s | Missing: %s\n", $key, $is_missing ? 'YES' : 'NO');
 }
 
 echo "\n";

@@ -97,10 +97,18 @@ class LabelsAnalyticsDashboard {
             wp_die(__('Invalid page access.', 'product-estimator'));
         }
 
-        // Handle export action
-        if (isset($_GET['export']) && $_GET['export'] === 'csv') {
-            $this->export_csv();
-            exit;
+        // Handle export actions
+        if (isset($_GET['export'])) {
+            if ($_GET['export'] === 'csv') {
+                $this->export_csv();
+                exit;
+            } elseif ($_GET['export'] === 'missing-labels-csv') {
+                $this->export_missing_labels_csv();
+                exit;
+            } elseif ($_GET['export'] === 'unused-labels-csv') {
+                $this->export_unused_labels_csv();
+                exit;
+            }
         }
 
         // Enqueue Chart.js
@@ -195,10 +203,16 @@ class LabelsAnalyticsDashboard {
             check_admin_referer('export_label_analytics_csv');
         }
 
+        // Clean any output buffers
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
         $analytics_data = $this->analytics->get_analytics_data();
         $filename = 'label-analytics-' . date('Y-m-d') . '.csv';
 
-        header('Content-Type: text/csv');
+        // Set headers before any output
+        header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Cache-Control: no-cache, no-store, must-revalidate');
         header('Pragma: no-cache');
@@ -225,6 +239,189 @@ class LabelsAnalyticsDashboard {
 
         fclose($output);
         exit;
+    }
+
+    /**
+     * Export missing labels to CSV
+     *
+     * @since    3.0.0
+     * @access   private
+     */
+    private function export_missing_labels_csv() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Permission denied.', 'product-estimator'));
+        }
+
+        // Verify nonce if available
+        if (isset($_GET['_wpnonce'])) {
+            check_admin_referer('export_missing_labels_csv');
+        }
+
+        // Clean any output buffers
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        $missing_labels = $this->analytics->get_missing_labels();
+        $filename = 'missing-labels-' . date('Y-m-d') . '.csv';
+
+        // Set headers before any output
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $output = fopen('php://output', 'w');
+
+        // Column headers
+        fputcsv($output, [
+            'Label Key',
+            'Default Text Used',
+            'Usage Count',
+            'Source Location',
+            'First Seen',
+            'Last Seen',
+            'Page Context',
+            'Alternative Defaults'
+        ]);
+
+        // Write missing labels data
+        if (!empty($missing_labels)) {
+            foreach ($missing_labels as $key => $data) {
+                $alternative_defaults = isset($data['alternative_defaults']) ? implode(' | ', $data['alternative_defaults']) : '';
+                $source_location = isset($data['stack_trace']) ? $data['stack_trace'] : '';
+                $page_context = isset($data['page']) ? $data['page'] : '';
+                
+                fputcsv($output, [
+                    $data['key'],
+                    $data['default_text'] ?? '',
+                    $data['count'] ?? 0,
+                    $source_location,
+                    $data['first_seen'] ?? '',
+                    $data['last_seen'] ?? '',
+                    $page_context,
+                    $alternative_defaults
+                ]);
+            }
+        }
+
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Export unused labels to CSV
+     *
+     * @since    3.0.0
+     * @access   private
+     */
+    private function export_unused_labels_csv() {
+        if (!current_user_can('manage_options')) {
+            wp_die(__('Permission denied.', 'product-estimator'));
+        }
+
+        // Verify nonce if available
+        if (isset($_GET['_wpnonce'])) {
+            check_admin_referer('export_unused_labels_csv');
+        }
+
+        // Clean any output buffers
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        $unused_labels = $this->analytics->get_unused_labels();
+        $filename = 'unused-labels-' . date('Y-m-d') . '.csv';
+
+        // Set headers before any output
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $output = fopen('php://output', 'w');
+
+        // Column headers
+        fputcsv($output, [
+            'Label Key',
+            'Category',
+            'Hierarchical Level',
+            'Suggested Implementation',
+            'Notes'
+        ]);
+
+        // Write unused labels data
+        if (!empty($unused_labels)) {
+            foreach ($unused_labels as $key) {
+                $category = $this->get_label_category($key);
+                $level = substr_count($key, '.') + 1;
+                $suggested_implementation = $this->get_implementation_suggestion($key);
+                $notes = $this->get_label_notes($key);
+                
+                fputcsv($output, [
+                    $key,
+                    $category,
+                    $level,
+                    $suggested_implementation,
+                    $notes
+                ]);
+            }
+        }
+
+        fclose($output);
+        exit;
+    }
+
+    /**
+     * Get implementation suggestion for a label key
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $key    Label key
+     * @return   string    Implementation suggestion
+     */
+    private function get_implementation_suggestion($key) {
+        if (strpos($key, '.buttons.') !== false) {
+            return 'Add to button elements in templates';
+        } elseif (strpos($key, '.messages.') !== false) {
+            return 'Use in error/success message displays';
+        } elseif (strpos($key, '.titles.') !== false) {
+            return 'Add to modal/dialog titles';
+        } elseif (strpos($key, '.labels.') !== false) {
+            return 'Use for form field labels';
+        } elseif (strpos($key, '.placeholders.') !== false) {
+            return 'Use for input placeholders';
+        } else {
+            return 'Review implementation context';
+        }
+    }
+
+    /**
+     * Get notes for a label key
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $key    Label key
+     * @return   string    Notes about the label
+     */
+    private function get_label_notes($key) {
+        $notes = [];
+        
+        if (substr_count($key, '.') > 5) {
+            $notes[] = 'Deep hierarchy - verify necessity';
+        }
+        
+        if (strpos($key, 'legacy') !== false) {
+            $notes[] = 'Legacy compatibility label';
+        }
+        
+        if (strpos($key, 'deprecated') !== false) {
+            $notes[] = 'Deprecated - consider removal';
+        }
+        
+        return implode('; ', $notes);
     }
 
     /**

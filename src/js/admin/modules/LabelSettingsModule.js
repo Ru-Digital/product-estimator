@@ -69,6 +69,9 @@ class LabelSettingsModule extends VerticalTabbedModule {
     // Reset category
     this.$('#reset-category-defaults').on('click', this.handleResetCategory.bind(this));
 
+    // Clear label caches
+    this.$('#clear-label-caches').on('click', this.handleClearCaches.bind(this));
+
     // Hierarchical-specific events for both main sections and subcategories
     this.$(document).on('click', '.pe-label-subcategory-heading, .pe-main-section-header', this.toggleSubcategory.bind(this));
     this.$('#label-search').on('input', this.debounce(this.handleSearch.bind(this), 300));
@@ -1122,6 +1125,65 @@ class LabelSettingsModule extends VerticalTabbedModule {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Handle clearing label caches
+   */
+  handleClearCaches() {
+    const button = this.$('#clear-label-caches');
+    const originalText = button.text();
+    
+    // Show loading state
+    button.prop('disabled', true).text('Clearing...');
+    
+    // Use managementNonce first, then fall back to regular nonce
+    const nonce = this.settings.managementNonce || this.settings.nonce;
+    logger.log('Clear caches: Using nonce:', nonce);
+
+    ajax.ajaxRequest({
+      url: this.settings.ajaxUrl,
+      data: {
+        action: 'pe_clear_label_caches',
+        nonce: nonce
+      }
+    })
+    .then(data => {
+      logger.log('Cache clearing results:', data);
+      
+      // Show success message
+      this.showNotice(data.message || 'Label caches cleared successfully', 'success');
+      
+      // Show user-friendly summary
+      const clearedCount = data.cleared_caches ? data.cleared_caches.filter(cache => cache.cleared).length : 0;
+      const hadFlat = data.had_flat_structure;
+      
+      let detailMessage = `Cleared ${clearedCount} cache entries.`;
+      if (hadFlat) {
+        detailMessage += ' Removed legacy flat structure.';
+      }
+      if (data.new_version) {
+        detailMessage += ` Version updated to ${data.new_version}.`;
+      }
+      
+      this.showNotice(detailMessage, 'info');
+      
+      // Suggest page refresh to see changes
+      setTimeout(() => {
+        if (confirm('Cache cleared successfully! Refresh the page to see changes in the analytics?')) {
+          window.location.reload();
+        }
+      }, 1000);
+      
+    })
+    .catch(error => {
+      logger.error('Cache clearing error:', error);
+      this.showNotice('Error clearing caches: ' + (error.message || 'Unknown error'), 'error');
+    })
+    .finally(() => {
+      // Restore button state
+      button.prop('disabled', false).text(originalText);
+    });
   }
 
   /**

@@ -252,7 +252,7 @@ class TemplateEngine {
   /**
    * Process labels in the element using data-label attributes
    * @param {Element|DocumentFragment} element - Element to process
-   * @public - This method is exposed for external use
+   * @public
    */
   processLabels(element) {
     // Process regular data-label attributes
@@ -1104,7 +1104,7 @@ class TemplateEngine {
   /**
    * Verify all registered templates and their dependencies
    * @param {Array} criticalTemplates - List of template IDs that are critical for the application
-   * @returns {Object} Verification results with success/error information
+   * @returns {object} Verification results with success/error information
    */
   verifyTemplates(criticalTemplates = []) {
     logger.group('Template Verification');
@@ -1182,7 +1182,7 @@ class TemplateEngine {
   
   /**
    * Get template usage statistics
-   * @returns {Object} Template usage data
+   * @returns {object} Template usage data
    */
   getTemplateUsageStats() {
     if (!this._templateUsage) {

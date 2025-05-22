@@ -7,8 +7,9 @@
  * This module relies on abstract base classes for common functionality,
  * selectors, and internationalization strings.
  */
-import VerticalTabbedModule from '../common/VerticalTabbedModule';
 import { createLogger, ajax } from '@utils';
+
+import VerticalTabbedModule from '../common/VerticalTabbedModule';
 
 const logger = createLogger('LabelSettingsModule');
 
@@ -528,6 +529,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
 
   /**
    * Handle importing labels from JSON file
+   * @param e
    */
   handleImport(e) {
     logger.log('Import button clicked');
@@ -731,6 +733,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
 
   /**
    * Handle bulk edit trigger button
+   * @param e
    */
   handleBulkEditTrigger(e) {
     e.preventDefault();
@@ -878,6 +881,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
 
   /**
    * Update preview text as user types
+   * @param e
    */
   updatePreview(e) {
     const $input = jQuery(e.target);
@@ -891,6 +895,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
 
   /**
    * Get preview text for a specific label
+   * @param labelId
    */
   getPreviewForLabel(labelId) {
     const previewMap = {
@@ -917,6 +922,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
 
   /**
    * Handle search functionality (hierarchical version)
+   * @param e
    */
   handleSearch(e) {
     const searchTerm = e.target.value.trim().toLowerCase();
@@ -1026,7 +1032,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
   /**
    * Expand sections and navigate to field after tab switch
    * @param {string} path - The full path to the field
-   * @param {array} pathParts - The path split into parts
+   * @param {Array} pathParts - The path split into parts
    */
   expandSectionsAndNavigateToField(path, pathParts) {
     logger.log(`DEBUG: expandSectionsAndNavigateToField called with path: ${path}`);
@@ -1104,6 +1110,8 @@ class LabelSettingsModule extends VerticalTabbedModule {
 
   /**
    * Download JSON data as a file
+   * @param filename
+   * @param data
    */
   downloadJSON(filename, data) {
     const blob = new Blob([data], { type: 'application/json' });

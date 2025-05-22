@@ -1,8 +1,7 @@
 /**
  * Example file demonstrating label usage in JavaScript
- * 
- * This file shows how to use the dynamic labels system in JavaScript
  *
+ * This file shows how to use the dynamic labels system in JavaScript
  * @since 2.0.0
  */
 

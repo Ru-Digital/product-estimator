@@ -7,6 +7,7 @@
  */
 
 import { createLogger, labelManager } from '@utils';
+
 import eventBus from '../core/EventBus';
 
 // Import services and utils first

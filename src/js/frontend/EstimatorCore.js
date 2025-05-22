@@ -6,8 +6,8 @@
  */
 
 import { createLogger, closeMainPluginLogGroup } from '@utils'; // Make sure closeMainPluginLogGroup is imported
-import eventBus from './core/EventBus';
 
+import eventBus from './core/EventBus';
 import DataService from './DataService';
 import ModalManager from './managers/ModalManager';
 import VariationHandler from './VariationHandler';

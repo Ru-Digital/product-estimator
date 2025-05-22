@@ -2315,7 +2315,7 @@ class RoomManager {
    * @param {string} roomId - The room ID
    * @param {Array} productIds - Array of product IDs in the room
    * @param {HTMLElement} roomElement - The room element
-   * @param {Object|null} sectionInfo - Section info with title and description
+   * @param {object | null} sectionInfo - Section info with title and description
    */
   renderSimilarProductsList(similarProductsList, similarProductsContainer, toggleButton, similarProducts, estimateId, roomId, productIds, roomElement, sectionInfo = null) {
     if (similarProducts.length === 0) {

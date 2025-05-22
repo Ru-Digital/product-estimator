@@ -17,36 +17,38 @@
   327:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/admin/modules/LabelSettingsModule.js
-    10:1   warning  There should be at least one empty line between import groups                   import/order
-    11:1   warning  `@utils` import should occur before import of `../common/VerticalTabbedModule`  import/order
-   149:15  warning  'pathParts' is assigned a value but never used                                  no-unused-vars
-   475:13  warning  '$tr' is assigned a value but never used                                        no-unused-vars
-   529:3   warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-   732:3   warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-   879:3   warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-   892:3   warning  Missing JSDoc @returns declaration                                              jsdoc/require-returns
-   892:3   warning  Missing JSDoc @param "labelId" declaration                                      jsdoc/require-param
-   918:3   warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-  1029:1   warning  Invalid JSDoc @param "pathParts" type "array"; prefer: "Array"                  jsdoc/check-types
-  1029:1   warning  The type 'array' is undefined                                                   jsdoc/no-undefined-types
-  1105:3   warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
-  1105:3   warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
+   150:15  warning  'pathParts' is assigned a value but never used  no-unused-vars
+   476:13  warning  '$tr' is assigned a value but never used        no-unused-vars
+   532:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
+   532:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
+   736:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
+   736:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
+   884:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
+   884:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
+   896:3   warning  Missing JSDoc @returns declaration              jsdoc/require-returns
+   898:1   warning  Missing JSDoc @param "labelId" description      jsdoc/require-param-description
+   898:1   warning  Missing JSDoc @param "labelId" type             jsdoc/require-param-type
+   925:1   warning  Missing JSDoc @param "e" description            jsdoc/require-param-description
+   925:1   warning  Missing JSDoc @param "e" type                   jsdoc/require-param-type
+  1113:1   warning  Missing JSDoc @param "filename" description     jsdoc/require-param-description
+  1113:1   warning  Missing JSDoc @param "filename" type            jsdoc/require-param-type
+  1114:1   warning  Missing JSDoc @param "data" description         jsdoc/require-param-description
+  1114:1   warning  Missing JSDoc @param "data" type                jsdoc/require-param-type
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/examples/using-labels.js
-    4:1   warning  Expected only 0 line after block description         jsdoc/tag-lines
-   17:1   warning  Unexpected console statement                         no-console
-   29:1   warning  Unexpected console statement                         no-console
-   34:5   error    'showNotification' is not defined                    no-undef
-   39:1   warning  Unexpected console statement                         no-console
-   54:7   warning  'ProductManager' is defined but never used           no-unused-vars
-   61:9   error    'showNotification' is not defined                    no-undef
-   68:13  error    'showNotification' is not defined                    no-undef
-   90:7   warning  'complexMessage' is assigned a value but never used  no-unused-vars
-  102:1   warning  Unexpected console statement                         no-console
-  106:1   warning  Unexpected console statement                         no-console
-  110:1   warning  Unexpected console statement                         no-console
-  121:5   error    'showNotification' is not defined                    no-undef
-  134:7   warning  'MyComponent' is assigned a value but never used     no-unused-vars
+   16:1   warning  Unexpected console statement                         no-console
+   28:1   warning  Unexpected console statement                         no-console
+   33:5   error    'showNotification' is not defined                    no-undef
+   38:1   warning  Unexpected console statement                         no-console
+   53:7   warning  'ProductManager' is defined but never used           no-unused-vars
+   60:9   error    'showNotification' is not defined                    no-undef
+   67:13  error    'showNotification' is not defined                    no-undef
+   89:7   warning  'complexMessage' is assigned a value but never used  no-unused-vars
+  101:1   warning  Unexpected console statement                         no-console
+  105:1   warning  Unexpected console statement                         no-console
+  109:1   warning  Unexpected console statement                         no-console
+  120:5   error    'showNotification' is not defined                    no-undef
+  133:7   warning  'MyComponent' is assigned a value but never used     no-unused-vars
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/CustomerDetailsManager.js
   10:52  warning  'clearCustomerDetails' is defined but never used  no-unused-vars
@@ -61,29 +63,26 @@
   805:28  warning  'productId' is assigned a value but never used  no-unused-vars
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimateActions.js
-   10:1   warning  There should be at least one empty line between import groups                 import/order
-   12:1   warning  There should be at least one empty line between import groups                 import/order
-   12:8   warning  'TemplateEngine' is defined but never used                                    no-unused-vars
-   13:1   warning  `@utils/labels` import should occur before import of `./CustomerStorage`      import/order
-   55:7   warning  Unexpected console statement                                                  no-console
-   63:5   warning  Unexpected console statement                                                  no-console
+   14:8   warning  'TemplateEngine' is defined but never used                                    no-unused-vars
+   56:7   warning  Unexpected console statement                                                  no-console
    64:5   warning  Unexpected console statement                                                  no-console
-   72:5   warning  Unexpected console statement                                                  no-console
-   79:9   warning  Unexpected console statement                                                  no-console
-   89:11  warning  Unexpected console statement                                                  no-console
-  175:5   warning  Unexpected console statement                                                  no-console
-  250:9   warning  Unexpected console statement                                                  no-console
-  257:11  warning  Unexpected console statement                                                  no-console
-  262:11  warning  Unexpected console statement                                                  no-console
-  266:11  warning  Unexpected console statement                                                  no-console
+   65:5   warning  Unexpected console statement                                                  no-console
+   73:5   warning  Unexpected console statement                                                  no-console
+   80:9   warning  Unexpected console statement                                                  no-console
+   90:11  warning  Unexpected console statement                                                  no-console
+  176:5   warning  Unexpected console statement                                                  no-console
+  251:9   warning  Unexpected console statement                                                  no-console
+  258:11  warning  Unexpected console statement                                                  no-console
+  263:11  warning  Unexpected console statement                                                  no-console
   267:11  warning  Unexpected console statement                                                  no-console
-  277:11  warning  Unexpected console statement                                                  no-console
-  295:13  warning  Unexpected console statement                                                  no-console
-  299:13  warning  Unexpected console statement                                                  no-console
-  308:15  warning  Unexpected console statement                                                  no-console
-  821:24  warning  'estimateId' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
-  827:9   warning  Unexpected console statement                                                  no-console
-  830:9   warning  Unexpected console statement                                                  no-console
+  268:11  warning  Unexpected console statement                                                  no-console
+  278:11  warning  Unexpected console statement                                                  no-console
+  296:13  warning  Unexpected console statement                                                  no-console
+  300:13  warning  Unexpected console statement                                                  no-console
+  309:15  warning  Unexpected console statement                                                  no-console
+  822:24  warning  'estimateId' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+  828:9   warning  Unexpected console statement                                                  no-console
+  831:9   warning  Unexpected console statement                                                  no-console
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimateStorage.js
   389:5    warning  Unexpected console statement                          no-console
@@ -92,10 +91,6 @@
   407:5    warning  Unexpected console statement                          no-console
   502:124  warning  'parentProductId' is assigned a value but never used  no-unused-vars
 
-/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/EstimatorCore.js
-  8:1  warning  There should be at least one empty line between import groups  import/order
-  9:1  warning  There should be no empty line within import group              import/order
-
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/InfiniteCarousel.js
   113:11  warning  'itemTotalWidth' is assigned a value but never used  no-unused-vars
   223:11  warning  'availableWidth' is assigned a value but never used  no-unused-vars
@@ -103,11 +98,6 @@
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/ProductSelectionDialog.js
    84:13  warning  Unexpected console statement  no-console
   100:13  warning  Unexpected console statement  no-console
-
-/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/TemplateEngine.js
-   255:1  warning  @public should be empty                                 jsdoc/empty-tags
-  1107:1  warning  Invalid JSDoc @returns type "Object"; prefer: "object"  jsdoc/check-types
-  1185:1  warning  Invalid JSDoc @returns type "Object"; prefer: "object"  jsdoc/check-types
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/Tooltip.js
    34:7   warning  Unexpected console statement                                             no-console
@@ -153,8 +143,7 @@
   13:28  warning  'saveEstimateData' is defined but never used  no-unused-vars
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/ModalManager.js
-   9:1  warning  There should be at least one empty line between import groups  import/order
-  10:1  warning  There should be no empty line within import group              import/order
+  11:1  warning  There should be no empty line within import group  import/order
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/ProductManager.js
    13:10  warning  'loadEstimateData' is defined but never used                                  no-unused-vars
@@ -166,11 +155,10 @@
   798:7   warning  'room' is assigned a value but never used                                     no-unused-vars
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/RoomManager.js
-    13:28  warning  'saveEstimateData' is defined but never used                        no-unused-vars
-    13:46  warning  'addRoom' is defined but never used                                 no-unused-vars
-    13:55  warning  'removeRoom' is defined but never used                              no-unused-vars
-  1056:7   warning  'sectionInfo' is assigned a value but never used                    no-unused-vars
-  2318:1   warning  Invalid JSDoc @param "sectionInfo" type "Object"; prefer: "object"  jsdoc/check-types
+    13:28  warning  'saveEstimateData' is defined but never used      no-unused-vars
+    13:46  warning  'addRoom' is defined but never used               no-unused-vars
+    13:55  warning  'removeRoom' is defined but never used            no-unused-vars
+  1056:7   warning  'sectionInfo' is assigned a value but never used  no-unused-vars
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/frontend/managers/UIManager.js
    11:10  warning  'format' is defined but never used                                              no-unused-vars
@@ -201,75 +189,11 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
-/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/labels-enhanced.js
-    2:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   60:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   81:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  156:17  warning  Unexpected console statement                                         no-console
-  178:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  181:1   warning  Invalid JSDoc @param "obj" type "Object"; prefer: "object"           jsdoc/check-types
-  201:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  244:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  275:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  304:21  warning  Unexpected console statement                                         no-console
-  309:17  warning  Unexpected console statement                                         no-console
-  315:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  318:1   warning  Invalid JSDoc @param "replacements" type "Object"; prefer: "object"  jsdoc/check-types
-  355:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  359:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  374:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  385:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  400:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  459:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  463:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  477:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  507:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  524:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  526:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  553:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  556:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  576:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  579:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  602:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  615:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  617:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  659:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  690:13  warning  Unexpected console statement                                         no-console
-  695:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  724:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/labels.js
-    2:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   56:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   77:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  134:21  warning  Unexpected console statement                                         no-console
-  160:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  203:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  232:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  261:21  warning  Unexpected console statement                                         no-console
-  266:17  warning  Unexpected console statement                                         no-console
-  272:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  275:1   warning  Invalid JSDoc @param "replacements" type "Object"; prefer: "object"  jsdoc/check-types
-  312:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  315:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  322:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  334:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  393:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  397:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  411:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  441:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  452:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  454:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  479:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  482:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  502:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  515:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  517:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  558:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  588:13  warning  Unexpected console statement                                         no-console
-  593:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  615:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  154:17  warning  Unexpected console statement  no-console
+  298:21  warning  Unexpected console statement  no-console
+  303:17  warning  Unexpected console statement  no-console
+  668:13  warning  Unexpected console statement  no-console
 
-✖ 219 problems (4 errors, 215 warnings)
-  0 errors and 78 warnings potentially fixable with the `--fix` option.
+✖ 150 problems (4 errors, 146 warnings)
 

@@ -8,9 +8,10 @@
  */
 
 import { createLogger } from '@utils';
+import { labelManager } from '@utils/labels';
+
 import { loadCustomerDetails, saveCustomerDetails } from './CustomerStorage';
 import TemplateEngine from './TemplateEngine';
-import { labelManager } from '@utils/labels';
 // ConfirmationDialog is used via window.productEstimator.dialog or modalManager
 
 const logger = createLogger('EstimateActions');

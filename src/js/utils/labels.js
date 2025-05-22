@@ -1,12 +1,14 @@
 /**
- * Label Manager utility for handling dynamic labels in the frontend
- * 
- * @since 2.0.0
+ * Enhanced Label Manager utility for handling hierarchical labels in the frontend
+ *
+ * Consolidated version combining both v2 and v3 label functionality
+ * Supports both legacy flat structure and new hierarchical structure
+ * @since 3.0.0
  */
 export class LabelManager {
     constructor() {
         this.labels = window.productEstimatorLabels || {};
-        this.version = this.labels._version || '2.0.0';
+        this.version = this.labels._version || '3.0.0';
         
         // Local cache for processed labels
         this.cache = new Map();
@@ -38,6 +40,7 @@ export class LabelManager {
             _lookups: {
                 hits: 0,
                 misses: 0,
+                hierarchicalHits: 0,
                 startTime: Date.now(),
                 performanceMarks: []
             }
@@ -54,7 +57,6 @@ export class LabelManager {
     
     /**
      * Set up interval for sending analytics batches
-     * 
      * @private
      */
     setupAnalyticsBatchSending() {
@@ -74,14 +76,14 @@ export class LabelManager {
     }
 
     /**
-     * Get a label value using hierarchical dot notation with client-side caching
-     * 
-     * @param {string} key - Label key (hierarchical path e.g., 'estimate_management.estimate_actions.buttons.save_button.label')
+     * Get a label value with enhanced support for hierarchical paths
+     * Supports both v2 flat structure and v3 hierarchical structure
+     * @param {string} key - Label key (supports both v2 and v3 formats)
      * @param {string} defaultValue - Default value if label not found
      * @returns {string} Label value or default
      */
     get(key, defaultValue = '') {
-        // Mark start time for performance analysis
+        // Start timing for performance analysis
         const startTime = window.performance && window.performance.now ? window.performance.now() : Date.now();
         
         // Check cache first for the fastest retrieval
@@ -93,10 +95,7 @@ export class LabelManager {
             }
             
             const value = this.cache.get(key);
-            
-            // Record performance timing
             this.recordLabelLookupPerformance(key, startTime, true);
-            
             return value;
         }
         
@@ -105,41 +104,58 @@ export class LabelManager {
             this.analytics._lookups.misses++;
         }
         
-        // Check if we have a flattened version first (faster lookup)
-        if (this.labels._flat && this.labels._flat[key] !== undefined) {
-            const value = this.labels._flat[key];
-            this.cache.set(key, value); // Cache for future
+        // Try finding the value in different ways
+        let value = null;
+        let lookupType = '';
+        
+        // 1. Check if this is a hierarchical path (3+ levels)
+        if (key.split('.').length >= 3) {
+            // This is likely a v3 hierarchical path
+            value = this.getDeepValue(this.labels, key.split('.'));
             
-            // Track usage analytics
-            if (this.analytics.enabled) {
-                this.trackUsage(key);
+            if (value !== null) {
+                lookupType = 'hierarchical';
+                if (this.analytics.enabled) {
+                    this.analytics._lookups.hierarchicalHits++;
+                }
             }
-            
-            // Record performance timing
-            this.recordLabelLookupPerformance(key, startTime, false, 'flattened');
-            
-            return value;
         }
         
-        // Hierarchical dot notation lookup
-        const keys = key.split('.');
-        let value = this.labels;
+        // 2. Check if we can find it in the flattened structure (v2 compatibility)
+        if (value === null && this.labels._flat && this.labels._flat[key] !== undefined) {
+            value = this.labels._flat[key];
+            lookupType = 'flattened';
+        }
         
-        for (const k of keys) {
-            if (value && value[k] !== undefined) {
-                value = value[k];
-            } else {
-                // Log missing label in development
-                if (window.productEstimatorDebug) {
-                    console.warn(`Label not found: ${key}`);
+        // 3. Standard hierarchical dot notation lookup
+        if (value === null) {
+            const keys = key.split('.');
+            let current = this.labels;
+            
+            for (const k of keys) {
+                if (current && current[k] !== undefined) {
+                    current = current[k];
+                } else {
+                    current = null;
+                    break;
                 }
-                this.cache.set(key, defaultValue); // Cache the default too
-                
-                // Record performance timing for missing label
-                this.recordLabelLookupPerformance(key, startTime, false, 'missing');
-                
-                return defaultValue;
             }
+            
+            if (current !== null) {
+                value = current;
+                lookupType = 'standard';
+            }
+        }
+        
+        // If we still don't have a value, use the default
+        if (value === null) {
+            // Log missing label in development
+            if (window.productEstimatorDebug) {
+                console.warn(`Label not found: ${key}`);
+            }
+            
+            value = defaultValue;
+            lookupType = 'missing';
         }
         
         // Cache the result for next time
@@ -147,18 +163,39 @@ export class LabelManager {
         
         // Track usage analytics
         if (this.analytics.enabled) {
-            this.trackUsage(key);
+            this.trackUsage(key, lookupType);
         }
         
-        // Record performance timing for successful lookup
-        this.recordLabelLookupPerformance(key, startTime, false, 'found');
+        // Record performance timing
+        this.recordLabelLookupPerformance(key, startTime, false, lookupType);
         
         return value;
     }
     
     /**
+     * Get a deep nested value from an object using path parts
+     * @private
+     * @param {object} obj - Object to traverse
+     * @param {Array} parts - Path parts
+     * @param {string} defaultValue - Default value if path not found
+     * @returns {any} The value or null if not found
+     */
+    getDeepValue(obj, parts, defaultValue = null) {
+        let current = obj;
+        
+        for (const part of parts) {
+            if (current && current[part] !== undefined) {
+                current = current[part];
+            } else {
+                return defaultValue;
+            }
+        }
+        
+        return current;
+    }
+    
+    /**
      * Record performance metrics for label lookup
-     * 
      * @private
      * @param {string} key - Label key
      * @param {number} startTime - Performance mark start time
@@ -201,11 +238,11 @@ export class LabelManager {
     
     /**
      * Track label usage for analytics
-     * 
      * @private
      * @param {string} key - Label key
+     * @param {string} lookupType - Type of lookup performed
      */
-    trackUsage(key) {
+    trackUsage(key, lookupType = '') {
         // Increment local count
         if (!this.analytics.counts[key]) {
             this.analytics.counts[key] = 0;
@@ -219,7 +256,8 @@ export class LabelManager {
         this.analytics.pendingBatch.push({
             key: key,
             timestamp: Date.now(),
-            page: window.location.pathname
+            page: window.location.pathname,
+            lookupType: lookupType || undefined
         });
         
         // Send batch if threshold reached
@@ -230,7 +268,6 @@ export class LabelManager {
     
     /**
      * Send analytics batch to server
-     * 
      * @private
      */
     sendAnalyticsBatch() {
@@ -270,9 +307,8 @@ export class LabelManager {
 
     /**
      * Format a label with replacements
-     * 
      * @param {string} key - Label key
-     * @param {Object} replacements - Key-value pairs for replacements
+     * @param {object} replacements - Key-value pairs for replacements
      * @param {string} defaultValue - Default value if label not found
      * @returns {string} Formatted label
      */
@@ -310,17 +346,24 @@ export class LabelManager {
 
     /**
      * Get all labels for a category
-     * 
      * @param {string} category - Category name (e.g., 'buttons', 'forms')
-     * @returns {Object} Category labels
+     * @param {string} subcategory - Optional subcategory (e.g., 'estimate', 'product')
+     * @returns {object} Category or subcategory labels
      */
-    getCategory(category) {
-        return this.labels[category] || {};
+    getCategory(category, subcategory = null) {
+        if (!this.labels[category]) {
+            return {};
+        }
+        
+        if (subcategory !== null) {
+            return this.labels[category][subcategory] || {};
+        }
+        
+        return this.labels[category];
     }
 
     /**
      * Check if a label exists
-     * 
      * @param {string} key - Label key
      * @returns {boolean} True if label exists
      */
@@ -328,11 +371,22 @@ export class LabelManager {
         return this.get(key, null) !== null;
     }
 
+    /**
+     * Get a hierarchical label (convenience method)
+     * @param {string} category - Category name
+     * @param {string} subcategory - Subcategory name
+     * @param {string} key - Label key
+     * @param {string} defaultValue - Default value if label not found
+     * @returns {string} Label value
+     */
+    getHierarchical(category, subcategory, key, defaultValue = '') {
+        const path = `${category}.${subcategory}.${key}`;
+        return this.get(path, defaultValue);
+    }
 
     /**
      * Update DOM elements with labels
      * Looks for elements with data-label attributes
-     * 
      * @param {HTMLElement} container - Container element to search within
      */
     updateDOM(container = document) {
@@ -391,10 +445,9 @@ export class LabelManager {
     /**
      * Get labels for a specific component
      * Useful for getting all labels needed by a component
-     * 
      * @param {string} component - Component name
      * @param {Array} labelKeys - Array of label keys needed
-     * @returns {Object} Object with label keys and values
+     * @returns {object} Object with label keys and values
      */
     getComponentLabels(component, labelKeys) {
         const componentLabels = {};
@@ -409,7 +462,6 @@ export class LabelManager {
     /**
      * Search for labels containing a specific text
      * Useful for debugging and admin search functionality
-     * 
      * @param {string} searchText - Text to search for
      * @returns {Array} Array of matching labels with their keys
      */
@@ -439,26 +491,30 @@ export class LabelManager {
 
     /**
      * Export labels for backup or sharing
-     * 
      * @param {string} category - Optional category to export
+     * @param {string} subcategory - Optional subcategory to export
      * @returns {string} JSON string of labels
      */
-    export(category = null) {
-        const exportData = category ? this.getCategory(category) : this.labels;
+    export(category = null, subcategory = null) {
+        let exportData = this.labels;
+        
+        if (category !== null) {
+            exportData = this.getCategory(category, subcategory);
+        }
+        
         return JSON.stringify(exportData, null, 2);
     }
 
     /**
      * Get debugging information
-     * 
-     * @returns {Object} Debug info
+     * @returns {object} Debug info
      */
     getDebugInfo() {
         return {
             version: this.version,
             totalLabels: this.countLabels(),
             hierarchicalStructure: {
-                categories: Object.keys(this.labels).filter(k => k !== '_version' && k !== '_flat'),
+                categories: Object.keys(this.labels).filter(k => k !== '_version' && k !== '_flat' && k !== '_legacy'),
                 subcategoryCounts: this.getSubcategoryCounts(),
             },
             missingLabels: this.findMissingLabels(),
@@ -470,16 +526,17 @@ export class LabelManager {
                 trackedLabels: Object.keys(this.analytics.counts).length,
                 pendingBatchSize: this.analytics.pendingBatch.length,
                 topUsedLabels: this.getTopUsedLabels(5),
-                totalUsageCounts: Object.values(this.analytics.counts).reduce((sum, count) => sum + count, 0)
+                totalUsageCounts: Object.values(this.analytics.counts).reduce((sum, count) => sum + count, 0),
+                hierarchicalHits: this.analytics._lookups.hierarchicalHits,
+                lookupTypes: this.getLookupTypeStats()
             }
         };
     }
     
     /**
      * Get subcategory counts for each category
-     * 
      * @private
-     * @returns {Object} Counts by category
+     * @returns {object} Counts by category
      */
     getSubcategoryCounts() {
         const counts = {};
@@ -499,8 +556,32 @@ export class LabelManager {
     }
     
     /**
+     * Get statistics on lookup types
+     * @private
+     * @returns {object} Lookup type stats
+     */
+    getLookupTypeStats() {
+        if (!this.analytics._lookups.performanceMarks.length) {
+            return {};
+        }
+        
+        const typeCounts = {};
+        
+        this.analytics._lookups.performanceMarks.forEach(mark => {
+            if (!mark.lookupType) return;
+            
+            if (!typeCounts[mark.lookupType]) {
+                typeCounts[mark.lookupType] = 0;
+            }
+            
+            typeCounts[mark.lookupType]++;
+        });
+        
+        return typeCounts;
+    }
+    
+    /**
      * Get the top most used labels in the current session
-     * 
      * @param {number} limit - Number of labels to return
      * @returns {Array} Top used labels with usage count
      */
@@ -513,8 +594,7 @@ export class LabelManager {
     
     /**
      * Analyze label usage performance
-     * 
-     * @returns {Object} Performance metrics
+     * @returns {object} Performance metrics
      */
     analyzePerformance() {
         if (!window.performance || !window.performance.getEntriesByType) {
@@ -548,7 +628,8 @@ export class LabelManager {
             cacheHitRate: this.getCacheHitRate(),
             totalProcessed: Object.values(this.analytics.counts).reduce((sum, count) => sum + count, 0),
             missingCount: this.findMissingLabels().length,
-            formatCount: this.analytics.pendingBatch.filter(item => item.context === 'formatted').length
+            formatCount: this.analytics.pendingBatch.filter(item => item.context === 'formatted').length,
+            lookupTypeStats: this.getLookupTypeStats()
         };
         
         return metrics;
@@ -556,7 +637,6 @@ export class LabelManager {
     
     /**
      * Calculate cache hit rate for performance analysis
-     * 
      * @private
      * @returns {number} Cache hit rate as percentage
      */
@@ -591,14 +671,20 @@ export class LabelManager {
 
     /**
      * Count total number of labels
-     * 
      * @returns {number} Total count
      */
     countLabels() {
         let count = 0;
         
         const countRecursive = (obj) => {
-            Object.values(obj).forEach(value => {
+            Object.keys(obj).forEach(key => {
+                // Skip special keys
+                if (key.startsWith('_')) {
+                    return;
+                }
+                
+                const value = obj[key];
+                
                 if (typeof value === 'string') {
                     count++;
                 } else if (typeof value === 'object' && value !== null) {
@@ -613,7 +699,6 @@ export class LabelManager {
 
     /**
      * Find missing labels referenced in the DOM
-     * 
      * @returns {Array} Array of missing label keys
      */
     findMissingLabels() {

@@ -13,7 +13,7 @@
             <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['page' => 'product-estimator-label-analytics', 'export' => 'csv'], admin_url('admin.php')), 'export_label_analytics_csv')); ?>" class="button">
                 <?php echo esc_html__('Export to CSV', 'product-estimator'); ?>
             </a>
-            <button id="pe-reset-analytics" class="button button-secondary">
+            <button id="pe-reset-analytics" class="button button-primary">
                 <?php echo esc_html__('Reset Analytics Data', 'product-estimator'); ?>
             </button>
         </div>
@@ -60,25 +60,29 @@
         <div class="analytics-tables">
             <div class="table-container">
                 <h3><?php echo esc_html__('Top 20 Most Used Labels', 'product-estimator'); ?></h3>
+                <p><?php echo esc_html__('These are the most frequently accessed labels in your application. High usage indicates important UI elements that users interact with regularly.', 'product-estimator'); ?></p>
+                
                 <?php if (!empty($most_used)): ?>
-                <table class="widefat striped">
-                    <thead>
-                        <tr>
-                            <th><?php echo esc_html__('Label Key', 'product-estimator'); ?></th>
-                            <th><?php echo esc_html__('Category', 'product-estimator'); ?></th>
-                            <th><?php echo esc_html__('Usage Count', 'product-estimator'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($most_used as $key => $count): ?>
+                <div class="table-wrapper">
+                    <table class="widefat striped">
+                        <thead>
                             <tr>
-                                <td><?php echo esc_html($key); ?></td>
-                                <td><?php echo esc_html($this->get_label_category($key)); ?></td>
-                                <td><?php echo esc_html($count); ?></td>
+                                <th><?php echo esc_html__('Label Key', 'product-estimator'); ?></th>
+                                <th><?php echo esc_html__('Category', 'product-estimator'); ?></th>
+                                <th><?php echo esc_html__('Usage Count', 'product-estimator'); ?></th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($most_used as $key => $count): ?>
+                                <tr>
+                                    <td><?php echo esc_html($key); ?></td>
+                                    <td><?php echo esc_html($this->get_label_category($key)); ?></td>
+                                    <td><?php echo esc_html($count); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
                 <?php else: ?>
                 <div class="notice notice-info inline">
                     <p><?php echo esc_html__('No label usage data has been collected yet. Enable the Label Analytics feature switch and use the application to start collecting data.', 'product-estimator'); ?></p>
@@ -86,7 +90,7 @@
                 <?php endif; ?>
             </div>
             
-            <div class="table-container">
+            <div class="table-container scrollable">
                 <div class="table-header-with-actions">
                     <h3><?php echo esc_html__('Unused Labels', 'product-estimator'); ?></h3>
                     <?php if (!empty($unused_labels)): ?>
@@ -104,34 +108,39 @@
                         </p>
                     <?php endif; ?>
                     
-                    <table class="widefat striped">
-                        <thead>
-                            <tr>
-                                <th><?php echo esc_html__('Label Key', 'product-estimator'); ?></th>
-                                <th><?php echo esc_html__('Category', 'product-estimator'); ?></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach (array_slice($unused_labels, 0, 50) as $key): ?>
+                    <div class="table-wrapper">
+                        <table class="widefat striped">
+                            <thead>
                                 <tr>
-                                    <td><?php echo esc_html($key); ?></td>
-                                    <td><?php echo esc_html($this->get_label_category($key)); ?></td>
+                                    <th><?php echo esc_html__('Label Key', 'product-estimator'); ?></th>
+                                    <th><?php echo esc_html__('Category', 'product-estimator'); ?></th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach (array_slice($unused_labels, 0, 50) as $key): ?>
+                                    <tr>
+                                        <td><?php echo esc_html($key); ?></td>
+                                        <td><?php echo esc_html($this->get_label_category($key)); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 <?php else: ?>
                     <div class="notice notice-info inline">
                         <p><?php echo esc_html__('No unused labels detected yet or all labels are already being tracked. Enable the Label Analytics feature switch and use the application to collect more data.', 'product-estimator'); ?></p>
                     </div>
                 <?php endif; ?>
             </div>
-            
-            <div class="table-container">
+        </div>
+        
+        <!-- Missing Labels Section - Full Width -->
+        <div class="missing-labels-section">
+            <div class="table-container full-width scrollable">
                 <div class="table-header-with-actions">
                     <h3><?php echo esc_html__('Missing Labels', 'product-estimator'); ?></h3>
                     <?php if (!empty($missing_labels)): ?>
-                    <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['page' => 'product-estimator-label-analytics', 'export' => 'missing-labels-csv'], admin_url('admin.php')), 'export_missing_labels_csv')); ?>" class="button button-primary">
+                    <a href="<?php echo esc_url(wp_nonce_url(add_query_arg(['page' => 'product-estimator-label-analytics', 'export' => 'missing-labels-csv'], admin_url('admin.php')), 'export_missing_labels_csv')); ?>" class="button button-secondary">
                         <?php echo esc_html__('Export Missing Labels', 'product-estimator'); ?>
                     </a>
                     <?php endif; ?>
@@ -145,56 +154,58 @@
                         </p>
                     <?php endif; ?>
                     
-                    <table class="widefat striped">
-                        <thead>
-                            <tr>
-                                <th><?php echo esc_html__('Label Key', 'product-estimator'); ?></th>
-                                <th><?php echo esc_html__('Default Text Used', 'product-estimator'); ?></th>
-                                <th><?php echo esc_html__('Usage Count', 'product-estimator'); ?></th>
-                                <th><?php echo esc_html__('Source Location', 'product-estimator'); ?></th>
-                                <th><?php echo esc_html__('First/Last Seen', 'product-estimator'); ?></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach (array_slice($missing_labels, 0, 50) as $key => $data): ?>
+                    <div class="table-wrapper">
+                        <table class="widefat striped">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        <code><?php echo esc_html($data['key']); ?></code>
-                                    </td>
-                                    <td>
-                                        <?php if (!empty($data['default_text'])): ?>
-                                            <em><?php echo esc_html($data['default_text']); ?></em>
-                                            <?php if (!empty($data['alternative_defaults'])): ?>
-                                                <br><small><strong>Alt defaults:</strong> <?php echo esc_html(implode(', ', array_slice($data['alternative_defaults'], 0, 3))); ?>
-                                                <?php if (count($data['alternative_defaults']) > 3): ?>
-                                                    (and <?php echo count($data['alternative_defaults']) - 3; ?> more)
-                                                <?php endif; ?>
-                                                </small>
-                                            <?php endif; ?>
-                                        <?php else: ?>
-                                            <span class="description"><?php echo esc_html__('No default text', 'product-estimator'); ?></span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <span class="count-badge"><?php echo esc_html($data['count']); ?></span>
-                                    </td>
-                                    <td>
-                                        <?php if (!empty($data['stack_trace'])): ?>
-                                            <code class="source-location"><?php echo esc_html($data['stack_trace']); ?></code>
-                                        <?php else: ?>
-                                            <span class="description"><?php echo esc_html__('No source info', 'product-estimator'); ?></span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <small>
-                                            <strong><?php echo esc_html__('First:', 'product-estimator'); ?></strong> <?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($data['first_seen']))); ?><br>
-                                            <strong><?php echo esc_html__('Last:', 'product-estimator'); ?></strong> <?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($data['last_seen']))); ?>
-                                        </small>
-                                    </td>
+                                    <th><?php echo esc_html__('Label Key', 'product-estimator'); ?></th>
+                                    <th><?php echo esc_html__('Default Text Used', 'product-estimator'); ?></th>
+                                    <th><?php echo esc_html__('Usage Count', 'product-estimator'); ?></th>
+                                    <th><?php echo esc_html__('Source Location', 'product-estimator'); ?></th>
+                                    <th><?php echo esc_html__('First/Last Seen', 'product-estimator'); ?></th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach (array_slice($missing_labels, 0, 50) as $key => $data): ?>
+                                    <tr>
+                                        <td>
+                                            <code><?php echo esc_html($data['key']); ?></code>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($data['default_text'])): ?>
+                                                <em><?php echo esc_html($data['default_text']); ?></em>
+                                                <?php if (!empty($data['alternative_defaults'])): ?>
+                                                    <br><small><strong>Alt defaults:</strong> <?php echo esc_html(implode(', ', array_slice($data['alternative_defaults'], 0, 3))); ?>
+                                                    <?php if (count($data['alternative_defaults']) > 3): ?>
+                                                        (and <?php echo count($data['alternative_defaults']) - 3; ?> more)
+                                                    <?php endif; ?>
+                                                    </small>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="description"><?php echo esc_html__('No default text', 'product-estimator'); ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <span class="count-badge"><?php echo esc_html($data['count']); ?></span>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($data['stack_trace'])): ?>
+                                                <code class="source-location"><?php echo esc_html($data['stack_trace']); ?></code>
+                                            <?php else: ?>
+                                                <span class="description"><?php echo esc_html__('No source info', 'product-estimator'); ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <small>
+                                                <strong><?php echo esc_html__('First:', 'product-estimator'); ?></strong> <?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($data['first_seen']))); ?><br>
+                                                <strong><?php echo esc_html__('Last:', 'product-estimator'); ?></strong> <?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($data['last_seen']))); ?>
+                                            </small>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 <?php else: ?>
                     <div class="notice notice-success inline">
                         <p><?php echo esc_html__('No missing labels detected! All requested label keys exist in the label structure.', 'product-estimator'); ?></p>
@@ -220,6 +231,7 @@
 
 .analytics-summary {
     display: flex;
+    gap: 20px;
     margin-bottom: 20px;
 }
 
@@ -246,10 +258,17 @@
     flex: 1;
     min-width: 300px;
     position: relative;
-    height: 350px; /* Fixed height for all chart containers */
-    overflow: hidden; /* Prevent overflow */
+    height: 450px; /* Increased height for better chart visibility */
+    overflow: visible; /* Allow content to be visible */
     display: flex;
     flex-direction: column;
+}
+
+.chart-container canvas {
+    flex: 1;
+    max-height: 380px; /* Ensure canvas doesn't exceed container */
+    width: 100% !important;
+    height: auto !important;
 }
 
 .analytics-tables {
@@ -265,6 +284,79 @@
     padding: 15px;
     flex: 1;
     min-width: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Equal height for side-by-side tables */
+.analytics-tables .table-container {
+    height: 500px;
+}
+
+/* Make the table wrapper take remaining space */
+.analytics-tables .table-container .table-wrapper,
+.analytics-tables .table-container table {
+    flex: 1;
+    height: 100%;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.analytics-tables .table-container table {
+    margin: 0;
+    border: none;
+}
+
+.analytics-tables .table-container table thead th {
+    position: sticky;
+    top: 0;
+    background: #f1f1f1;
+    z-index: 10;
+    border-bottom: 2px solid #ddd;
+}
+
+/* Missing Labels Section - Full Width */
+.missing-labels-section {
+    margin-top: 20px;
+}
+
+.missing-labels-section .table-container.full-width {
+    width: 100%;
+    flex: none;
+    min-width: auto;
+}
+
+/* Scrollable Tables for Unused and Missing Labels */
+.table-container.scrollable {
+    max-height: 500px;
+    overflow-y: auto;
+    position: relative;
+}
+
+.table-container.scrollable table {
+    margin-bottom: 0;
+}
+
+.table-container.scrollable .table-wrapper {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.table-container.scrollable .table-wrapper table {
+    margin: 0;
+    border: none;
+}
+
+.table-container.scrollable .table-wrapper thead th {
+    position: sticky;
+    top: 0;
+    background: #f1f1f1;
+    z-index: 10;
+    border-bottom: 2px solid #ddd;
 }
 
 /* Style for the empty data messages */
@@ -298,14 +390,24 @@
 /* Table Header with Actions */
 .table-header-with-actions {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: 10px;
+    flex-wrap: nowrap;
+    gap: 20px;
 }
 
 .table-header-with-actions h3 {
     margin: 0;
+    flex: none;
+    min-width: 0;
 }
+
+.table-header-with-actions .button {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
 
 /* Missing Labels Panel Styles */
 .count-badge {
@@ -404,7 +506,18 @@ jQuery(document).ready(function($) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false, // Changed to false for better container sizing
+                layout: {
+                    padding: {
+                        bottom: 20 // Add padding to prevent label cut-off
+                    }
+                },
                 scales: {
+                    x: {
+                        ticks: {
+                            maxRotation: 45, // Rotate labels to prevent overlap
+                            minRotation: 45
+                        }
+                    },
                     y: {
                         beginAtZero: true
                     }
@@ -449,9 +562,21 @@ jQuery(document).ready(function($) {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false, // Changed to false for better container sizing
+                    layout: {
+                        padding: {
+                            top: 10,
+                            bottom: 10,
+                            left: 10,
+                            right: 10
+                        }
+                    },
                     plugins: {
                         legend: {
                             position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 10
+                            }
                         }
                     }
                 }

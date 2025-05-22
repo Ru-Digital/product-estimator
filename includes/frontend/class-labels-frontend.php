@@ -251,13 +251,13 @@ class LabelsFrontend extends FrontendBase {
             $stored_labels = get_option($this->option_name, []);
         }
         
-        // If no labels exist, get defaults
+        // If no labels exist, get defaults (values only, no metadata)
         if (empty($stored_labels)) {
-            $stored_labels = LabelsStructure::get_structure();
+            $stored_labels = LabelsStructure::get_label_values_only();
         }
         
-        // Merge with defaults to ensure all labels exist
-        $default_labels = LabelsStructure::get_structure();
+        // Merge with defaults to ensure all labels exist (values only, no metadata)
+        $default_labels = LabelsStructure::get_label_values_only();
         $merged_labels = array_replace_recursive($default_labels, $stored_labels);
         
         // Apply performance improvements

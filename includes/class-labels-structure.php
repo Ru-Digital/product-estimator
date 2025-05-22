@@ -25,16 +25,24 @@ class LabelsStructure {
                 'estimate_actions' => [
                     'buttons' => [
                         'save_button' => [
-                            'label' => __('Save Estimate', 'product-estimator')
+                            'label' => __('Save Estimate', 'product-estimator'),
+                            'description' => __('Button text for saving the current estimate', 'product-estimator'),
+                            'usage' => __('Used in the estimate editor toolbar and form submission', 'product-estimator')
                         ],
                         'print_button' => [
-                            'label' => __('Print Estimate', 'product-estimator')
+                            'label' => __('Print Estimate', 'product-estimator'),
+                            'description' => __('Button text for printing the estimate as PDF', 'product-estimator'),
+                            'usage' => __('Used in estimate view and actions menu for PDF generation', 'product-estimator')
                         ],
                         'request_copy_button' => [
-                            'label' => __('Request a Copy', 'product-estimator')
+                            'label' => __('Request a Copy', 'product-estimator'),
+                            'description' => __('Button text for requesting a copy of the estimate', 'product-estimator'),
+                            'usage' => __('Used in estimate sharing options and customer actions', 'product-estimator')
                         ],
                         'delete_button' => [
-                            'label' => __('Delete Estimate', 'product-estimator')
+                            'label' => __('Delete Estimate', 'product-estimator'),
+                            'description' => __('Button text for deleting the current estimate', 'product-estimator'),
+                            'usage' => __('Used in estimate management interfaces and confirmation dialogs', 'product-estimator')
                         ]
                     ]
                 ],
@@ -42,7 +50,11 @@ class LabelsStructure {
                     'fields' => [
                         'estimate_name_field' => [
                             'label' => __('Estimate Name', 'product-estimator'),
-                            'placeholder' => __('Enter estimate name', 'product-estimator')
+                            'placeholder' => __('Enter estimate name', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Estimate name is required', 'product-estimator'),
+                                'min_length' => __('Estimate name must be at least 2 characters', 'product-estimator')
+                            ]
                         ]
                     ],
                     'buttons' => [
@@ -52,6 +64,27 @@ class LabelsStructure {
                     ],
                     'heading' => [
                         'title' => __('Create New Estimate', 'product-estimator')
+                    ]
+                ],
+                'estimate_selection_form' => [
+                    'fields' => [
+                        'estimate_choice_field' => [
+                            'label' => __('Choose an estimate:', 'product-estimator'),
+                            'default_option' => __('-- Select an Estimate --', 'product-estimator')
+                        ]
+                    ],
+                    'buttons' => [
+                        'start_new_button' => [
+                            'label' => __('Start New Estimate', 'product-estimator')
+                        ]
+                    ],
+                    'heading' => [
+                        'title' => __('Select an estimate', 'product-estimator')
+                    ],
+                    'messages' => [
+                        'no_estimates_available_message' => [
+                            'text' => __('No estimates available', 'product-estimator')
+                        ]
                     ]
                 ],
                 'empty_states' => [
@@ -70,20 +103,57 @@ class LabelsStructure {
                     'fields' => [
                         'room_name_field' => [
                             'label' => __('Room Name', 'product-estimator'),
-                            'placeholder' => __('Enter room name', 'product-estimator')
+                            'placeholder' => __('Enter room name', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Room name is required', 'product-estimator'),
+                                'min_length' => __('Room name must be at least 2 characters', 'product-estimator')
+                            ]
                         ],
                         'room_width_field' => [
                             'label' => __('Width (m)', 'product-estimator'),
-                            'placeholder' => __('Width', 'product-estimator')
+                            'placeholder' => __('Width', 'product-estimator'),
+                            'validation' => [
+                                'invalid' => __('Please enter a valid width', 'product-estimator')
+                            ]
                         ],
                         'room_length_field' => [
                             'label' => __('Length (m)', 'product-estimator'),
-                            'placeholder' => __('Length', 'product-estimator')
+                            'placeholder' => __('Length', 'product-estimator'),
+                            'validation' => [
+                                'invalid' => __('Please enter a valid length', 'product-estimator')
+                            ]
                         ]
                     ],
                     'buttons' => [
                         'add_button' => [
                             'label' => __('Add Room', 'product-estimator')
+                        ]
+                    ]
+                ],
+                'room_selection_form' => [
+                    'fields' => [
+                        'room_choice_field' => [
+                            'label' => __('Choose a room:', 'product-estimator'),
+                            'default_option' => __('-- Select a Room --', 'product-estimator')
+                        ]
+                    ],
+                    'buttons' => [
+                        'continue_shopping_button' => [
+                            'label' => __('Continue Shopping', 'product-estimator')
+                        ],
+                        'done_shopping_button' => [
+                            'label' => __('Done Shopping', 'product-estimator')
+                        ],
+                        'create_new_room_button' => [
+                            'label' => __('+ Add New Room', 'product-estimator')
+                        ]
+                    ],
+                    'heading' => [
+                        'title' => __('Select Room', 'product-estimator')
+                    ],
+                    'messages' => [
+                        'no_rooms_message' => [
+                            'text' => __('No rooms available. Create a new room to get started.', 'product-estimator')
                         ]
                     ]
                 ],
@@ -115,6 +185,99 @@ class LabelsStructure {
                         ]
                     ]
                 ],
+                'similar_products' => [
+                    'buttons' => [
+                        'view_similar_button' => [
+                            'label' => __('View Similar', 'product-estimator'),
+                            'description' => __('Button to view similar products', 'product-estimator'),
+                            'usage' => __('Used in product detail view to show similar products', 'product-estimator')
+                        ],
+                        'add_similar_button' => [
+                            'label' => __('Add Similar Product', 'product-estimator'),
+                            'description' => __('Button to add a similar product to the room', 'product-estimator'),
+                            'usage' => __('Used in similar products carousel', 'product-estimator')
+                        ]
+                    ],
+                    'headings' => [
+                        'similar_products_heading' => [
+                            'text' => __('Similar Products', 'product-estimator'),
+                            'description' => __('Heading for similar products section', 'product-estimator'),
+                            'usage' => __('Used in product detail view for similar products section', 'product-estimator')
+                        ]
+                    ],
+                    'messages' => [
+                        'no_similar_products_message' => [
+                            'text' => __('No similar products available', 'product-estimator'),
+                            'description' => __('Message shown when no similar products exist', 'product-estimator'),
+                            'usage' => __('Used in similar products section when empty', 'product-estimator')
+                        ],
+                        'similar_product_added_message' => [
+                            'text' => __('Similar product added to room', 'product-estimator'),
+                            'description' => __('Success message when similar product is added', 'product-estimator'),
+                            'usage' => __('Shown after successfully adding a similar product', 'product-estimator')
+                        ]
+                    ]
+                ],
+                'product_additions' => [
+                    'buttons' => [
+                        'view_additions_button' => [
+                            'label' => __('View Additions', 'product-estimator'),
+                            'description' => __('Button to view additional products', 'product-estimator'),
+                            'usage' => __('Used in product detail view to show additional products', 'product-estimator')
+                        ],
+                        'add_addition_button' => [
+                            'label' => __('Add to Room', 'product-estimator'),
+                            'description' => __('Button to add an additional product to the room', 'product-estimator'),
+                            'usage' => __('Used in product additions section', 'product-estimator')
+                        ],
+                        'remove_addition_button' => [
+                            'label' => __('Remove Addition', 'product-estimator'),
+                            'description' => __('Button to remove an additional product', 'product-estimator'),
+                            'usage' => __('Used in room view for additional products', 'product-estimator')
+                        ]
+                    ],
+                    'headings' => [
+                        'additional_products_heading' => [
+                            'text' => __('Additional Products', 'product-estimator'),
+                            'description' => __('Heading for additional products section', 'product-estimator'),
+                            'usage' => __('Used in product detail view for additional products section', 'product-estimator')
+                        ],
+                        'recommended_additions_heading' => [
+                            'text' => __('Recommended Additions', 'product-estimator'),
+                            'description' => __('Heading for recommended additional products', 'product-estimator'),
+                            'usage' => __('Used in product detail view for recommended additions', 'product-estimator')
+                        ]
+                    ],
+                    'messages' => [
+                        'no_additions_message' => [
+                            'text' => __('No additional products available', 'product-estimator'),
+                            'description' => __('Message shown when no additional products exist', 'product-estimator'),
+                            'usage' => __('Used in additional products section when empty', 'product-estimator')
+                        ],
+                        'addition_added_message' => [
+                            'text' => __('Additional product added to room', 'product-estimator'),
+                            'description' => __('Success message when additional product is added', 'product-estimator'),
+                            'usage' => __('Shown after successfully adding an additional product', 'product-estimator')
+                        ],
+                        'addition_removed_message' => [
+                            'text' => __('Additional product removed from room', 'product-estimator'),
+                            'description' => __('Success message when additional product is removed', 'product-estimator'),
+                            'usage' => __('Shown after successfully removing an additional product', 'product-estimator')
+                        ]
+                    ],
+                    'labels' => [
+                        'price_label' => [
+                            'text' => __('Price:', 'product-estimator'),
+                            'description' => __('Label for additional product price', 'product-estimator'),
+                            'usage' => __('Used in additional product displays', 'product-estimator')
+                        ],
+                        'total_price_label' => [
+                            'text' => __('Total with additions:', 'product-estimator'),
+                            'description' => __('Label for total price including additions', 'product-estimator'),
+                            'usage' => __('Used in product pricing display when additions are included', 'product-estimator')
+                        ]
+                    ]
+                ],
                 'empty_states' => [
                     'no_products_message' => [
                         'text' => __('No products added to this room yet.', 'product-estimator')
@@ -131,19 +294,34 @@ class LabelsStructure {
                     'fields' => [
                         'customer_name_field' => [
                             'label' => __('Customer Name', 'product-estimator'),
-                            'placeholder' => __('Enter your name', 'product-estimator')
+                            'placeholder' => __('Enter your name', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Customer name is required', 'product-estimator'),
+                                'min_length' => __('Customer name must be at least 2 characters', 'product-estimator')
+                            ]
                         ],
                         'customer_email_field' => [
                             'label' => __('Email Address', 'product-estimator'),
-                            'placeholder' => __('your@email.com', 'product-estimator')
+                            'placeholder' => __('your@email.com', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Email address is required', 'product-estimator'),
+                                'invalid' => __('Please enter a valid email address', 'product-estimator')
+                            ]
                         ],
                         'customer_phone_field' => [
                             'label' => __('Phone Number', 'product-estimator'),
-                            'placeholder' => __('Your phone number', 'product-estimator')
+                            'placeholder' => __('Your phone number', 'product-estimator'),
+                            'validation' => [
+                                'invalid' => __('Please enter a valid phone number', 'product-estimator')
+                            ]
                         ],
                         'customer_postcode_field' => [
                             'label' => __('Postcode', 'product-estimator'),
-                            'placeholder' => __('Your postcode', 'product-estimator')
+                            'placeholder' => __('Your postcode', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Postcode required', 'product-estimator'),
+                                'invalid' => __('Please enter a valid postcode', 'product-estimator')
+                            ]
                         ]
                     ],
                     'heading' => [
@@ -177,15 +355,127 @@ class LabelsStructure {
                 'confirmation_dialogs' => [
                     'buttons' => [
                         'confirm_button' => [
-                            'label' => __('Confirm', 'product-estimator')
+                            'label' => __('Confirm', 'product-estimator'),
+                            'description' => __('Generic confirm button text', 'product-estimator'),
+                            'usage' => __('Default text for confirmation dialog confirm buttons', 'product-estimator')
                         ],
                         'cancel_button' => [
-                            'label' => __('Cancel', 'product-estimator')
+                            'label' => __('Cancel', 'product-estimator'),
+                            'description' => __('Generic cancel button text', 'product-estimator'),
+                            'usage' => __('Default text for confirmation dialog cancel buttons', 'product-estimator')
+                        ],
+                        'ok_button' => [
+                            'label' => __('OK', 'product-estimator'),
+                            'description' => __('Generic OK button text', 'product-estimator'),
+                            'usage' => __('Default text for single-button dialogs and acknowledgments', 'product-estimator')
+                        ],
+                        'yes_button' => [
+                            'label' => __('Yes', 'product-estimator'),
+                            'description' => __('Yes button for yes/no confirmations', 'product-estimator'),
+                            'usage' => __('Used in yes/no confirmation dialogs', 'product-estimator')
+                        ],
+                        'no_button' => [
+                            'label' => __('No', 'product-estimator'),
+                            'description' => __('No button for yes/no confirmations', 'product-estimator'),
+                            'usage' => __('Used in yes/no confirmation dialogs', 'product-estimator')
+                        ],
+                        'delete_button' => [
+                            'label' => __('Delete', 'product-estimator'),
+                            'description' => __('Delete button for destructive actions', 'product-estimator'),
+                            'usage' => __('Used in delete confirmation dialogs', 'product-estimator')
+                        ],
+                        'remove_button' => [
+                            'label' => __('Remove', 'product-estimator'),
+                            'description' => __('Remove button for removal actions', 'product-estimator'),
+                            'usage' => __('Used in remove confirmation dialogs', 'product-estimator')
+                        ],
+                        'replace_button' => [
+                            'label' => __('Replace', 'product-estimator'),
+                            'description' => __('Replace button for replacement actions', 'product-estimator'),
+                            'usage' => __('Used in replacement confirmation dialogs', 'product-estimator')
                         ]
                     ],
                     'messages' => [
                         'confirm_delete' => [
-                            'text' => __('Are you sure you want to delete this?', 'product-estimator')
+                            'text' => __('Are you sure you want to delete this?', 'product-estimator'),
+                            'description' => __('Generic delete confirmation message', 'product-estimator'),
+                            'usage' => __('Default message for delete confirmation dialogs', 'product-estimator')
+                        ]
+                    ]
+                ],
+                'product_dialogs' => [
+                    'product_exists_dialog' => [
+                        'title' => [
+                            'text' => __('Product Already Exists', 'product-estimator'),
+                            'description' => __('Dialog title when a product already exists in the room', 'product-estimator'),
+                            'usage' => __('Used in ProductManager when attempting to add a duplicate product', 'product-estimator')
+                        ],
+                        'message' => [
+                            'text' => __('This product already exists in the selected room.', 'product-estimator'),
+                            'description' => __('Dialog message when a product already exists in the room', 'product-estimator'),
+                            'usage' => __('Used in ProductManager to inform user about duplicate product', 'product-estimator')
+                        ]
+                    ],
+                    'product_conflict_dialog' => [
+                        'title' => [
+                            'text' => __('A flooring product already exists in the selected room', 'product-estimator'),
+                            'description' => __('Dialog title for primary category conflict', 'product-estimator'),
+                            'usage' => __('Used when adding a primary category product that conflicts with existing one', 'product-estimator')
+                        ],
+                        'buttons' => [
+                            'replace_existing_button' => [
+                                'label' => __('Replace the existing product', 'product-estimator'),
+                                'description' => __('Button to replace existing product with new one', 'product-estimator'),
+                                'usage' => __('Used in primary category conflict dialog', 'product-estimator')
+                            ],
+                            'go_back_button' => [
+                                'label' => __('Go back to room select', 'product-estimator'),
+                                'description' => __('Button to return to room selection', 'product-estimator'),
+                                'usage' => __('Used in primary category conflict dialog to cancel and go back', 'product-estimator')
+                            ]
+                        ]
+                    ],
+                    'primary_conflict_dialog' => [
+                        'title' => [
+                            'text' => __('Primary Product Category Conflict', 'product-estimator'),
+                            'description' => __('Dialog title for server-side primary category conflict', 'product-estimator'),
+                            'usage' => __('Used when server detects primary category conflict', 'product-estimator')
+                        ],
+                        'buttons' => [
+                            'replace_existing_button' => [
+                                'label' => __('Replace existing product', 'product-estimator'),
+                                'description' => __('Button to replace existing product (server conflict)', 'product-estimator'),
+                                'usage' => __('Used in server-side primary category conflict dialog', 'product-estimator')
+                            ],
+                            'back_button' => [
+                                'label' => __('Back', 'product-estimator'),
+                                'description' => __('Back button for server conflict dialog', 'product-estimator'),
+                                'usage' => __('Used in server-side primary category conflict dialog', 'product-estimator')
+                            ]
+                        ]
+                    ],
+                    'remove_product_dialog' => [
+                        'title' => [
+                            'text' => __('Remove Product', 'product-estimator'),
+                            'description' => __('Dialog title for product removal confirmation', 'product-estimator'),
+                            'usage' => __('Used when user wants to remove a product from room', 'product-estimator')
+                        ],
+                        'message' => [
+                            'text' => __('Are you sure you want to remove this product from the room?', 'product-estimator'),
+                            'description' => __('Confirmation message for product removal', 'product-estimator'),
+                            'usage' => __('Used in product removal confirmation dialog', 'product-estimator')
+                        ]
+                    ],
+                    'product_replaced_dialog' => [
+                        'title' => [
+                            'text' => __('Product Replaced Successfully', 'product-estimator'),
+                            'description' => __('Success dialog title when product is replaced', 'product-estimator'),
+                            'usage' => __('Used after successful product replacement', 'product-estimator')
+                        ],
+                        'message' => [
+                            'text' => __('The product has been successfully replaced in your estimate.', 'product-estimator'),
+                            'description' => __('Success message when product is replaced', 'product-estimator'),
+                            'usage' => __('Used in success dialog after product replacement', 'product-estimator')
                         ]
                     ]
                 ],
@@ -282,6 +572,126 @@ class LabelsStructure {
         self::flatten_recursive($structure, '', $flattened);
         
         return $flattened;
+    }
+
+    /**
+     * Get structure with only label values (no metadata like description/usage)
+     * This is used for storing in the database - we don't need to store admin metadata
+     * 
+     * @return array Structure with only label values
+     */
+    public static function get_label_values_only() {
+        $structure = self::get_structure();
+        return self::strip_metadata($structure);
+    }
+
+    /**
+     * Recursively strip metadata from structure, keeping only label values
+     * 
+     * @param array $structure Structure to clean
+     * @return array Cleaned structure
+     */
+    private static function strip_metadata($structure) {
+        $cleaned = [];
+        
+        foreach ($structure as $key => $value) {
+            if (is_array($value)) {
+                // Check if this is a label definition (has 'label', 'text', 'placeholder', etc.)
+                if (self::is_label_definition($value)) {
+                    // Keep only the actual label values, strip metadata
+                    $cleaned[$key] = self::filter_label_values($value);
+                } else {
+                    // This is a category/group, recurse
+                    $cleaned[$key] = self::strip_metadata($value);
+                }
+            } else {
+                // Keep primitive values as-is
+                $cleaned[$key] = $value;
+            }
+        }
+        
+        return $cleaned;
+    }
+
+    /**
+     * Check if an array represents a label definition
+     * 
+     * @param array $array Array to check
+     * @return bool True if this looks like a label definition
+     */
+    private static function is_label_definition($array) {
+        // Label definitions contain keys like 'label', 'text', 'placeholder'
+        $label_keys = ['label', 'text', 'placeholder', 'validation', 'default_option'];
+        return !empty(array_intersect(array_keys($array), $label_keys));
+    }
+
+    /**
+     * Filter label values, removing metadata keys
+     * 
+     * @param array $label_def Label definition array
+     * @return array Filtered array with only label values
+     */
+    private static function filter_label_values($label_def) {
+        // Keep only actual label values, remove metadata
+        $allowed_keys = ['label', 'text', 'placeholder', 'validation', 'default_option'];
+        $filtered = [];
+        
+        foreach ($label_def as $key => $value) {
+            if (in_array($key, $allowed_keys)) {
+                $filtered[$key] = $value;
+            }
+        }
+        
+        return $filtered;
+    }
+
+    /**
+     * Get description for a specific label path
+     * 
+     * @param string $path Dot notation path to the label
+     * @return string Label description or empty string if not found
+     */
+    public static function get_description($path) {
+        return self::get_metadata($path, 'description');
+    }
+
+    /**
+     * Get usage information for a specific label path
+     * 
+     * @param string $path Dot notation path to the label
+     * @return string Label usage info or empty string if not found
+     */
+    public static function get_usage($path) {
+        return self::get_metadata($path, 'usage');
+    }
+
+    /**
+     * Get metadata for a specific label path and key
+     * 
+     * @param string $path Dot notation path to the label
+     * @param string $key Metadata key (description, usage, etc.)
+     * @return string Metadata value or empty string if not found
+     */
+    public static function get_metadata($path, $key) {
+        $structure = self::get_structure();
+        $keys = explode('.', $path);
+        $current = $structure;
+        
+        // Navigate to the label
+        foreach ($keys as $k) {
+            if (isset($current[$k])) {
+                $current = $current[$k];
+            } else {
+                return '';
+            }
+        }
+        
+        // Return the requested metadata key
+        if (is_array($current) && isset($current[$key])) {
+            return $current[$key];
+        }
+        
+        return '';
     }
 
     /**

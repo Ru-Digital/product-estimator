@@ -50,10 +50,10 @@ class LabelsMigration {
     }
 
     /**
-     * Get the default hierarchical label structure
+     * Get the default hierarchical label structure (values only, no metadata)
      */
     public static function get_default_structure() {
-        return LabelsStructure::get_structure();
+        return LabelsStructure::get_label_values_only();
     }
 
     /**

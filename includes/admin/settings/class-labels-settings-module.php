@@ -69,8 +69,9 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             ],
         ];
 
-        // Load the current V3 hierarchical structure from database
-        $this->hierarchical_structure = LabelsStructure::get_structure();
+        // Load the current V3 hierarchical structure (values only, no metadata)
+        // This is used for merging with saved data and defaults
+        $this->hierarchical_structure = LabelsStructure::get_label_values_only();
     }
 
     public function register_hooks() {
@@ -640,340 +641,43 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
     }
 
     private function get_label_description($category, $field_path) {
-        // This could be replaced with a more comprehensive mapping
-        // or loaded from a configuration file
-        $descriptions = [
-            'common' => [
-                'common.buttons.save' => 'Generic save button text used throughout the interface',
-                'common.buttons.cancel' => 'Generic cancel button text used throughout the interface',
-                'common.buttons.delete' => 'Generic delete button text',
-                'common.buttons.edit' => 'Generic edit button text',
-                'common.buttons.close' => 'Generic close button text',
-                'common.buttons.confirm' => 'Generic confirmation button text',
-                'common.buttons.back' => 'Generic back button text',
-                'common.buttons.next' => 'Generic next button text',
-                'common.buttons.continue' => 'Generic continue button text',
-                'common.buttons.ok' => 'Generic OK button text',
-                'common.messages.success' => 'Generic success message',
-                'common.messages.error' => 'Generic error message',
-                'common.messages.warning' => 'Generic warning message',
-                'common.messages.info' => 'Generic information message',
-                'common.messages.confirm' => 'Generic confirmation message',
-            ],
-            'ui' => [
-                'ui.loading' => 'Loading indicator text',
-                'ui.empty_state' => 'Generic empty state message',
-                'ui.no_results' => 'Message shown when search returns no results',
-                'ui.search.placeholder' => 'Placeholder text for search input',
-                'ui.search.button' => 'Search button text',
-                'ui.search.results_count' => 'Text showing number of search results found',
-                'ui.tooltips.close' => 'Close button text for tooltips',
-                'ui.pagination.previous' => 'Previous page button text',
-                'ui.pagination.next' => 'Next page button text',
-                'ui.pagination.page_count' => 'Page count indicator text (e.g., "Page X of Y")',
-                'ui.errors.not_found' => 'Not found error message',
-                'ui.errors.server_error' => 'Server error message',
-                'ui.errors.validation_error' => 'Form validation error message',
-                'ui.errors.network_error' => 'Network connectivity error message',
-            ],
-            'estimate' => [
-                'estimate.title' => 'Estimate page title',
-                'estimate.buttons.create' => 'Create estimate button text',
-                'estimate.buttons.save' => 'Save estimate button text',
-                'estimate.buttons.delete' => 'Delete estimate button text',
-                'estimate.buttons.print' => 'Print estimate button text',
-                'estimate.buttons.email' => 'Email estimate button text',
-                'estimate.buttons.share' => 'Share estimate button text',
-                'estimate.forms.name' => 'Estimate name field label',
-                'estimate.forms.name_placeholder' => 'Placeholder text for estimate name input',
-                'estimate.messages.created' => 'Message shown when estimate is created',
-                'estimate.messages.saved' => 'Message shown when estimate is saved',
-                'estimate.messages.deleted' => 'Message shown when estimate is deleted',
-                'estimate.messages.empty' => 'Message shown when estimate has no rooms',
-                'estimate.messages.confirm_delete' => 'Confirmation message when deleting an estimate',
-                'estimate.headings.summary' => 'Estimate summary section heading',
-                'estimate.headings.rooms' => 'Rooms section heading in estimate view',
-                'estimate.headings.details' => 'Estimate details section heading',
-            ],
-            'room' => [
-                'room.title' => 'Room page title',
-                'room.buttons.add' => 'Add room button text',
-                'room.buttons.edit' => 'Edit room button text',
-                'room.buttons.delete' => 'Delete room button text',
-                'room.buttons.products' => 'Manage room products button text',
-                'room.forms.name' => 'Room name field label',
-                'room.forms.name_placeholder' => 'Placeholder text for room name input',
-                'room.forms.width' => 'Room width field label',
-                'room.forms.width_placeholder' => 'Placeholder text for room width input',
-                'room.forms.length' => 'Room length field label',
-                'room.forms.length_placeholder' => 'Placeholder text for room length input',
-                'room.messages.created' => 'Message shown when room is created',
-                'room.messages.updated' => 'Message shown when room is updated',
-                'room.messages.deleted' => 'Message shown when room is deleted',
-                'room.messages.empty' => 'Message shown when room has no products',
-                'room.messages.confirm_delete' => 'Confirmation message when deleting a room',
-                'room.headings.dimensions' => 'Room dimensions section heading',
-                'room.headings.products' => 'Products section heading in room view',
-            ],
-            'product' => [
-                'product.buttons.add' => 'Add product button text',
-                'product.buttons.remove' => 'Remove product button text',
-                'product.buttons.details' => 'View product details button text',
-                'product.buttons.variations' => 'Select product variations button text',
-                'product.buttons.includes' => 'Product includes button text',
-                'product.buttons.similar' => 'Similar products button text',
-                'product.buttons.suggested' => 'Suggested products button text',
-                'product.buttons.additional' => 'Additional products button text',
-                'product.messages.added' => 'Message shown when product is added',
-                'product.messages.removed' => 'Message shown when product is removed',
-                'product.messages.confirm_remove' => 'Confirmation message when removing a product',
-                'product.messages.load_error' => 'Error message when products fail to load',
-                'product.messages.no_variations' => 'Message shown when product has no variations',
-                'product.messages.no_includes' => 'Message shown when product has no inclusions',
-                'product.messages.no_suggestions' => 'Message shown when there are no product suggestions',
-                'product.messages.no_similar' => 'Message shown when there are no similar products',
-                'product.headings.details' => 'Product details section heading',
-                'product.headings.notes' => 'Product notes section heading',
-                'product.headings.includes' => 'Product includes section heading',
-                'product.headings.variations' => 'Product variations section heading',
-                'product.headings.similar' => 'Similar products section heading',
-                'product.headings.suggested' => 'Suggested products section heading',
-                'product.headings.additional' => 'Additional products section heading',
-                'product.pricing.price' => 'Product price label',
-                'product.pricing.total' => 'Total price label',
-                'product.pricing.per_unit' => 'Per unit price indicator',
-                'product.pricing.price_range' => 'Price range label',
-            ],
-            'customer' => [
-                'customer.forms.name' => 'Customer name field label',
-                'customer.forms.name_placeholder' => 'Placeholder text for customer name input',
-                'customer.forms.email' => 'Customer email field label',
-                'customer.forms.email_placeholder' => 'Placeholder text for customer email input',
-                'customer.forms.phone' => 'Customer phone field label',
-                'customer.forms.phone_placeholder' => 'Placeholder text for customer phone input',
-                'customer.forms.postcode' => 'Customer postcode field label',
-                'customer.forms.postcode_placeholder' => 'Placeholder text for customer postcode input',
-                'customer.messages.details_required' => 'Message explaining why customer details are required',
-                'customer.messages.email_required' => 'Message explaining why email is required',
-                'customer.messages.phone_required' => 'Message explaining why phone number is required',
-                'customer.messages.saved' => 'Message shown when customer details are saved',
-                'customer.headings.details' => 'Customer details section heading',
-                'customer.headings.saved_details' => 'Saved customer details section heading',
-                'customer.headings.edit_details' => 'Edit customer details section heading',
-            ],
-            'modal' => [
-                'modal.title' => 'Default modal title',
-                'modal.buttons.close' => 'Close modal button text',
-                'modal.headings.product_selection' => 'Product selection modal heading',
-                'modal.headings.room_selection' => 'Room selection modal heading',
-                'modal.headings.estimate_selection' => 'Estimate selection modal heading',
-                'modal.headings.customer_details' => 'Customer details modal heading',
-                'modal.headings.product_added' => 'Product added success dialog heading',
-                'modal.headings.product_removed' => 'Product removed success dialog heading',
-                'modal.headings.product_conflict' => 'Product conflict dialog heading',
-                'modal.headings.confirmation' => 'Confirmation dialog heading',
-                'modal.headings.error' => 'Error dialog heading',
-                'modal.headings.success' => 'Success dialog heading',
-                'modal.messages.not_found' => 'Error message when modal cannot be found or loaded',
-            ],
-            'pdf' => [
-                'pdf.title' => 'PDF document title',
-                'pdf.customer_details' => 'Customer details section heading in PDF',
-                'pdf.estimate_summary' => 'Estimate summary section heading in PDF',
-                'pdf.price_range' => 'Price range label in PDF',
-                'pdf.from' => 'From label in price range',
-                'pdf.to' => 'To label in price range',
-                'pdf.date' => 'Date label in PDF',
-                'pdf.page' => 'Page label in PDF footer',
-                'pdf.of' => 'Of text in page numbering',
-                'pdf.company_name' => 'Company name in PDF header',
-                'pdf.company_phone' => 'Company phone in PDF header',
-                'pdf.company_email' => 'Company email in PDF header',
-                'pdf.company_website' => 'Company website in PDF header',
-                'pdf.footer_text' => 'Text in PDF footer',
-                'pdf.disclaimer' => 'Legal disclaimer text in PDF',
-            ],
-        ];
-
-        // Check if a description exists for this path
-        foreach ($descriptions as $cat => $paths) {
-            if (isset($paths[$field_path])) {
-                return $paths[$field_path];
-            }
+        // Use centralized structure for descriptions
+        $description = LabelsStructure::get_description($field_path);
+        
+        // If no description found, generate a generic one
+        if (empty($description)) {
+            $parts = explode('.', $field_path);
+            $humanized = str_replace('_', ' ', end($parts));
+            return sprintf(
+                __('Text for %s in the %s section', 'product-estimator'),
+                $humanized,
+                $category
+            );
         }
-
-        // If no specific description is found, create a generic one
-        $parts = explode('.', $field_path);
-        $label_name = end($parts);
-        $humanized = ucwords(str_replace('_', ' ', $label_name));
-
-        return sprintf(
-            __('Text for %s in the %s section', 'product-estimator'),
-            $humanized,
-            $category
-        );
+        
+        return $description;
     }
 
     private function get_label_usage($category, $field_path) {
-        // This is a simplified mapping that could be expanded or loaded from a configuration
-        $usage_map = [
-            'common' => [
-                'common.buttons.save' => 'Used in various forms and edit interfaces throughout the application',
-                'common.buttons.cancel' => 'Used in forms, dialogs, and confirmation prompts',
-                'common.buttons.delete' => 'Used in deletion interfaces, confirmation dialogs',
-                'common.buttons.edit' => 'Used in list views, detail views, and management interfaces',
-                'common.buttons.close' => 'Used in dialogs, modals, pop-ups, and notification windows',
-                'common.buttons.confirm' => 'Used in confirmation dialogs for important actions',
-                'common.buttons.back' => 'Used in multi-step flows and navigation',
-                'common.buttons.next' => 'Used in multi-step flows and pagination',
-                'common.buttons.continue' => 'Used in multi-step forms and processes',
-                'common.buttons.ok' => 'Used in notification dialogs and alerts',
-                'common.messages.success' => 'Used for generic operation success notifications',
-                'common.messages.error' => 'Used for generic error notifications',
-                'common.messages.warning' => 'Used for warning alerts and notifications',
-                'common.messages.info' => 'Used for informational messages and notifications',
-                'common.messages.confirm' => 'Used for general confirmation prompts',
-            ],
-            'estimate' => [
-                'estimate.title' => 'Main estimate page heading',
-                'estimate.buttons.create' => 'Used in the estimator home page and empty states',
-                'estimate.buttons.save' => 'Used in the estimate editor and toolbar',
-                'estimate.buttons.delete' => 'Used in estimate management interfaces',
-                'estimate.buttons.print' => 'Used in estimate view and actions menu',
-                'estimate.buttons.email' => 'Used in estimate sharing options',
-                'estimate.buttons.share' => 'Used in estimate view and actions menu',
-                'estimate.forms.name' => 'Used in new estimate and edit estimate forms',
-                'estimate.forms.name_placeholder' => 'Used in estimate name input field',
-                'estimate.messages.created' => 'Shown after successful estimate creation',
-                'estimate.messages.saved' => 'Shown after successfully saving an estimate',
-                'estimate.messages.deleted' => 'Shown after successfully deleting an estimate',
-                'estimate.messages.empty' => 'Shown when an estimate contains no rooms',
-                'estimate.messages.confirm_delete' => 'Shown when confirming estimate deletion',
-                'estimate.headings.summary' => 'Used in estimate view for the summary section',
-                'estimate.headings.rooms' => 'Used in estimate view for the rooms list section',
-                'estimate.headings.details' => 'Used in estimate view for the details section',
-            ],
-            'room' => [
-                'room.title' => 'Room management page heading',
-                'room.buttons.add' => 'Used in estimate view and empty states',
-                'room.buttons.edit' => 'Used in room list and room detail views',
-                'room.buttons.delete' => 'Used in room management interfaces',
-                'room.buttons.products' => 'Used in room detail view',
-                'room.forms.name' => 'Used in new room and edit room forms',
-                'room.forms.name_placeholder' => 'Used in room name input field',
-                'room.forms.width' => 'Used in room dimensions section of forms',
-                'room.forms.width_placeholder' => 'Used in room width input field',
-                'room.forms.length' => 'Used in room dimensions section of forms',
-                'room.forms.length_placeholder' => 'Used in room length input field',
-                'room.messages.created' => 'Shown after successful room creation',
-                'room.messages.updated' => 'Shown after successfully updating a room',
-                'room.messages.deleted' => 'Shown after successfully deleting a room',
-                'room.messages.empty' => 'Shown when a room contains no products',
-                'room.messages.confirm_delete' => 'Shown when confirming room deletion',
-                'room.headings.dimensions' => 'Used in room form for the dimensions section',
-                'room.headings.products' => 'Used in room view for the products list section',
-            ],
-            'product' => [
-                'product.buttons.add' => 'Used in product listings and search results',
-                'product.buttons.remove' => 'Used in room product list and management interfaces',
-                'product.buttons.details' => 'Used in product listings and room product list',
-                'product.buttons.variations' => 'Used in product selection dialogs',
-                'product.buttons.includes' => 'Used in product detail view',
-                'product.buttons.similar' => 'Used in product detail view',
-                'product.buttons.suggested' => 'Used in room view and product listings',
-                'product.buttons.additional' => 'Used in product detail view and checkout flow',
-                'product.messages.added' => 'Shown after adding a product to a room',
-                'product.messages.removed' => 'Shown after removing a product from a room',
-                'product.messages.confirm_remove' => 'Shown when confirming product removal',
-                'product.messages.load_error' => 'Shown when products fail to load',
-                'product.messages.no_variations' => 'Shown when a product has no variations',
-                'product.messages.no_includes' => 'Shown when a product has no inclusions',
-                'product.messages.no_suggestions' => 'Shown when there are no product suggestions',
-                'product.messages.no_similar' => 'Shown when there are no similar products',
-                'product.headings.details' => 'Used in product detail view',
-                'product.headings.notes' => 'Used in product detail view',
-                'product.headings.includes' => 'Used in product detail view for the includes section',
-                'product.headings.variations' => 'Used in product selection dialog',
-                'product.headings.similar' => 'Used in product detail view for similar products section',
-                'product.headings.suggested' => 'Used in room view for suggested products section',
-                'product.headings.additional' => 'Used in product detail view for additional products section',
-                'product.pricing.price' => 'Used in product listings and detail view',
-                'product.pricing.total' => 'Used in product detail view and checkout',
-                'product.pricing.per_unit' => 'Used in product pricing display',
-                'product.pricing.price_range' => 'Used for variable product pricing display',
-            ],
-            'customer' => [
-                'customer.forms.name' => 'Used in customer details forms',
-                'customer.forms.name_placeholder' => 'Used in customer name input field',
-                'customer.forms.email' => 'Used in customer details forms',
-                'customer.forms.email_placeholder' => 'Used in customer email input field',
-                'customer.forms.phone' => 'Used in customer details forms',
-                'customer.forms.phone_placeholder' => 'Used in customer phone input field',
-                'customer.forms.postcode' => 'Used in customer details forms',
-                'customer.forms.postcode_placeholder' => 'Used in customer postcode input field',
-                'customer.messages.details_required' => 'Shown when prompting for customer details',
-                'customer.messages.email_required' => 'Shown when email is required for an action',
-                'customer.messages.phone_required' => 'Shown when phone is required for an action',
-                'customer.messages.saved' => 'Shown after saving customer details',
-                'customer.headings.details' => 'Used in customer details section',
-                'customer.headings.saved_details' => 'Used when displaying saved customer information',
-                'customer.headings.edit_details' => 'Used in edit customer details form',
-            ],
-            'modal' => [
-                'modal.title' => 'Default title for modal dialogs',
-                'modal.buttons.close' => 'Used in modal header and footer',
-                'modal.headings.product_selection' => 'Used in product selection modal',
-                'modal.headings.room_selection' => 'Used in room selection modal',
-                'modal.headings.estimate_selection' => 'Used in estimate selection modal',
-                'modal.headings.customer_details' => 'Used in customer details modal',
-                'modal.headings.product_added' => 'Used in success dialog after adding a product',
-                'modal.headings.product_removed' => 'Used in success dialog after removing a product',
-                'modal.headings.product_conflict' => 'Used in product conflict resolution dialog',
-                'modal.headings.confirmation' => 'Used in confirmation dialogs',
-                'modal.headings.error' => 'Used in error notification dialogs',
-                'modal.headings.success' => 'Used in success notification dialogs',
-                'modal.messages.not_found' => 'Shown when a modal fails to load',
-            ],
-            'pdf' => [
-                'pdf.title' => 'Used as the main heading in PDF documents',
-                'pdf.customer_details' => 'Used in the customer section of PDF documents',
-                'pdf.estimate_summary' => 'Used in the summary section of PDF documents',
-                'pdf.price_range' => 'Used for price range display in PDFs',
-                'pdf.from' => 'Used in price range minimum indicator',
-                'pdf.to' => 'Used in price range maximum indicator',
-                'pdf.date' => 'Used for date display in PDF documents',
-                'pdf.page' => 'Used in PDF pagination',
-                'pdf.of' => 'Used in PDF page count (e.g., "Page X of Y")',
-                'pdf.company_name' => 'Used in PDF header for company information',
-                'pdf.company_phone' => 'Used in PDF header for company contact details',
-                'pdf.company_email' => 'Used in PDF header for company contact details',
-                'pdf.company_website' => 'Used in PDF header for company contact details',
-                'pdf.footer_text' => 'Used in the footer of PDF documents',
-                'pdf.disclaimer' => 'Used for legal disclaimer in PDF documents',
-            ],
-        ];
+        // Use centralized structure for usage information
+        $usage = LabelsStructure::get_usage($field_path);
+        
+        // If no usage found, generate a generic one
+        if (empty($usage)) {
+            $parts = explode('.', $field_path);
+            $section = isset($parts[1]) ? ucwords(str_replace('_', ' ', $parts[1])) : '';
+            $context = isset($parts[0]) ? ucwords(str_replace('_', ' ', $parts[0])) : '';
 
-        // Look for exact match in the mapping
-        foreach ($usage_map as $cat => $paths) {
-            if (isset($paths[$field_path])) {
-                return $paths[$field_path];
+            if ($section && $context) {
+                return sprintf(
+                    __('Used in %s section of the %s interface', 'product-estimator'),
+                    $section,
+                    $context
+                );
             }
         }
 
-        // If not found, generate generic usage info
-        $parts = explode('.', $field_path);
-        $section = isset($parts[1]) ? ucwords(str_replace('_', ' ', $parts[1])) : '';
-        $context = isset($parts[0]) ? ucwords(str_replace('_', ' ', $parts[0])) : '';
-
-        if ($section && $context) {
-            return sprintf(
-                __('Used in %s section of the %s interface', 'product-estimator'),
-                $section,
-                $context
-            );
-        }
-
-        return '';
+        return $usage;
     }
 
     public function render_vertical_tabs_sidebar() {
@@ -1466,9 +1170,9 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 return ['success' => false, 'message' => 'Invalid label structure'];
             }
 
-            // Get current labels and default structure
+            // Get current labels and default structure (values only, no metadata)
             $current_labels = get_option('product_estimator_labels', []);
-            $default_labels = LabelsStructure::get_structure();
+            $default_labels = LabelsStructure::get_label_values_only();
 
             // Deep merge the structures
             $merged_labels = [];
@@ -1669,8 +1373,8 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             wp_send_json_error(__('Invalid category', 'product-estimator'));
         }
 
-        // Get default structure for this category
-        $defaults = LabelsStructure::get_structure();
+        // Get default structure for this category (values only, no metadata)
+        $defaults = LabelsStructure::get_label_values_only();
 
         // Ensure defaults is an array
         if (!is_array($defaults)) {

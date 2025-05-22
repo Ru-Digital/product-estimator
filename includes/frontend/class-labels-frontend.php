@@ -4,11 +4,12 @@ namespace RuDigital\ProductEstimator\Includes\Frontend;
 use RuDigital\ProductEstimator\Includes\LabelsMigration;
 
 /**
- * Frontend-only functionality for labels
- * This lightweight class provides only what's needed for the frontend
- * without loading admin dependencies
+ * Labels Frontend Class
  *
- * @since      2.0.0
+ * Handles frontend labels functionality with hierarchical structure support.
+ * Clean implementation focused on modern hierarchical label system.
+ *
+ * @since      3.0.0
  * @package    Product_Estimator
  * @subpackage Product_Estimator/includes/frontend
  */
@@ -16,7 +17,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Option name for storing label settings
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   private
      * @var      string $option_name Option name for settings
      */
@@ -25,7 +26,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Option name for labels version
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   private
      * @var      string $version_option_name Option name for version
      */
@@ -34,7 +35,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Cache duration in seconds
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   private
      * @var      int $cache_duration Cache duration
      */
@@ -43,7 +44,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * In-memory cache for labels
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   private
      * @var      array $memory_cache Memory cache
      */
@@ -71,14 +72,31 @@ class LabelsFrontend extends FrontendBase {
     ];
 
     /**
+     * Flattened cache of labels for quick lookups
+     * 
+     * @var array
+     */
+    private $flat_labels = [];
+
+    /**
+     * Debug mode flag - when enabled, prepends debug info to labels
+     * 
+     * @var bool
+     */
+    private $debug_mode = false;
+
+    /**
      * Initialize the class and set its properties.
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @param    string    $plugin_name    The name of this plugin.
      * @param    string    $version        The version of this plugin.
      */
     public function __construct($plugin_name, $version) {
         parent::__construct($plugin_name, $version);
+
+        // Check if debug mode is enabled
+        $this->debug_mode = $this->is_debug_mode_enabled();
 
         // Only add frontend actions if not in admin
         if (!is_admin()) {
@@ -97,15 +115,68 @@ class LabelsFrontend extends FrontendBase {
     }
 
     /**
+     * Check if debug mode is enabled
+     * 
+     * @since    3.0.0
+     * @access   private
+     * @return   bool    True if debug mode is enabled
+     */
+    private function is_debug_mode_enabled() {
+        // 1. WordPress constant (most permanent)
+        if (defined('PRODUCT_ESTIMATOR_LABELS_DEBUG') && PRODUCT_ESTIMATOR_LABELS_DEBUG) {
+            return true;
+        }
+        
+        // 2. WordPress option (admin toggleable)
+        if (get_option('product_estimator_labels_debug_mode', false)) {
+            return true;
+        }
+        
+        // 3. URL parameter (temporary testing)
+        if (isset($_GET['pe_labels_debug']) && $_GET['pe_labels_debug'] === '1') {
+            return true;
+        }
+        
+        // 4. User meta (per-user debugging - useful for admins)
+        if (is_user_logged_in() && get_user_meta(get_current_user_id(), 'pe_labels_debug', true)) {
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Enable debug mode
+     * 
+     * @since    3.0.0
+     * @access   public
+     */
+    public function enable_debug_mode() {
+        $this->debug_mode = true;
+        update_option('product_estimator_labels_debug_mode', true);
+    }
+
+    /**
+     * Disable debug mode
+     * 
+     * @since    3.0.0
+     * @access   public
+     */
+    public function disable_debug_mode() {
+        $this->debug_mode = false;
+        update_option('product_estimator_labels_debug_mode', false);
+    }
+
+    /**
      * Maybe run the labels migration
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      */
     public function maybe_run_migration() {
         // Check if migration is needed
         $current_version = get_option($this->version_option_name, '0');
-        if (version_compare($current_version, '2.0.0', '<')) {
+        if (version_compare($current_version, '3.0.0', '<')) {
             require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'includes/class-labels-migration.php';
             LabelsMigration::migrate();
         }
@@ -114,7 +185,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Get all labels with caching
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      * @return   array    All labels with cache
      */
@@ -152,25 +223,23 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Get labels version for cache busting
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   private
      * @return   string    Version string
      */
     private function get_labels_version() {
-        return get_option($this->version_option_name, '2.0.0');
+        return get_option($this->version_option_name, '3.0.0');
     }
 
     /**
      * Build all labels array with optimized DB queries
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   private
      * @return   array    All labels
      */
     private function build_all_labels() {
         // Use alloptions for more efficient retrieval when possible
-        // This avoids separate DB query when labels are already in cache
-        global $wp_options;
         $alloptions = wp_load_alloptions();
         
         // Check if our option is in the alloptions cache
@@ -190,7 +259,7 @@ class LabelsFrontend extends FrontendBase {
         $default_labels = LabelsMigration::get_default_structure();
         $merged_labels = array_replace_recursive($default_labels, $stored_labels);
         
-        // Apply performance improvements for large label sets
+        // Apply performance improvements
         $merged_labels = $this->optimize_label_structure($merged_labels);
         
         return $merged_labels;
@@ -245,26 +314,14 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Optimize label structure for performance
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   private
      * @param    array    $labels    Labels array
      * @return   array    Optimized labels
      */
     private function optimize_label_structure($labels) {
-        // Flatten deeply nested structures for faster access
-        // This is especially important for templates that access deep properties
-        if (isset($labels['templates']) && is_array($labels['templates'])) {
-            foreach ($labels['templates'] as $template_key => $template_labels) {
-                if (is_array($template_labels) && count($template_labels) > 0) {
-                    // Create flattened access paths for deeply nested template labels
-                    foreach ($template_labels as $key => $value) {
-                        if (is_string($value)) {
-                            $labels['_flat']['templates_' . $template_key . '_' . $key] = $value;
-                        }
-                    }
-                }
-            }
-        }
+        // Create flattened access paths for performance
+        $labels['_flat'] = $this->create_flat_structure($labels);
         
         return $labels;
     }
@@ -274,7 +331,7 @@ class LabelsFrontend extends FrontendBase {
      *
      * @since    3.0.0
      * @access   public
-     * @param    string    $key        Label key (hierarchical dot notation)
+     * @param    string    $key        Label key in hierarchical dot notation
      * @param    string    $default    Default value if label not found
      * @return   string    The label value
      */
@@ -286,7 +343,19 @@ class LabelsFrontend extends FrontendBase {
             $labels = $this->get_all_labels_with_cache();
         }
         
-        // All labels use hierarchical dot notation
+        // First check if we have a cached flat version of this key
+        if (isset($this->flat_labels[$key])) {
+            return $this->format_label_with_debug($this->flat_labels[$key], $key);
+        }
+        
+        // Check if key exists in flattened structure (performance optimization)
+        if (isset($labels['_flat']) && isset($labels['_flat'][$key])) {
+            $value = $labels['_flat'][$key];
+            $this->flat_labels[$key] = $value; // Cache for future
+            return $this->format_label_with_debug($value, $key);
+        }
+        
+        // Try hierarchical dot notation lookup
         $keys = explode('.', $key);
         $value = $labels;
         
@@ -294,17 +363,48 @@ class LabelsFrontend extends FrontendBase {
             if (isset($value[$k])) {
                 $value = $value[$k];
             } else {
-                return $default;
+                return $this->format_label_with_debug($default, $key . '[NOT FOUND]');
             }
         }
         
-        return $value;
+        // Cache for future lookups
+        if (is_string($value)) {
+            $this->flat_labels[$key] = $value;
+            return $this->format_label_with_debug($value, $key);
+        }
+        
+        return $this->format_label_with_debug($default, $key . '[NOT STRING]');
+    }
+
+    /**
+     * Format a label with debug information if debug mode is enabled
+     * 
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $label_value    The actual label value
+     * @param    string    $label_key      The label key/path for debugging  
+     * @return   string                    Formatted label (with or without debug info)
+     */
+    private function format_label_with_debug($label_value, $label_key) {
+        if (!$this->debug_mode) {
+            return $label_value;
+        }
+        
+        // Add debug information
+        $debug_info = "[DEBUG: {$label_key}]";
+        
+        // Different formatting based on content
+        if (empty($label_value)) {
+            return $debug_info . '[EMPTY LABEL]';
+        }
+        
+        return $debug_info . $label_value;
     }
 
     /**
      * Format a label with replacements
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      * @param    string    $key            Label key
      * @param    array     $replacements   Key-value pairs for replacements
@@ -325,7 +425,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Get labels for a specific category
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      * @param    string    $category   Label category
      * @return   array     Labels for the category
@@ -336,7 +436,7 @@ class LabelsFrontend extends FrontendBase {
     }
 
     /**
-     * Get all frontend labels for localization (hierarchical structure)
+     * Get all frontend labels for localization
      *
      * @since    3.0.0
      * @access   public
@@ -345,8 +445,10 @@ class LabelsFrontend extends FrontendBase {
     public function get_all_frontend_labels() {
         $all_labels = $this->get_all_labels_with_cache();
         
-        // All labels are hierarchical - create flattened version for performance
-        $all_labels['_flat'] = $this->create_flat_structure($all_labels);
+        // Ensure we have flattened version for JavaScript compatibility
+        if (!isset($all_labels['_flat'])) {
+            $all_labels['_flat'] = $this->create_flat_structure($all_labels);
+        }
         
         return $all_labels;
     }
@@ -354,7 +456,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Add labels to frontend script localization
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      */
     public function add_labels_to_frontend() {
@@ -371,11 +473,10 @@ class LabelsFrontend extends FrontendBase {
         );
     }
 
-
     /**
      * Get PDF footer contact details
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      * @return   array     Footer contact details
      */
@@ -393,7 +494,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Check if a label exists
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      * @param    string    $key    Label key
      * @return   bool      True if label exists
@@ -406,12 +507,15 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Invalidate label cache
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      */
     public function invalidate_cache() {
         // Clear memory cache
         self::$memory_cache = null;
+        
+        // Clear flat labels cache
+        $this->flat_labels = [];
         
         // Clear transient cache
         $cache_key = 'pe_frontend_labels_' . $this->get_labels_version();
@@ -428,7 +532,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Check if cache should be invalidated on option update
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      * @param    string    $option_name    The option name
      * @param    mixed     $old_value      The old option value
@@ -444,7 +548,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Preload frequently used labels
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      */
     public function preload_frequent_labels() {
@@ -481,7 +585,7 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Check if labels should be preloaded
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   private
      * @return   bool     Whether to preload labels
      */
@@ -509,24 +613,14 @@ class LabelsFrontend extends FrontendBase {
     /**
      * Get labels for use in JavaScript templates
      *
-     * @since    2.0.0
+     * @since    3.0.0
      * @access   public
      * @return   array     Labels formatted for template use
      */
     public function get_template_labels() {
         $all_labels = $this->get_all_frontend_labels();
         
-        // Flatten the structure for easier access in templates
-        $template_labels = [];
-        
-        foreach ($all_labels as $category => $labels) {
-            if (is_array($labels)) {
-                foreach ($labels as $key => $value) {
-                    $template_labels["{$category}_{$key}"] = $value;
-                }
-            }
-        }
-        
-        return $template_labels;
+        // Return the flattened structure for easier access in templates
+        return $all_labels['_flat'] ?? [];
     }
 }

@@ -26,6 +26,21 @@ class LabelSettingsModule extends VerticalTabbedModule {
 
     // Initialize label management properties
     this.bulkEditItems = [];
+    this.expandedSections = new Set();
+    this.searchResults = [];
+  }
+
+  /**
+   * Module initialization method called by ProductEstimatorSettings base class
+   */
+  moduleInit() {
+    super.moduleInit();
+    logger.log('LabelSettingsModule moduleInit called');
+    
+    // Fix section header table structure immediately when module loads
+    setTimeout(() => {
+      this.fixSectionHeaderTableStructure();
+    }, 500);
   }
 
   /**
@@ -50,27 +65,23 @@ class LabelSettingsModule extends VerticalTabbedModule {
     this.$('#import-labels').on('click', () => this.$('#import-file').click());
     this.$('#import-file').on('change', this.handleImport.bind(this));
 
-
     // Reset category
     this.$('#reset-category-defaults').on('click', this.handleResetCategory.bind(this));
 
-    // Search functionality
-    this.$('#label-search').on('input', this.handleSearch.bind(this));
-    this.$('#label-search').on('keypress', (e) => {
-      if (e.which === 13) { // Enter key
-        e.preventDefault();
-        this.handleSearch(e);
-      }
-    });
+    // Hierarchical-specific events
+    this.$(document).on('click', '.pe-label-subcategory-heading', this.toggleSubcategory.bind(this));
+    this.$('#label-search').on('input', this.debounce(this.handleSearch.bind(this), 300));
+    
+    // Add expand/collapse all buttons to each tab
+    this.addExpandCollapseButtons();
 
     // Bulk edit
     this.$(document).on('click', '.bulk-edit-trigger', this.handleBulkEditTrigger.bind(this));
     this.$('#apply-bulk-edits').on('click', this.handleBulkUpdate.bind(this));
     this.$('#cancel-bulk-edit').on('click', this.cancelBulkEdit.bind(this));
 
-    // Preview updates for V3 hierarchical structure
-    this.$('.regular-text[id^="estimate_management_"], .regular-text[id^="room_management_"], .regular-text[id^="customer_details_"], .regular-text[id^="product_management_"], .regular-text[id^="common_ui_"], .regular-text[id^="modal_system_"], .regular-text[id^="search_and_filters_"], .regular-text[id^="pdf_generation_"]')
-      .on('input', this.updatePreview.bind(this));
+    // Preview updates for hierarchical labels
+    this.$(document).on('input', 'input[data-path]', this.updatePreview.bind(this));
 
     logger.log('Label management events bound successfully');
   }
@@ -81,7 +92,188 @@ class LabelSettingsModule extends VerticalTabbedModule {
   onMainTabActivated() {
     super.onMainTabActivated();
     logger.log('Labels tab activated');
+    this.initializeUI();
+  }
+  
+  /**
+   * Initialize UI components
+   */
+  initializeUI() {
+    // Fix section header table structure to use colspan (with delay to ensure DOM is ready)
+    setTimeout(() => {
+      this.fixSectionHeaderTableStructure();
+    }, 100);
+    
+    // Hide all nested fields initially
+    jQuery('.pe-label-field-wrapper[data-depth]').each((_, field) => {
+      const $field = jQuery(field);
+      const path = $field.data('path') || '';
+      const pathParts = path.split('.');
+      
+      // If this is a nested field (depth > 1), check if its path matches any expanded section
+      if (pathParts.length > 2) {
+        const parentPath = pathParts.slice(0, pathParts.length - 1).join('.');
+        const isVisible = this.expandedSections.has(parentPath);
+        $field.toggle(isVisible);
+      }
+    });
+    
+    // Apply expand/collapse state to section headings
+    jQuery('.pe-label-subcategory-heading').each((_, heading) => {
+      const $heading = jQuery(heading);
+      const $data = $heading.next('.pe-label-subcategory-data');
+      const path = $data.data('path');
+      
+      if (path && this.expandedSections.has(path)) {
+        $heading.addClass('expanded');
+      } else {
+        $heading.removeClass('expanded');
+      }
+    });
+    
     this.initializePreview();
+  }
+
+  /**
+   * Add expand/collapse all buttons to each vertical tab panel
+   */
+  addExpandCollapseButtons() {
+    this.$('.pe-vtabs-tab-panel, .vertical-tab-content').each((_, panel) => {
+      const $panel = jQuery(panel);
+      const $subcategoryHeadings = $panel.find('.pe-label-subcategory-heading');
+      
+      // Only add buttons if this panel has hierarchical label sections
+      if ($subcategoryHeadings.length > 0) {
+        const $heading = $panel.find('h2, h3').first();
+        
+        if ($heading.length) {
+          const $buttonContainer = jQuery('<div class="section-toggle-buttons"></div>');
+          const $expandButton = jQuery(`<button type="button" class="button expand-all-button">
+            ${this.settings.i18n.expandAll || 'Expand All Sections'}
+          </button>`);
+          
+          const $collapseButton = jQuery(`<button type="button" class="button collapse-all-button">
+            ${this.settings.i18n.collapseAll || 'Collapse All Sections'}
+          </button>`);
+          
+          $buttonContainer.append($expandButton).append($collapseButton);
+          $heading.after($buttonContainer);
+          
+          $expandButton.on('click', () => this.expandAllSections($panel));
+          $collapseButton.on('click', () => this.collapseAllSections($panel));
+        }
+      }
+    });
+  }
+
+  /**
+   * Expand all sections in a panel
+   * @param {jQuery} $panel - The panel containing sections to expand
+   */
+  expandAllSections($panel) {
+    const $headings = $panel.find('.pe-label-subcategory-heading');
+    $headings.each((_, heading) => {
+      const $heading = jQuery(heading);
+      const path = $heading.next('.pe-label-subcategory-data').data('path');
+      
+      if (path) {
+        this.expandedSections.add(path);
+        this.updateSectionVisibility(path, true);
+      }
+    });
+  }
+  
+  /**
+   * Collapse all sections in a panel
+   * @param {jQuery} $panel - The panel containing sections to collapse
+   */
+  collapseAllSections($panel) {
+    const $headings = $panel.find('.pe-label-subcategory-heading');
+    $headings.each((_, heading) => {
+      const $heading = jQuery(heading);
+      const path = $heading.next('.pe-label-subcategory-data').data('path');
+      
+      if (path) {
+        this.expandedSections.delete(path);
+        this.updateSectionVisibility(path, false);
+      }
+    });
+  }
+  
+  /**
+   * Toggle a subcategory's visibility
+   * @param {Event} e - The click event
+   */
+  toggleSubcategory(e) {
+    const $heading = jQuery(e.currentTarget);
+    const $data = $heading.next('.pe-label-subcategory-data');
+    const path = $data.data('path');
+    
+    if (!path) return;
+    
+    if (this.expandedSections.has(path)) {
+      this.expandedSections.delete(path);
+      this.updateSectionVisibility(path, false);
+    } else {
+      this.expandedSections.add(path);
+      this.updateSectionVisibility(path, true);
+    }
+  }
+  
+  /**
+   * Update a section's visibility
+   * @param {string} path - The section path
+   * @param {boolean} visible - Whether the section should be visible
+   */
+  updateSectionVisibility(path, visible) {
+    const $heading = jQuery(`.pe-label-subcategory-data[data-path="${path}"]`).prev('.pe-label-subcategory-heading');
+    const $fields = jQuery(`.pe-label-field-wrapper[data-path^="${path}."]`);
+    
+    if (visible) {
+      $heading.addClass('expanded');
+      $fields.show();
+    } else {
+      $heading.removeClass('expanded');
+      $fields.hide();
+    }
+  }
+
+  /**
+   * Fix section header table structure to use proper colspan
+   */
+  fixSectionHeaderTableStructure() {
+    logger.log('fixSectionHeaderTableStructure called');
+    const $headers = jQuery('.section-header-needs-colspan');
+    logger.log('Found headers with needs-colspan:', $headers.length);
+
+    $headers.each((_, sectionHeader) => {
+      const $sectionHeader = jQuery(sectionHeader);
+      const $td = $sectionHeader.closest('td');
+      const $th = $td.prev('th');
+      const $tr = $td.closest('tr');
+
+      logger.log('Processing header:', $sectionHeader.text());
+      logger.log('Found td:', $td.length);
+      logger.log('Found th:', $th.length);
+      logger.log('Th is empty:', $th.is(':empty'));
+
+      // Only process if this is in a table row with empty th
+      if ($th.length && $th.is(':empty')) {
+        logger.log('Removing th and adding colspan for:', $sectionHeader.text());
+
+        // Remove the empty th
+        $th.remove();
+
+        // Add colspan to the td
+        $td.attr('colspan', '2');
+        $td.addClass('section-header-cell');
+
+        // Remove the special class now that we've processed it
+        $sectionHeader.removeClass('section-header-needs-colspan');
+
+        logger.log('Fixed section header table structure for:', $sectionHeader.text());
+      }
+    });
   }
 
   /**
@@ -502,239 +694,133 @@ class LabelSettingsModule extends VerticalTabbedModule {
   }
 
   /**
-   * Handle search functionality
+   * Handle search functionality (hierarchical version)
    */
   handleSearch(e) {
-    const searchTerm = e.target.value.toLowerCase().trim();
-    const $resultsContainer = this.$('#label-search-results');
-
-    logger.log('Search term:', searchTerm);
-
+    const searchTerm = e.target.value.trim().toLowerCase();
+    const $resultsContainer = jQuery('#label-search-results');
+    
     if (searchTerm.length < 2) {
-      $resultsContainer.empty();
-      this.clearSearchHighlights();
+      $resultsContainer.hide();
       return;
     }
-
-    // Find all matching labels
-    const results = this.searchLabels(searchTerm);
-
-    // Display results
-    this.displaySearchResults(results, searchTerm);
-
-    // Highlight matching fields in the current view
-    this.highlightSearchMatches(searchTerm);
-  }
-
-  /**
-   * Search through all labels for matching terms
-   */
-  searchLabels(searchTerm) {
-    const results = [];
-    const $allInputs = this.$('.regular-text[data-path]');
-
-    $allInputs.each((index, input) => {
+    
+    // Find matching labels
+    this.searchResults = [];
+    jQuery('input[data-path]').each((_, input) => {
       const $input = jQuery(input);
       const path = $input.data('path');
-      const value = $input.val();
-      const label = $input.closest('.form-field').find('.field-label').text();
-
-      // Search in path, label, and value
-      if (path.toLowerCase().includes(searchTerm) ||
-          value.toLowerCase().includes(searchTerm) ||
-          label.toLowerCase().includes(searchTerm)) {
-
-        results.push({
+      const value = $input.val().toLowerCase();
+      
+      if (path.toLowerCase().includes(searchTerm) || value.includes(searchTerm)) {
+        this.searchResults.push({
           path: path,
-          label: label,
-          value: value,
-          input: $input
+          value: $input.val(),
+          element: $input
         });
       }
     });
-
-    return results;
-  }
-
-  /**
-   * Display search results in the sidebar
-   */
-  displaySearchResults(results, searchTerm) {
-    const $resultsContainer = this.$('#label-search-results');
+    
+    // Display results
     $resultsContainer.empty();
-
-    if (results.length === 0) {
-      $resultsContainer.html(`
-        <div class="search-no-results">
-          ${this.settings.i18n.searchNoResults || 'No labels found matching your search.'}
-        </div>
-      `);
+    
+    if (this.searchResults.length === 0) {
+      $resultsContainer.html(`<p>${this.settings.i18n.searchNoResults || 'No labels found matching your search.'}</p>`);
+      $resultsContainer.show();
       return;
     }
-
-    // Add results count
-    const countText = this.settings.i18n.searchResultsCount || '%d labels found.';
-    $resultsContainer.append(`
-      <div class="search-results-count">
-        ${countText.replace('%d', results.length)}
-      </div>
-    `);
-
-    // Add each result
-    results.forEach(result => {
+    
+    const resultsCountText = this.settings.i18n.searchResultsCount
+      ? this.settings.i18n.searchResultsCount.replace('%d', this.searchResults.length)
+      : `${this.searchResults.length} labels found.`;
+    
+    $resultsContainer.append(`<p><strong>${resultsCountText}</strong></p>`);
+    
+    // Add results to container
+    this.searchResults.forEach(result => {
+      const highlightedPath = this.highlightSearchTerm(result.path, searchTerm);
+      const highlightedValue = this.highlightSearchTerm(result.value, searchTerm);
+      
       const $resultItem = jQuery(`
         <div class="search-result-item">
-          <div class="path">${this.highlightText(result.path, searchTerm)}</div>
-          <div class="label">${this.highlightText(result.label, searchTerm)}</div>
-          <div class="value">${this.highlightText(result.value, searchTerm)}</div>
-          <button type="button" class="button-link go-to" data-path="${result.path}">Go to field</button>
+          <div class="path">${highlightedPath}</div>
+          <div class="value">${highlightedValue}</div>
+          <a href="#" class="go-to" data-path="${result.path}">Go to this field</a>
         </div>
       `);
-
+      
       $resultsContainer.append($resultItem);
     });
-
-    // Bind click handlers for "Go to field" buttons
+    
+    // Bind click events for "Go to" links
     $resultsContainer.find('.go-to').on('click', (e) => {
-      const path = jQuery(e.target).data('path');
-      this.goToField(path);
+      e.preventDefault();
+      const path = jQuery(e.currentTarget).data('path');
+      this.goToLabelField(path);
     });
+    
+    $resultsContainer.show();
   }
 
   /**
    * Highlight search term in text
+   * @param {string} text - The text to highlight
+   * @param {string} term - The search term
+   * @returns {string} HTML with highlighted term
    */
-  highlightText(text, searchTerm) {
-    if (!text || !searchTerm) return text;
-
-    const regex = new RegExp(`(${searchTerm})`, 'gi');
+  highlightSearchTerm(text, term) {
+    if (!term) return text;
+    
+    const regex = new RegExp(`(${term})`, 'gi');
     return text.replace(regex, '<span class="label-search-highlight">$1</span>');
   }
-
+  
   /**
-   * Highlight matching fields in the current view
+   * Navigate to a label field by path (hierarchical version)
+   * @param {string} path - The path to the field
    */
-  highlightSearchMatches(searchTerm) {
-    this.clearSearchHighlights();
-
-    if (searchTerm.length < 2) return;
-
-    const $visibleInputs = this.$('.pe-vtabs-tab-panel:visible .regular-text[data-path]');
-
-    $visibleInputs.each((index, input) => {
-      const $input = jQuery(input);
-      const $wrapper = $input.closest('.form-field');
-      const path = $input.data('path');
-      const value = $input.val();
-      const label = $wrapper.find('.field-label').text();
-
-      if (path.toLowerCase().includes(searchTerm) ||
-          value.toLowerCase().includes(searchTerm) ||
-          label.toLowerCase().includes(searchTerm)) {
-
-        $wrapper.addClass('search-match');
-      }
-    });
-  }
-
-  /**
-   * Clear search highlights
-   */
-  clearSearchHighlights() {
-    this.$('.search-match').removeClass('search-match');
-    this.$('.label-search-highlight').removeClass('label-search-highlight');
-  }
-
-  /**
-   * Navigate to a specific field
-   */
-  goToField(path) {
-    logger.log('Going to field with path:', path);
-
-    // Determine which category this field belongs to
+  goToLabelField(path) {
+    // First, determine which tab this field is in
     const pathParts = path.split('.');
-    let category = pathParts[0];
-
-    // Map path prefixes to categories
-    const categoryMap = {
-      'create_new_estimate_form': 'estimate_management',
-      'estimate_selection': 'estimate_management',
-      'estimate_actions': 'estimate_management',
-      'estimate_display': 'estimate_management',
-      'add_new_room_form': 'room_management',
-      'room_selection_form': 'room_management',
-      'room_actions': 'room_management',
-      'room_display': 'room_management',
-      'room_navigation': 'room_management',
-      'customer_details_form': 'customer_details',
-      'general_validation': 'customer_details',
-      'confirmation_dialogs': 'common_ui',
-      'general_actions': 'common_ui',
-      'navigation': 'common_ui',
-      'loading_states': 'common_ui',
-      'error_handling': 'common_ui',
-      'validation': 'common_ui'
-    };
-
-    category = categoryMap[pathParts[0]] || pathParts[0];
-    logger.log('Mapped category:', category);
-
-    // Try multiple selectors to find the correct tab
-    let $categoryTab = this.$(`.pe-vtabs-nav-item[data-tab="${category}"]`);
-
-    if (!$categoryTab.length) {
-      // Try alternative selectors
-      $categoryTab = this.$(`.pe-vtabs-nav-item[data-tabid="${category}"]`);
+    const category = pathParts[0];
+    
+    // Switch to the correct tab if needed
+    if (this.getCurrentSubTabId() !== category) {
+      this.activateSubTab(category);
     }
-
-    if (!$categoryTab.length) {
-      // Try finding the link inside the nav item
-      $categoryTab = this.$(`.pe-vtabs-nav-item a[data-tab="${category}"]`).closest('.pe-vtabs-nav-item');
-    }
-
-    if ($categoryTab.length) {
-      logger.log('Found category tab, switching to:', category);
-
-      // Get the link inside the tab for clicking
-      const $tabLink = $categoryTab.find('a').first();
-      if ($tabLink.length) {
-        $tabLink[0].click();
-      } else {
-        $categoryTab[0].click();
-      }
-
-      // Wait for tab switch, then scroll to field
+    
+    // Ensure all parent sections are expanded
+    let currentPath = '';
+    pathParts.forEach((part, index) => {
+      if (index === pathParts.length - 1) return; // Skip the last part (field name)
+      
+      currentPath = currentPath ? `${currentPath}.${part}` : part;
+      this.expandedSections.add(currentPath);
+      this.updateSectionVisibility(currentPath, true);
+    });
+    
+    // Find and highlight the field
+    const $field = jQuery(`input[data-path="${path}"]`);
+    if ($field.length) {
+      // Scroll to the field
+      jQuery('html, body').animate({
+        scrollTop: $field.offset().top - 100
+      }, 500);
+      
+      // Highlight the field
+      $field.focus().css('background-color', '#fffbcc');
+      
+      // Remove highlight after a delay
       setTimeout(() => {
-        // Find the input with this path after tab switch
-        const $input = this.$(`[data-path="${path}"]`);
-
-        if (!$input.length) {
-          logger.warn('Field not found for path after tab switch:', path);
-          return;
-        }
-
-        logger.log('Scrolling to field:', path);
-        $input[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        $input.focus();
-
-        // Temporarily highlight the field
-        const $wrapper = $input.closest('.form-field');
-        $wrapper.addClass('search-target');
-        setTimeout(() => {
-          $wrapper.removeClass('search-target');
-        }, 2000);
-      }, 300); // Increased timeout to allow tab switch to complete
-    } else {
-      logger.warn('Category tab not found for category:', category);
-
-      // If we can't find the tab, try to go to the field anyway
-      const $input = this.$(`[data-path="${path}"]`);
-      if ($input.length) {
-        $input[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        $input.focus();
-      }
+        $field.css('background-color', '');
+      }, 3000);
+      
+      // Close search results
+      jQuery('#label-search-results').hide();
+      jQuery('#label-search').val('');
     }
   }
+
 
   /**
    * Download JSON data as a file
@@ -749,6 +835,21 @@ class LabelSettingsModule extends VerticalTabbedModule {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Simple debounce function
+   * @param {Function} func - The function to debounce
+   * @param {number} wait - Milliseconds to wait
+   * @returns {Function} Debounced function
+   */
+  debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+      const context = this;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(context, args), wait);
+    };
   }
 }
 

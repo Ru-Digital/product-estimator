@@ -28,15 +28,17 @@
   687:3   warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/admin/modules/LabelSettingsModule.js
-   10:1  warning  There should be at least one empty line between import groups                   import/order
-   11:1  warning  `@utils` import should occur before import of `../common/VerticalTabbedModule`  import/order
-  106:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-  309:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-  456:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
-  469:3  warning  Missing JSDoc @returns declaration                                              jsdoc/require-returns
-  469:3  warning  Missing JSDoc @param "labelId" declaration                                      jsdoc/require-param
-  495:3  warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
-  495:3  warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
+   10:1   warning  There should be at least one empty line between import groups                   import/order
+   11:1   warning  `@utils` import should occur before import of `../common/VerticalTabbedModule`  import/order
+  253:13  warning  '$tr' is assigned a value but never used                                        no-unused-vars
+  307:3   warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  510:3   warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  657:3   warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  670:3   warning  Missing JSDoc @returns declaration                                              jsdoc/require-returns
+  670:3   warning  Missing JSDoc @param "labelId" declaration                                      jsdoc/require-param
+  696:3   warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  825:3   warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
+  825:3   warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/examples/using-labels.js
     4:1   warning  Expected only 0 line after block description         jsdoc/tag-lines
@@ -208,77 +210,74 @@
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/labels-enhanced.js
-     2:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-    70:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-    73:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-   300:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   321:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   415:17  warning  Unexpected console statement                                         no-console
-   437:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   440:1   warning  Invalid JSDoc @param "obj" type "Object"; prefer: "object"           jsdoc/check-types
-   460:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   503:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   534:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   563:21  warning  Unexpected console statement                                         no-console
-   568:17  warning  Unexpected console statement                                         no-console
-   574:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   577:1   warning  Invalid JSDoc @param "replacements" type "Object"; prefer: "object"  jsdoc/check-types
-   614:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   618:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-   633:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   643:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   668:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   683:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   742:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   746:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-   760:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   790:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   807:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   809:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-   837:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   840:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-   860:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   863:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-   886:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   899:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   901:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-   944:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   962:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   992:13  warning  Unexpected console statement                                         no-console
-   997:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  1026:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+    2:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   60:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   81:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  156:17  warning  Unexpected console statement                                         no-console
+  178:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  181:1   warning  Invalid JSDoc @param "obj" type "Object"; prefer: "object"           jsdoc/check-types
+  201:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  244:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  275:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  304:21  warning  Unexpected console statement                                         no-console
+  309:17  warning  Unexpected console statement                                         no-console
+  315:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  318:1   warning  Invalid JSDoc @param "replacements" type "Object"; prefer: "object"  jsdoc/check-types
+  355:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  359:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  374:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  385:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  400:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  459:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  463:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  477:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  507:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  524:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  526:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  553:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  556:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  576:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  579:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  602:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  615:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  617:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  659:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  690:13  warning  Unexpected console statement                                         no-console
+  695:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  724:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
 
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/labels.js
     2:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   54:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-   75:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  132:21  warning  Unexpected console statement                                         no-console
-  158:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  201:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  230:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  259:21  warning  Unexpected console statement                                         no-console
-  264:17  warning  Unexpected console statement                                         no-console
-  270:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  273:1   warning  Invalid JSDoc @param "replacements" type "Object"; prefer: "object"  jsdoc/check-types
-  310:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  313:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  320:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  330:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  353:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  412:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  416:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  430:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  460:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  471:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  473:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  495:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  508:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  510:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
-  551:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  581:13  warning  Unexpected console statement                                         no-console
-  586:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
-  608:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   56:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   77:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  134:21  warning  Unexpected console statement                                         no-console
+  160:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  203:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  232:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  261:21  warning  Unexpected console statement                                         no-console
+  266:17  warning  Unexpected console statement                                         no-console
+  272:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  275:1   warning  Invalid JSDoc @param "replacements" type "Object"; prefer: "object"  jsdoc/check-types
+  312:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  315:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  322:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  334:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  393:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  397:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  411:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  441:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  452:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  454:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  479:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  482:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  502:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  515:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  517:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+  558:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  588:13  warning  Unexpected console statement                                         no-console
+  593:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  615:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
 
-✖ 226 problems (4 errors, 222 warnings)
-  0 errors and 87 warnings potentially fixable with the `--fix` option.
+✖ 225 problems (4 errors, 221 warnings)
+  0 errors and 85 warnings potentially fixable with the `--fix` option.
 

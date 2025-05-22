@@ -9,7 +9,6 @@ import './modules/NetsuiteSettingsModule';
 import './modules/NotificationSettingsModule';
 import './modules/ProductAdditionsSettingsModule';
 import './modules/LabelSettingsModule';
-import './modules/HierarchicalLabelSettingsModule';
 import './modules/FeatureSwitchesSettingsModule';
 import './modules/PricingRulesSettingsModule';
 import './modules/SimilarProductsSettingsModule';

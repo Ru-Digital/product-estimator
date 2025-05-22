@@ -70,7 +70,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         ];
 
         // Load the current V3 hierarchical structure from database
-        $this->hierarchical_structure = $this->get_current_v3_structure();
+        $this->hierarchical_structure = $this->get_default_v3_admin_structure();
     }
 
     public function register_hooks() {
@@ -154,7 +154,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                     // Register each property of the field (label, placeholder, validation_*, etc.)
                     foreach ($value as $prop_key => $prop_value) {
                         $prop_path = $field_path . '.' . $prop_key;
-                        
+
                         // Handle validation arrays specially
                         if ($prop_key === 'validation' && is_array($prop_value)) {
                             // Register each validation rule as a separate field
@@ -204,7 +204,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
     private function is_field_with_properties($value) {
         // Check for common field properties (form fields)
         $field_properties = ['label', 'placeholder', 'description'];
-        
+
         // Check for button, message, and heading properties
         $ui_element_properties = ['text']; // buttons have 'label', messages/headings have 'text'
 
@@ -225,7 +225,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                 break;
             }
         }
-        
+
         // Check if it has UI element properties (buttons, messages, headings)
         $has_ui_element_properties = false;
         foreach ($ui_element_properties as $property) {
@@ -234,7 +234,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                 break;
             }
         }
-        
+
         // Also check for 'label' property (used by buttons)
         if (isset($value['label'])) {
             $has_ui_element_properties = true;
@@ -1301,9 +1301,10 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         }
 
         $export_data = [
-            'version' => get_option('product_estimator_labels_version', '2.5.0'),
+            'version' => get_option('product_estimator_labels_version', '3.0.0'),
             'exported_at' => current_time('mysql'),
             'structure' => 'hierarchical',
+            'structure_version' => 'v3',
             'labels' => $labels
         ];
 
@@ -1424,14 +1425,8 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                 return ['success' => false, 'message' => 'No labels found in import data'];
             }
 
-            // Check if we're importing hierarchical or flat structure
-            $is_hierarchical = isset($data['structure']) && $data['structure'] === 'hierarchical';
-
-            // If importing flat structure, convert to hierarchical
-            $labels_to_import = $is_hierarchical ? $data['labels'] : $this->convert_flat_to_hierarchical($data['labels']);
-
             // Validate label structure
-            $validated_labels = $this->validate_import_data($labels_to_import);
+            $validated_labels = $this->validate_import_data($data['labels']);
 
             if (!$validated_labels) {
                 return ['success' => false, 'message' => 'Invalid label structure'];
@@ -1490,55 +1485,6 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         } catch (\Exception $e) {
             return ['success' => false, 'message' => 'Import failed: ' . $e->getMessage()];
         }
-    }
-
-    /**
-     * Convert flat structure to hierarchical
-     *
-     * @param array $flat_labels Flat labels structure
-     * @return array Hierarchical structure
-     */
-    private function convert_flat_to_hierarchical($flat_labels) {
-        // This is a simplified conversion that maps from old categories to new
-        $mapping = [
-            'buttons' => 'common.buttons',
-            'forms' => 'common.forms',
-            'messages' => 'common.messages',
-            'ui_elements' => 'ui',
-            'pdf' => 'pdf'
-        ];
-
-        $hierarchical = [];
-
-        foreach ($flat_labels as $old_category => $labels) {
-            // Determine where to put these labels
-            $new_category = $mapping[$old_category] ?? 'common';
-            $path_parts = explode('.', $new_category);
-
-            // Build the hierarchical structure
-            if (count($path_parts) === 1) {
-                if (!isset($hierarchical[$path_parts[0]])) {
-                    $hierarchical[$path_parts[0]] = [];
-                }
-
-                $hierarchical[$path_parts[0]] = array_merge($hierarchical[$path_parts[0]], $labels);
-            } elseif (count($path_parts) === 2) {
-                if (!isset($hierarchical[$path_parts[0]])) {
-                    $hierarchical[$path_parts[0]] = [];
-                }
-
-                if (!isset($hierarchical[$path_parts[0]][$path_parts[1]])) {
-                    $hierarchical[$path_parts[0]][$path_parts[1]] = [];
-                }
-
-                $hierarchical[$path_parts[0]][$path_parts[1]] = array_merge(
-                    $hierarchical[$path_parts[0]][$path_parts[1]],
-                    $labels
-                );
-            }
-        }
-
-        return $hierarchical;
     }
 
     /**
@@ -1713,36 +1659,6 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         ]);
     }
 
-    /**
-     * Get the current V3 field-grouped structure from database
-     *
-     * @return array Current V3 hierarchical structure
-     */
-    private function get_current_v3_structure() {
-        // Get the current labels from database (should be V3 structure now)
-        $current_labels = get_option('product_estimator_labels', []);
-
-        // If we have V3 structure, return it
-        if (!empty($current_labels) && $this->is_v3_structure($current_labels)) {
-            return $current_labels;
-        }
-
-        // If no V3 structure or empty, return default V3 structure
-        return $this->get_default_v3_admin_structure();
-    }
-
-    /**
-     * Check if labels are in V3 field-grouped structure
-     *
-     * @param array $labels The labels to check
-     * @return bool True if V3 structure
-     */
-    private function is_v3_structure($labels) {
-        // V3 structure has top-level keys like estimate_management, room_management, customer_details
-        return isset($labels['estimate_management']) ||
-               isset($labels['room_management']) ||
-               isset($labels['customer_details']);
-    }
 
     /**
      * Get default V3 field-grouped structure for admin display

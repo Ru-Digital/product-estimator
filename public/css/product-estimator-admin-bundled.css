@@ -1,3 +1,6 @@
+/*!******************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/admin/Index.scss ***!
+  \******************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main admin styles entry point
@@ -2208,30 +2211,38 @@ textarea.error {
 .pe-vtabs-tab-form .form-table {
   background: #fff;
   border: 1px solid #eee;
+  border-collapse: separate;
   border-radius: 6px;
+  border-spacing: 0;
   margin-bottom: 20px;
-  padding: 20px;
+  overflow: hidden;
 }
-.pe-vtabs-tab-form .form-table tbody > tr {
-  border-bottom: 1px solid #e0e0e0;
-}
-.pe-vtabs-tab-form .form-table tbody > tr:last-child {
+.pe-vtabs-tab-form .form-table tbody > tr:last-child th, .pe-vtabs-tab-form .form-table tbody > tr:last-child td {
   border-bottom: none;
 }
 .pe-vtabs-tab-form .form-table th {
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  border-right: 1px solid #eee;
   color: #2c3338;
   font-weight: 600;
-  padding: 16px 20px 16px 0;
-  vertical-align: top;
+  padding: 16px 20px;
+  position: relative;
+  vertical-align: middle;
   width: 200px;
+  text-align: center;
 }
 .pe-vtabs-tab-form .form-table th label {
   color: #2c3338;
+  display: block;
+  font-size: 14px;
   font-weight: 600;
-  margin-bottom: 4px;
+  line-height: 1.4;
+  margin-bottom: 0;
 }
 .pe-vtabs-tab-form .form-table td {
-  padding: 16px 0;
+  border-bottom: 1px solid #eee;
+  padding: 16px 20px;
   vertical-align: top;
 }
 .pe-vtabs-tab-form .form-table td input[type=text],
@@ -2259,6 +2270,58 @@ textarea.error {
   font-size: 13px;
   font-style: italic;
   margin-top: 6px;
+}
+
+td.section-header-cell {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+td.section-header-cell div.section-header.pe-main-section-header {
+  background: #333333 !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  display: block !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  padding: 16px 20px !important;
+  text-align: center !important;
+  text-shadow: none !important;
+}
+
+td.section-header-cell .pe-label-subcategory-heading,
+td.section-header-cell h4.pe-label-subcategory-heading {
+  background: #444 !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  display: block !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  padding: 12px 16px !important;
+  text-align: center !important;
+}
+
+td.section-header-cell h4.pe-label-subcategory-heading {
+  border: none !important;
+  font-family: inherit !important;
+  line-height: 1.2 !important;
+}
+
+.pe-field-heading {
+  background-color: #999;
+  border-radius: 0 3px 3px 0 !important;
+  color: #2c3338 !important;
+  margin: 0 !important;
+  padding: 12px 16px !important;
+}
+.pe-field-heading .pe-field-heading-title {
+  color: #fff !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  margin: 0 !important;
+  text-align: center !important;
 }
 
 /* Label usage preview styles */

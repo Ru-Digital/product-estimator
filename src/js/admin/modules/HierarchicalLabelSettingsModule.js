@@ -29,6 +29,18 @@ class HierarchicalLabelSettingsModule extends VerticalTabbedModule {
     this.expandedSections = new Set();
     this.searchResults = [];
   }
+  
+  /**
+   * Module initialization method called by ProductEstimatorSettings base class
+   */
+  moduleInit() {
+    logger.log('HierarchicalLabelSettingsModule moduleInit called');
+    
+    // Fix section header table structure immediately when module loads
+    setTimeout(() => {
+      this.fixSectionHeaderTableStructure();
+    }, 500);
+  }
 
   /**
    * Override to bind module-specific events.
@@ -313,6 +325,11 @@ class HierarchicalLabelSettingsModule extends VerticalTabbedModule {
    * Initialize UI components
    */
   initializeUI() {
+    // Fix section header table structure to use colspan (with delay to ensure DOM is ready)
+    setTimeout(() => {
+      this.fixSectionHeaderTableStructure();
+    }, 100);
+    
     // Hide all nested fields initially
     jQuery('.pe-label-field-wrapper[data-depth]').each((_, field) => {
       const $field = jQuery(field);
@@ -337,6 +354,44 @@ class HierarchicalLabelSettingsModule extends VerticalTabbedModule {
         $heading.addClass('expanded');
       } else {
         $heading.removeClass('expanded');
+      }
+    });
+  }
+  
+  /**
+   * Fix section header table structure to use proper colspan
+   */
+  fixSectionHeaderTableStructure() {
+    logger.log('fixSectionHeaderTableStructure called');
+    const $headers = jQuery('.section-header-needs-colspan');
+    logger.log('Found headers with needs-colspan:', $headers.length);
+    
+    $headers.each((_, sectionHeader) => {
+      const $sectionHeader = jQuery(sectionHeader);
+      const $td = $sectionHeader.closest('td');
+      const $th = $td.prev('th');
+      const $tr = $td.closest('tr');
+      
+      logger.log('Processing header:', $sectionHeader.text());
+      logger.log('Found td:', $td.length);
+      logger.log('Found th:', $th.length);
+      logger.log('Th is empty:', $th.is(':empty'));
+      
+      // Only process if this is in a table row with empty th
+      if ($th.length && $th.is(':empty')) {
+        logger.log('Removing th and adding colspan for:', $sectionHeader.text());
+        
+        // Remove the empty th
+        $th.remove();
+        
+        // Add colspan to the td
+        $td.attr('colspan', '2');
+        $td.addClass('section-header-cell');
+        
+        // Remove the special class now that we've processed it
+        $sectionHeader.removeClass('section-header-needs-colspan');
+        
+        logger.log('Fixed section header table structure for:', $sectionHeader.text());
       }
     });
   }
@@ -664,16 +719,7 @@ class HierarchicalLabelSettingsModule extends VerticalTabbedModule {
 jQuery(document).ready(function() {
   if (jQuery('#labels').length) {
     logger.log('Initializing HierarchicalLabelSettingsModule');
-    // Check if we should use the hierarchical module
-    const labelSettings = window.productEstimatorSettings?.labelSettings || {};
-    
-    if (labelSettings.hierarchical) {
-      window.LabelSettingsModuleInstance = new HierarchicalLabelSettingsModule();
-    } else {
-      // If hierarchical flag is not set, this script will not initialize
-      // and the regular LabelSettingsModule will be used instead
-      logger.log('Not using hierarchical labels module (hierarchical flag not set)');
-    }
+    window.LabelSettingsModuleInstance = new HierarchicalLabelSettingsModule();
   }
 });
 

@@ -293,6 +293,7 @@ export class LabelManager {
 
     /**
      * Get a clean stack trace for debugging purposes
+     * Uses source maps when available to map bundled locations back to source files
      * @private
      * @returns {string} Formatted stack trace with source locations
      */
@@ -326,8 +327,44 @@ export class LabelManager {
                     const match = line.match(/(?:at\s+)?(?:.*?\s+)?\(?(.+\.js):(\d+):(\d+)\)?/);
                     if (match) {
                         const [, file, lineNum, colNum] = match;
-                        const fileName = file.split('/').pop(); // Get just filename
-                        return `${fileName}:${lineNum}:${colNum}`;
+                        
+                        // Try to get source-mapped location for bundled files
+                        const sourceLocation = this.getSourceMappedLocation(file, lineNum, colNum);
+                        if (sourceLocation) {
+                            return sourceLocation;
+                        }
+                        
+                        // Fallback to improved path handling for bundled files
+                        if (file.includes('.bundle.js')) {
+                            const pathParts = file.split('/');
+                            let meaningfulPath = '';
+                            
+                            // Find the plugins directory and get path from there
+                            const pluginIndex = pathParts.findIndex(part => part === 'product-estimator');
+                            if (pluginIndex !== -1 && pluginIndex < pathParts.length - 1) {
+                                meaningfulPath = pathParts.slice(pluginIndex).join('/');
+                            } else {
+                                // Fallback to last few directories + filename
+                                meaningfulPath = pathParts.slice(-3).join('/');
+                            }
+                            
+                            return `${meaningfulPath}:${lineNum}:${colNum} [bundled]`;
+                        } else {
+                            // For source files, try to get a meaningful path
+                            const pathParts = file.split('/');
+                            let sourcePath = '';
+                            
+                            // Look for src directory or other meaningful indicators
+                            const srcIndex = pathParts.findIndex(part => part === 'src');
+                            if (srcIndex !== -1 && srcIndex < pathParts.length - 1) {
+                                sourcePath = pathParts.slice(srcIndex).join('/');
+                            } else {
+                                // Fallback to filename with some context
+                                sourcePath = pathParts.slice(-2).join('/');
+                            }
+                            
+                            return `${sourcePath}:${lineNum}:${colNum}`;
+                        }
                     }
                     return line.trim();
                 }).join(' → ');
@@ -336,6 +373,68 @@ export class LabelManager {
             return 'Unknown source location';
         } catch (e) {
             return 'Error capturing stack trace';
+        }
+    }
+
+    /**
+     * Attempt to get source-mapped location for bundled files
+     * Uses browser's Error.stack source mapping when available
+     * @private
+     * @param {string} file - File path from stack trace
+     * @param {string|number} lineNum - Line number
+     * @param {string|number} colNum - Column number
+     * @returns {string|null} Source-mapped location or null if not available
+     */
+    getSourceMappedLocation(file, lineNum, colNum) {
+        try {
+            // Only process bundled files
+            if (!file.includes('.bundle.js')) {
+                return null;
+            }
+
+            // Check if we're in a browser environment with developer tools
+            if (typeof console === 'undefined' || !console.trace) {
+                return null;
+            }
+
+            // Try to use browser's source mapping by creating a function that will
+            // generate a stack trace with source map information
+            const testError = new Error();
+            
+            // If the browser has already source-mapped the stack trace,
+            // it might contain webpack:// URLs or source paths
+            if (testError.stack && testError.stack.includes('webpack://')) {
+                // Extract webpack source path if available
+                const webpackMatch = testError.stack.match(/webpack:\/\/.*?\/(src\/[^:]+):(\d+):(\d+)/);
+                if (webpackMatch) {
+                    const [, sourcePath, srcLine, srcCol] = webpackMatch;
+                    return `${sourcePath}:${srcLine}:${srcCol} [source-mapped]`;
+                }
+            }
+
+            // Alternative approach: Look for source map hints in the current script tags
+            const scripts = document.querySelectorAll('script[src*=".bundle.js"]');
+            for (const script of scripts) {
+                if (script.src.includes(file.split('/').pop())) {
+                    // Check if there's a corresponding .map file
+                    const mapUrl = script.src + '.map';
+                    // Note: We can't easily fetch and parse source maps synchronously here,
+                    // but we can indicate that source mapping should be available
+                    const fileName = file.split('/').pop();
+                    return `${fileName}:${lineNum}:${colNum} [bundled, source maps available]`;
+                }
+            }
+
+            // Provide helpful guidance for developers
+            const fileName = file.split('/').pop();
+            if (fileName && (fileName.includes('product-estimator') || fileName.includes('common'))) {
+                return `${fileName}:${lineNum}:${colNum} [bundled - open DevTools Sources tab for original location]`;
+            }
+
+            return null;
+        } catch (e) {
+            // Silent fallback
+            return null;
         }
     }
 

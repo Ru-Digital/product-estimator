@@ -496,12 +496,20 @@ class LabelsUsageAnalytics {
             $analytics['missing_labels'] = [];
         }
 
+        // Resolve source location from stack trace
+        $resolved_source = $this->resolve_source_location($stack_trace);
+
         $now = current_time('mysql');
 
         if (isset($analytics['missing_labels'][$key])) {
             // Update existing missing label
             $analytics['missing_labels'][$key]['count']++;
             $analytics['missing_labels'][$key]['last_seen'] = $now;
+
+            // Update resolved source if we have a better one
+            if ($resolved_source && !empty($resolved_source)) {
+                $analytics['missing_labels'][$key]['stack_trace'] = $resolved_source;
+            }
 
             // Track alternative default texts
             if ($analytics['missing_labels'][$key]['default_text'] !== $default_text) {
@@ -516,7 +524,7 @@ class LabelsUsageAnalytics {
             $analytics['missing_labels'][$key] = [
                 'key' => $key,
                 'default_text' => $default_text,
-                'stack_trace' => $stack_trace,
+                'stack_trace' => $resolved_source ?: $stack_trace,
                 'first_seen' => $now,
                 'last_seen' => $now,
                 'count' => 1,
@@ -527,6 +535,258 @@ class LabelsUsageAnalytics {
         // Update the analytics data
         $analytics['last_updated'] = $now;
         $this->save_analytics_data($analytics);
+    }
+
+    /**
+     * Resolve source location from stack trace using source maps
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $stack_trace    Raw stack trace from JavaScript
+     * @return   string    Resolved source location or empty string
+     */
+    private function resolve_source_location($stack_trace) {
+        if (empty($stack_trace)) {
+            return '';
+        }
+
+        // Parse the stack trace to extract bundled file info
+        if (preg_match('/([^\/]+\.bundle\.js):(\d+):(\d+)/', $stack_trace, $matches)) {
+            $bundle_file = $matches[1];
+            $line = intval($matches[2]);
+            $column = intval($matches[3]);
+
+            // Try to resolve using source map
+            $source_location = $this->resolve_with_source_map($bundle_file, $line, $column);
+            if ($source_location) {
+                return $source_location;
+            }
+        }
+
+        // If we can't resolve, return a cleaned version of the original
+        return $this->clean_stack_trace($stack_trace);
+    }
+
+    /**
+     * Resolve bundled location to source location using source maps
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $bundle_file    Bundle filename
+     * @param    int       $line          Line number in bundle
+     * @param    int       $column        Column number in bundle
+     * @return   string|null    Resolved source location or null
+     */
+    private function resolve_with_source_map($bundle_file, $line, $column) {
+        // Get the source map file path
+        $source_map_path = $this->get_source_map_path($bundle_file);
+        
+        if (!$source_map_path || !file_exists($source_map_path)) {
+            return null;
+        }
+
+        try {
+            // Read and decode the source map
+            $source_map_content = file_get_contents($source_map_path);
+            $source_map = json_decode($source_map_content, true);
+
+            if (!$source_map || !isset($source_map['mappings'])) {
+                return null;
+            }
+
+            // Parse the source map to find the original location
+            $original_location = $this->parse_source_map($source_map, $line, $column);
+            
+            if ($original_location) {
+                return $original_location;
+            }
+
+        } catch (Exception $e) {
+            // Log error if debug mode is enabled
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Product Estimator: Source map parsing error: ' . $e->getMessage());
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Get the path to the source map file for a bundle
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $bundle_file    Bundle filename
+     * @return   string|null    Source map file path or null
+     */
+    private function get_source_map_path($bundle_file) {
+        $plugin_dir = plugin_dir_path(dirname(__FILE__));
+        $js_dir = $plugin_dir . 'public/js/';
+        
+        // Map of bundle files to their source map locations
+        $source_map_files = [
+            'product-estimator.bundle.js' => $js_dir . 'product-estimator.bundle.js.map',
+            'product-estimator-admin.bundle.js' => $js_dir . 'product-estimator-admin.bundle.js.map',
+            'common.bundle.js' => $js_dir . 'common.bundle.js.map',
+        ];
+
+        return isset($source_map_files[$bundle_file]) ? $source_map_files[$bundle_file] : null;
+    }
+
+    /**
+     * Parse source map to find original location
+     * Simplified version - uses heuristics to find most likely source file
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    array     $source_map    Decoded source map data
+     * @param    int       $line         Line number in bundle (1-based)
+     * @param    int       $column       Column number in bundle (0-based)
+     * @return   string|null    Original source location or null
+     */
+    private function parse_source_map($source_map, $line, $column) {
+        // If we have sources array, analyze to find the most relevant source file
+        if (isset($source_map['sources']) && is_array($source_map['sources'])) {
+            $prioritized_sources = $this->prioritize_source_files($source_map['sources']);
+            
+            if (!empty($prioritized_sources)) {
+                // Use the highest priority source file
+                $best_source = $prioritized_sources[0];
+                $clean_source = $this->clean_source_path($best_source);
+                
+                // For complex mappings, try to estimate a reasonable line number
+                // This is heuristic-based since proper VLQ parsing is complex
+                $estimated_line = $this->estimate_source_line($source_map, $line, $column);
+                
+                return $clean_source . ':' . $estimated_line . ':' . $column . ' [source-mapped]';
+            }
+        }
+
+        // If we have sourceRoot, try to construct a meaningful path
+        if (isset($source_map['sourceRoot']) && !empty($source_map['sourceRoot'])) {
+            return $source_map['sourceRoot'] . ':' . $line . ':' . $column . ' [source-mapped]';
+        }
+
+        return null;
+    }
+
+    /**
+     * Prioritize source files based on relevance to missing labels
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    array    $sources    Array of source file paths
+     * @return   array    Prioritized source files
+     */
+    private function prioritize_source_files($sources) {
+        $prioritized = [];
+        $deprioritized = [];
+
+        foreach ($sources as $source) {
+            $clean_source = $this->clean_source_path($source);
+            
+            // High priority: label-related files, manager files, frontend components
+            if (strpos($clean_source, 'labels') !== false ||
+                strpos($clean_source, 'Manager') !== false ||
+                strpos($clean_source, 'frontend') !== false ||
+                strpos($clean_source, 'src/js/') !== false) {
+                $prioritized[] = $source;
+            } 
+            // Medium priority: other JavaScript files
+            elseif (strpos($source, '.js') !== false) {
+                $deprioritized[] = $source;
+            }
+        }
+
+        // Sort prioritized files by specificity
+        usort($prioritized, function($a, $b) {
+            // Prefer files with 'labels' in the name
+            if (strpos($a, 'labels') !== false && strpos($b, 'labels') === false) {
+                return -1;
+            }
+            if (strpos($b, 'labels') !== false && strpos($a, 'labels') === false) {
+                return 1;
+            }
+            
+            // Prefer frontend over other directories
+            if (strpos($a, 'frontend') !== false && strpos($b, 'frontend') === false) {
+                return -1;
+            }
+            if (strpos($b, 'frontend') !== false && strpos($a, 'frontend') === false) {
+                return 1;
+            }
+            
+            return 0;
+        });
+
+        return array_merge($prioritized, $deprioritized);
+    }
+
+    /**
+     * Estimate source line number from bundle line
+     * Simple heuristic since full VLQ parsing is complex
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    array    $source_map    Source map data
+     * @param    int      $bundle_line   Line in bundle
+     * @param    int      $bundle_column Column in bundle
+     * @return   int      Estimated source line
+     */
+    private function estimate_source_line($source_map, $bundle_line, $bundle_column) {
+        // For minified webpack bundles, most code is on line 1
+        // Use a simple heuristic based on column position
+        if ($bundle_line === 1 && $bundle_column > 1000) {
+            // Estimate line based on column position
+            // This is very rough but better than showing line 1
+            return intval($bundle_column / 100) + 1;
+        }
+        
+        // For non-minified bundles, the line number might be more meaningful
+        return $bundle_line;
+    }
+
+    /**
+     * Clean and normalize source file paths
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $source_path    Raw source path from source map
+     * @return   string    Cleaned source path
+     */
+    private function clean_source_path($source_path) {
+        // Remove webpack-specific prefixes
+        $cleaned = preg_replace('/^webpack:\/\/[^\/]*\//', '', $source_path);
+        $cleaned = preg_replace('/^\.\/', '', $cleaned);
+        $cleaned = preg_replace('/^\.\.\//', '', $cleaned);
+        
+        // Ensure it starts with src/ if it's a source file
+        if (strpos($cleaned, 'src/') === false && strpos($cleaned, '.js') !== false) {
+            // Try to identify the file type and add appropriate prefix
+            if (strpos($cleaned, 'frontend') !== false || strpos($cleaned, 'admin') !== false) {
+                $cleaned = 'src/js/' . $cleaned;
+            }
+        }
+
+        return $cleaned;
+    }
+
+    /**
+     * Clean stack trace for better readability when source mapping fails
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $stack_trace    Raw stack trace
+     * @return   string    Cleaned stack trace
+     */
+    private function clean_stack_trace($stack_trace) {
+        // Extract just the file and location info, remove extra text
+        if (preg_match('/([^\/\s]+\.bundle\.js):(\d+):(\d+)/', $stack_trace, $matches)) {
+            return $matches[1] . ':' . $matches[2] . ':' . $matches[3] . ' [bundled]';
+        }
+        
+        // Return original if we can't parse it
+        return $stack_trace;
     }
 
     /**

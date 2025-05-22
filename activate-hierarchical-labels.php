@@ -17,12 +17,51 @@
 
 // Exit if accessed directly
 if (!defined('ABSPATH')) {
-    // If running as standalone script, define ABSPATH
-    if (php_sapi_name() == 'cli') {
-        // This is for command line usage
-        define('ABSPATH', dirname(__FILE__) . '/../../../../../../');
-        require_once(ABSPATH . 'wp-load.php');
-    } else {
+    // Try to load WordPress
+    $wp_load_paths = [
+        dirname(__FILE__) . '/../../../../../wp-load.php',
+        dirname(__FILE__) . '/../../../../wp-load.php', 
+        dirname(__FILE__) . '/../../../wp-load.php',
+        dirname(__FILE__) . '/../../wp-load.php',
+        dirname(__FILE__) . '/../wp-load.php'
+    ];
+
+    $wp_loaded = false;
+    foreach ($wp_load_paths as $path) {
+        if (file_exists($path)) {
+            require_once($path);
+            $wp_loaded = true;
+            break;
+        }
+    }
+    
+    // If we still can't load WordPress
+    if (!$wp_loaded) {
+        // Try to find WordPress root by looking for wp-config.php
+        $current_dir = dirname(__FILE__);
+        $max_depth = 10;
+        $depth = 0;
+        
+        while ($depth < $max_depth) {
+            if (file_exists($current_dir . '/wp-config.php') || file_exists($current_dir . '/wp-load.php')) {
+                if (file_exists($current_dir . '/wp-load.php')) {
+                    require_once($current_dir . '/wp-load.php');
+                    $wp_loaded = true;
+                    break;
+                }
+            }
+            $current_dir = dirname($current_dir);
+            $depth++;
+        }
+    }
+    
+    // If we still can't load WordPress, exit
+    if (!$wp_loaded) {
+        if (php_sapi_name() == 'cli') {
+            echo "Error: Could not find WordPress installation. Please run this script from within your WordPress directory.\n";
+        } else {
+            die('Error: Could not load WordPress. Please ensure this script is in the correct location within your WordPress installation.');
+        }
         exit;
     }
 }

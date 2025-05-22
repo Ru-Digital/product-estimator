@@ -16,6 +16,16 @@
   294:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
   327:3  warning  Missing JSDoc @returns declaration           jsdoc/require-returns
 
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/admin/modules/HierarchicalLabelSettingsModule.js
+   10:1  warning  There should be at least one empty line between import groups                   import/order
+   11:1  warning  `@utils` import should occur before import of `../common/VerticalTabbedModule`  import/order
+  175:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  372:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  492:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  619:3  warning  Missing JSDoc @param "e" declaration                                            jsdoc/require-param
+  632:3  warning  Missing JSDoc @param "filename" declaration                                     jsdoc/require-param
+  632:3  warning  Missing JSDoc @param "data" declaration                                         jsdoc/require-param
+
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/admin/modules/LabelSettingsModule.js
    10:1  warning  There should be at least one empty line between import groups                   import/order
    11:1  warning  `@utils` import should occur before import of `../common/VerticalTabbedModule`  import/order
@@ -196,6 +206,47 @@
   40:1  warning  Missing JSDoc @param "decimals" description        jsdoc/require-param-description
   40:1  warning  Missing JSDoc @param "decimals" type               jsdoc/require-param-type
 
+/Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/labels-enhanced.js
+     2:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+    70:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+    73:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+   300:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   321:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   415:17  warning  Unexpected console statement                                         no-console
+   437:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   440:1   warning  Invalid JSDoc @param "obj" type "Object"; prefer: "object"           jsdoc/check-types
+   460:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   503:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   534:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   563:21  warning  Unexpected console statement                                         no-console
+   568:17  warning  Unexpected console statement                                         no-console
+   574:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   577:1   warning  Invalid JSDoc @param "replacements" type "Object"; prefer: "object"  jsdoc/check-types
+   614:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   618:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+   633:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   643:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   668:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   683:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   742:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   746:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+   760:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   790:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   807:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   809:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+   837:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   840:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+   860:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   863:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+   886:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   899:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   901:1   warning  Invalid JSDoc @returns type "Object"; prefer: "object"               jsdoc/check-types
+   944:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   962:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+   992:13  warning  Unexpected console statement                                         no-console
+   997:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+  1026:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
+
 /Users/rudigital/Documents/Projects/andersens/app/public/wp-content/plugins/product-estimator/src/js/utils/labels.js
     2:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
    54:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
@@ -227,6 +278,6 @@
   586:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
   608:1   warning  Expected only 0 line after block description                         jsdoc/tag-lines
 
-✖ 178 problems (4 errors, 174 warnings)
-  0 errors and 44 warnings potentially fixable with the `--fix` option.
+✖ 225 problems (4 errors, 221 warnings)
+  0 errors and 87 warnings potentially fixable with the `--fix` option.
 

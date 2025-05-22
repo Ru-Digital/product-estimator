@@ -135,12 +135,12 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         foreach ($labels as $key => $value) {
             // Generate the field path
             $field_path = $parent_path ? $parent_path . '.' . $key : $key;
-            
+
             // If the value is an array, it's a nested category
             if (is_array($value)) {
                 // Add a subheading for this subcategory
                 $this->add_subcategory_heading($key, $field_path, $page_slug, $section_id, $depth);
-                
+
                 // Process the nested labels
                 $this->register_hierarchical_fields(
                     $value,
@@ -177,10 +177,10 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
     protected function add_subcategory_heading($key, $field_path, $page_slug, $section_id, $depth) {
         // Format the subcategory key for display
         $display_name = ucwords(str_replace('_', ' ', $key));
-        
+
         // Create a unique ID for this heading
         $heading_id = 'heading_' . sanitize_key($field_path);
-        
+
         // Register a custom field for the heading
         add_settings_field(
             $heading_id,
@@ -210,14 +210,14 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
     protected function register_label_field($vertical_tab_id, $key, $value, $field_path, $page_slug, $section_id, $depth) {
         // Format the key for display
         $label_title = ucwords(str_replace('_', ' ', $key));
-        
+
         // Generate HTML ID from the field path
         $display_id = 'label_' . sanitize_key($field_path);
-        
+
         // Field ID is the path in brackets notation for proper form submission
         // e.g., "ui.buttons.save" becomes "ui[buttons][save]"
         $field_id = $this->path_to_brackets($field_path);
-        
+
         $callback_args = [
             'id'          => $display_id, // HTML ID for the element
             'field_id'    => $field_id,   // Field ID for data matching
@@ -231,7 +231,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
             'value'       => $value,
             'depth'       => $depth,
         ];
-        
+
         add_settings_field(
             $display_id,
             $label_title,
@@ -240,7 +240,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
             $section_id,
             $callback_args
         );
-        
+
         // Store the field for use in validation
         $this->store_field_for_sub_tab($vertical_tab_id, $field_id, $callback_args);
     }
@@ -254,18 +254,18 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         $heading_text = $args['heading_text'] ?? '';
         $depth = $args['depth'] ?? 0;
         $field_path = $args['field_path'] ?? '';
-        
+
         // Calculate indentation based on depth
         $indent_style = $depth > 0 ? 'margin-left: ' . ($depth * 20) . 'px;' : '';
-        
+
         // Different heading levels based on depth
         $heading_tag = $depth === 0 ? 'h3' : 'h4';
         $heading_class = 'pe-label-subcategory-heading depth-' . $depth;
-        
+
         echo '<' . $heading_tag . ' class="' . esc_attr($heading_class) . '" style="' . esc_attr($indent_style) . '">';
         echo esc_html($heading_text);
         echo '</' . $heading_tag . '>';
-        
+
         // Add a data attribute for JavaScript interaction
         echo '<div class="pe-label-subcategory-data" data-path="' . esc_attr($field_path) . '" style="display:none;"></div>';
     }
@@ -278,17 +278,17 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
      */
     protected function path_to_brackets($path) {
         $parts = explode('.', $path);
-        
+
         if (empty($parts)) {
             return '';
         }
-        
+
         $result = array_shift($parts); // First part without brackets
-        
+
         foreach ($parts as $part) {
             $result .= '[' . $part . ']';
         }
-        
+
         return $result;
     }
 
@@ -301,37 +301,37 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         $options = get_option($this->option_name, []);
         $field_path = $args['field_path'] ?? '';
         $depth = $args['depth'] ?? 0;
-        
+
         // Get the current value with fallback to default
         $current_value = $this->get_value_from_path($options, $field_path, $args['default'] ?? '');
-        
+
         // Field name for nested structure based on brackets notation
         $field_name = $this->option_name . '[' . $args['field_id'] . ']';
-        
+
         // Calculate indentation based on depth
         $indent_style = $depth > 0 ? 'margin-left: ' . ($depth * 20) . 'px;' : '';
-        
+
         // Create wrapper with indentation
         echo '<div class="pe-label-field-wrapper depth-' . esc_attr($depth) . '" style="' . esc_attr($indent_style) . '">';
-        
+
         // Path indicator to show hierarchy
         if ($depth > 0) {
             echo '<div class="pe-label-path-indicator">';
             echo '<code>' . esc_html($field_path) . '</code>';
             echo '</div>';
         }
-        
+
         // Render the field
         echo '<input type="text" id="' . esc_attr($args['id']) . '" name="' . esc_attr($field_name) . '" value="' . esc_attr($current_value) . '" class="regular-text" data-path="' . esc_attr($field_path) . '" />';
-        
+
         // Add description if provided
         if (!empty($args['description'])) {
             echo '<p class="description">' . esc_html($args['description']) . '</p>';
         }
-        
+
         // Add usage info
         $this->render_label_usage($args['category'], $field_path);
-        
+
         echo '</div>';
     }
 
@@ -346,14 +346,14 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
     protected function get_value_from_path($array, $path, $default = '') {
         $parts = explode('.', $path);
         $current = $array;
-        
+
         foreach ($parts as $part) {
             if (!is_array($current) || !isset($current[$part])) {
                 return $default;
             }
             $current = $current[$part];
         }
-        
+
         return $current;
     }
 
@@ -381,15 +381,15 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
     private function get_labels_for_category($category) {
         // Get saved labels from DB
         $saved_labels = get_option($this->option_name, []);
-        
+
         // Get default hierarchical structure
         $default_structure = $this->hierarchical_structure[$category] ?? [];
-        
+
         // If there's no saved data for this category, use defaults
         if (!isset($saved_labels[$category])) {
             return $default_structure;
         }
-        
+
         // Merge default structure with saved labels to ensure we have all fields
         // This is a deep merge that preserves structure but prioritizes saved values
         return $this->deep_merge($default_structure, $saved_labels[$category]);
@@ -404,7 +404,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
      */
     private function deep_merge($default, $custom) {
         $result = $default;
-        
+
         foreach ($custom as $key => $value) {
             // If both are arrays, recursively merge
             if (isset($result[$key]) && is_array($result[$key]) && is_array($value)) {
@@ -415,7 +415,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                 $result[$key] = $value;
             }
         }
-        
+
         return $result;
     }
 
@@ -586,7 +586,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         $parts = explode('.', $field_path);
         $label_name = end($parts);
         $humanized = ucwords(str_replace('_', ' ', $label_name));
-        
+
         return sprintf(
             __('Text for %s in the %s section', 'product-estimator'),
             $humanized,
@@ -744,7 +744,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         $parts = explode('.', $field_path);
         $section = isset($parts[1]) ? ucwords(str_replace('_', ' ', $parts[1])) : '';
         $context = isset($parts[0]) ? ucwords(str_replace('_', ' ', $parts[0])) : '';
-        
+
         if ($section && $context) {
             return sprintf(
                 __('Used in %s section of the %s interface', 'product-estimator'),
@@ -752,7 +752,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                 $context
             );
         }
-        
+
         return '';
     }
 
@@ -863,47 +863,47 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
             padding-bottom: 5px;
             border-bottom: 1px solid #ccc;
         }
-        
+
         .pe-label-subcategory-heading.depth-0 {
             font-size: 18px;
             border-bottom: 2px solid #2271b1;
         }
-        
+
         .pe-label-subcategory-heading.depth-1 {
             font-size: 16px;
             border-bottom: 1px solid #c3c4c7;
             margin-top: 15px;
         }
-        
+
         .pe-label-subcategory-heading.depth-2 {
             font-size: 14px;
             border-bottom: 1px dotted #c3c4c7;
             margin-top: 10px;
         }
-        
+
         .pe-label-field-wrapper {
             padding: 8px 0;
             border-bottom: 1px solid #f6f7f7;
         }
-        
+
         .pe-label-path-indicator {
             color: #646970;
             font-size: 11px;
             margin-bottom: 4px;
         }
-        
+
         .pe-label-path-indicator code {
             background: #f0f0f1;
             padding: 2px 4px;
             border-radius: 2px;
         }
-        
+
         /* Search results highlighting */
         .label-search-highlight {
             background-color: #ffff00;
             padding: 2px;
         }
-        
+
         #label-search-results {
             margin-top: 10px;
             max-height: 200px;
@@ -913,27 +913,27 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
             background: #f6f7f7;
             display: none;
         }
-        
+
         .search-result-item {
             margin-bottom: 5px;
             padding-bottom: 5px;
             border-bottom: 1px solid #eee;
         }
-        
+
         .search-result-item .path {
             font-weight: bold;
         }
-        
+
         .search-result-item .value {
             color: #646970;
         }
-        
+
         .search-result-item .go-to {
             display: block;
             margin-top: 3px;
             text-decoration: none;
         }
-        
+
         /* Toggle buttons for expanding/collapsing sections */
         .section-toggle-buttons {
             margin: 10px 0;
@@ -950,11 +950,11 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'product_estimator_settings_nonce')) {
             wp_send_json_error(['message' => __('Security check failed', 'product-estimator')], 403); exit;
         }
-        
+
         if (!current_user_can('manage_options')) {
             wp_send_json_error(['message' => __('You do not have permission to change these settings', 'product-estimator')], 403); exit;
         }
-        
+
         if (!isset($_POST['form_data'])) {
             if (defined('WP_DEBUG') && WP_DEBUG) { error_log('form_data not in POST.'); }
             wp_send_json_error(['message' => __('No form data received', 'product-estimator')], 400); exit;
@@ -972,17 +972,17 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         // Get existing options
         $existing_options = get_option($this->option_name, []);
         if (!is_array($existing_options)) { $existing_options = []; }
-        
+
         // Get the submitted data for the current category from form data
         $category_data = $parsed_form_data[$this->option_name][$current_context_id] ?? [];
-        
+
         if (empty($category_data)) {
             wp_send_json_error(['message' => __('Error: No data received for this category.', 'product-estimator')]); exit;
         }
 
         // Create/update the category in existing options
         $existing_options[$current_context_id] = $this->process_hierarchical_data(
-            $category_data, 
+            $category_data,
             $existing_options[$current_context_id] ?? []
         );
 
@@ -1013,7 +1013,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
      */
     private function process_hierarchical_data($submitted_data, $existing_data) {
         $processed_data = $existing_data;
-        
+
         // Process each key in the submitted data
         foreach ($submitted_data as $key => $value) {
             // Check if the key contains brackets indicating a nested structure
@@ -1021,7 +1021,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                 // Extract the path from the bracketed key format
                 $path = $this->brackets_to_path($key);
                 $path_parts = explode('.', $path);
-                
+
                 // Set the value at the specified path
                 $this->set_value_at_path($processed_data, $path_parts, $value);
             } else {
@@ -1029,7 +1029,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
                 $processed_data[$key] = sanitize_text_field($value);
             }
         }
-        
+
         return $processed_data;
     }
 
@@ -1057,18 +1057,18 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
      */
     private function set_value_at_path(&$array, $path_parts, $value) {
         $current = &$array;
-        
+
         // Traverse the path to find the target location
         for ($i = 0; $i < count($path_parts) - 1; $i++) {
             $part = $path_parts[$i];
-            
+
             if (!isset($current[$part]) || !is_array($current[$part])) {
                 $current[$part] = [];
             }
-            
+
             $current = &$current[$part];
         }
-        
+
         // Set the value at the final location
         $current[$path_parts[count($path_parts) - 1]] = sanitize_text_field($value);
     }
@@ -1151,7 +1151,7 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         foreach ($structure as $key => $value) {
             // Sanitize the key
             $clean_key = sanitize_key($key);
-            
+
             if ($clean_key === '') {
                 continue;
             }
@@ -1298,25 +1298,25 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
             // Determine where to put these labels
             $new_category = $mapping[$old_category] ?? 'common';
             $path_parts = explode('.', $new_category);
-            
+
             // Build the hierarchical structure
             if (count($path_parts) === 1) {
                 if (!isset($hierarchical[$path_parts[0]])) {
                     $hierarchical[$path_parts[0]] = [];
                 }
-                
+
                 $hierarchical[$path_parts[0]] = array_merge($hierarchical[$path_parts[0]], $labels);
             } elseif (count($path_parts) === 2) {
                 if (!isset($hierarchical[$path_parts[0]])) {
                     $hierarchical[$path_parts[0]] = [];
                 }
-                
+
                 if (!isset($hierarchical[$path_parts[0]][$path_parts[1]])) {
                     $hierarchical[$path_parts[0]][$path_parts[1]] = [];
                 }
-                
+
                 $hierarchical[$path_parts[0]][$path_parts[1]] = array_merge(
-                    $hierarchical[$path_parts[0]][$path_parts[1]], 
+                    $hierarchical[$path_parts[0]][$path_parts[1]],
                     $labels
                 );
             }
@@ -1363,18 +1363,18 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
         foreach ($updates as $path => $new_value) {
             // Split the path into parts
             $path_parts = explode('.', $path);
-            
+
             // Get the category (first part of the path)
             $category = array_shift($path_parts);
-            
+
             // Skip if category doesn't exist
             if (!isset($labels[$category])) {
                 continue;
             }
-            
+
             // Update the value at the path
             $updated = $this->update_value_at_path($labels[$category], $path_parts, sanitize_text_field($new_value));
-            
+
             if ($updated) {
                 $updated_count++;
             }
@@ -1407,15 +1407,15 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
     private function update_value_at_path(&$array, $path_parts, $value) {
         // Clone the path parts to avoid modifying the original
         $parts = $path_parts;
-        
+
         // Empty path - can't update
         if (empty($parts)) {
             return false;
         }
-        
+
         // Get the current key
         $current_key = array_shift($parts);
-        
+
         // If this is the last part, update the value
         if (empty($parts)) {
             if (isset($array[$current_key])) {
@@ -1427,12 +1427,12 @@ final class LabelsSettingsModuleHierarchical extends SettingsModuleWithVerticalT
             }
             return false;
         }
-        
+
         // Otherwise, continue traversing
         if (isset($array[$current_key]) && is_array($array[$current_key])) {
             return $this->update_value_at_path($array[$current_key], $parts, $value);
         }
-        
+
         return false;
     }
 

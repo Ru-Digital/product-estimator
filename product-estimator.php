@@ -6,7 +6,7 @@
  * Plugin Name: Product Estimator
  * Plugin URI: https://github.com/Ru-Digital/product-estimator
  * Description: A customizable product estimation tool for WordPress.
- * Version: 2.0.14
+ * Version: 2.1.1
  * Author: RU Digital
  * Author URI: https://rudigital.com.au
  * License: GPL2
@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Plugin Constants
-define('PRODUCT_ESTIMATOR_VERSION', '2.0.14'); // Consider updating this if making changes
+define('PRODUCT_ESTIMATOR_VERSION', '2.1.1'); // Consider updating this if making changes
 define('PRODUCT_ESTIMATOR_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PRODUCT_ESTIMATOR_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('PRODUCT_ESTIMATOR_BASENAME', plugin_basename(__FILE__));
@@ -93,6 +93,21 @@ if (file_exists($functions_file)) {
     error_log('Product Estimator Critical Error: Required file includes/functions.php not found.');
     // Optional: Prevent plugin execution if functions are essential.
     // return;
+}
+
+// Load hierarchical labels integration if enabled
+if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'enable-hierarchical-labels.php')) {
+    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'enable-hierarchical-labels.php';
+}
+
+// Load frontend hierarchical labels integration if enabled
+if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'enable-frontend-hierarchical-labels.php')) {
+    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'enable-frontend-hierarchical-labels.php';
+}
+
+// Load admin activation page for hierarchical labels (temporary)
+if (file_exists(PRODUCT_ESTIMATOR_PLUGIN_DIR . 'activate-hierarchical-labels-admin.php')) {
+    require_once PRODUCT_ESTIMATOR_PLUGIN_DIR . 'activate-hierarchical-labels-admin.php';
 }
 // --- END MODIFICATION ---
 

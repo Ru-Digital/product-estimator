@@ -1,3 +1,6 @@
+/*!******************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/admin/Index.scss ***!
+  \******************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main admin styles entry point
@@ -26,7 +29,7 @@
 /* General Admin Styles */
 .product-estimator-admin-wrapper {
   margin: 20px 0;
-  max-width: 1200px;
+  max-width: 1600px;
 }
 .product-estimator-admin-wrapper .meta-box-sortables {
   min-height: 0;
@@ -60,9 +63,6 @@
 }
 
 /* Form Styling */
-.product-estimator-form {
-  max-width: 800px;
-}
 .product-estimator-form input[type=text], .product-estimator-form input[type=email], .product-estimator-form input[type=number], .product-estimator-form input + select {
   min-width: 250px;
 }

@@ -15,7 +15,7 @@ $link-color: #0073aa;
 
 .product-estimator-admin-wrapper {
   margin: 20px 0;
-  max-width: 1200px;
+  max-width: 1600px;
 
   .meta-box-sortables {
     min-height: 0;
@@ -56,7 +56,6 @@ $link-color: #0073aa;
 /* Form Styling */
 
 .product-estimator-form {
-  max-width: 800px;
 
   input {
 
@@ -211,29 +210,29 @@ $link-color: #0073aa;
     orphans: 3; /* Minimum lines at bottom of page before break */
     widows: 3;  /* Minimum lines at top of page after break */
   }
-  
+
   /* Avoid breaks inside these elements */
 
-  h1, h2, h3, h4, 
+  h1, h2, h3, h4,
   .postbox,
-  tr, 
+  tr,
   thead {
     page-break-inside: avoid;
   }
-  
+
   /* Force page breaks before these elements */
 
   h1, h2, h3 {
     page-break-after: avoid;
     page-break-before: auto;
   }
-  
+
   /* Ensure tables have header rows on each page */
 
   thead {
     display: table-header-group;
   }
-  
+
   /* Avoid breaks in the middle of images */
 
   img {

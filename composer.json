@@ -54,7 +54,7 @@
             "includes/frontend/class-similar-products-frontend.php",
             "includes/frontend/class-product-additions-frontend.php",
             "includes/frontend/class-labels-frontend.php",
-            "includes/frontend/class-labels-frontend-enhanced.php",
+            "includes/class-labels-structure.php",
             "includes/integration/class-netsuite-integration.php",
             "includes/integration/class-woocommerce-integration.php",
             "includes/models/class-estimate-model.php",

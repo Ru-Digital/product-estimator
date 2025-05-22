@@ -2,6 +2,7 @@
 namespace RuDigital\ProductEstimator\Includes\Frontend;
 
 use RuDigital\ProductEstimator\Includes\LabelsMigration;
+use RuDigital\ProductEstimator\Includes\LabelsStructure;
 
 /**
  * Labels Frontend Class
@@ -252,11 +253,11 @@ class LabelsFrontend extends FrontendBase {
         
         // If no labels exist, get defaults
         if (empty($stored_labels)) {
-            $stored_labels = LabelsMigration::get_default_structure();
+            $stored_labels = LabelsStructure::get_structure();
         }
         
         // Merge with defaults to ensure all labels exist
-        $default_labels = LabelsMigration::get_default_structure();
+        $default_labels = LabelsStructure::get_structure();
         $merged_labels = array_replace_recursive($default_labels, $stored_labels);
         
         // Apply performance improvements

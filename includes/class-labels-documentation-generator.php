@@ -114,12 +114,44 @@ class LabelsDocumentationGenerator {
                     margin-top: 25px;
                     color: #23282d;
                 }
-                .category {
-                    margin-bottom: 30px;
+                .section {
+                    margin-bottom: 40px;
                     padding: 20px;
                     background: #f9f9f9;
                     border-radius: 5px;
                     border-left: 4px solid #0073aa;
+                }
+                .subsection {
+                    margin: 30px 0;
+                    padding: 15px;
+                    background: #fff;
+                    border-radius: 3px;
+                    border-left: 3px solid #ddd;
+                }
+                .group {
+                    margin: 20px 0;
+                    padding: 10px 0;
+                }
+                .section h1 {
+                    margin-top: 0;
+                    color: #0073aa;
+                    border-bottom: 2px solid #0073aa;
+                    padding-bottom: 10px;
+                }
+                .subsection h2 {
+                    margin-top: 0;
+                    color: #333;
+                    border-bottom: 1px solid #ddd;
+                    padding-bottom: 8px;
+                }
+                .group h3 {
+                    margin-top: 0;
+                    color: #555;
+                    font-size: 18px;
+                }
+                .usage-example h4 {
+                    margin-bottom: 15px;
+                    color: #666;
                 }
                 table {
                     width: 100%;
@@ -192,12 +224,43 @@ class LabelsDocumentationGenerator {
                 }
                 .toc {
                     background: #f5f5f5;
-                    padding: 15px;
+                    padding: 20px;
                     border-radius: 5px;
                     margin-bottom: 20px;
                 }
-                .toc ul {
-                    column-count: 2;
+                .toc > ul {
+                    margin: 0;
+                    padding: 0;
+                    list-style: none;
+                }
+                .toc li {
+                    margin-bottom: 8px;
+                }
+                .toc > ul > li {
+                    font-weight: bold;
+                    margin-bottom: 12px;
+                }
+                .toc > ul > li > a {
+                    color: #0073aa;
+                    text-decoration: none;
+                    font-size: 16px;
+                }
+                .toc ul ul {
+                    margin: 8px 0 0 20px;
+                    padding: 0;
+                    list-style: none;
+                }
+                .toc ul ul li {
+                    font-weight: normal;
+                    margin-bottom: 4px;
+                }
+                .toc ul ul a {
+                    color: #555;
+                    text-decoration: none;
+                    font-size: 14px;
+                }
+                .toc a:hover {
+                    text-decoration: underline;
                 }
                 .search-box {
                     margin: 20px 0;
@@ -240,8 +303,17 @@ class LabelsDocumentationGenerator {
             <div class="toc">
                 <h2>Table of Contents</h2>
                 <ul>
-                    <?php foreach ($categories as $category => $data): ?>
-                    <li><a href="#<?php echo esc_attr($category); ?>"><?php echo esc_html($data['title']); ?></a></li>
+                    <?php foreach ($categories as $section_key => $section_data): ?>
+                    <li>
+                        <a href="#<?php echo esc_attr($section_key); ?>"><?php echo esc_html($section_data['title']); ?></a>
+                        <?php if (!empty($section_data['subsections'])): ?>
+                        <ul>
+                            <?php foreach ($section_data['subsections'] as $subsection_key => $subsection_data): ?>
+                            <li><a href="#<?php echo esc_attr($section_key . '-' . $subsection_key); ?>"><?php echo esc_html($subsection_data['title']); ?></a></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php endif; ?>
+                    </li>
                     <?php endforeach; ?>
                 </ul>
             </div>
@@ -274,64 +346,85 @@ const label = labelManager.format('messages.item_added', {
 &lt;/button&gt;</pre>
             </div>
             
-            <?php foreach ($categories as $category => $data): ?>
-            <div class="category" id="<?php echo esc_attr($category); ?>">
-                <h2><?php echo esc_html($data['title']); ?></h2>
-                <p><?php echo esc_html($data['description']); ?></p>
+            <?php foreach ($categories as $section_key => $section_data): ?>
+            <div class="section" id="<?php echo esc_attr($section_key); ?>">
+                <h1><?php echo esc_html($section_data['title']); ?></h1>
+                <p><?php echo esc_html($section_data['description']); ?></p>
                 
-                <?php if (!empty($data['labels'])): ?>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Label Key</th>
-                            <th>Value</th>
-                            <?php if ($include_analytics): ?>
-                            <th>Usage</th>
-                            <?php endif; ?>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($data['labels'] as $key => $value): 
-                            $full_key = $category . '.' . $key;
-                            $usage_count = $usage_data[$full_key] ?? 0;
+                <?php if (!empty($section_data['subsections'])): ?>
+                    <?php foreach ($section_data['subsections'] as $subsection_key => $subsection_data): ?>
+                    <div class="subsection" id="<?php echo esc_attr($section_key . '-' . $subsection_key); ?>">
+                        <h2><?php echo esc_html($subsection_data['title']); ?></h2>
+                        <p><?php echo esc_html($subsection_data['description']); ?></p>
+                        
+                        <?php if (!empty($subsection_data['groups'])): ?>
+                            <?php foreach ($subsection_data['groups'] as $group_key => $group_data): ?>
+                            <div class="group">
+                                <h3><?php echo esc_html($group_data['title']); ?></h3>
+                                <p><?php echo esc_html($group_data['description']); ?></p>
+                                
+                                <?php if (!empty($group_data['labels'])): ?>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Label Key</th>
+                                            <th>Value</th>
+                                            <?php if ($include_analytics): ?>
+                                            <th>Usage</th>
+                                            <?php endif; ?>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($group_data['labels'] as $label_key => $label_value): 
+                                            $usage_count = $usage_data[$label_key] ?? 0;
+                                            
+                                            // Determine usage class
+                                            $usage_class = 'no-usage';
+                                            if ($usage_count > 50) {
+                                                $usage_class = 'high-usage';
+                                            } elseif ($usage_count > 10) {
+                                                $usage_class = 'medium-usage';
+                                            } elseif ($usage_count > 0) {
+                                                $usage_class = 'low-usage';
+                                            }
+                                        ?>
+                                        <tr class="label-row">
+                                            <td class="label-key"><?php echo esc_html($label_key); ?></td>
+                                            <td class="label-value"><?php echo esc_html($label_value); ?></td>
+                                            <?php if ($include_analytics): ?>
+                                            <td class="usage-count <?php echo esc_attr($usage_class); ?>">
+                                                <?php echo esc_html($usage_count); ?> <?php echo $usage_count === 1 ? 'use' : 'uses'; ?>
+                                            </td>
+                                            <?php endif; ?>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                                <?php else: ?>
+                                <p>No labels defined in this group.</p>
+                                <?php endif; ?>
+                            </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                        <p>No label groups defined in this subsection.</p>
+                        <?php endif; ?>
+                        
+                        <h4>Usage Examples</h4>
+                        <div class="usage-example">
+                            <strong>PHP:</strong>
+                            <pre>$label = $labels_frontend->get('<?php echo $section_key . '.' . $subsection_key; ?>.example_key.label', 'Default Value');</pre>
                             
-                            // Determine usage class
-                            $usage_class = 'no-usage';
-                            if ($usage_count > 50) {
-                                $usage_class = 'high-usage';
-                            } elseif ($usage_count > 10) {
-                                $usage_class = 'medium-usage';
-                            } elseif ($usage_count > 0) {
-                                $usage_class = 'low-usage';
-                            }
-                        ?>
-                        <tr class="label-row">
-                            <td class="label-key"><?php echo esc_html($full_key); ?></td>
-                            <td class="label-value"><?php echo esc_html($value); ?></td>
-                            <?php if ($include_analytics): ?>
-                            <td class="usage-count <?php echo esc_attr($usage_class); ?>">
-                                <?php echo esc_html($usage_count); ?> <?php echo $usage_count === 1 ? 'use' : 'uses'; ?>
-                            </td>
-                            <?php endif; ?>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                            <strong>JavaScript:</strong>
+                            <pre>const label = labelManager.get('<?php echo $section_key . '.' . $subsection_key; ?>.example_key.label', 'Default Value');</pre>
+                            
+                            <strong>Template:</strong>
+                            <pre>&lt;span data-label="<?php echo $section_key . '.' . $subsection_key; ?>.example_key.label"&gt;Default Value&lt;/span&gt;</pre>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
                 <?php else: ?>
-                <p>No labels defined in this category.</p>
+                <p>No subsections defined in this section.</p>
                 <?php endif; ?>
-                
-                <h3>Usage Examples</h3>
-                <div class="usage-example">
-                    <strong>PHP:</strong>
-                    <pre>$label = $labels_frontend->get('<?php echo $category; ?>.example_key', 'Default Value');</pre>
-                    
-                    <strong>JavaScript:</strong>
-                    <pre>const label = labelManager.get('<?php echo $category; ?>.example_key', 'Default Value');</pre>
-                    
-                    <strong>Template:</strong>
-                    <pre>&lt;span data-label="<?php echo $category; ?>.example_key"&gt;Default Value&lt;/span&gt;</pre>
-                </div>
             </div>
             <?php endforeach; ?>
             
@@ -394,8 +487,15 @@ const label = labelManager.format('messages.item_added', {
         $output .= "\n";
         
         $output .= "## Table of Contents\n\n";
-        foreach ($categories as $category => $data) {
-            $output .= "- [{$data['title']}](#" . strtolower(str_replace(' ', '-', $data['title'])) . ")\n";
+        foreach ($categories as $section_key => $section_data) {
+            $section_anchor = strtolower(str_replace([' ', '_'], '-', $section_key));
+            $output .= "- [{$section_data['title']}](#{$section_anchor})\n";
+            if (!empty($section_data['subsections'])) {
+                foreach ($section_data['subsections'] as $subsection_key => $subsection_data) {
+                    $subsection_anchor = strtolower(str_replace([' ', '_'], '-', $section_key . '-' . $subsection_key));
+                    $output .= "  - [{$subsection_data['title']}](#{$subsection_anchor})\n";
+                }
+            }
         }
         $output .= "\n";
         
@@ -429,44 +529,63 @@ const label = labelManager.format('messages.item_added', {
         $output .= "</button>\n";
         $output .= "```\n\n";
         
-        foreach ($categories as $category => $data) {
-            $output .= "## {$data['title']}\n\n";
-            $output .= "{$data['description']}\n\n";
+        foreach ($categories as $section_key => $section_data) {
+            $section_anchor = strtolower(str_replace([' ', '_'], '-', $section_key));
+            $output .= "## {$section_data['title']} {#{$section_anchor}}\n\n";
+            $output .= "{$section_data['description']}\n\n";
             
-            if (!empty($data['labels'])) {
-                $output .= "| Label Key | Value | " . ($include_analytics ? "Usage |" : "") . "\n";
-                $output .= "| --------- | ----- | " . ($include_analytics ? "---- |" : "") . "\n";
-                
-                foreach ($data['labels'] as $key => $value) {
-                    $full_key = $category . '.' . $key;
-                    $usage_count = $usage_data[$full_key] ?? 0;
+            if (!empty($section_data['subsections'])) {
+                foreach ($section_data['subsections'] as $subsection_key => $subsection_data) {
+                    $subsection_anchor = strtolower(str_replace([' ', '_'], '-', $section_key . '-' . $subsection_key));
+                    $output .= "### {$subsection_data['title']} {#{$subsection_anchor}}\n\n";
+                    $output .= "{$subsection_data['description']}\n\n";
                     
-                    $output .= "| `{$full_key}` | " . $this->escape_md_table_cell($value) . " | ";
-                    if ($include_analytics) {
-                        $output .= "{$usage_count} " . ($usage_count === 1 ? 'use' : 'uses') . " | ";
+                    if (!empty($subsection_data['groups'])) {
+                        foreach ($subsection_data['groups'] as $group_key => $group_data) {
+                            $output .= "#### {$group_data['title']}\n\n";
+                            $output .= "{$group_data['description']}\n\n";
+                            
+                            if (!empty($group_data['labels'])) {
+                                $output .= "| Label Key | Value | " . ($include_analytics ? "Usage |" : "") . "\n";
+                                $output .= "| --------- | ----- | " . ($include_analytics ? "---- |" : "") . "\n";
+                                
+                                foreach ($group_data['labels'] as $label_key => $label_value) {
+                                    $usage_count = $usage_data[$label_key] ?? 0;
+                                    
+                                    $output .= "| `{$label_key}` | " . $this->escape_md_table_cell($label_value) . " | ";
+                                    if ($include_analytics) {
+                                        $output .= "{$usage_count} " . ($usage_count === 1 ? 'use' : 'uses') . " | ";
+                                    }
+                                    $output .= "\n";
+                                }
+                                $output .= "\n";
+                            } else {
+                                $output .= "No labels defined in this group.\n\n";
+                            }
+                        }
+                    } else {
+                        $output .= "No label groups defined in this subsection.\n\n";
                     }
-                    $output .= "\n";
+                    
+                    $output .= "##### Usage Examples\n\n";
+                    $output .= "**PHP:**\n\n";
+                    $output .= "```php\n";
+                    $output .= "\$label = \$labels_frontend->get('{$section_key}.{$subsection_key}.example_key.label', 'Default Value');\n";
+                    $output .= "```\n\n";
+                    
+                    $output .= "**JavaScript:**\n\n";
+                    $output .= "```javascript\n";
+                    $output .= "const label = labelManager.get('{$section_key}.{$subsection_key}.example_key.label', 'Default Value');\n";
+                    $output .= "```\n\n";
+                    
+                    $output .= "**Template:**\n\n";
+                    $output .= "```html\n";
+                    $output .= "<span data-label=\"{$section_key}.{$subsection_key}.example_key.label\">Default Value</span>\n";
+                    $output .= "```\n\n";
                 }
-                $output .= "\n";
             } else {
-                $output .= "No labels defined in this category.\n\n";
+                $output .= "No subsections defined in this section.\n\n";
             }
-            
-            $output .= "### Usage Examples\n\n";
-            $output .= "**PHP:**\n\n";
-            $output .= "```php\n";
-            $output .= "\$label = \$labels_frontend->get('{$category}.example_key', 'Default Value');\n";
-            $output .= "```\n\n";
-            
-            $output .= "**JavaScript:**\n\n";
-            $output .= "```javascript\n";
-            $output .= "const label = labelManager.get('{$category}.example_key', 'Default Value');\n";
-            $output .= "```\n\n";
-            
-            $output .= "**Template:**\n\n";
-            $output .= "```html\n";
-            $output .= "<span data-label=\"{$category}.example_key\">Default Value</span>\n";
-            $output .= "```\n\n";
         }
         
         return $output;
@@ -517,25 +636,323 @@ const label = labelManager.format('messages.item_added', {
     private function get_categories($labels) {
         $categories = [];
         
-        foreach ($labels as $key => $value) {
+        foreach ($labels as $section_key => $section_value) {
             // Skip special keys
-            if ($key === '_version' || $key === '_flat') {
+            if ($section_key === '_version' || $section_key === '_flat' || strpos($section_key, '_') === 0) {
                 continue;
             }
             
-            if (is_array($value)) {
-                $title = ucfirst(str_replace('_', ' ', $key));
-                $description = $this->get_category_description($key);
-                
-                $categories[$key] = [
-                    'title' => $title,
-                    'description' => $description,
-                    'labels' => $value
-                ];
+            if (is_array($section_value)) {
+                // Build hierarchical structure that matches admin interface
+                $categories[$section_key] = $this->build_hierarchical_section($section_key, $section_value);
             }
         }
         
         return $categories;
+    }
+    
+    /**
+     * Build hierarchical section structure matching admin interface
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $section_key     The section key (e.g., 'estimate_management')
+     * @param    array     $section_data    The section data
+     * @return   array                      Hierarchical section structure
+     */
+    private function build_hierarchical_section($section_key, $section_data) {
+        $section = [
+            'title' => $this->get_section_title($section_key),
+            'description' => $this->get_section_description($section_key),
+            'subsections' => []
+        ];
+        
+        // Process each subsection within the main section
+        foreach ($section_data as $subsection_key => $subsection_data) {
+            if (is_array($subsection_data)) {
+                $subsection = $this->build_subsection($section_key, $subsection_key, $subsection_data);
+                if (!empty($subsection)) {
+                    $section['subsections'][$subsection_key] = $subsection;
+                }
+            }
+        }
+        
+        return $section;
+    }
+    
+    /**
+     * Build subsection structure (e.g., 'estimate_actions', 'create_new_estimate_form')
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $section_key      The parent section key
+     * @param    string    $subsection_key   The subsection key
+     * @param    array     $subsection_data  The subsection data
+     * @return   array                       Subsection structure
+     */
+    private function build_subsection($section_key, $subsection_key, $subsection_data) {
+        $subsection = [
+            'title' => $this->get_subsection_title($subsection_key),
+            'description' => $this->get_subsection_description($section_key, $subsection_key),
+            'groups' => []
+        ];
+        
+        // Process each group within the subsection (buttons, fields, messages, etc.)
+        foreach ($subsection_data as $group_key => $group_data) {
+            if (is_array($group_data)) {
+                $group = $this->build_group($section_key, $subsection_key, $group_key, $group_data);
+                if (!empty($group)) {
+                    $subsection['groups'][$group_key] = $group;
+                }
+            }
+        }
+        
+        return $subsection;
+    }
+    
+    /**
+     * Build group structure (e.g., 'buttons', 'fields', 'messages')
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $section_key      The parent section key
+     * @param    string    $subsection_key   The parent subsection key
+     * @param    string    $group_key        The group key
+     * @param    array     $group_data       The group data
+     * @return   array                       Group structure
+     */
+    private function build_group($section_key, $subsection_key, $group_key, $group_data) {
+        $group = [
+            'title' => $this->get_group_title($group_key),
+            'description' => $this->get_group_description($group_key),
+            'labels' => []
+        ];
+        
+        // Extract actual label values from this group
+        $base_path = $section_key . '.' . $subsection_key . '.' . $group_key;
+        $this->extract_labels_recursive($base_path, $group_data, $group['labels']);
+        
+        return $group;
+    }
+    
+    /**
+     * Extract label values recursively from hierarchical structure
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $base_path      Base path for this level
+     * @param    array     $data           Data to extract from
+     * @param    array     &$flat_labels   Reference to flat labels array
+     */
+    private function extract_labels_recursive($base_path, $data, &$flat_labels) {
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                // Check if this contains actual label values
+                if ($this->is_label_definition($value)) {
+                    // This is a label definition, extract the actual values
+                    $label_path = $base_path . '.' . $key;
+                    
+                    if (isset($value['label'])) {
+                        $flat_labels[$label_path . '.label'] = $value['label'];
+                    }
+                    if (isset($value['text'])) {
+                        $flat_labels[$label_path . '.text'] = $value['text'];
+                    }
+                    if (isset($value['placeholder'])) {
+                        $flat_labels[$label_path . '.placeholder'] = $value['placeholder'];
+                    }
+                    if (isset($value['default_option'])) {
+                        $flat_labels[$label_path . '.default_option'] = $value['default_option'];
+                    }
+                    
+                    // Handle validation messages
+                    if (isset($value['validation']) && is_array($value['validation'])) {
+                        foreach ($value['validation'] as $validation_key => $validation_value) {
+                            $flat_labels[$label_path . '.validation.' . $validation_key] = $validation_value;
+                        }
+                    }
+                } else {
+                    // This is a nested category, recurse deeper
+                    $this->extract_labels_recursive($base_path . '.' . $key, $value, $flat_labels);
+                }
+            } else {
+                // This is a direct value (like in PDF section)
+                $flat_labels[$base_path . '.' . $key] = $value;
+            }
+        }
+    }
+    
+    /**
+     * Check if an array represents a label definition
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    array     $array   Array to check
+     * @return   bool               True if this looks like a label definition
+     */
+    private function is_label_definition($array) {
+        // Label definitions contain keys like 'label', 'text', 'placeholder', 'validation', 'default_option'
+        // Also check for 'description' and 'usage' which indicate this is a complete label definition with metadata
+        $label_keys = ['label', 'text', 'placeholder', 'validation', 'default_option', 'description', 'usage'];
+        return !empty(array_intersect(array_keys($array), $label_keys));
+    }
+    
+    /**
+     * Get section title
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $section_key   The section key
+     * @return   string                   Formatted section title
+     */
+    private function get_section_title($section_key) {
+        $section_titles = [
+            'estimate_management' => 'Estimate Management',
+            'room_management' => 'Room Management', 
+            'product_management' => 'Product Management',
+            'customer_details' => 'Customer Details',
+            'common_ui' => 'Common UI',
+            'pdf' => 'PDF Generation'
+        ];
+        
+        return $section_titles[$section_key] ?? ucwords(str_replace('_', ' ', $section_key));
+    }
+    
+    /**
+     * Get section description
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $section_key   The section key
+     * @return   string                   Section description
+     */
+    private function get_section_description($section_key) {
+        $descriptions = [
+            'estimate_management' => 'Labels related to creating, managing, and working with estimates.',
+            'room_management' => 'Labels for adding, selecting, and managing rooms within estimates.',
+            'product_management' => 'Labels for adding, removing, and managing products within rooms.',
+            'customer_details' => 'Labels for collecting and managing customer information.',
+            'common_ui' => 'Generic UI labels used throughout the application.',
+            'pdf' => 'Labels and content used in PDF generation and document formatting.'
+        ];
+        
+        return $descriptions[$section_key] ?? 'Labels for ' . ucwords(str_replace('_', ' ', $section_key)) . '.';
+    }
+    
+    /**
+     * Get subsection title
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $subsection_key   The subsection key
+     * @return   string                      Formatted subsection title
+     */
+    private function get_subsection_title($subsection_key) {
+        $subsection_titles = [
+            'estimate_actions' => 'Estimate Actions',
+            'create_new_estimate_form' => 'Create New Estimate Form',
+            'estimate_selection_form' => 'Estimate Selection Form',
+            'add_new_room_form' => 'Add New Room Form',
+            'room_selection_form' => 'Room Selection Form',
+            'product_actions' => 'Product Actions',
+            'similar_products' => 'Similar Products',
+            'product_additions' => 'Product Additions',
+            'customer_details_form' => 'Customer Details Form',
+            'general_actions' => 'General Actions',
+            'confirmation_dialogs' => 'Confirmation Dialogs',
+            'product_dialogs' => 'Product Dialogs',
+            'loading_states' => 'Loading States',
+            'error_messages' => 'Error Messages',
+            'empty_states' => 'Empty States',
+            'success_messages' => 'Success Messages'
+        ];
+        
+        return $subsection_titles[$subsection_key] ?? ucwords(str_replace('_', ' ', $subsection_key));
+    }
+    
+    /**
+     * Get subsection description
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $section_key      The parent section key
+     * @param    string    $subsection_key   The subsection key
+     * @return   string                      Subsection description
+     */
+    private function get_subsection_description($section_key, $subsection_key) {
+        $key = $section_key . '.' . $subsection_key;
+        $descriptions = [
+            'estimate_management.estimate_actions' => 'Action buttons and controls for managing estimates (save, print, delete, etc.).',
+            'estimate_management.create_new_estimate_form' => 'Form elements for creating new estimates, including field labels and validation messages.',
+            'estimate_management.estimate_selection_form' => 'Form elements for selecting existing estimates from a list.',
+            'estimate_management.empty_states' => 'Messages displayed when no estimates are available.',
+            'estimate_management.success_messages' => 'Success messages for estimate-related operations.',
+            
+            'room_management.add_new_room_form' => 'Form elements for adding new rooms to estimates, including field labels and validation.',
+            'room_management.room_selection_form' => 'Form elements for selecting rooms within an estimate.',
+            'room_management.empty_states' => 'Messages displayed when no rooms are available in an estimate.',
+            'room_management.success_messages' => 'Success messages for room-related operations.',
+            
+            'product_management.product_actions' => 'Action buttons for managing products within rooms (add, remove, view details, etc.).',
+            'product_management.similar_products' => 'Labels and messages for the similar products feature.',
+            'product_management.product_additions' => 'Labels and messages for additional product options and accessories.',
+            'product_management.empty_states' => 'Messages displayed when no products are in a room.',
+            'product_management.success_messages' => 'Success messages for product-related operations.',
+            
+            'customer_details.customer_details_form' => 'Form elements for collecting customer information, including validation messages.',
+            
+            'common_ui.general_actions' => 'Generic action buttons used throughout the application (save, cancel, close, etc.).',
+            'common_ui.confirmation_dialogs' => 'Standard confirmation dialog elements and messages.',
+            'common_ui.product_dialogs' => 'Specialized dialogs for product-related confirmations and notifications.',
+            'common_ui.loading_states' => 'Loading messages and indicators.',
+            'common_ui.error_messages' => 'Generic error messages used throughout the application.'
+        ];
+        
+        return $descriptions[$key] ?? ucwords(str_replace('_', ' ', $subsection_key)) . ' labels.';
+    }
+    
+    /**
+     * Get group title
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $group_key   The group key
+     * @return   string                 Formatted group title
+     */
+    private function get_group_title($group_key) {
+        $group_titles = [
+            'buttons' => 'Buttons',
+            'fields' => 'Fields',
+            'messages' => 'Messages',
+            'headings' => 'Headings',
+            'labels' => 'Labels',
+            'heading' => 'Heading',
+            'validation' => 'Validation'
+        ];
+        
+        return $group_titles[$group_key] ?? ucwords(str_replace('_', ' ', $group_key));
+    }
+    
+    /**
+     * Get group description
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $group_key   The group key
+     * @return   string                 Group description
+     */
+    private function get_group_description($group_key) {
+        $descriptions = [
+            'buttons' => 'Button labels and text.',
+            'fields' => 'Form field labels, placeholders, help text, and validation messages.',
+            'messages' => 'Messages, notifications, and user feedback text.',
+            'headings' => 'Section headings and titles.',
+            'labels' => 'Descriptive labels and text.',
+            'heading' => 'Section heading text.',
+            'validation' => 'Form validation messages and error text.'
+        ];
+        
+        return $descriptions[$group_key] ?? ucwords(str_replace('_', ' ', $group_key)) . ' labels.';
     }
     
     /**
@@ -548,6 +965,7 @@ const label = labelManager.format('messages.item_added', {
      */
     private function get_category_description($category) {
         $descriptions = [
+            // Legacy categories (for backward compatibility)
             'buttons' => 'Labels used for buttons throughout the application.',
             'forms' => 'Form field labels, placeholders, and help text.',
             'messages' => 'Success, error, warning, and confirmation messages.',
@@ -558,10 +976,38 @@ const label = labelManager.format('messages.item_added', {
             'emails' => 'Email template content.',
             'headers' => 'Header and title text.',
             'errors' => 'Error messages shown to users.',
-            'success' => 'Success messages shown to users.'
+            'success' => 'Success messages shown to users.',
+            
+            // New hierarchical categories
+            'estimate_management.estimate_actions' => 'Action buttons and controls for managing estimates (save, print, delete, etc.).',
+            'estimate_management.create_new_estimate_form' => 'Form elements for creating new estimates, including field labels and validation messages.',
+            'estimate_management.estimate_selection_form' => 'Form elements for selecting existing estimates from a list.',
+            'estimate_management.empty_states' => 'Messages displayed when no estimates are available.',
+            'estimate_management.success_messages' => 'Success messages for estimate-related operations.',
+            
+            'room_management.add_new_room_form' => 'Form elements for adding new rooms to estimates, including field labels and validation.',
+            'room_management.room_selection_form' => 'Form elements for selecting rooms within an estimate.',
+            'room_management.empty_states' => 'Messages displayed when no rooms are available in an estimate.',
+            'room_management.success_messages' => 'Success messages for room-related operations.',
+            
+            'product_management.product_actions' => 'Action buttons for managing products within rooms (add, remove, view details, etc.).',
+            'product_management.similar_products' => 'Labels and messages for the similar products feature.',
+            'product_management.product_additions' => 'Labels and messages for additional product options and accessories.',
+            'product_management.empty_states' => 'Messages displayed when no products are in a room.',
+            'product_management.success_messages' => 'Success messages for product-related operations.',
+            
+            'customer_details.customer_details_form' => 'Form elements for collecting customer information, including validation messages.',
+            
+            'common_ui.general_actions' => 'Generic action buttons used throughout the application (save, cancel, close, etc.).',
+            'common_ui.confirmation_dialogs' => 'Standard confirmation dialog elements and messages.',
+            'common_ui.product_dialogs' => 'Specialized dialogs for product-related confirmations and notifications.',
+            'common_ui.loading_states' => 'Loading messages and indicators.',
+            'common_ui.error_messages' => 'Generic error messages used throughout the application.',
+            
+            'pdf' => 'Labels and content specific to PDF generation and document formatting.'
         ];
         
-        return $descriptions[$category] ?? 'Labels for ' . ucfirst(str_replace('_', ' ', $category)) . '.';
+        return $descriptions[$category] ?? 'Labels for ' . ucfirst(str_replace(['_', '.'], [' ', ' - '], $category)) . '.';
     }
     
     /**

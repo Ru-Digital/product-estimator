@@ -543,19 +543,6 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         echo '</div>';
     }
 
-
-
-    /**
-     * Get all registered fields (helper method)
-     *
-     * @return array Array of all registered fields
-     */
-    private function get_all_registered_fields() {
-        // This would need to be implemented to return all registered fields
-        // For now, return empty array as we're focusing on the structure change
-        return [];
-    }
-
     /**
      * Get a value from a nested array using dot notation path
      *
@@ -643,7 +630,7 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
     private function get_label_description($category, $field_path) {
         // Use centralized structure for descriptions
         $description = LabelsStructure::get_description($field_path);
-        
+
         // If no description found, generate a generic one
         if (empty($description)) {
             $parts = explode('.', $field_path);
@@ -654,14 +641,14 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
                 $category
             );
         }
-        
+
         return $description;
     }
 
     private function get_label_usage($category, $field_path) {
         // Use centralized structure for usage information
         $usage = LabelsStructure::get_usage($field_path);
-        
+
         // If no usage found, generate a generic one
         if (empty($usage)) {
             $parts = explode('.', $field_path);
@@ -769,101 +756,8 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
     public function enqueue_scripts() {
         // Make sure to provide the script data
         $this->provide_script_data_for_localization();
-
-        // Add custom CSS for hierarchical labels interface
-        wp_add_inline_style('product-estimator-admin', $this->get_hierarchical_styles());
     }
 
-    /**
-     * Add custom CSS for the hierarchical labels interface
-     *
-     * @return string CSS styles
-     */
-    private function get_hierarchical_styles() {
-        return "
-        .pe-label-subcategory-heading {
-            margin-top: 20px;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #ccc;
-        }
-
-        .pe-label-subcategory-heading.depth-0 {
-            font-size: 18px;
-            border-bottom: 2px solid #2271b1;
-        }
-
-        .pe-label-subcategory-heading.depth-1 {
-            font-size: 16px;
-            border-bottom: 1px solid #c3c4c7;
-            margin-top: 15px;
-        }
-
-        .pe-label-subcategory-heading.depth-2 {
-            font-size: 14px;
-            border-bottom: 1px dotted #c3c4c7;
-            margin-top: 10px;
-        }
-
-        .pe-label-field-wrapper {
-            padding: 8px 0;
-            border-bottom: 1px solid #f6f7f7;
-        }
-
-        .pe-label-path-indicator {
-            color: #646970;
-            font-size: 11px;
-            margin-bottom: 4px;
-        }
-
-        .pe-label-path-indicator code {
-            background: #f0f0f1;
-            padding: 2px 4px;
-            border-radius: 2px;
-        }
-
-        /* Search results highlighting */
-        .label-search-highlight {
-            background-color: #ffff00;
-            padding: 2px;
-        }
-
-        #label-search-results {
-            margin-top: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #dcdcde;
-            padding: 10px;
-            background: #f6f7f7;
-            display: none;
-        }
-
-        .search-result-item {
-            margin-bottom: 5px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .search-result-item .path {
-            font-weight: bold;
-        }
-
-        .search-result-item .value {
-            color: #646970;
-        }
-
-        .search-result-item .go-to {
-            display: block;
-            margin-top: 3px;
-            text-decoration: none;
-        }
-
-        /* Toggle buttons for expanding/collapsing sections */
-        .section-toggle-buttons {
-            margin: 10px 0;
-        }
-        ";
-    }
 
     /**
      * Override the handle_ajax_save method to handle hierarchical structure

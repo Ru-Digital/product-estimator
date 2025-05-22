@@ -954,6 +954,8 @@ td.section-header-cell h4.pe-label-subcategory-heading {
 
 .pe-label-field-wrapper {
   transition: all 0.3s ease;
+  border-bottom: 1px solid #f6f7f7;
+  padding: 8px 0;
 
   &[data-parent-section] {
     border-left: 2px solid transparent;
@@ -965,4 +967,82 @@ td.section-header-cell h4.pe-label-subcategory-heading {
       border-left-color: color.adjust($primary-color, $lightness: 30%);
     }
   }
+}
+
+/* Hierarchical label structure styles */
+.pe-label-subcategory-heading {
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 10px;
+  margin-top: 20px;
+  padding-bottom: 5px;
+
+  &.depth-0 {
+    border-bottom: 2px solid #2271b1;
+    font-size: 18px;
+  }
+
+  &.depth-1 {
+    border-bottom: 1px solid #c3c4c7;
+    font-size: 16px;
+    margin-top: 15px;
+  }
+
+  &.depth-2 {
+    border-bottom: 1px dotted #c3c4c7;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+}
+
+.pe-label-path-indicator {
+  color: #646970;
+  font-size: 11px;
+  margin-bottom: 4px;
+
+  code {
+    background: #f0f0f1;
+    border-radius: 2px;
+    padding: 2px 4px;
+  }
+}
+
+/* Search results highlighting */
+.label-search-highlight {
+  background-color: #ffff00;
+  padding: 2px;
+}
+
+#label-search-results {
+  background: #f6f7f7;
+  border: 1px solid #dcdcde;
+  display: none;
+  margin-top: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.search-result-item {
+  border-bottom: 1px solid #eee;
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+
+  .path {
+    font-weight: bold;
+  }
+
+  .value {
+    color: #646970;
+  }
+
+  .go-to {
+    display: block;
+    margin-top: 3px;
+    text-decoration: none;
+  }
+}
+
+/* Toggle buttons for expanding/collapsing sections */
+.section-toggle-buttons {
+  margin: 10px 0;
 }

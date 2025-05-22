@@ -37,7 +37,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
   moduleInit() {
     super.moduleInit();
     logger.log('LabelSettingsModule moduleInit called');
-    
+
     // Fix section header table structure immediately when module loads
     setTimeout(() => {
       this.fixSectionHeaderTableStructure();
@@ -72,7 +72,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
     // Hierarchical-specific events for both main sections and subcategories
     this.$(document).on('click', '.pe-label-subcategory-heading, .pe-main-section-header', this.toggleSubcategory.bind(this));
     this.$('#label-search').on('input', this.debounce(this.handleSearch.bind(this), 300));
-    
+
     // Add expand/collapse all buttons to each tab
     this.addExpandCollapseButtons();
 
@@ -95,21 +95,21 @@ class LabelSettingsModule extends VerticalTabbedModule {
     logger.log('Labels tab activated');
     this.initializeUI();
   }
-  
+
   /**
    * Initialize UI components
    */
   initializeUI() {
     logger.log('Initializing UI components');
-    
+
     // Fix section header table structure to use colspan (with delay to ensure DOM is ready)
     setTimeout(() => {
       this.fixSectionHeaderTableStructure();
     }, 100);
-    
+
     // Initialize hierarchical sections
     this.initializeHierarchicalSections();
-    
+
     this.initializePreview();
   }
 
@@ -118,38 +118,38 @@ class LabelSettingsModule extends VerticalTabbedModule {
    */
   initializeHierarchicalSections() {
     logger.log('Initializing hierarchical sections');
-    
+
     // Handle both main section headers (depth 0) and subcategory headings
     const $subcategoryHeadings = jQuery('.pe-label-subcategory-heading');
     const $mainSectionHeaders = jQuery('.pe-main-section-header');
     const $allHeadings = $subcategoryHeadings.add($mainSectionHeaders);
-    
+
     logger.log('Found subcategory headings:', $subcategoryHeadings.length);
     logger.log('Found main section headers:', $mainSectionHeaders.length);
     logger.log('Total headings to process:', $allHeadings.length);
-    
+
     // Make sure headings are clickable and have proper styling
     $allHeadings.each((_, heading) => {
       const $heading = jQuery(heading);
       const $data = $heading.next('.pe-label-subcategory-data');
       const path = $data.data('path');
-      
+
       logger.log('Processing heading for path:', path);
-      
+
       if (path) {
         // Add cursor pointer and ensure heading is clickable
         $heading.css('cursor', 'pointer');
         $heading.attr('data-path', path);
-        
+
         // Add expand/collapse indicator
         if (!$heading.find('.expand-indicator').length) {
           $heading.prepend('<span class="expand-indicator">▶ </span>');
         }
-        
+
         // Determine initial state - start with all expanded so users can see all fields
         const pathParts = path.split('.');
         const shouldBeExpanded = true; // Start everything expanded for better UX
-        
+
         if (shouldBeExpanded) {
           this.expandedSections.add(path);
           $heading.addClass('expanded');
@@ -160,24 +160,24 @@ class LabelSettingsModule extends VerticalTabbedModule {
           $heading.removeClass('expanded');
           $heading.find('.expand-indicator').text('▶ ');
         }
-        
+
         // Update visibility based on initial state - this will properly hide/show fields
         this.updateSectionVisibility(path, shouldBeExpanded);
       }
     });
-    
+
     // Find and organize nested fields
     const $fieldWrappers = jQuery('.pe-label-field-wrapper');
     logger.log('Found field wrappers:', $fieldWrappers.length);
-    
+
     $fieldWrappers.each((_, wrapper) => {
       const $wrapper = jQuery(wrapper);
       const fieldPath = $wrapper.find('input[data-path]').data('path');
-      
+
       if (fieldPath) {
         // Add the path to the wrapper for easier identification
         $wrapper.attr('data-field-path', fieldPath);
-        
+
         // Determine which section this field belongs to
         const pathParts = fieldPath.split('.');
         if (pathParts.length > 1) {
@@ -185,7 +185,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
           for (let i = pathParts.length - 1; i > 0; i--) {
             const parentPath = pathParts.slice(0, i).join('.');
             const $parentSection = jQuery(`.pe-label-subcategory-data[data-path="${parentPath}"]`);
-            
+
             if ($parentSection.length) {
               $wrapper.attr('data-parent-section', parentPath);
               break;
@@ -194,7 +194,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
         }
       }
     });
-    
+
     logger.log('Hierarchical sections initialized');
   }
 
@@ -207,24 +207,24 @@ class LabelSettingsModule extends VerticalTabbedModule {
       const $subcategoryHeadings = $panel.find('.pe-label-subcategory-heading');
       const $mainSectionHeaders = $panel.find('.pe-main-section-header');
       const $allCollapsibleHeadings = $subcategoryHeadings.add($mainSectionHeaders);
-      
+
       // Only add buttons if this panel has hierarchical label sections
       if ($allCollapsibleHeadings.length > 0) {
         const $heading = $panel.find('h2, h3').first();
-        
+
         if ($heading.length) {
           const $buttonContainer = jQuery('<div class="section-toggle-buttons"></div>');
           const $expandButton = jQuery(`<button type="button" class="button expand-all-button">
             ${this.settings.i18n.expandAll || 'Expand All Sections'}
           </button>`);
-          
+
           const $collapseButton = jQuery(`<button type="button" class="button collapse-all-button">
             ${this.settings.i18n.collapseAll || 'Collapse All Sections'}
           </button>`);
-          
+
           $buttonContainer.append($expandButton).append($collapseButton);
           $heading.after($buttonContainer);
-          
+
           $expandButton.on('click', () => this.expandAllSections($panel));
           $collapseButton.on('click', () => this.collapseAllSections($panel));
         }
@@ -241,14 +241,14 @@ class LabelSettingsModule extends VerticalTabbedModule {
     $headings.each((_, heading) => {
       const $heading = jQuery(heading);
       const path = $heading.next('.pe-label-subcategory-data').data('path');
-      
+
       if (path) {
         this.expandedSections.add(path);
         this.updateSectionVisibility(path, true);
       }
     });
   }
-  
+
   /**
    * Collapse all sections in a panel
    * @param {jQuery} $panel - The panel containing sections to collapse
@@ -258,14 +258,14 @@ class LabelSettingsModule extends VerticalTabbedModule {
     $headings.each((_, heading) => {
       const $heading = jQuery(heading);
       const path = $heading.next('.pe-label-subcategory-data').data('path');
-      
+
       if (path) {
         this.expandedSections.delete(path);
         this.updateSectionVisibility(path, false);
       }
     });
   }
-  
+
   /**
    * Toggle a subcategory's visibility
    * @param {Event} e - The click event
@@ -274,14 +274,14 @@ class LabelSettingsModule extends VerticalTabbedModule {
     e.preventDefault();
     const $heading = jQuery(e.currentTarget);
     const path = $heading.attr('data-path') || $heading.next('.pe-label-subcategory-data').data('path');
-    
+
     logger.log('Toggling subcategory for path:', path);
-    
+
     if (!path) {
       logger.warn('No path found for subcategory heading');
       return;
     }
-    
+
     if (this.expandedSections.has(path)) {
       this.expandedSections.delete(path);
       this.updateSectionVisibility(path, false);
@@ -290,25 +290,25 @@ class LabelSettingsModule extends VerticalTabbedModule {
       this.updateSectionVisibility(path, true);
     }
   }
-  
+
   /**
    * Expand all nested subsections of a main section
    * @param {string} mainSectionPath - The path of the main section
    */
   expandNestedSections(mainSectionPath) {
     logger.log(`Expanding nested sections for: ${mainSectionPath}`);
-    
+
     // Find all subcategory headings that are children of this main section
     const $nestedHeadings = jQuery('.pe-label-subcategory-heading').filter(function() {
       const $heading = jQuery(this);
       const headingPath = $heading.next('.pe-label-subcategory-data').data('path') || $heading.data('path');
       return headingPath && headingPath.startsWith(mainSectionPath + '.');
     });
-    
+
     $nestedHeadings.each((_, heading) => {
       const $heading = jQuery(heading);
       const nestedPath = $heading.next('.pe-label-subcategory-data').data('path') || $heading.data('path');
-      
+
       if (nestedPath) {
         logger.log(`Expanding nested section: ${nestedPath}`);
         this.expandedSections.add(nestedPath);
@@ -316,25 +316,25 @@ class LabelSettingsModule extends VerticalTabbedModule {
       }
     });
   }
-  
+
   /**
    * Collapse all nested subsections of a main section
    * @param {string} mainSectionPath - The path of the main section
    */
   collapseNestedSections(mainSectionPath) {
     logger.log(`Collapsing nested sections for: ${mainSectionPath}`);
-    
+
     // Find all subcategory headings that are children of this main section
     const $nestedHeadings = jQuery('.pe-label-subcategory-heading').filter(function() {
       const $heading = jQuery(this);
       const headingPath = $heading.next('.pe-label-subcategory-data').data('path') || $heading.data('path');
       return headingPath && headingPath.startsWith(mainSectionPath + '.');
     });
-    
+
     $nestedHeadings.each((_, heading) => {
       const $heading = jQuery(heading);
       const nestedPath = $heading.next('.pe-label-subcategory-data').data('path') || $heading.data('path');
-      
+
       if (nestedPath) {
         logger.log(`Collapsing nested section: ${nestedPath}`);
         this.expandedSections.delete(nestedPath);
@@ -351,33 +351,33 @@ class LabelSettingsModule extends VerticalTabbedModule {
    */
   updateSectionVisibility(path, visible, skipNestedToggle = false) {
     logger.log(`Updating visibility for path: ${path}, visible: ${visible}`);
-    
+
     // Find the heading - could be either subcategory or main section header
     let $heading = jQuery(`.pe-label-subcategory-heading[data-path="${path}"]`);
     if (!$heading.length) {
       $heading = jQuery(`.pe-main-section-header[data-path="${path}"]`);
     }
-    
+
     const $indicator = $heading.find('.expand-indicator');
-    
+
     // Find all fields that belong to this section using multiple strategies
     let $allFields = jQuery();
-    
+
     // Strategy 1: Fields with data-parent-section attribute
     const $fields = jQuery(`.pe-label-field-wrapper[data-parent-section="${path}"]`);
     $allFields = $allFields.add($fields);
-    
+
     // Strategy 2: Direct child fields using path prefix matching
     const $directFields = jQuery(`.pe-label-field-wrapper`).filter(function() {
       const fieldPath = jQuery(this).attr('data-field-path') || '';
       return fieldPath.startsWith(path + '.') && fieldPath.split('.').length === path.split('.').length + 1;
     });
     $allFields = $allFields.add($directFields);
-    
+
     // Strategy 3: Find fields by looking for input elements with data-path starting with our path
     const $inputFields = jQuery(`input[data-path^="${path}."]`).closest('.pe-label-field-wrapper');
     $allFields = $allFields.add($inputFields);
-    
+
     // Strategy 3a: For subcategory sections, find all content between this subcategory and the next one
     if ($heading.hasClass('pe-label-subcategory-heading')) {
       const $nextSubcategoryOrMain = $heading.nextAll('.pe-label-subcategory-heading, .pe-main-section-header').first();
@@ -397,7 +397,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
         }
       }
     }
-    
+
     // Strategy 3b: For table structure, also find table rows containing field wrappers
     const $fieldWrappers = $allFields.filter('.pe-label-field-wrapper');
     $fieldWrappers.each(function() {
@@ -407,7 +407,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
         $allFields = $allFields.add($parentRow);
       }
     });
-    
+
     // Strategy 4: For main sections, include everything except other main section headers
     if ($heading.hasClass('pe-main-section-header')) {
       const $nextMainHeader = $heading.nextAll('.pe-main-section-header').first();
@@ -422,7 +422,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
         $allFields = $allFields.add($allFollowing.not($otherMainHeaders));
       }
     }
-    
+
     // Strategy 5: Look for fields between this heading and the next heading (fallback)
     if ($allFields.length === 0) {
       const $nextHeading = $heading.nextAll('.pe-label-subcategory-heading, .pe-main-section-header').first();
@@ -433,17 +433,17 @@ class LabelSettingsModule extends VerticalTabbedModule {
         $allFields = $heading.nextAll('.pe-label-field-wrapper');
       }
     }
-    
+
     logger.log(`Found ${$allFields.length} fields for section ${path} using combined strategies`);
     logger.log(`Heading classes: ${$heading.attr('class')}`);
     logger.log(`Indicator found: ${$indicator.length > 0}`);
-    
+
     if (visible) {
       $heading.addClass('expanded');
       $indicator.text('▼ ');
       $allFields.show().css('display', '');
       logger.log(`Expanded section: ${path}`);
-      
+
       // If this is a main section, also expand all nested subsections
       if (!skipNestedToggle && $heading.hasClass('pe-main-section-header')) {
         this.expandNestedSections(path);
@@ -453,7 +453,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
       $indicator.text('▶ ');
       $allFields.hide();
       logger.log(`Collapsed section: ${path}`);
-      
+
       // If this is a main section, also collapse all nested subsections
       if (!skipNestedToggle && $heading.hasClass('pe-main-section-header')) {
         this.collapseNestedSections(path);
@@ -927,19 +927,19 @@ class LabelSettingsModule extends VerticalTabbedModule {
   handleSearch(e) {
     const searchTerm = e.target.value.trim().toLowerCase();
     const $resultsContainer = jQuery('#label-search-results');
-    
+
     if (searchTerm.length < 2) {
       $resultsContainer.hide();
       return;
     }
-    
+
     // Find matching labels
     this.searchResults = [];
     jQuery('input[data-path]').each((_, input) => {
       const $input = jQuery(input);
       const path = $input.data('path');
       const value = $input.val().toLowerCase();
-      
+
       if (path.toLowerCase().includes(searchTerm) || value.includes(searchTerm)) {
         this.searchResults.push({
           path: path,
@@ -948,45 +948,45 @@ class LabelSettingsModule extends VerticalTabbedModule {
         });
       }
     });
-    
+
     // Display results
     $resultsContainer.empty();
-    
+
     if (this.searchResults.length === 0) {
       $resultsContainer.html(`<p>${this.settings.i18n.searchNoResults || 'No labels found matching your search.'}</p>`);
       $resultsContainer.show();
       return;
     }
-    
+
     const resultsCountText = this.settings.i18n.searchResultsCount
       ? this.settings.i18n.searchResultsCount.replace('%d', this.searchResults.length)
       : `${this.searchResults.length} labels found.`;
-    
+
     $resultsContainer.append(`<p><strong>${resultsCountText}</strong></p>`);
-    
+
     // Add results to container
     this.searchResults.forEach(result => {
       const highlightedPath = this.highlightSearchTerm(result.path, searchTerm);
       const highlightedValue = this.highlightSearchTerm(result.value, searchTerm);
-      
+
       const $resultItem = jQuery(`
         <div class="search-result-item">
           <div class="path">${highlightedPath}</div>
           <div class="value">${highlightedValue}</div>
-          <a href="#" class="go-to" data-path="${result.path}">Go to this field</a>
+          <a href="#" class="go-to" data-path="${result.path}">Go to this label</a>
         </div>
       `);
-      
+
       $resultsContainer.append($resultItem);
     });
-    
+
     // Bind click events for "Go to" links
     $resultsContainer.find('.go-to').on('click', (e) => {
       e.preventDefault();
       const path = jQuery(e.currentTarget).data('path');
       this.goToLabelField(path);
     });
-    
+
     $resultsContainer.show();
   }
 
@@ -998,37 +998,37 @@ class LabelSettingsModule extends VerticalTabbedModule {
    */
   highlightSearchTerm(text, term) {
     if (!term) return text;
-    
+
     const regex = new RegExp(`(${term})`, 'gi');
     return text.replace(regex, '<span class="label-search-highlight">$1</span>');
   }
-  
+
   /**
    * Navigate to a label field by path (hierarchical version)
    * @param {string} path - The path to the field
    */
   goToLabelField(path) {
     logger.log(`DEBUG: goToLabelField called with path: ${path}`);
-    
+
     // First, determine which tab this field is in
     const pathParts = path.split('.');
     const verticalTabId = pathParts[0]; // This should be the vertical tab ID (e.g., 'estimate_management')
     const currentTabId = this.getCurrentSubTabId();
-    
+
     logger.log(`DEBUG: Path parts: ${JSON.stringify(pathParts)}`);
     logger.log(`DEBUG: Vertical tab ID: ${verticalTabId}`);
     logger.log(`DEBUG: Current tab ID: ${currentTabId}`);
-    
+
     // Always try to switch to the correct tab (force it to ensure proper state)
     logger.log(`DEBUG: Switching from tab '${currentTabId}' to tab '${verticalTabId}'`);
     this.activateSubTab(verticalTabId);
-    
+
     // Wait a moment for tab to switch before continuing
     setTimeout(() => {
       this.expandSectionsAndNavigateToField(path, pathParts);
     }, 300);
   }
-  
+
   /**
    * Expand sections and navigate to field after tab switch
    * @param {string} path - The full path to the field
@@ -1036,7 +1036,7 @@ class LabelSettingsModule extends VerticalTabbedModule {
    */
   expandSectionsAndNavigateToField(path, pathParts) {
     logger.log(`DEBUG: expandSectionsAndNavigateToField called with path: ${path}`);
-    
+
     // Ensure all parent sections are expanded, including the section containing the field
     let currentPath = '';
     pathParts.forEach((part, index) => {
@@ -1052,17 +1052,17 @@ class LabelSettingsModule extends VerticalTabbedModule {
         }
         return;
       }
-      
+
       currentPath = currentPath ? `${currentPath}.${part}` : part;
       this.expandedSections.add(currentPath);
       this.updateSectionVisibility(currentPath, true);
       logger.log(`DEBUG: Expanding parent section: ${currentPath}`);
     });
-    
+
     // Find and highlight the field
     const $field = jQuery(`input[data-path="${path}"]`);
     logger.log(`DEBUG: Looking for field with path: ${path}, found: ${$field.length}`);
-    
+
     if ($field.length) {
       // Additional step: ensure the immediate section containing this field is expanded
       // Find the closest section heading above this field
@@ -1078,26 +1078,26 @@ class LabelSettingsModule extends VerticalTabbedModule {
           }
         }
       }
-      
+
       // Scroll to the field
       jQuery('html, body').animate({
         scrollTop: $field.offset().top - 100
       }, 500);
-      
+
       // Highlight the field
       $field.focus().css('background-color', '#fffbcc');
-      
+
       // Remove highlight after a delay
       setTimeout(() => {
         $field.css('background-color', '');
       }, 3000);
-      
+
       // Close search results
       jQuery('#label-search-results').hide();
       jQuery('#label-search').val('');
     } else {
       logger.warn(`DEBUG: Field with path "${path}" not found`);
-      
+
       // Debug: let's see what fields actually exist
       const allFields = jQuery('input[data-path]');
       logger.log(`DEBUG: All available fields:`);

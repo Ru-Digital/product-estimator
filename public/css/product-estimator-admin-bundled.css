@@ -1,3 +1,6 @@
+/*!******************************************************************************************************************************************************************************!*\
+  !*** css ./node_modules/css-loader/dist/cjs.js??ruleSet[1].rules[1].use[1]!./node_modules/sass-loader/dist/cjs.js??ruleSet[1].rules[1].use[2]!./src/styles/admin/Index.scss ***!
+  \******************************************************************************************************************************************************************************/
 @charset "UTF-8";
 /**
  * Main admin styles entry point
@@ -2779,6 +2782,8 @@ td.section-header-cell h4.pe-label-subcategory-heading {
 
 .pe-label-field-wrapper {
   transition: all 0.3s ease;
+  border-bottom: 1px solid #f6f7f7;
+  padding: 8px 0;
 }
 .pe-label-field-wrapper[data-parent-section] {
   border-left: 2px solid transparent;
@@ -2788,6 +2793,77 @@ td.section-header-cell h4.pe-label-subcategory-heading {
 }
 .pe-label-field-wrapper[data-parent-section]:hover {
   border-left-color: rgb(132.5260663507, 187.1895734597, 231.4739336493);
+}
+
+/* Hierarchical label structure styles */
+.pe-label-subcategory-heading {
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 10px;
+  margin-top: 20px;
+  padding-bottom: 5px;
+}
+.pe-label-subcategory-heading.depth-0 {
+  border-bottom: 2px solid #2271b1;
+  font-size: 18px;
+}
+.pe-label-subcategory-heading.depth-1 {
+  border-bottom: 1px solid #c3c4c7;
+  font-size: 16px;
+  margin-top: 15px;
+}
+.pe-label-subcategory-heading.depth-2 {
+  border-bottom: 1px dotted #c3c4c7;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.pe-label-path-indicator {
+  color: #646970;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.pe-label-path-indicator code {
+  background: #f0f0f1;
+  border-radius: 2px;
+  padding: 2px 4px;
+}
+
+/* Search results highlighting */
+.label-search-highlight {
+  background-color: #ffff00;
+  padding: 2px;
+}
+
+#label-search-results {
+  background: #f6f7f7;
+  border: 1px solid #dcdcde;
+  display: none;
+  margin-top: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.search-result-item {
+  border-bottom: 1px solid #eee;
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+}
+.search-result-item .path {
+  font-weight: bold;
+}
+.search-result-item .value {
+  color: #646970;
+}
+.search-result-item .go-to {
+  display: block;
+  margin-top: 3px;
+  text-decoration: none;
+}
+
+/* Toggle buttons for expanding/collapsing sections */
+.section-toggle-buttons {
+  margin: 10px 0;
 }
 
 /*

@@ -113,13 +113,22 @@
                             <thead>
                                 <tr>
                                     <th><?php echo esc_html__('Label Key', 'product-estimator'); ?></th>
+                                    <th><?php echo esc_html__('Label Text', 'product-estimator'); ?></th>
                                     <th><?php echo esc_html__('Category', 'product-estimator'); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach (array_slice($unused_labels, 0, 50) as $key): ?>
+                                    <?php $label_text = $this->get_label_text($key); ?>
                                     <tr>
-                                        <td><?php echo esc_html($key); ?></td>
+                                        <td><code><?php echo esc_html($key); ?></code></td>
+                                        <td>
+                                            <?php if (!empty($label_text)): ?>
+                                                <em><?php echo esc_html($label_text); ?></em>
+                                            <?php else: ?>
+                                                <span class="description"><?php echo esc_html__('No text found', 'product-estimator'); ?></span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td><?php echo esc_html($this->get_label_category($key)); ?></td>
                                     </tr>
                                 <?php endforeach; ?>

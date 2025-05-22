@@ -188,6 +188,84 @@ class LabelsAnalyticsDashboard {
     }
 
     /**
+     * Get the actual label text for a given key
+     *
+     * @since    3.0.0
+     * @access   private
+     * @param    string    $key    Label key
+     * @return   string    Label text or empty string if not found
+     */
+    private function get_label_text($key) {
+        // Try getting from the default label structure first
+        $structure = \RuDigital\ProductEstimator\Includes\LabelsStructure::get_structure();
+        
+        // Navigate to the label using dot notation
+        $keys = explode('.', $key);
+        $current = $structure;
+        
+        // Handle cases where there might be duplicate top-level keys
+        if (count($keys) > 1 && $keys[0] === $keys[1]) {
+            // Remove the first duplicate key
+            array_shift($keys);
+        }
+        
+        foreach ($keys as $k) {
+            if (isset($current[$k])) {
+                $current = $current[$k];
+            } else {
+                // Key not found in structure
+                return '';
+            }
+        }
+        
+        // If we reached a string, return it directly
+        if (is_string($current)) {
+            return $current;
+        }
+        
+        // If we reached an array but it's empty or not a proper label definition
+        if (!is_array($current) || empty($current)) {
+            return '';
+        }
+        
+        // If we reached an array (label definition), look for common text properties
+        // Try different text properties in order of preference
+        $text_properties = ['label', 'text', 'placeholder', 'title'];
+        
+        foreach ($text_properties as $prop) {
+            if (isset($current[$prop]) && is_string($current[$prop])) {
+                return $current[$prop];
+            }
+        }
+        
+        // If it's a validation or options object, try to get the first string value
+        if (isset($current['required']) && is_string($current['required'])) {
+            return $current['required'];
+        }
+        
+        if (isset($current['min_length']) && is_string($current['min_length'])) {
+            return $current['min_length'];
+        }
+        
+        if (isset($current['invalid']) && is_string($current['invalid'])) {
+            return $current['invalid'];
+        }
+        
+        if (isset($current['default_option']) && is_string($current['default_option'])) {
+            return $current['default_option'];
+        }
+        
+        // If we still haven't found anything, look for any string value in the array
+        foreach ($current as $value) {
+            if (is_string($value) && !empty($value)) {
+                return $value;
+            }
+        }
+        
+        return '';
+    }
+
+    /**
      * Export analytics data as CSV
      *
      * @since    2.3.0
@@ -346,6 +424,7 @@ class LabelsAnalyticsDashboard {
         // Column headers
         fputcsv($output, [
             'Label Key',
+            'Label Text',
             'Category',
             'Hierarchical Level',
             'Suggested Implementation',
@@ -355,6 +434,7 @@ class LabelsAnalyticsDashboard {
         // Write unused labels data
         if (!empty($unused_labels)) {
             foreach ($unused_labels as $key) {
+                $label_text = $this->get_label_text($key);
                 $category = $this->get_label_category($key);
                 $level = substr_count($key, '.') + 1;
                 $suggested_implementation = $this->get_implementation_suggestion($key);
@@ -362,6 +442,7 @@ class LabelsAnalyticsDashboard {
                 
                 fputcsv($output, [
                     $key,
+                    $label_text,
                     $category,
                     $level,
                     $suggested_implementation,

@@ -2,6 +2,7 @@
  * Module styles for Labels Settings Module
  */
 
+@use 'sass:color';
 @use '../variables' as *;
 @use '../mixins' as *;
 
@@ -862,6 +863,106 @@ td.section-header-cell h4.pe-label-subcategory-heading {
           border-color: $primary-hover-color;
         }
       }
+    }
+  }
+}
+
+/* Hierarchical expand/collapse functionality */
+.pe-label-subcategory-heading,
+.pe-main-section-header {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+
+  .expand-indicator {
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: bold;
+    margin-right: 6px;
+  }
+}
+
+/* Subcategory headings styling */
+.pe-label-subcategory-heading {
+  background: color.adjust($primary-color, $lightness: 40%);
+  border: 1px solid color.adjust($primary-color, $lightness: 20%);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 10px 0 5px;
+  padding: 8px 12px;
+
+  &:hover {
+    background: color.adjust($primary-color, $lightness: 30%);
+    border-color: color.adjust($primary-color, $lightness: 10%);
+  }
+
+  .expand-indicator {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  &.expanded {
+    background: $primary-color;
+    border-color: $primary-hover-color;
+  }
+}
+
+/* Main section headers styling (top-level sections) */
+.pe-main-section-header {
+  position: relative;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .expand-indicator {
+    color: rgba(255, 255, 255, 0.9);
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  &.expanded {
+    .expand-indicator {
+      color: rgba(255, 255, 255, 1);
+    }
+  }
+
+  /* Adjust text position to make room for indicator */
+  &[data-path] {
+    padding-left: 40px;
+  }
+}
+
+.section-toggle-buttons {
+  margin: 10px 0;
+  text-align: right;
+
+  .button {
+    margin-left: 5px;
+  }
+
+  .expand-all-button,
+  .collapse-all-button {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
+
+.pe-label-field-wrapper {
+  transition: all 0.3s ease;
+
+  &[data-parent-section] {
+    border-left: 2px solid transparent;
+    margin-left: 20px;
+    padding-left: 10px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-left-color: color.adjust($primary-color, $lightness: 30%);
     }
   }
 }

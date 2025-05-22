@@ -2703,6 +2703,93 @@ td.section-header-cell h4.pe-label-subcategory-heading {
   border-color: #135e96;
 }
 
+/* Hierarchical expand/collapse functionality */
+.pe-label-subcategory-heading,
+.pe-main-section-header {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.pe-label-subcategory-heading .expand-indicator,
+.pe-main-section-header .expand-indicator {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+/* Subcategory headings styling */
+.pe-label-subcategory-heading {
+  background: rgb(175.308056872, 210.8767772512, 239.691943128);
+  border: 1px solid rgb(89.7440758294, 163.5023696682, 223.2559241706);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 10px 0 5px;
+  padding: 8px 12px;
+}
+.pe-label-subcategory-heading:hover {
+  background: rgb(132.5260663507, 187.1895734597, 231.4739336493);
+  border-color: rgb(46.9620853081, 139.8151658768, 215.0379146919);
+}
+.pe-label-subcategory-heading .expand-indicator {
+  color: rgba(255, 255, 255, 0.9);
+}
+.pe-label-subcategory-heading.expanded {
+  background: #2271b1;
+  border-color: #135e96;
+}
+
+/* Main section headers styling (top-level sections) */
+.pe-main-section-header {
+  position: relative;
+  /* Adjust text position to make room for indicator */
+}
+.pe-main-section-header:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.pe-main-section-header .expand-indicator {
+  color: rgba(255, 255, 255, 0.9);
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.pe-main-section-header.expanded .expand-indicator {
+  color: rgb(255, 255, 255);
+}
+.pe-main-section-header[data-path] {
+  padding-left: 40px;
+}
+
+.section-toggle-buttons {
+  margin: 10px 0;
+  text-align: right;
+}
+.section-toggle-buttons .button {
+  margin-left: 5px;
+}
+.section-toggle-buttons .expand-all-button,
+.section-toggle-buttons .collapse-all-button {
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.pe-label-field-wrapper {
+  transition: all 0.3s ease;
+}
+.pe-label-field-wrapper[data-parent-section] {
+  border-left: 2px solid transparent;
+  margin-left: 20px;
+  padding-left: 10px;
+  transition: all 0.3s ease;
+}
+.pe-label-field-wrapper[data-parent-section]:hover {
+  border-left-color: rgb(132.5260663507, 187.1895734597, 231.4739336493);
+}
+
 /*
 @use 'modules/FeatureSwitches';
 @use 'modules/NetsuiteSettings';

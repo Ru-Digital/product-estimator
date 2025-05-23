@@ -284,7 +284,7 @@ class EstimateActions {
 
         // Show the dialog with form fields
         dialog.show({
-          title: labelManager.get('estimate_management.estimate_actions.headings.common_heading.text', 'Contact Information Required'),
+          title: labelManager.get('estimate_management.estimate_actions.default_heading.title', 'Contact Information Required'),
           message: instruction,
           formFields: formFields,
           confirmText: labelManager.get('common_ui.general_actions.buttons.continue_button.label', 'Continue'),
@@ -610,16 +610,16 @@ class EstimateActions {
    */
   showContactSelectionPrompt(estimateId, button, action = 'request_copy') {
     // Customize title and prompt based on the action
-    let title = labelManager.get('ui_elements.contact_method_estimate_title', 'How would you like to receive your estimate?');
-    let prompt = labelManager.get('messages.contact_method_estimate_prompt', 'Please choose how you\'d prefer to receive your estimate:');
-    let emailBtnText = labelManager.get('buttons.contact_email', 'Email');
-    let phoneBtnText = labelManager.get('buttons.contact_phone', 'SMS');
+    let title = labelManager.get('estimate_management.request_copy_form.headings.copy_select_heading.label', 'How would you like to receive your estimate?');
+    let prompt = labelManager.get('estimate_management.request_copy_form.messages.copy_select_message.text', 'Please choose how you\'d prefer to receive your estimate:');
+    let emailBtnText = labelManager.get('estimate_management.request_copy_form.buttons.contact_email_button.label', 'Email');
+    let phoneBtnText = labelManager.get('estimate_management.request_copy_form.buttons.contact_sms_button.label', 'SMS');
 
     if (action === 'request_contact') {
-      title = labelManager.get('ui_elements.contact_method_title', 'How would you like to be contacted?');
-      prompt = labelManager.get('messages.contact_method_prompt', 'Please choose how you\'d prefer our store to contact you:');
-      emailBtnText = labelManager.get('buttons.contact_email', 'Email');
-      phoneBtnText = labelManager.get('buttons.contact_phone', 'Phone');
+      title = labelManager.get('estimate_management.request_contact_form.headings.contact_select_heading.label', 'How would you like to be contacted?');
+      prompt = labelManager.get('estimate_management.request_contact_form.messages.contact_select_message.text', 'Please choose how you\'d prefer our store to contact you:');
+      emailBtnText = labelManager.get('estimate_management.request_contact_form.buttons.contact_email_button.label', 'Email');
+      phoneBtnText = labelManager.get('estimate_management.request_contact_form.buttons.contact_phone_button.label', 'Phone');
     }
 
     // Get the dialog instance

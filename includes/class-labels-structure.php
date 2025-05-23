@@ -71,7 +71,6 @@ class LabelsStructure {
                         'save_button' => [
                             'label' => __('Save Estimate', 'product-estimator'),
                             'description' => __('Button text for saving the current estimate', 'product-estimator'),
-                            'usage' => __('Used in the estimate editor toolbar and form submission', 'product-estimator')
                         ],
                         'print_button' => [
                             'label' => __('Print Estimate', 'product-estimator'),
@@ -82,6 +81,10 @@ class LabelsStructure {
                             'label' => __('Request a Copy', 'product-estimator'),
                             'description' => __('Button text for requesting a copy of the estimate', 'product-estimator'),
                             'usage' => __('Used in estimate sharing options and customer actions', 'product-estimator')
+                        ],
+                        'request_contact_button' => [
+                            'label' => __('Request contact from store', 'product-estimator'),
+                            'description' => __('Button text for requesting contact from a store', 'product-estimator'),
                         ],
                         'delete_button' => [
                             'label' => __('Delete Estimate', 'product-estimator'),
@@ -226,7 +229,20 @@ class LabelsStructure {
                          ],
                     ]
                 ],
-
+                'remove_estimate_dialog' => [
+                    'title' => [
+                        'text' => __('Remove Estimate', 'product-estimator'),
+                        'description' => __('Dialog title for estimate removal confirmation', 'product-estimator'),
+                    ],
+                    'message' => [
+                        'text' => __('Are you sure you want to remove this estimate? All rooms and products in this estimate will also be removed. This action cannot be undone.', 'product-estimator'),
+                    ]
+                ],
+                'estimated_removed_dialog' => [
+                    'estimate_removed' => [
+                        'text' => __('This estimate has been removed successfully.', 'product-estimator')
+                    ]
+                ],
                 'empty_states' => [
                     'no_estimates_message' => [
                         'text' => __('You don\'t have any estimates yet.', 'product-estimator')
@@ -333,6 +349,27 @@ class LabelsStructure {
                         ],
                         'select_variation_button' => [
                             'label' => __('Select Variation', 'product-estimator')
+                        ]
+                    ]
+                ],
+                'product_selection' => [
+                    'title' => [
+                        'text' => __('Select Product Options', 'product-estimator')
+                    ],
+                    'messages' => [
+                        'select_options_message' => [
+                            'text' => __('Please select your options below:', 'product-estimator')
+                        ],
+                        'no_options_available_message' => [
+                            'text' => __('No options available.', 'product-estimator')
+                        ]
+                    ],
+                    'buttons' => [
+                        'add_product_to_estimate_button' => [
+                            'label' => __('Add to Estimate', 'product-estimator')
+                        ],
+                        'replace_product_button' => [
+                            'label' => __('Replace Product In Estimate', 'product-estimator')
                         ]
                     ]
                 ],

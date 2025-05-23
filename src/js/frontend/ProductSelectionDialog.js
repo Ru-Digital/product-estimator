@@ -1,6 +1,6 @@
 /**
  * ProductSelectionDialog Component
- * 
+ *
  * Handles product selection with variations
  * Displays variation swatches and options
  * Manages user selection before adding to estimate
@@ -19,12 +19,12 @@ class ProductSelectionDialog {
         this.selectedVariationId = null;
         this.onSelectCallback = null;
         this.onCancelCallback = null;
-        
+
         // Load default labels
         this.labels = {
             selectOptionsTitle: labelManager.get('product_management.product_actions.buttons.select_variation_button.label', 'Select Product Options'),
             addToEstimate: labelManager.get('product_management.product_actions.buttons.add_to_room_button.label', 'Add to Estimate'),
-            replaceProduct: labelManager.get('common_ui.general_actions.buttons.replace_button.label', 'Replace Product'),
+            replaceProduct: labelManager.get('product_management.product_selection.buttons.replace_product_button.label', 'Replace Product'),
             confirmAddMessage: labelManager.get('common_ui.generic_delete_dialog.message.text', 'Add this product to your estimate?'),
             loadingTitle: labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading...'),
             loadingMessage: labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading product variations...')
@@ -52,23 +52,23 @@ class ProductSelectionDialog {
         this.selectedVariationId = null;
 
         this.create();
-        
+
         // Check if dialog creation succeeded
         if (!this.dialogElement || !this.backdropElement) {
             throw new Error('Failed to create product selection dialog');
         }
-        
+
         // Reset the confirm button to disabled state
         const confirmButton = this.dialogElement.querySelector('.pe-dialog-confirm');
         if (confirmButton) {
             confirmButton.disabled = true;
         }
-        
+
         // If we're transitioning from loading state, hide it first
         if (this.dialogElement && this.dialogElement.classList.contains('loading')) {
             this.hideLoading();
         }
-        
+
         this.populateDialog();
         this.showDialog();
     }
@@ -87,11 +87,11 @@ class ProductSelectionDialog {
 
         // Create dialog from template using the create method
         const dialogFragment = this.templateEngine.create('product-selection-template', {});
-        
+
         // Create a wrapper div to hold the fragment content
         const wrapper = document.createElement('div');
         wrapper.appendChild(dialogFragment);
-        
+
         // Extract the elements
         this.backdropElement = wrapper.querySelector('.pe-dialog-backdrop');
         this.dialogElement = wrapper.querySelector('.pe-product-selection-dialog');
@@ -110,16 +110,16 @@ class ProductSelectionDialog {
         // Bind events
         this.bindEvents();
     }
-    
+
     /**
      * Process labels in the dialog
      */
     processLabels() {
         if (!this.dialogElement) return;
-        
+
         // Use labelManager to process any data-label attributes
         labelManager.updateDOM(this.dialogElement);
-        
+
         // Also process labels in the backdrop
         if (this.backdropElement) {
             labelManager.updateDOM(this.backdropElement);
@@ -163,12 +163,12 @@ class ProductSelectionDialog {
         if (productNameEl) {
             productNameEl.textContent = this.currentProduct.name || this.labels.selectOptionsTitle;
         }
-        
+
         // Update confirm button text based on action
         const confirmButton = this.dialogElement.querySelector('.pe-dialog-confirm');
         if (confirmButton) {
-            confirmButton.textContent = this.action === 'replace' ? 
-                this.labels.replaceProduct : 
+            confirmButton.textContent = this.action === 'replace' ?
+                this.labels.replaceProduct :
                 this.labels.addToEstimate;
             // Reset button state to disabled for variations
             confirmButton.disabled = true;
@@ -287,10 +287,10 @@ class ProductSelectionDialog {
 
         // Find matching variation
         this.findMatchingVariation();
-        
+
         // Update confirm button state
         this.updateConfirmButton();
-        
+
         // Update selected summary
         this.updateSelectedSummary();
     }
@@ -350,7 +350,7 @@ class ProductSelectionDialog {
 
         this.backdropElement.classList.remove('visible');
         this.dialogElement.classList.remove('visible');
-        
+
         setTimeout(() => {
             this.backdropElement.style.display = 'none';
         }, 300);
@@ -408,19 +408,19 @@ class ProductSelectionDialog {
         // Show dialog with loading state
         if (this.dialogElement) {
             this.dialogElement.classList.add('visible', 'loading');
-            
+
             // Update header title
             const titleEl = this.dialogElement.querySelector('.pe-dialog-title');
             if (titleEl) {
                 titleEl.textContent = this.labels.loadingTitle;
             }
-            
+
             // Update content to show loading message
             const body = this.dialogElement.querySelector('.pe-dialog-body');
             if (body) {
                 body.innerHTML = `<div class="pe-loading-message">${this.labels.loadingMessage}</div>`;
             }
-            
+
             // Hide buttons during loading
             const confirmBtn = this.dialogElement.querySelector('.pe-dialog-confirm');
             const cancelBtn = this.dialogElement.querySelector('.pe-dialog-cancel');
@@ -439,19 +439,19 @@ class ProductSelectionDialog {
     hideLoading() {
         if (this.dialogElement) {
             this.dialogElement.classList.remove('loading');
-            
+
             // Restore original title
             const titleEl = this.dialogElement.querySelector('.pe-dialog-title');
             if (titleEl) {
                 titleEl.textContent = this.labels.selectOptionsTitle;
             }
-            
+
             // Restore original dialog body structure
             const body = this.dialogElement.querySelector('.pe-dialog-body');
             if (body) {
                 // Get the select options label
                 const selectOptionsMsg = labelManager.get('messages.select_options', 'Please select your options below:');
-                
+
                 // Recreate the original structure needed for populateDialog
                 body.innerHTML = `
                     <div class="pe-dialog-product-name"></div>
@@ -463,7 +463,7 @@ class ProductSelectionDialog {
                     </div>
                 `;
             }
-            
+
             // Re-show buttons
             const confirmBtn = this.dialogElement.querySelector('.pe-dialog-confirm');
             const cancelBtn = this.dialogElement.querySelector('.pe-dialog-cancel');

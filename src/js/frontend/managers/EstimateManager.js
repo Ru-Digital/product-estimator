@@ -82,7 +82,7 @@ class EstimateManager {
     // Check each room for products
     for (const roomId in estimate.rooms) {
       const room = estimate.rooms[roomId];
-      
+
       // Check if room has products (object or array)
       if (room.products) {
         if (Array.isArray(room.products) && room.products.length > 0) {
@@ -727,61 +727,61 @@ class EstimateManager {
 
         // Check if customer already has a postcode
         const customerDetailsManager = window.productEstimator?.core?.customerDetailsManager;
-        
+
         // Get the customer details display section
         const customerDetailsDisplay = newEstimateForm.querySelector('.customer-details-display');
         const customerDetailsContent = newEstimateForm.querySelector('.customer-details-content');
-        
+
         if (customerDetailsManager) {
           const customerData = customerDetailsManager.getCustomerDetails();
-          
+
           // Check if we have any customer data to display
           if (customerData && (customerData.name || customerData.email || customerData.phone || customerData.postcode)) {
             logger.log('Customer data found, displaying details');
-            
+
             // Build the customer details HTML in grid format
             let detailsHtml = '';
-            
+
             if (customerData.name) {
               detailsHtml += `<p><strong>NAME:</strong><br>${customerData.name}</p>`;
             }
-            
+
             if (customerData.email) {
               detailsHtml += `<p><strong>EMAIL:</strong><br>${customerData.email}</p>`;
             }
-            
+
             if (customerData.phone) {
               detailsHtml += `<p><strong>PHONE:</strong><br>${customerData.phone}</p>`;
             }
-            
+
             if (customerData.postcode) {
               detailsHtml += `<p><strong>POSTCODE:</strong><br>${customerData.postcode}</p>`;
             }
-            
+
             // Insert the details and show the section
             if (customerDetailsDisplay && customerDetailsContent) {
               customerDetailsContent.innerHTML = detailsHtml;
               customerDetailsDisplay.style.display = '';  // Remove inline style to use CSS
             }
           }
-          
+
           // Handle postcode field visibility
           if (customerDetailsManager.hasPostcode()) {
             logger.log('Customer postcode found, hiding postcode field');
-            
+
             // Hide the entire customer details section since we have postcode
             const customerDetailsSection = formElement.querySelector('.customer-details-section');
             if (customerDetailsSection) {
               customerDetailsSection.style.display = 'none';
             }
-            
+
             // Remove the required attribute from the postcode field to prevent validation errors
             const postcodeField = formElement.querySelector('#customer-postcode');
             if (postcodeField) {
               postcodeField.removeAttribute('required');
               logger.log('Removed required attribute from hidden postcode field');
             }
-            
+
             // Also set a data attribute to indicate we have customer data
             formElement.dataset.hasPostcode = 'true';
           } else {
@@ -831,7 +831,7 @@ class EstimateManager {
     // Show the confirmation dialog using the standardized dialog helper
     showDeleteConfirmDialog(
       this.modalManager,
-      labelManager.get('messages.confirm_delete_estimate', 'Are you sure you want to delete this estimate?'),
+      labelManager.get('estimate_management.remove_estimate_dialog.message.text', 'Are you sure you want to delete this estimate?'),
       () => {
         // User confirmed, remove the estimate
         logger.log('Confirm button clicked, proceeding with estimate removal');
@@ -859,9 +859,9 @@ class EstimateManager {
             logger.log('Showing success dialog');
             // Show success message using the standardized dialog helper
             showSuccessDialog(
-              this.modalManager, 
-              labelManager.get('messages.estimate_removed', 'This estimate has been removed successfully.'), 
-              'estimate', 
+              this.modalManager,
+              labelManager.get('estimate_management.estimated_removed_dialog.estimate_removed.text', 'This estimate has been removed successfully.'),
+              'estimate',
               () => logger.log('Success dialog closed')
             );
           })
@@ -870,9 +870,9 @@ class EstimateManager {
 
             // Show error through the standardized dialog helper
             showErrorDialog(
-              this.modalManager, 
-              labelManager.get('messages.estimate_remove_error', 'There was a problem removing the estimate. Please try again.'), 
-              'estimate', 
+              this.modalManager,
+              labelManager.get('messages.estimate_remove_error', 'There was a problem removing the estimate. Please try again.'),
+              'estimate',
               () => logger.log('Error dialog closed')
             );
           })

@@ -3,7 +3,7 @@
  *
  * Custom confirmation dialog component for Product Estimator plugin.
  * Uses TemplateEngine with HTML templates for proper styling and UI consistency.
- * 
+ *
  * Supports multiple dialog types through the 'action' parameter:
  * - default: Standard confirmation dialog (blue/primary styling)
  * - success: Success message dialog (green styling)
@@ -86,14 +86,14 @@ class ConfirmationDialog {
     // Create the dialog container using TemplateEngine
     this.dialogContainer = document.createElement('div');
     this.dialogContainer.id = 'confirmation-dialog-container';
-    
+
     // Insert the dialog template into the container
     TemplateEngine.insert('confirmation-dialog-template', {}, this.dialogContainer);
 
     // Get references to the backdrop and dialog elements
     this.backdropElement = this.dialogContainer.querySelector('.pe-dialog-backdrop');
     this.dialog = this.dialogContainer.querySelector('.pe-confirmation-dialog');
-    
+
     // Process labels in the dialog template
     TemplateEngine.processLabels(this.dialogContainer);
 
@@ -153,18 +153,18 @@ class ConfirmationDialog {
       confirmBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         if (typeof this.callbacks.confirm === 'function') {
           // For form dialogs, check if the callback returns false to keep dialog open
           const result = this.callbacks.confirm();
-          
+
           // If callback explicitly returns false or a promise that resolves to false,
           // keep the dialog open (for validation failures)
           if (result === false) {
             logger.log('Confirmation callback returned false, keeping dialog open');
             return;
           }
-          
+
           // If it's a promise, wait for it
           if (result && typeof result.then === 'function') {
             result.then(shouldClose => {
@@ -178,7 +178,7 @@ class ConfirmationDialog {
             return;
           }
         }
-        
+
         // Default behavior: hide the dialog
         this.hide();
       });
@@ -293,7 +293,7 @@ class ConfirmationDialog {
 
     // Get the dialog body element
     const bodyEl = this.dialog.querySelector('.pe-dialog-body');
-    
+
     // Add or remove form-body class based on dialog type
     if (bodyEl) {
       if (settings.type === 'form' || settings.action === 'collect-details') {
@@ -306,17 +306,17 @@ class ConfirmationDialog {
     if (messageEl) {
       // Clear existing content
       messageEl.innerHTML = '';
-      
+
       // Check if we have a form type dialog with template content
       if (settings.type === 'form' && settings.formFields) {
         // Create form container using template
         const formContainer = TemplateEngine.create('dialog-content-form-template', {
           instruction: settings.message || labelManager.get('ui_elements.form_instructions', 'Please fill out the following information:')
         });
-        
+
         // Get the form fields container
         const fieldsContainer = formContainer.querySelector('.pe-dialog-form-fields');
-        
+
         // Add each form field
         if (fieldsContainer && Array.isArray(settings.formFields)) {
           settings.formFields.forEach(field => {
@@ -327,30 +327,30 @@ class ConfirmationDialog {
             }
           });
         }
-        
+
         // Append the complete form to the message element
         messageEl.appendChild(formContainer);
       } else if (settings.type === 'contact-selection') {
         // Create contact selection dialog using template
         const selectionContainer = TemplateEngine.create('dialog-contact-selection-template', {
-          message: settings.message || labelManager.get('messages.contact_selection', 'How would you like to be contacted?'),
-          emailButtonText: settings.emailButtonText || labelManager.get('buttons.contact_email', 'Email'),
-          phoneButtonText: settings.phoneButtonText || labelManager.get('buttons.contact_phone', 'Phone')
+          message: settings.message || labelManager.get('estimate_management.request_contact_form.headings.contact_select_heading.label', 'How would you like to be contacted?'),
+          emailButtonText: settings.emailButtonText || labelManager.get('estimate_management.request_contact_form.buttons.contact_email_button.label', 'Email'),
+          phoneButtonText: settings.phoneButtonText || labelManager.get('estimate_management.request_contact_form.buttons.contact_phone_button.label', 'Phone')
         });
-        
+
         messageEl.appendChild(selectionContainer);
-        
+
         // Set up click handlers for the choice buttons
         const emailBtn = messageEl.querySelector('.pe-dialog-email-choice');
         const phoneBtn = messageEl.querySelector('.pe-dialog-phone-choice');
-        
+
         if (emailBtn && settings.onEmailChoice) {
           emailBtn.addEventListener('click', () => {
             settings.onEmailChoice();
             this.hide();
           });
         }
-        
+
         if (phoneBtn && settings.onPhoneChoice) {
           phoneBtn.addEventListener('click', () => {
             settings.onPhoneChoice();
@@ -375,7 +375,7 @@ class ConfirmationDialog {
     } else {
       // Show footer for other dialog types
       if (footerEl) footerEl.style.display = '';
-      
+
       // Handle cancel button visibility
       if (cancelEl) {
         if (settings.showCancel) {
@@ -396,19 +396,19 @@ class ConfirmationDialog {
         }
       }
     }
-    
+
     // Handle additional buttons if provided
     if (settings.additionalButtons && buttonsContainer) {
       // Clear any existing additional buttons
       const existingAdditionalButtons = buttonsContainer.querySelectorAll('.pe-dialog-additional');
       existingAdditionalButtons.forEach(btn => btn.remove());
-      
+
       // Add new additional buttons
       settings.additionalButtons.forEach((buttonConfig, index) => {
         const button = document.createElement('button');
         button.className = 'pe-button pe-button-secondary pe-dialog-additional';
         button.textContent = buttonConfig.text || `Button ${index + 1}`;
-        
+
         // Set up click handler
         button.addEventListener('click', (e) => {
           e.preventDefault();
@@ -418,7 +418,7 @@ class ConfirmationDialog {
             buttonConfig.callback();
           }
         });
-        
+
         // Insert the button after the cancel button or before confirm if no cancel
         if (cancelEl && settings.showCancel) {
           buttonsContainer.insertBefore(button, confirmEl);
@@ -449,14 +449,14 @@ class ConfirmationDialog {
         'pe-dialog-action-warning',
         'pe-dialog-action-success'
       );
-      
+
       // Map certain actions to standard types for consistency
       let actionClass = settings.action || 'default';
-      
+
       // Normalize action types for consistent styling
       if (actionClass === 'add') actionClass = 'success';
       if (actionClass === 'remove') actionClass = 'delete';
-      
+
       // Add the specific action class
       this.dialog.classList.add(`pe-dialog-action-${actionClass}`);
     }

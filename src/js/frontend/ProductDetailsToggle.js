@@ -683,7 +683,7 @@ class ProductDetailsToggle {
   prepareIncludesToggle() {
     // Find room items for includes toggle (product items no longer have includes)
     const roomItems = document.querySelectorAll('.room-item');
-    
+
     logger.log(`Found ${roomItems.length} room items to process for includes toggle`);
 
     roomItems.forEach(item => {
@@ -835,10 +835,8 @@ const instance = new ProductDetailsToggle({
   i18n: {
     showProducts: labelManager.get('product_management.similar_products.headings.similar_products_heading.text', 'Similar Products'),
     hideProducts: labelManager.get('product_management.similar_products.headings.similar_products_heading.text', 'Similar Products'),
-    showNotes: labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Notes'),
-    hideNotes: labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Notes'),
-    showIncludes: labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Includes'),
-    hideIncludes: labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Includes'),
+    showIncludes: labelManager.get('product_management.product_additions.buttons.view_product_details_button.label', 'Product Includes'),
+    hideIncludes: labelManager.get('product_management.product_additions.buttons.view_product_details_button.label', 'Product Includes'),
     showSuggestions: labelManager.get('product_management.product_additions.headings.recommended_additions_heading.text', 'Suggested Products'),
     hideSuggestions: labelManager.get('product_management.product_additions.headings.recommended_additions_heading.text', 'Suggested Products'),
     loading: labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading...')

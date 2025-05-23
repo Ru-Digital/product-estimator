@@ -149,7 +149,7 @@ class RoomManager {
           TemplateEngine.insert('room-selection-form-template', {
             estimateName: estimate.name || `Estimate #${estimate.id}`
           }, roomSelectionForm);
-          
+
           // Explicitly process labels after template insertion
           TemplateEngine.processLabels(roomSelectionForm);
 
@@ -315,8 +315,8 @@ class RoomManager {
               if (this.modalManager && this.modalManager.confirmationDialog) {
                 setTimeout(() => {
                   this.modalManager.confirmationDialog.show({
-                    title: labelManager.get('ui_elements.product_added_title', 'Product Added'),
-                    message: labelManager.get('messages.product_added_success', 'The product has been added to the selected room.'),
+                    title: labelManager.get('product_management.product added success dialog.title.text', 'Product Added'),
+                    message: labelManager.get('product_management.product_added_success_dialog.message.text', 'The product has been added to the selected room.'),
                     type: 'product',
                     action: 'success',
                     showCancel: false,
@@ -868,9 +868,9 @@ class RoomManager {
                 const button = variationElement.querySelector('.replace-product-in-room');
                 if (button) {
                   // Change button text based on selected state
-                  button.textContent = variation.selected === true ? 
-                    labelManager.get('product_management.product_additions.buttons.remove_addition_button.label', 'Selected') : 
-                    labelManager.get('product_management.product_additions.buttons.add_addition_button.label', 'Select');
+                  button.textContent = variation.selected === true ?
+                    labelManager.get('product_management.product_additions.buttons.selected_button.label', 'Selected') :
+                    labelManager.get('product_management.product_additions.buttons.select_button.label', 'Select');
                   button.dataset.productId = variation.id;
                   button.dataset.estimateId = estimateId;
                   button.dataset.roomId = roomId;
@@ -1203,7 +1203,7 @@ class RoomManager {
         // Show confirmation dialog before removing
         if (this.modalManager && this.modalManager.confirmationDialog) {
           this.modalManager.confirmationDialog.show({
-            title: labelManager.get('ui_elements.remove_product_title', 'Remove Product'),
+            title: labelManager.get('product_management.remove_product_dialog.title.text', 'Remove Product'),
             message: labelManager.format('messages.confirm_product_remove_with_name', { product_name: productName }, `Are you sure you want to remove "${productName}" from this room?`),
             confirmText: labelManager.get('common_ui.general_actions.buttons.remove_button.label', 'Remove'),
             cancelText: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
@@ -1504,7 +1504,7 @@ class RoomManager {
 
         // Get the submit button regardless of productId
         const submitButton = formElement.querySelector('.submit-btn');
-        
+
         if (productId) {
           formElement.dataset.productId = productId;
 
@@ -1514,13 +1514,13 @@ class RoomManager {
           }
         } else {
           delete formElement.dataset.productId;
-          
+
           // Set default button text for regular room addition flow
           if (submitButton) {
             // Either use the label from the data-label attribute or set a default
             if (submitButton.dataset.label) {
               // Use imported labelManager
-              submitButton.textContent = labelManager.get('buttons.add_room', 'Add Room');
+              submitButton.textContent = labelManager.get('room_management.add_new_room_form.buttons.add_button.label', 'Add Room');
             } else {
               // Fallback text if no data-label attribute
               submitButton.textContent = 'Add Room';
@@ -1818,8 +1818,8 @@ class RoomManager {
 
     // Show the confirmation dialog using the dedicated component
     this.modalManager.confirmationDialog.show({
-      title: labelManager.get('room_management.room_actions.remove_room_dialog.title.text', 'Remove Room'),
-      message: labelManager.get('room_management.room_actions.remove_room_dialog.message.text', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'),
+      title: labelManager.get('room_management.remove_room_dialog.title.text', 'Remove Room'),
+      message: labelManager.get('room_management.remove_room_dialog.message.text', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'),
       confirmText: labelManager.get('common_ui.general_actions.buttons.delete_button.label', 'Delete'),
       cancelText: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
       type: 'room',           // Specify the entity type (for proper styling)

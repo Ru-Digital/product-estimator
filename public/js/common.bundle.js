@@ -927,7 +927,7 @@ function showSuccessDialog(modalManager, message) {
   modalManager.confirmationDialog.show({
     title: dialogTitle,
     message: message,
-    confirmText: _labels__WEBPACK_IMPORTED_MODULE_1__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK'),
+    confirmText: _labels__WEBPACK_IMPORTED_MODULE_1__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK'),
     cancelText: false,
     // No cancel button
     action: 'success',
@@ -1028,7 +1028,7 @@ function showDeleteConfirmDialog(modalManager, message, onConfirm) {
   modalManager.confirmationDialog.show({
     title: dialogTitle,
     message: message,
-    confirmText: _labels__WEBPACK_IMPORTED_MODULE_1__.labelManager.get('common_ui.generic_delete_dialog.buttons.delete_button.label', 'Delete'),
+    confirmText: _labels__WEBPACK_IMPORTED_MODULE_1__.labelManager.get('common_ui.general_actions.buttons.delete_button.label', 'Delete'),
     cancelText: _labels__WEBPACK_IMPORTED_MODULE_1__.labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
     action: 'delete',
     type: type,
@@ -1778,7 +1778,7 @@ var LabelManager = /*#__PURE__*/function () {
     this.cache = new Map();
 
     // List of high-priority labels to preload (hierarchical structure)
-    this.criticalLabels = ['estimate_management.estimate_actions.buttons.save_button.label', 'estimate_management.estimate_actions.buttons.print_button.label', 'estimate_management.estimate_actions.buttons.request_copy_button.label', 'estimate_management.create_new_estimate_form.fields.estimate_name_field.label', 'room_management.add_new_room_form.buttons.add_button.label', 'room_management.add_new_room_form.fields.room_name_field.label', 'customer_details.customer_details_form.fields.customer_name_field.label', 'customer_details.customer_details_form.fields.customer_email_field.label', 'common_ui.general_actions.buttons.save_button.label', 'common_ui.general_actions.buttons.cancel_button.label', 'common_ui.generic_confirm_dialog.buttons.confirm_button.label'];
+    this.criticalLabels = ['estimate_management.estimate_actions.buttons.save_button.label', 'estimate_management.estimate_actions.buttons.print_button.label', 'estimate_management.estimate_actions.buttons.request_copy_button.label', 'estimate_management.create_new_estimate_form.fields.estimate_name_field.label', 'room_management.add_new_room_form.buttons.add_button.label', 'room_management.add_new_room_form.fields.room_name_field.label', 'customer_details.customer_details_form.fields.customer_name_field.label', 'customer_details.customer_details_form.fields.customer_email_field.label', 'common_ui.general_actions.buttons.save_button.label', 'common_ui.general_actions.buttons.cancel_button.label', 'common_ui.general_actions.buttons.confirm_button.label'];
 
     // Analytics configuration
     this.analytics = {

@@ -22,30 +22,6 @@ class LabelsStructure {
     public static function get_structure() {
         return [
             'estimate_management' => [
-                'estimate_actions' => [
-                    'buttons' => [
-                        'save_button' => [
-                            'label' => __('Save Estimate', 'product-estimator'),
-                            'description' => __('Button text for saving the current estimate', 'product-estimator'),
-                            'usage' => __('Used in the estimate editor toolbar and form submission', 'product-estimator')
-                        ],
-                        'print_button' => [
-                            'label' => __('Print Estimate', 'product-estimator'),
-                            'description' => __('Button text for printing the estimate as PDF', 'product-estimator'),
-                            'usage' => __('Used in estimate view and actions menu for PDF generation', 'product-estimator')
-                        ],
-                        'request_copy_button' => [
-                            'label' => __('Request a Copy', 'product-estimator'),
-                            'description' => __('Button text for requesting a copy of the estimate', 'product-estimator'),
-                            'usage' => __('Used in estimate sharing options and customer actions', 'product-estimator')
-                        ],
-                        'delete_button' => [
-                            'label' => __('Delete Estimate', 'product-estimator'),
-                            'description' => __('Button text for deleting the current estimate', 'product-estimator'),
-                            'usage' => __('Used in estimate management interfaces and confirmation dialogs', 'product-estimator')
-                        ]
-                    ]
-                ],
                 'create_new_estimate_form' => [
                     'fields' => [
                         'estimate_name_field' => [
@@ -87,6 +63,170 @@ class LabelsStructure {
                         ]
                     ]
                 ],
+                'estimate_actions' => [
+                    'default_heading' => [
+                        'title' => __('Additional information is required to continue.', 'product-estimator')
+                    ],
+                    'buttons' => [
+                        'save_button' => [
+                            'label' => __('Save Estimate', 'product-estimator'),
+                            'description' => __('Button text for saving the current estimate', 'product-estimator'),
+                            'usage' => __('Used in the estimate editor toolbar and form submission', 'product-estimator')
+                        ],
+                        'print_button' => [
+                            'label' => __('Print Estimate', 'product-estimator'),
+                            'description' => __('Button text for printing the estimate as PDF', 'product-estimator'),
+                            'usage' => __('Used in estimate view and actions menu for PDF generation', 'product-estimator')
+                        ],
+                        'request_copy_button' => [
+                            'label' => __('Request a Copy', 'product-estimator'),
+                            'description' => __('Button text for requesting a copy of the estimate', 'product-estimator'),
+                            'usage' => __('Used in estimate sharing options and customer actions', 'product-estimator')
+                        ],
+                        'delete_button' => [
+                            'label' => __('Delete Estimate', 'product-estimator'),
+                            'description' => __('Button text for deleting the current estimate', 'product-estimator'),
+                            'usage' => __('Used in estimate management interfaces and confirmation dialogs', 'product-estimator')
+                        ]
+                    ],
+                ],
+
+                'print_estimate_form' => [
+                    'headings' => [
+                        'pdf_details_required_heading' => [
+                            'label' => __('Your details are required to send your estimate copy', 'product-estimator')
+                        ],
+
+                    ],
+
+                    'fields' => [
+                        'customer_name_field' => [
+                            'label' => __('Full Name', 'product-estimator'),
+                            'placeholder' => __('Enter your name', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Your full name is required', 'product-estimator')
+                            ]
+                        ],
+                        'customer_email_field' => [
+                            'label' => __('Email', 'product-estimator'),
+                            'placeholder' => __('Enter your email', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Your email address is required', 'product-estimator'),
+                                'email' => __('a valid email address is required', 'product-estimator')
+                            ]
+                        ]
+                    ]
+                ],
+                'request_copy_form' => [
+                    'headings' => [
+                        'copy_select_heading' => [
+                            'label' => __('How would you like to receive your estimate?', 'product-estimator')
+                        ],
+                        'details_required_heading' => [
+                            'label' => __('Your details are required to send your estimate copy', 'product-estimator')
+                        ],
+                    ],
+                    'messages' => [
+                        'copy_select_message' => [
+                            'text' => __('Please choose how you\'d prefer to receive your estimate:', 'product-estimator')
+                        ],
+                        'details_required_sms_message' => [
+                            'text' => __('A phone number is required to send your estimate via SMS.', 'product-estimator')
+                        ],
+                        'details_required_email_message' => [
+                            'text' => __('An email address is required to send your estimate copy.', 'product-estimator')
+                        ]
+                    ],
+                    'fields' => [
+                        'customer_name_field' => [
+                            'label' => __('Full Name', 'product-estimator'),
+                            'placeholder' => __('Enter your name', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Your full name is required', 'product-estimator')
+                            ]
+                        ],
+                        'customer_email_field' => [
+                            'label' => __('Email', 'product-estimator'),
+                            'placeholder' => __('Enter your email', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Your email address is required', 'product-estimator'),
+                                'email' => __('a valid email address is required', 'product-estimator')
+                            ]
+                        ],
+                        'customer_phone_field' => [
+                            'label' => __('Mobile Number', 'product-estimator'),
+                            'placeholder' => __('Enter your mobile number', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Your mobile number is required', 'product-estimator'),
+                                'phone_number' => __('a valid mobile number is required', 'product-estimator')
+                            ]
+                        ]
+                    ],
+                    'buttons' => [
+                        'contact_email_button' => [
+                            'label' => __('Email', 'product-estimator')
+                        ],
+                        'contact_sms_button' => [
+                            'label' => __('SMS', 'product-estimator')
+                        ],
+                    ]
+                ],
+
+                'request_contact_form' => [
+                    'headings' => [
+                        'contact_select_heading' => [
+                            'label' => __('How would you like our store to contact you?', 'product-estimator')
+                        ],
+                        'details_required_heading' => [
+                            'label' => __('Your details are required for a store to contact you.', 'product-estimator')
+                        ],
+                    ],
+                    'messages' => [
+                        'contact_select_message' => [
+                            'text' => __('Please choose how you\'d prefer a store to contact yuo:', 'product-estimator')
+                        ],
+                        'details_required_call_message' => [
+                            'text' => __('A phone number is required for a store to call you.', 'product-estimator')
+                        ],
+                        'details_required_email_message' => [
+                            'text' => __('An email address is required for a store to email you.', 'product-estimator')
+                        ]
+                    ],
+                    'fields' => [
+                        'customer_name_field' => [
+                            'label' => __('Full Name', 'product-estimator'),
+                            'placeholder' => __('Enter your name', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Your full name is required', 'product-estimator')
+                            ]
+                        ],
+                        'customer_email_field' => [
+                            'label' => __('Email', 'product-estimator'),
+                            'placeholder' => __('Enter your email', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Your email address is required', 'product-estimator'),
+                                'email' => __('a valid email address is required', 'product-estimator')
+                            ],
+                        'customer_phone_field' => [
+                            'label' => __('Phone Number', 'product-estimator'),
+                            'placeholder' => __('Enter your phone number', 'product-estimator'),
+                            'validation' => [
+                                'required' => __('Your phone number is required', 'product-estimator'),
+                                'phone_number' => __('a valid mobile number is required', 'product-estimator')
+                            ]
+                        ]
+                        ]
+                    ],
+                    'buttons' => [
+                        'contact_email_button' => [
+                            'label' => __('Email', 'product-estimator')
+                        ],
+                        'contact_phone_button' => [
+                            'label' => __('Phone', 'product-estimator')
+                         ],
+                    ]
+                ],
+
                 'empty_states' => [
                     'no_estimates_message' => [
                         'text' => __('You don\'t have any estimates yet.', 'product-estimator')
@@ -99,6 +239,11 @@ class LabelsStructure {
                 ]
             ],
             'room_management' => [
+                'headings' => [
+                    'room_heading' => [
+                      'text' =>  __('Rooms', 'product-estimator')
+                    ]
+                ],
                 'add_new_room_form' => [
                     'fields' => [
                         'room_name_field' => [
@@ -141,14 +286,11 @@ class LabelsStructure {
                         ]
                     ],
                     'buttons' => [
-                        'continue_shopping_button' => [
-                            'label' => __('Continue Shopping', 'product-estimator')
-                        ],
-                        'done_shopping_button' => [
-                            'label' => __('Done Shopping', 'product-estimator')
-                        ],
                         'create_new_room_button' => [
                             'label' => __('+ Add New Room', 'product-estimator')
+                        ],
+                        'add_product_to_room_button' => [
+                            'label' => __('Add Product To Room', 'product-estimator')
                         ]
                     ],
                     'heading' => [
@@ -158,6 +300,15 @@ class LabelsStructure {
                         'no_rooms_message' => [
                             'text' => __('No rooms available. Create a new room to get started.', 'product-estimator')
                         ]
+                    ]
+                ],
+                'remove_room_dialog' => [
+                    'title' => [
+                        'text' => __('Remove Room', 'product-estimator'),
+                        'description' => __('Dialog title for room removal confirmation', 'product-estimator'),
+                    ],
+                    'message' => [
+                        'text' => __('Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.', 'product-estimator'),
                     ]
                 ],
                 'empty_states' => [
@@ -180,9 +331,6 @@ class LabelsStructure {
                         'remove_from_room_button' => [
                             'label' => __('Remove', 'product-estimator')
                         ],
-                        'view_details_button' => [
-                            'label' => __('View Details', 'product-estimator')
-                        ],
                         'select_variation_button' => [
                             'label' => __('Select Variation', 'product-estimator')
                         ]
@@ -191,7 +339,7 @@ class LabelsStructure {
                 'similar_products' => [
                     'buttons' => [
                         'view_similar_button' => [
-                            'label' => __('View Similar', 'product-estimator'),
+                            'label' => __('Other Products you might consider', 'product-estimator'),
                             'description' => __('Button to view similar products', 'product-estimator'),
                             'usage' => __('Used in product detail view to show similar products', 'product-estimator')
                         ],
@@ -199,6 +347,9 @@ class LabelsStructure {
                             'label' => __('Add Similar Product', 'product-estimator'),
                             'description' => __('Button to add a similar product to the room', 'product-estimator'),
                             'usage' => __('Used in similar products carousel', 'product-estimator')
+                        ],
+                        'replace_button' => [
+                            'label' => __('Replace Product', 'product-estimator')
                         ]
                     ],
                     'headings' => [
@@ -221,23 +372,37 @@ class LabelsStructure {
                         ]
                     ]
                 ],
+                'tooltips' => [
+                    'product_details' => [
+                        'prompt' => [
+                            'label' => __('Product Details', 'product-estimator')
+                        ],
+                        'notes_heading' => [
+                            'text' => __('Notes', 'product-estimator')
+                        ],
+                        'details_heading' => [
+                            'text' => __('Details', 'product-estimator')
+                        ],
+                    ]
+                ],
                 'product_additions' => [
                     'buttons' => [
-                        'view_additions_button' => [
-                            'label' => __('View Additions', 'product-estimator'),
-                            'description' => __('Button to view additional products', 'product-estimator'),
-                            'usage' => __('Used in product detail view to show additional products', 'product-estimator')
-                        ],
-                        'add_addition_button' => [
-                            'label' => __('Add to Room', 'product-estimator'),
-                            'description' => __('Button to add an additional product to the room', 'product-estimator'),
-                            'usage' => __('Used in product additions section', 'product-estimator')
+                        'view_product_details_button' => [
+                            'label' => __('Product Details', 'product-estimator'),
+                            'description' => __('Button to expand / collapse product details', 'product-estimator'),
                         ],
                         'remove_addition_button' => [
                             'label' => __('Remove Addition', 'product-estimator'),
                             'description' => __('Button to remove an additional product', 'product-estimator'),
                             'usage' => __('Used in room view for additional products', 'product-estimator')
+                        ],
+                        'select_button' => [
+                            'label' => __('Select', 'product-estimator')
+                        ],
+                        'selected_button' => [
+                            'label' => __('Selected', 'product-estimator')
                         ]
+
                     ],
                     'headings' => [
                         'additional_products_heading' => [
@@ -269,6 +434,9 @@ class LabelsStructure {
                         ]
                     ],
                     'labels' => [
+                        'price_notice' => [
+                            'text' => __('Prices are subject to check measures without notice', 'product-estimator'),
+                        ],
                         'price_label' => [
                             'text' => __('Price:', 'product-estimator'),
                             'description' => __('Label for additional product price', 'product-estimator'),
@@ -432,6 +600,11 @@ class LabelsStructure {
             ],
             'common_ui' => [
                 'general_actions' => [
+                    'headings' => [
+                        'product_estimator_name' => [
+                            'text' => __('Product Estimator', 'product-estimator'),
+                        ]
+                    ],
                     'buttons' => [
                         // Basic action buttons
                         'save_button' => [
@@ -505,6 +678,9 @@ class LabelsStructure {
                             'label' => __('Replace', 'product-estimator'),
                             'description' => __('Replace button for replacement actions', 'product-estimator'),
                             'usage' => __('Used in replacement confirmation dialogs', 'product-estimator')
+                        ],
+                        'close_tooltip' => [
+                            'label' => __('Close tooltip', 'product-estimator'),
                         ]
                     ],
                     'loading_states' => [

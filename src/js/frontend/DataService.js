@@ -90,7 +90,7 @@ class DataService {
    */
   getProductVariationData(productId) {
     logger.log(`Getting variation data for product ID: ${productId}`);
-    
+
     return this.ajaxService._request('product_estimator_get_product_variations', {
       product_id: productId
     })
@@ -333,11 +333,11 @@ class DataService {
             (Array.isArray(room.products) && room.products.find(product => String(product.id) === productIdStr))) {
           logger.warn(`DataService: Product ID ${productId} already exists in room ${roomId} locally. Aborting.`);
           return Promise.reject({
-            message: labelManager.get('common_ui.product_dialogs.product_exists_dialog.message.text', 'This product already exists in the selected room.'),
+            message: labelManager.get('product_management.product_exists_dialog.message.text', 'This product already exists in the selected room.'),
             data: { duplicate: true, estimate_id: estimateId, room_id: roomId }
           });
         }
-        
+
         // Note: Primary category checking happens on the server side during the AJAX request
         // We can't check it here without the product category information and settings
       }
@@ -380,16 +380,16 @@ class DataService {
     const localStoragePromise = fetchProductAndSuggestionsPromise
       .then(productDataResponse => {
         logger.log('DataService: Fetched comprehensive product data response:', productDataResponse);
-        
+
         // Log specifically for additional products and their upgrades
         if (productDataResponse.product_data && productDataResponse.product_data.additional_products) {
           console.log('ADDITIONAL PRODUCTS CHECK: Found additional products:', productDataResponse.product_data.additional_products);
-          
+
           // Check each additional product for upgrades
           Object.entries(productDataResponse.product_data.additional_products).forEach(([productId, productData]) => {
             console.log(`ADDITIONAL PRODUCTS CHECK: Product ${productId} - ${productData.name}`);
             console.log(`  - has_upgrades: ${productData.has_upgrades}`);
-            
+
             if (productData.has_upgrades && productData.upgrades) {
               console.log(`  - upgrades data:`, productData.upgrades);
               if (productData.upgrades.products) {
@@ -443,16 +443,16 @@ class DataService {
           const estimate = getEstimate(estimateId);
           const room = estimate && estimate.rooms && estimate.rooms[roomId];
           const existingProducts = room && room.products ? room.products : {};
-          
+
           for (const productKey in existingProducts) {
             const existingProduct = existingProducts[productKey];
             // Skip non-product items like notes
             if (existingProduct.type === 'note') continue;
-            
+
             if (existingProduct.is_primary_category === true) {
               // Found an existing primary category product - return conflict response
               logger.log('DataService: Primary category conflict detected. Existing product:', existingProduct.name, 'New product:', comprehensiveProductData.name);
-              
+
               return {
                 success: false,
                 error: new Error('Primary category conflict - flooring product already exists in this room'),
@@ -1205,25 +1205,25 @@ class DataService {
    */
   updateProductAdditionVariation(estimateId, roomId, parentProductId, variationId) {
     logger.log('DataService: Updating product addition variation', { estimateId, roomId, parentProductId, variationId });
-    
+
     return new Promise((resolve, reject) => {
       try {
         // Get the estimate data from localStorage
         const estimatesData = loadEstimateData();
         const estimate = estimatesData.estimates[estimateId];
-        
+
         if (!estimate || !estimate.rooms[roomId]) {
           logger.error('Estimate or room not found', { estimateId, roomId });
           reject(new Error('Estimate or room not found'));
           return;
         }
-        
+
         const room = estimate.rooms[roomId];
-        
+
         // Find the parent product that has this additional product
         let parentProduct = null;
         let additionalProduct = null;
-        
+
         if (room.products && typeof room.products === 'object') {
           Object.values(room.products).forEach(product => {
             if (product.additional_products && product.additional_products[parentProductId]) {
@@ -1232,29 +1232,29 @@ class DataService {
             }
           });
         }
-        
+
         if (!parentProduct || !additionalProduct) {
           logger.error('Parent product or additional product not found', { parentProductId });
           reject(new Error('Parent product or additional product not found'));
           return;
         }
-        
+
         // Update the selected_option
         additionalProduct.selected_option = parseInt(variationId);
-        
+
         // Update the selected state for all variations
         if (additionalProduct.variations) {
           Object.values(additionalProduct.variations).forEach(variation => {
             variation.selected = (variation.id === parseInt(variationId));
           });
         }
-        
+
         // Save the updated data to localStorage
         saveEstimateData(estimatesData);
-        
+
         // Refresh the cache
         this.refreshEstimatesCache();
-        
+
         resolve();
       } catch (error) {
         logger.error('Error updating product addition variation', error);

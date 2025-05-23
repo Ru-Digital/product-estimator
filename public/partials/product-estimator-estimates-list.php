@@ -72,7 +72,7 @@ $options = get_option('product_estimator_settings');
 
             <div id="rooms">
                 <div class="room-header">
-                    <h4><?php product_estimator_label('ui_elements.rooms_heading', 'Rooms'); ?></h4>
+                    <h4><?php product_estimator_label('room_management.headings.room_heading.label', 'Rooms'); ?></h4>
 
                     <button class="add-room" data-estimate="<?php echo esc_attr($estimate_id); ?>">
                         <?php product_estimator_label('room_management.room_selection_form.buttons.create_new_room_button.label', 'Add New Room'); ?>

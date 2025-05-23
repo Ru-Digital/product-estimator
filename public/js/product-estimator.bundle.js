@@ -383,7 +383,7 @@ var ConfirmationDialog = /*#__PURE__*/function () {
       this.show({
         title: title,
         message: message,
-        confirmText: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'Confirm'),
+        confirmText: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'Confirm'),
         cancelText: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('buttons.cancel', 'Cancel'),
         action: 'default',
         onConfirm: onConfirm,
@@ -598,7 +598,7 @@ var ConfirmationDialog = /*#__PURE__*/function () {
         message: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('common_ui.generic_confirm_dialog.message.text', 'Are you sure you want to proceed?'),
         type: '',
         // product, room, estimate - entity type for context
-        confirmText: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', i18n.confirm || 'Confirm'),
+        confirmText: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', i18n.confirm || 'Confirm'),
         cancelText: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('common_ui.general_actions.buttons.cancel_button.label', i18n.cancel || 'Cancel'),
         onConfirm: null,
         onCancel: null,
@@ -1932,7 +1932,7 @@ var DataService = /*#__PURE__*/function () {
           })) {
             logger.warn("DataService: Product ID ".concat(productId, " already exists in room ").concat(roomId, " locally. Aborting."));
             return Promise.reject({
-              message: _utils__WEBPACK_IMPORTED_MODULE_6__.labelManager.get('common_ui.product_dialogs.product_exists_dialog.message.text', 'This product already exists in the selected room.'),
+              message: _utils__WEBPACK_IMPORTED_MODULE_6__.labelManager.get('product_management.product_exists_dialog.message.text', 'This product already exists in the selected room.'),
               data: {
                 duplicate: true,
                 estimate_id: estimateId,
@@ -3234,7 +3234,7 @@ var EstimateActions = /*#__PURE__*/function () {
 
         // Show the dialog with form fields
         dialog.show({
-          title: _this3.getDialogTitle(action),
+          title: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('estimate_management.estimate_actions.headings.common_heading.text', 'Contact Information Required'),
           message: instruction,
           formFields: formFields,
           confirmText: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('common_ui.general_actions.buttons.continue_button.label', 'Continue'),
@@ -3327,17 +3327,17 @@ var EstimateActions = /*#__PURE__*/function () {
     key: "getDialogInstruction",
     value: function getDialogInstruction(action, missingFields) {
       if (action === 'request_copy_email') {
-        return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('messages.email_required_for_copy', 'An email address is required to send your estimate copy.');
+        return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('estimate_management.request_copy_form.messages.details_required_email_message.text', 'An email address is required to send your estimate copy.');
       } else if (action === 'request_copy_sms') {
-        return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('messages.phone_required_for_sms', 'A phone number is required to send your estimate via SMS.');
+        return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('estimate_management.request_copy_form.messages.details_required_sms_message.text', 'A phone number is required to send your estimate via SMS.');
       } else if (action === 'request_contact_email') {
-        return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('messages.contact_email_details_required', 'Your details are required for our store to contact you via email.');
+        return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('estimate_management.request_contact_form.messages.details_required_email_message.text', 'Your details are required for our store to contact you via email.');
       } else if (action === 'request_contact_phone') {
-        return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('messages.contact_phone_details_required', 'Your details are required for our store to contact you via phone.');
+        return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('estimate_management.request_contact_form.messages.details_required_call_message.text', 'Your details are required for our store to contact you via phone.');
       } else if (missingFields.includes('email') && !missingFields.includes('name')) {
-        return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('messages.email_required_for_estimate', 'An email address is required to view your estimate.');
+        return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('estimate_management.print_estimate_form.headings.pdf_details_required_heading.label', 'An email address is required to view your estimate.');
       }
-      return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('messages.additional_information_required', 'Additional information is required to continue.');
+      return _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('estimate_management.estimate_actions.default_heading.title', 'Additional information is required to continue.');
     }
 
     /**
@@ -3388,25 +3388,6 @@ var EstimateActions = /*#__PURE__*/function () {
         errorMessage: errorMessage,
         details: updatedDetails
       };
-    }
-
-    /**
-     * Get dialog title based on action
-     * @param {string} action - The action type
-     * @returns {string} Dialog title
-     */
-  }, {
-    key: "getDialogTitle",
-    value: function getDialogTitle(action) {
-      // Use label manager to get dialog titles with appropriate defaults
-      var titles = {
-        'print': _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('ui_elements.complete_details_title', 'Complete Your Details'),
-        'request_copy_email': _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('ui_elements.email_details_required_title', 'Email Details Required'),
-        'request_copy_sms': _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('ui_elements.phone_details_required_title', 'Phone Number Required'),
-        'request_contact_email': _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('ui_elements.contact_information_required_title', 'Contact Information Required'),
-        'request_contact_phone': _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('ui_elements.contact_information_required_title', 'Contact Information Required')
-      };
-      return titles[action] || _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('ui_elements.complete_details_title', 'Complete Your Details');
     }
 
     /**
@@ -4003,7 +3984,7 @@ var EstimateActions = /*#__PURE__*/function () {
           message: message,
           type: 'estimate',
           action: 'confirm',
-          confirmText: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK'),
+          confirmText: _utils_labels__WEBPACK_IMPORTED_MODULE_4__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK'),
           cancelText: null,
           onConfirm: function onConfirm() {
             if (typeof _onConfirm === 'function') {
@@ -6113,13 +6094,11 @@ var instance = new ProductDetailsToggle({
   i18n: {
     showProducts: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.similar_products.headings.similar_products_heading.text', 'Similar Products'),
     hideProducts: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.similar_products.headings.similar_products_heading.text', 'Similar Products'),
-    showNotes: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Notes'),
-    hideNotes: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Notes'),
-    showIncludes: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Includes'),
-    hideIncludes: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Includes'),
+    showIncludes: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_additions.buttons.view_product_details_button.label', 'Product Includes'),
+    hideIncludes: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_additions.buttons.view_product_details_button.label', 'Product Includes'),
     showSuggestions: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_additions.headings.recommended_additions_heading.text', 'Suggested Products'),
     hideSuggestions: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_additions.headings.recommended_additions_heading.text', 'Suggested Products'),
-    loading: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...')
+    loading: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading...')
   }
 });
 
@@ -6171,10 +6150,10 @@ var ProductSelectionDialog = /*#__PURE__*/function () {
     this.labels = {
       selectOptionsTitle: _utils_labels__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('product_management.product_actions.buttons.select_variation_button.label', 'Select Product Options'),
       addToEstimate: _utils_labels__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('product_management.product_actions.buttons.add_to_room_button.label', 'Add to Estimate'),
-      replaceProduct: _utils_labels__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.dialog_buttons.replace_button.label', 'Replace Product'),
+      replaceProduct: _utils_labels__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.general_actions.buttons.replace_button.label', 'Replace Product'),
       confirmAddMessage: _utils_labels__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.generic_delete_dialog.message.text', 'Add this product to your estimate?'),
-      loadingTitle: _utils_labels__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...'),
-      loadingMessage: _utils_labels__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading product variations...')
+      loadingTitle: _utils_labels__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading...'),
+      loadingMessage: _utils_labels__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading product variations...')
     };
   }
 
@@ -11949,7 +11928,7 @@ var ModalManager = /*#__PURE__*/function () {
                       message: _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('errors.replace_product_error', 'Unable to replace product. Please try again.'),
                       type: 'error',
                       showCancel: false,
-                      confirmText: _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+                      confirmText: _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
                     });
                   }
                 })["finally"](function () {
@@ -12008,7 +11987,7 @@ var ModalManager = /*#__PURE__*/function () {
 
           // Insert template content
           _TemplateEngine__WEBPACK_IMPORTED_MODULE_7__["default"].insert(loadingTemplateId, {
-            loadingText: _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...')
+            loadingText: _utils__WEBPACK_IMPORTED_MODULE_3__.labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading...')
           }, loadingContainer);
           this.modal.appendChild(loadingContainer);
           this.loadingIndicator = loadingContainer;
@@ -12661,7 +12640,7 @@ var ProductManager = /*#__PURE__*/function () {
                 type: 'product',
                 action: 'add',
                 showCancel: false,
-                confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+                confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
               });
             } else {
               logger.warn('ConfirmationDialog not available, using console log instead');
@@ -12684,7 +12663,7 @@ var ProductManager = /*#__PURE__*/function () {
                 type: 'product',
                 action: 'error',
                 showCancel: false,
-                confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+                confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
               });
             } else {
               logger.warn('ConfirmationDialog not available, using console log instead');
@@ -12793,7 +12772,7 @@ var ProductManager = /*#__PURE__*/function () {
               type: 'product',
               action: 'warning',
               showCancel: false,
-              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
             });
           }
 
@@ -12813,16 +12792,16 @@ var ProductManager = /*#__PURE__*/function () {
           if (_this2.modalManager && _this2.modalManager.confirmationDialog) {
             var roomName = _this2.modalManager.roomManager ? _this2.modalManager.roomManager.getRoomName(error.estimateId, error.roomId) : 'selected room';
             _this2.modalManager.confirmationDialog.show({
-              title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_conflict_dialog.title.text', 'A flooring product already exists in the selected room'),
-              message: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.format('product_management.product_conflict_dialog.message.text', {
+              title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.primary_conflict_dialog.title.text', 'A flooring product already exists in the selected room'),
+              message: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.format('product_management.primary_conflict_dialog.message.text', {
                 room_name: roomName,
                 existing_product: error.existingProductName,
                 new_product: error.newProductName
               }, "The ".concat(roomName, " already contains \"").concat(error.existingProductName, "\". Would you like to replace it with \"").concat(error.newProductName, "\"?")),
               type: 'product',
               action: 'replace',
-              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_conflict_dialog.buttons.replace_existing_button.label', 'Replace the existing product'),
-              cancelText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_conflict_dialog.buttons.go_back_button.label', 'Go back to room select'),
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.primary_conflict_dialog.buttons.replace_existing_button.label', 'Replace the existing product'),
+              cancelText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.primary_conflict_dialog.buttons.go_back_button.label', 'Go back to room select'),
               additionalButtons: [{
                 text: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
                 callback: function callback() {
@@ -12861,8 +12840,8 @@ var ProductManager = /*#__PURE__*/function () {
               message: error.message || error.data.message,
               type: 'product',
               action: 'replace',
-              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.product_conflict_dialog.buttons.replace_existing_button.label', 'Replace existing product'),
-              cancelText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.primary_conflict_dialog.buttons.back_button.label', 'Back'),
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.primary_conflict_dialog.buttons.replace_existing_button.label', 'Replace existing product'),
+              cancelText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.primary_conflict_dialog.buttons.go_back_button.label', 'Go back to room select'),
               additionalButtons: [{
                 text: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
                 callback: function callback() {
@@ -13021,7 +13000,7 @@ var ProductManager = /*#__PURE__*/function () {
       this.modalManager.confirmationDialog.show({
         title: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.remove_product_dialog.title.text', 'Remove Product'),
         message: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('product_management.remove_product_dialog.message.text', 'Are you sure you want to remove this product from the room?'),
-        confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.generic_delete_dialog.buttons.delete_button.label', 'Delete'),
+        confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.delete_button.label', 'Delete'),
         cancelText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
         type: 'product',
         action: 'delete',
@@ -13069,7 +13048,7 @@ var ProductManager = /*#__PURE__*/function () {
               type: 'product',
               action: 'error',
               showCancel: false,
-              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
             });
           }
         }
@@ -13154,7 +13133,7 @@ var ProductManager = /*#__PURE__*/function () {
               type: 'product',
               action: 'error',
               showCancel: false,
-              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
             });
           } else {
             // Fallback to modalManager.showError
@@ -13254,7 +13233,7 @@ var ProductManager = /*#__PURE__*/function () {
               type: 'product',
               action: 'error',
               showCancel: false,
-              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+              confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
             });
           } else {
             _this6.modalManager.showError('Error updating variation. Please try again.');
@@ -13320,7 +13299,7 @@ var ProductManager = /*#__PURE__*/function () {
                 type: 'success',
                 action: 'success',
                 showCancel: false,
-                confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+                confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
               });
             }
           }, 200);
@@ -13352,7 +13331,7 @@ var ProductManager = /*#__PURE__*/function () {
             type: 'product',
             action: 'error',
             showCancel: false,
-            confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+            confirmText: _utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
           });
         }
       });
@@ -13407,7 +13386,7 @@ var ProductManager = /*#__PURE__*/function () {
           disabled: button.disabled
         };
         button.disabled = true;
-        button.innerHTML = "<span class=\"spinner\"></span> ".concat(_utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...'));
+        button.innerHTML = "<span class=\"spinner\"></span> ".concat(_utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading...'));
         button.classList.add('loading');
       }
 
@@ -13448,7 +13427,7 @@ var ProductManager = /*#__PURE__*/function () {
 
                   // Re-disable button if provided
                   if (button) {
-                    button.innerHTML = "<span class=\"spinner\"></span> ".concat(_utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...'));
+                    button.innerHTML = "<span class=\"spinner\"></span> ".concat(_utils__WEBPACK_IMPORTED_MODULE_2__.labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading...'));
                     button.disabled = true;
                     button.classList.add('loading');
                   }
@@ -13859,12 +13838,12 @@ var RoomManager = /*#__PURE__*/function () {
               if (_this2.modalManager && _this2.modalManager.confirmationDialog) {
                 setTimeout(function () {
                   _this2.modalManager.confirmationDialog.show({
-                    title: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('ui_elements.product_added_title', 'Product Added'),
-                    message: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('messages.product_added_success', 'The product has been added to the selected room.'),
+                    title: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('product_management.product added success dialog.title.text', 'Product Added'),
+                    message: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('product_management.product_added_success_dialog.message.text', 'The product has been added to the selected room.'),
                     type: 'product',
                     action: 'success',
                     showCancel: false,
-                    confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+                    confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
                   });
                 }, 100); // Short delay to allow estimates list to render
               } else {
@@ -14417,7 +14396,7 @@ var RoomManager = /*#__PURE__*/function () {
                   var button = variationElement.querySelector('.replace-product-in-room');
                   if (button) {
                     // Change button text based on selected state
-                    button.textContent = variation.selected === true ? _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('product_management.product_additions.buttons.remove_addition_button.label', 'Selected') : _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('product_management.product_additions.buttons.add_addition_button.label', 'Select');
+                    button.textContent = variation.selected === true ? _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('product_management.product_additions.buttons.selected_button.label', 'Selected') : _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('product_management.product_additions.buttons.select_button.label', 'Select');
                     button.dataset.productId = variation.id;
                     button.dataset.estimateId = estimateId;
                     button.dataset.roomId = roomId;
@@ -14520,7 +14499,7 @@ var RoomManager = /*#__PURE__*/function () {
             message: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('messages.general_error', 'Failed to update the variation. Please try again.'),
             type: 'error',
             showCancel: false,
-            confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+            confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
           });
         }
       });
@@ -14759,7 +14738,7 @@ var RoomManager = /*#__PURE__*/function () {
           // Show confirmation dialog before removing
           if (_this7.modalManager && _this7.modalManager.confirmationDialog) {
             _this7.modalManager.confirmationDialog.show({
-              title: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('ui_elements.remove_product_title', 'Remove Product'),
+              title: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('product_management.remove_product_dialog.title.text', 'Remove Product'),
               message: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.format('messages.confirm_product_remove_with_name', {
                 product_name: productName
               }, "Are you sure you want to remove \"".concat(productName, "\" from this room?")),
@@ -15072,7 +15051,7 @@ var RoomManager = /*#__PURE__*/function () {
               // Either use the label from the data-label attribute or set a default
               if (submitButton.dataset.label) {
                 // Use imported labelManager
-                submitButton.textContent = _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('buttons.add_room', 'Add Room');
+                submitButton.textContent = _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('room_management.add_new_room_form.buttons.add_button.label', 'Add Room');
               } else {
                 // Fallback text if no data-label attribute
                 submitButton.textContent = 'Add Room';
@@ -15178,7 +15157,7 @@ var RoomManager = /*#__PURE__*/function () {
                       type: 'room',
                       action: 'success',
                       showCancel: false,
-                      confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+                      confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
                     });
                   }, 100);
                 } else {
@@ -15218,7 +15197,7 @@ var RoomManager = /*#__PURE__*/function () {
                     type: 'room',
                     action: 'success',
                     showCancel: false,
-                    confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+                    confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
                   });
                 }, 100);
               } else {
@@ -15242,7 +15221,7 @@ var RoomManager = /*#__PURE__*/function () {
                     type: 'room',
                     action: 'success',
                     showCancel: false,
-                    confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK')
+                    confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
                   });
                 }, 100);
               } else {
@@ -15257,7 +15236,7 @@ var RoomManager = /*#__PURE__*/function () {
                   type: 'room',
                   action: 'success',
                   showCancel: false,
-                  confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK'),
+                  confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK'),
                   onConfirm: function onConfirm() {
                     _this0.modalManager.closeModal();
                   }
@@ -15370,9 +15349,9 @@ var RoomManager = /*#__PURE__*/function () {
 
       // Show the confirmation dialog using the dedicated component
       this.modalManager.confirmationDialog.show({
-        title: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('room_management.room_actions.remove_room_dialog.title.text', 'Remove Room'),
-        message: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('room_management.room_actions.remove_room_dialog.message.text', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'),
-        confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.generic_delete_dialog.buttons.delete_button.label', 'Delete'),
+        title: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('room_management.remove_room_dialog.title.text', 'Remove Room'),
+        message: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('room_management.remove_room_dialog.message.text', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'),
+        confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.general_actions.buttons.delete_button.label', 'Delete'),
         cancelText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
         type: 'room',
         // Specify the entity type (for proper styling)
@@ -15480,7 +15459,7 @@ var RoomManager = /*#__PURE__*/function () {
           _this10.modalManager.confirmationDialog.show({
             title: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('ui_elements.error_title', 'Error'),
             message: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('messages.general_error', 'Error removing room. Please try again.'),
-            confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.generic_alert_dialog.buttons.ok_button.label', 'OK'),
+            confirmText: _utils__WEBPACK_IMPORTED_MODULE_5__.labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK'),
             cancelText: false,
             onConfirm: function onConfirm() {
               logger.log('Error dialog closed');
@@ -16727,7 +16706,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="select-option-template"> <option value="{{value}}" data-label="{{labelKey}}">{{text}}</option> </template>`;
+var code = `<template id="select-option-template"> <option value="{{value}}">{{text}}</option> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16778,7 +16757,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="estimate-item-template"> <div class="estimate-section collapsed" data-estimate-id=""> <div class="estimate-header"> <h3 class="estimate-name" data-prefix-label="ui_elements.estimate"> <div class="price-graph-container"> <div class="price-range-title"> <span class="price-title name" data-prefix-label="ui_elements.estimate"></span> <span class="estimate-price min_total max_total"></span> </div> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> </h3> <button class="remove-estimate" data-estimate-id="" data-title-label="estimate_management.estimate_actions.buttons.delete_button.label" data-aria-label="estimate_management.estimate_actions.buttons.delete_button.label" title="Delete Estimate" aria-label="Delete Estimate"> <span class="dashicons dashicons-trash"></span> </button> </div> <div class="estimate-content"> <div id="rooms"> <div class="room-header"> <h4 data-label="ui_elements.rooms_heading">Rooms</h4> <button class="add-room" data-estimate-id="" data-label="room_management.room_selection_form.buttons.create_new_room_button.label">Add New Room</button> </div> <div class="rooms-container"></div> </div> </div> <div class="estimate-actions"> <ul> <li> <a class="print-estimate" data-estimate-id="" data-title-label="estimate_management.estimate_actions.buttons.print_button.label" title="Print Estimate"> <span class="dashicons dashicons-pdf"></span> <span data-label="estimate_management.estimate_actions.buttons.print_button.label">Print estimate</span> </a> </li> <li> <a class="request-contact-estimate" data-estimate-id="" data-title-label="buttons.request_contact" title="Request contact from store"> <span class="dashicons dashicons-businessperson"></span> <span data-label="buttons.request_contact">Request contact from store</span> </a> </li> <li> <a class="request-a-copy" data-estimate-id="" data-title-label="estimate_management.estimate_actions.buttons.request_copy_button.label" title="Request a copy"> <span class="dashicons dashicons-email"></span> <span data-label="estimate_management.estimate_actions.buttons.request_copy_button.label">Request a copy</span> </a> </li> </ul> </div> </div> </template> `;
+var code = `<template id="estimate-item-template"> <div class="estimate-section collapsed" data-estimate-id=""> <div class="estimate-header"> <h3 class="estimate-name" data-prefix-label="ui_elements.estimate"> <div class="price-graph-container"> <div class="price-range-title"> <span class="price-title name" data-prefix-label="ui_elements.estimate"></span> <span class="estimate-price min_total max_total"></span> </div> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> </h3> <button class="remove-estimate" data-estimate-id="" data-title-label="estimate_management.estimate_actions.buttons.delete_button.label" data-aria-label="estimate_management.estimate_actions.buttons.delete_button.label" title="Delete Estimate" aria-label="Delete Estimate"> <span class="dashicons dashicons-trash"></span> </button> </div> <div class="estimate-content"> <div id="rooms"> <div class="room-header"> <h4 data-label="room_management.headings.room_heading.text">Rooms</h4> <button class="add-room" data-estimate-id="" data-label="room_management.room_selection_form.buttons.create_new_room_button.label">Add New Room</button> </div> <div class="rooms-container"></div> </div> </div> <div class="estimate-actions"> <ul> <li> <a class="print-estimate" data-estimate-id="" data-title-label="estimate_management.estimate_actions.buttons.print_button.label" title="Print Estimate"> <span class="dashicons dashicons-pdf"></span> <span data-label="estimate_management.estimate_actions.buttons.print_button.label">Print estimate</span> </a> </li> <li> <a class="request-contact-estimate" data-estimate-id="" data-title-label="buttons.request_contact" title="Request contact from store"> <span class="dashicons dashicons-businessperson"></span> <span data-label="buttons.request_contact">Request contact from store</span> </a> </li> <li> <a class="request-a-copy" data-estimate-id="" data-title-label="estimate_management.estimate_actions.buttons.request_copy_button.label" title="Request a copy"> <span class="dashicons dashicons-email"></span> <span data-label="estimate_management.estimate_actions.buttons.request_copy_button.label">Request a copy</span> </a> </li> </ul> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16797,7 +16776,7 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `<template id="additional-product-option-template"> <div class="additional-product-option-tile"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="" class="tile-image product-img" data-alt-label="ui_elements.product_details"> <span class="tile-label product-name"></span> <div class="option-price product-price" data-prefix-label="ui_elements.single_price"></div> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-replace-type="" data-label="product_management.product_additions.buttons.add_addition_button.label" data-aria-label="product_management.product_additions.buttons.add_addition_button.label" data-title-label="product_management.product_additions.buttons.add_addition_button.label"> Select </button> </div> </template> `;
+var code = `<template id="additional-product-option-template"> <div class="additional-product-option-tile"> <img src="${___HTML_LOADER_IMPORT_0___}" alt="" class="tile-image product-img" data-alt-label="ui_elements.product_details"> <span class="tile-label product-name"></span> <div class="option-price product-price" data-prefix-label="ui_elements.single_price"></div> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-replace-type="" data-label="product_management.product_additions.buttons.select_button.label" data-aria-label="product_management.product_additions.buttons.select_button.label" data-title-label="product_management.product_additions.buttons.select_button.label"> Select </button> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16831,7 +16810,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="include-item-template"> <div class="include-item" data-product-id=""> <span class="product-includes-icon"> <span class="dashicons dashicons-plus-alt"></span> </span> <span class="include-item-name product-name"></span> <span class="pe-info-button" data-tooltip-type="rich" data-tooltip-position="right" data-title-label="ui_elements.product_details" data-tooltip-title="Product Details" data-aria-label="product_management.product_actions.buttons.view_details_button.label" aria-label="View Details" data-label="product_management.product_actions.buttons.view_details_button.label"></span> <div class="include-item-prices"> <div class="include-item-total-price product-price" data-prefix-label="ui_elements.single_price"> </div> </div> <button class="remove-product" data-estimate-id="" data-room-id="" data-product-id="" data-title-label="common_ui.confirmation_dialogs.buttons.remove_button.label" data-aria-label="common_ui.confirmation_dialogs.buttons.remove_button.label"> <span class="dashicons dashicons-trash"></span> <span class="remove-text" data-label="common_ui.confirmation_dialogs.buttons.remove_button.label">Remove</span> </button> </div> </template> `;
+var code = `<template id="include-item-template"> <div class="include-item" data-product-id=""> <span class="product-includes-icon"> <span class="dashicons dashicons-plus-alt"></span> </span> <span class="include-item-name product-name"></span> <span class="pe-info-button" data-tooltip-type="rich" data-tooltip-position="right" data-title-label="product_management.tooltips.product_details.prompt.label" data-tooltip-title="Product Details" data-aria-label="product_management.tooltips.product_details.prompt.label" aria-label="View Details" data-label="product_management.tooltips.product_details.prompt.label"></span> <div class="include-item-prices"> <div class="include-item-total-price product-price" data-prefix-label="ui_elements.single_price"> </div> </div> <button class="remove-product" data-estimate-id="" data-room-id="" data-product-id="" data-title-label="common_ui.general_actions.buttons.remove_button.label" data-aria-label="common_ui.general_actions.buttons.remove_button.label"> <span class="dashicons dashicons-trash"></span> <span class="remove-text" data-label="common_ui.general_actions.buttons.remove_button.label">Remove</span> </button> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16848,7 +16827,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="note-item-template"> <div class="include-item note-item"> <span class="product-includes-icon"> <span class="dashicons dashicons-sticky" data-title-label="ui_elements.notes_heading" data-aria-label="ui_elements.notes_heading"> </span> </span> <div class="include-item-note"> <p class="note-text"></p> </div> </div> </template> `;
+var code = `<template id="note-item-template"> <div class="include-item note-item"> <span class="product-includes-icon"> <span class="dashicons dashicons-sticky"> </span> </span> <div class="include-item-note"> <p class="note-text"></p> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16867,7 +16846,8 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `<template id="similar-product-item-template"> <div class="suggestion-item similar-product-item" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method=""> <div class="suggestion-image"> <img src="${___HTML_LOADER_IMPORT_0___}" class="similar-product-thumbnail product-img"> <div class="no-image" style="display:none"></div> </div> <div class="suggestion-details"> <div class="suggestion-name product-name"></div> <div class="suggestion-price product-price" data-prefix-label="ui_elements.single_price"></div> <div class="suggestion-actions"> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-label="common_ui.confirmation_dialogs.buttons.replace_button.label" data-aria-label="common_ui.confirmation_dialogs.buttons.replace_button.label" data-title-label="common_ui.confirmation_dialogs.buttons.replace_button.label"> Replace </button> </div> </div> </div> </template> `;
+var code = `<template id="similar-product-item-template"> <div class="suggestion-item similar-product-item" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method=""> <div class="suggestion-image"> <img src="${___HTML_LOADER_IMPORT_0___}" class="similar-product-thumbnail product-img"> <div class="no-image" style="display:none"></div> </div> <div class="suggestion-details"> <div class="suggestion-name product-name"></div> <div class="suggestion-price product-price" data-prefix-label="ui_elements.single_price"></div> <div class="suggestion-actions"> <button type="button" class="replace-product-in-room" data-product-id="" data-estimate-id="" data-room-id="" data-replace-product-id="" data-pricing-method="" data-label="product_management.product_additions.buttons.selected_button.label
+" data-aria-label="product_management.similar_products.buttons.replace_button.label" data-title-label="product_management.similar_products.buttons.replace_button.label"> Replace </button> </div> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -16922,7 +16902,7 @@ __webpack_require__.r(__webpack_exports__);
 // Imports
 var ___HTML_LOADER_IMPORT_0___ = new URL(/* asset import */ __webpack_require__(/*! data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw== */ "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="), __webpack_require__.b);
 // Module
-var code = `<template id="room-item-template"> <div class="accordion-item room-item" data-room-id="" data-estimate-id=""> <div class="accordion-header-wrapper"> <div class="accordion-header room-item-header"> <div class="room-image-wrapper"> <img class="primary-product-image product-thumbnail" src="${___HTML_LOADER_IMPORT_0___}" alt="Primary product" data-visible-if="has_primary_product"> </div> <div class="room-details-wrapper"> <div class="room-details"> <div class="room-name-wrapper"> <span class="room-name" data-prefix-label="ui_elements.room"></span> <span class="primary-product-name"></span> <span class="room-dimensions"></span> </div> <div class="room-price" data-prefix-label="ui_elements.products"></div> </div> <div class="price-graph-container"> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> </div> <div class="room-actions"> <button class="remove-room" data-estimate-id="" data-room-id="" data-title-label="common_ui.confirmation_dialogs.buttons.remove_button.label" title="Remove Room" data-aria-label="common_ui.confirmation_dialogs.buttons.remove_button.label"> <span class="dashicons dashicons-trash"></span> </button> </div> </div> </div> <div class="accordion-content"> <div class="room-empty-state" style="display:none"></div> <button class="product-includes-toggle expanded"> <span data-label="buttons.product_includes">Product Includes</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="includes-container visible"> <div class="product-includes"> <div class="product-includes-items"></div> </div> <div class="price-notice" data-label="ui_elements.price_notice">Prices are subject to check measures without notice</div> <div class="additional-products-container" style="display:none"> <div class="additional-products-list"> </div> </div> </div> <button class="product-details-toggle similar-products-toggle expanded"> <span data-label="product_management.similar_products.headings.similar_products_heading.text">Similar Products</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="similar-products-container visible" data-room-id=""> <div class="product-similar-products"> <div class="suggestions-carousel similar-products-carousel"> <div class="suggestions-nav prev" data-aria-label="common_ui.general_actions.buttons.back_button.label" data-title-label="common_ui.general_actions.buttons.back_button.label" aria-label="Previous" title="Previous"> <span class="dashicons dashicons-arrow-left-alt2"></span> </div> <div class="suggestions-container similar-products-list"> </div> <div class="suggestions-nav next" data-aria-label="common_ui.general_actions.buttons.next_button.label" data-title-label="common_ui.general_actions.buttons.next_button.label" aria-label="Next" title="Next"> <span class="dashicons dashicons-arrow-right-alt2"></span> </div> </div> </div> </div> <div class="product-suggestions" style="display:none"> <button class="product-suggestions-toggle"> <span data-label="product_management.product_additions.headings.recommended_additions_heading.text">Suggested Products</span> <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span> </button> <div class="suggestions-container-wrapper"> <div class="suggestions-carousel"> <div class="suggestions-nav prev" data-aria-label="common_ui.general_actions.buttons.previous_button.label" data-title-label="common_ui.general_actions.buttons.previous_button.label" aria-label="Previous Suggestions" title="Previous Suggestions">&#10094;</div> <div class="suggestions-container"> </div> <div class="suggestions-nav next" data-aria-label="common_ui.general_actions.buttons.next_button.label" data-title-label="common_ui.general_actions.buttons.next_button.label" aria-label="Next Suggestions" title="Next Suggestions">&#10095;</div> </div> </div> </div> </div> </div> </template> `;
+var code = `<template id="room-item-template"> <div class="accordion-item room-item" data-room-id="" data-estimate-id=""> <div class="accordion-header-wrapper"> <div class="accordion-header room-item-header"> <div class="room-image-wrapper"> <img class="primary-product-image product-thumbnail" src="${___HTML_LOADER_IMPORT_0___}" alt="Primary product" data-visible-if="has_primary_product"> </div> <div class="room-details-wrapper"> <div class="room-details"> <div class="room-name-wrapper"> <span class="room-name" data-prefix-label="ui_elements.room"></span> <span class="primary-product-name"></span> <span class="room-dimensions"></span> </div> <div class="room-price" data-prefix-label="ui_elements.products"></div> </div> <div class="price-graph-container"> <div class="price-graph-bar"> <div class="price-graph-range"></div> </div> <div class="price-graph-labels"></div> </div> </div> <div class="room-actions"> <button class="remove-room" data-estimate-id="" data-room-id="" data-title-label="common_ui.general_actions.buttons.remove_button.label" title="Remove Room" data-aria-label="common_ui.general_actions.buttons.remove_button.labe"> <span class="dashicons dashicons-trash"></span> </button> </div> </div> </div> <div class="accordion-content"> <div class="room-empty-state" style="display:none"></div> <button class="product-includes-toggle expanded"> <span data-label="product_management.product_additions.buttons.view_product_details_button.label">Product Details</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="includes-container visible"> <div class="product-includes"> <div class="product-includes-items"></div> </div> <div class="price-notice" data-label="product_management.product_additions.labels.price_notice.text">Prices are subject to check measures without notice</div> <div class="additional-products-container" style="display:none"> <div class="additional-products-list"> </div> </div> </div> <button class="product-details-toggle similar-products-toggle expanded"> <span data-label="product_management.similar_products.headings.similar_products_heading.text">Similar Products</span> <span class="toggle-icon dashicons dashicons-arrow-up-alt2"></span> </button> <div class="similar-products-container visible" data-room-id=""> <div class="product-similar-products"> <div class="suggestions-carousel similar-products-carousel"> <div class="suggestions-nav prev" data-aria-label="common_ui.general_actions.buttons.back_button.label" data-title-label="common_ui.general_actions.buttons.back_button.label" aria-label="Previous" title="Previous"> <span class="dashicons dashicons-arrow-left-alt2"></span> </div> <div class="suggestions-container similar-products-list"> </div> <div class="suggestions-nav next" data-aria-label="common_ui.general_actions.buttons.next_button.label" data-title-label="common_ui.general_actions.buttons.next_button.label" aria-label="Next" title="Next"> <span class="dashicons dashicons-arrow-right-alt2"></span> </div> </div> </div> </div> <div class="product-suggestions" style="display:none"> <button class="product-suggestions-toggle"> <span data-label="product_management.product_additions.headings.recommended_additions_heading.text">Suggested Products</span> <span class="toggle-icon dashicons dashicons-arrow-down-alt2"></span> </button> <div class="suggestions-container-wrapper"> <div class="suggestions-carousel"> <div class="suggestions-nav prev" data-aria-label="common_ui.general_actions.buttons.previous_button.label" data-title-label="common_ui.general_actions.buttons.previous_button.label" aria-label="Previous Suggestions" title="Previous Suggestions">&#10094;</div> <div class="suggestions-container"> </div> <div class="suggestions-nav next" data-aria-label="common_ui.general_actions.buttons.next_button.label" data-title-label="common_ui.general_actions.buttons.next_button.label" aria-label="Next Suggestions" title="Next Suggestions">&#10095;</div> </div> </div> </div> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -17007,7 +16987,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="room-selection-form-template"> <h2 data-label="room_management.room_selection_form.heading.title">Select a Room</h2> <form id="room-selection-form"> <div class="form-group"> <label for="room-dropdown" data-label="room_management.room_selection_form.fields.room_choice_field.label">Choose a room:</label> <select id="room-dropdown" name="room_id" required> </select> </div> <div class="form-actions"> <button type="submit" class="button submit-btn" data-label="buttons.add_product_to_room">Add Product to Room</button> <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection" data-label="common_ui.general_actions.buttons.back_button.label">Back</button> <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate-id="" data-label="room_management.room_selection_form.buttons.create_new_room_button.label">Add New Room</button> </div> </form> </template> `;
+var code = `<template id="room-selection-form-template"> <h2 data-label="room_management.room_selection_form.heading.title">Select a Room</h2> <form id="room-selection-form"> <div class="form-group"> <label for="room-dropdown" data-label="room_management.room_selection_form.fields.room_choice_field.label">Choose a room:</label> <select id="room-dropdown" name="room_id" required> </select> </div> <div class="form-actions"> <button type="submit" class="button submit-btn" data-label="room_management.room_selection_form.buttons.add_product_to_room_button.label">Add Product to Room</button> <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection" data-label="common_ui.general_actions.buttons.back_button.label">Back</button> <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate-id="" data-label="room_management.room_selection_form.buttons.create_new_room_button.label">Add New Room</button> </div> </form> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -17024,7 +17004,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="modal-container-template"> <div id="product-estimator-modal" class="product-estimator-modal"> <div class="product-estimator-modal-overlay"></div> <div class="product-estimator-modal-container"> <button class="product-estimator-modal-close" aria-label="Close" data-label="common_ui.general_actions.buttons.close_button.label"> <span aria-hidden="true">&times;</span> </button> <div class="product-estimator-modal-header"> <h2 data-label="pdf.title">Product Estimator</h2> </div> <div class="product-estimator-modal-form-container"> <div id="estimates"></div> <div id="estimate-selection-wrapper" style="display:none"></div> <div id="room-selection-form-wrapper" style="display:none"></div> <div id="new-estimate-form-wrapper" style="display:none"></div> <div id="new-room-form-wrapper" style="display:none"></div> </div> <div class="product-estimator-modal-loading" style="display:none"> <div class="loading-spinner"></div> <div class="loading-text" data-label="common_ui.loading_states.generic_loading.text">Loading...</div> </div> </div> </div> </template>`;
+var code = `<template id="modal-container-template"> <div id="product-estimator-modal" class="product-estimator-modal"> <div class="product-estimator-modal-overlay"></div> <div class="product-estimator-modal-container"> <button class="product-estimator-modal-close" aria-label="Close" data-label="common_ui.general_actions.buttons.close_button.label"> <span aria-hidden="true">&times;</span> </button> <div class="product-estimator-modal-header"> <h2 data-label="common_ui.general_actions.headings.product_estimator_name.text">Product Estimator</h2> </div> <div class="product-estimator-modal-form-container"> <div id="estimates"></div> <div id="estimate-selection-wrapper" style="display:none"></div> <div id="room-selection-form-wrapper" style="display:none"></div> <div id="new-estimate-form-wrapper" style="display:none"></div> <div id="new-room-form-wrapper" style="display:none"></div> </div> <div class="product-estimator-modal-loading" style="display:none"> <div class="loading-spinner"></div> <div class="loading-text" data-label="common_ui.general_actions.loading_states.generic_loading.text">Loading...</div> </div> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -17109,7 +17089,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="confirmation-dialog-template"> <div class="pe-dialog-backdrop"> <div class="pe-confirmation-dialog" role="dialog" aria-modal="true"> <div class="dialog-content"> <div class="pe-dialog-header"> <h3 class="pe-dialog-title" data-label="common_ui.confirmation_dialogs.title.text">Confirm Action</h3> <button type="button" class="pe-dialog-close" aria-label="Close" data-aria-label="common_ui.general_actions.buttons.close_button.label"> <span aria-hidden="true">&times;</span> </button> </div> <div class="pe-dialog-body"> <p class="pe-dialog-message" data-label="common_ui.confirmation_dialogs.messages.confirm_delete.text">Are you sure you want to proceed?</p> </div> <div class="pe-dialog-footer pe-dialog-buttons"> <button type="button" class="pe-dialog-btn pe-dialog-cancel" data-label="common_ui.general_actions.buttons.cancel_button.label">Cancel</button> <button type="button" class="pe-dialog-btn pe-dialog-confirm" data-label="common_ui.confirmation_dialogs.buttons.ok_button.label">Confirm</button> </div> </div> </div> </div> </template>`;
+var code = `<template id="confirmation-dialog-template"> <div class="pe-dialog-backdrop"> <div class="pe-confirmation-dialog" role="dialog" aria-modal="true"> <div class="dialog-content"> <div class="pe-dialog-header"> <h3 class="pe-dialog-title" data-label="common_ui.generic_confirm_dialog.title.text">Confirm Action</h3> <button type="button" class="pe-dialog-close" aria-label="Close" data-aria-label="common_ui.general_actions.buttons.close_button.label"> <span aria-hidden="true">&times;</span> </button> </div> <div class="pe-dialog-body"> <p class="pe-dialog-message" data-label="common_ui.generic_confirm_dialog.message.text">Are you sure you want to proceed?</p> </div> <div class="pe-dialog-footer pe-dialog-buttons"> <button type="button" class="pe-dialog-btn pe-dialog-cancel" data-label="common_ui.general_actions.buttons.cancel_button.label">Cancel</button> <button type="button" class="pe-dialog-btn pe-dialog-confirm" data-label="common_ui.general_actions.buttons.confirm_button.label">Confirm</button> </div> </div> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 
@@ -17296,7 +17276,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
 /* harmony export */ });
 // Module
-var code = `<template id="tooltip-rich-template"> <div class="pe-tooltip pe-tooltip-rich" role="tooltip"> <div class="pe-tooltip-header"> <h4 class="pe-tooltip-title"></h4> <button class="pe-tooltip-close" data-aria-label="ui_elements.close_tooltip" aria-label="Close tooltip"> <span class="dashicons dashicons-no-alt"></span> </button> </div> <div class="pe-tooltip-content"> <div class="pe-tooltip-notes"> <h5 class="pe-tooltip-section-title" data-label="ui_elements.notes_heading">Notes</h5> <div class="pe-tooltip-notes-content"></div> </div> <div class="pe-tooltip-details"> <h5 class="pe-tooltip-section-title" data-label="ui_elements.details_heading">Details</h5> <div class="pe-tooltip-details-content"></div> </div> </div> </div> </template> `;
+var code = `<template id="tooltip-rich-template"> <div class="pe-tooltip pe-tooltip-rich" role="tooltip"> <div class="pe-tooltip-header"> <h4 class="pe-tooltip-title"></h4> <button class="pe-tooltip-close" data-aria-label="common_ui.general_actions.buttons.close_tooltip.label" aria-label="Close tooltip"> <span class="dashicons dashicons-no-alt"></span> </button> </div> <div class="pe-tooltip-content"> <div class="pe-tooltip-notes"> <h5 class="pe-tooltip-section-title" data-label="product_management.tooltips.product_details.notes_heading.text">Notes</h5> <div class="pe-tooltip-notes-content"></div> </div> <div class="pe-tooltip-details"> <h5 class="pe-tooltip-section-title" data-label="product_management.tooltips.product_details.details_heading.text">Details</h5> <div class="pe-tooltip-details-content"></div> </div> </div> </div> </template> `;
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (code);
 

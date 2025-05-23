@@ -71,7 +71,7 @@ class EstimateActions {
    */
   bindEvents() {
     console.log('[EstimateActions] Binding events...');
-    
+
     // Use event delegation for better performance and to handle dynamically added elements
     document.addEventListener('click', (e) => {
       // Handle print PDF buttons
@@ -223,7 +223,7 @@ class EstimateActions {
    */
   showCustomerDetailsPrompt(estimateId, button, action = 'print') {
     this.log('showCustomerDetailsPrompt called with:', { estimateId, action });
-    
+
     // Required fields are determined in getMissingFields method
     // Field requirements by action type:
     // print: ['name', 'email']
@@ -236,7 +236,7 @@ class EstimateActions {
     this.checkCustomerDetails(estimateId)
       .then(customerInfo => {
         this.log('Customer info in showCustomerDetailsPrompt:', customerInfo);
-        
+
         // Determine which fields are missing based on action type
         const missingFields = this.getMissingFields(customerInfo, action);
         this.log('Missing fields:', missingFields);
@@ -249,9 +249,9 @@ class EstimateActions {
 
         // Get the confirmation dialog instance from modalManager
         console.log('[EstimateActions] Looking for dialog...');
-        
+
         let dialog = null;
-        
+
         // First, try from modalManager reference (preferred)
         if (this.modalManager && this.modalManager.confirmationDialog) {
           dialog = this.modalManager.confirmationDialog;
@@ -281,10 +281,10 @@ class EstimateActions {
         // Create the form fields data
         const formFields = this.createFormFieldsData(missingFields, action, customerInfo);
         const instruction = this.getDialogInstruction(action, missingFields);
-        
+
         // Show the dialog with form fields
         dialog.show({
-          title: this.getDialogTitle(action),
+          title: labelManager.get('estimate_management.estimate_actions.headings.common_heading.text', 'Contact Information Required'),
           message: instruction,
           formFields: formFields,
           confirmText: labelManager.get('common_ui.general_actions.buttons.continue_button.label', 'Continue'),
@@ -294,11 +294,11 @@ class EstimateActions {
           showCancel: true,
           onConfirm: () => {
             console.log('[EstimateActions] Dialog onConfirm triggered');
-            
+
             // Validate and collect form data
             const validationResult = this.validateAndCollectFormData(missingFields, customerInfo);
             console.log('[EstimateActions] Validation result:', validationResult);
-            
+
             if (!validationResult.isValid) {
               // Show validation error
               const errorEl = document.querySelector('.pe-dialog-validation-error');
@@ -309,11 +309,11 @@ class EstimateActions {
               console.log('[EstimateActions] Validation failed, keeping dialog open');
               return false; // Keep dialog open
             }
-            
+
             // Save to localStorage
             saveCustomerDetails(validationResult.details);
             this.log('Customer details saved to localStorage:', validationResult.details);
-            
+
             // Update server (async)
             this.updateCustomerDetails(estimateId, validationResult.details)
               .then(() => {
@@ -330,7 +330,7 @@ class EstimateActions {
             this.processing = false;
           }
         });
-        
+
         // Add input focus after dialog is displayed
         setTimeout(() => {
           const firstInput = document.querySelector('.pe-dialog-body input');
@@ -341,7 +341,7 @@ class EstimateActions {
       })
       .catch(error => {
         this.log('Error in showCustomerDetailsPrompt:', error);
-        
+
         // Since we're only using localStorage, errors are very unlikely
         // but if they occur, we can still continue
         this.setButtonLoading(button, false);
@@ -373,18 +373,18 @@ class EstimateActions {
    */
   getDialogInstruction(action, missingFields) {
     if (action === 'request_copy_email') {
-      return labelManager.get('messages.email_required_for_copy', 'An email address is required to send your estimate copy.');
+      return labelManager.get('estimate_management.request_copy_form.messages.details_required_email_message.text', 'An email address is required to send your estimate copy.');
     } else if (action === 'request_copy_sms') {
-      return labelManager.get('messages.phone_required_for_sms', 'A phone number is required to send your estimate via SMS.');
+      return labelManager.get('estimate_management.request_copy_form.messages.details_required_sms_message.text', 'A phone number is required to send your estimate via SMS.');
     } else if (action === 'request_contact_email') {
-      return labelManager.get('messages.contact_email_details_required', 'Your details are required for our store to contact you via email.');
+      return labelManager.get('estimate_management.request_contact_form.messages.details_required_email_message.text', 'Your details are required for our store to contact you via email.');
     } else if (action === 'request_contact_phone') {
-      return labelManager.get('messages.contact_phone_details_required', 'Your details are required for our store to contact you via phone.');
+      return labelManager.get('estimate_management.request_contact_form.messages.details_required_call_message.text', 'Your details are required for our store to contact you via phone.');
     } else if (missingFields.includes('email') && !missingFields.includes('name')) {
-      return labelManager.get('messages.email_required_for_estimate', 'An email address is required to view your estimate.');
+      return labelManager.get('estimate_management.print_estimate_form.headings.pdf_details_required_heading.label', 'An email address is required to view your estimate.');
     }
-    
-    return labelManager.get('messages.additional_information_required', 'Additional information is required to continue.');
+
+    return labelManager.get('estimate_management.estimate_actions.default_heading.title', 'Additional information is required to continue.');
   }
 
   /**
@@ -429,24 +429,6 @@ class EstimateActions {
       errorMessage,
       details: updatedDetails
     };
-  }
-
-  /**
-   * Get dialog title based on action
-   * @param {string} action - The action type
-   * @returns {string} Dialog title
-   */
-  getDialogTitle(action) {
-    // Use label manager to get dialog titles with appropriate defaults
-    const titles = {
-      'print': labelManager.get('ui_elements.complete_details_title', 'Complete Your Details'),
-      'request_copy_email': labelManager.get('ui_elements.email_details_required_title', 'Email Details Required'),
-      'request_copy_sms': labelManager.get('ui_elements.phone_details_required_title', 'Phone Number Required'),
-      'request_contact_email': labelManager.get('ui_elements.contact_information_required_title', 'Contact Information Required'),
-      'request_contact_phone': labelManager.get('ui_elements.contact_information_required_title', 'Contact Information Required')
-    };
-
-    return titles[action] || labelManager.get('ui_elements.complete_details_title', 'Complete Your Details');
   }
 
   /**
@@ -642,7 +624,7 @@ class EstimateActions {
 
     // Get the dialog instance
     let dialog = null;
-    
+
     // Try to get dialog from modalManager reference (preferred)
     if (this.modalManager && this.modalManager.confirmationDialog) {
       dialog = this.modalManager.confirmationDialog;
@@ -823,7 +805,7 @@ class EstimateActions {
     return new Promise((resolve, _reject) => {
       // Only check localStorage for customer details
       const storedDetails = loadCustomerDetails();
-      
+
       if (storedDetails && Object.keys(storedDetails).length > 0) {
         console.log('[EstimateActions] Customer details found in localStorage:', storedDetails);
         resolve(storedDetails);
@@ -847,7 +829,7 @@ class EstimateActions {
       if (!details.postcode) {
         details.postcode = '0000'; // Default postcode if not set
       }
-      
+
       // Save to localStorage immediately
       saveCustomerDetails(details);
       this.log('Customer details saved to localStorage from updateCustomerDetails:', details);

@@ -136,6 +136,12 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
      */
     protected function register_hierarchical_fields($labels, $vertical_tab_id, $page_slug, $section_id, $parent_path = '', $depth = 0) {
         $has_fields_heading = false;
+        $has_actual_form_fields = false;
+
+        // First pass: check if this level contains any actual form fields
+        if ($depth === 1) {
+            $has_actual_form_fields = $this->contains_form_fields($labels);
+        }
 
         foreach ($labels as $key => $value) {
             // Generate the field path
@@ -145,8 +151,8 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
             if (is_array($value)) {
                 // Check if this is a field with properties (has label, placeholder, validation_*, etc.)
                 if ($this->is_field_with_properties($value)) {
-                    // Add "Fields" heading before the first field if we haven't already
-                    if (!$has_fields_heading && $depth === 1) {
+                    // Only add "Fields" heading for actual form fields, not UI elements
+                    if (!$has_fields_heading && $depth === 1 && $has_actual_form_fields && $this->is_form_field($value)) {
                         $this->add_fields_section_heading($page_slug, $section_id, $depth);
                         $has_fields_heading = true;
                     }
@@ -244,6 +250,41 @@ final class LabelsSettingsModule extends SettingsModuleWithVerticalTabsBase impl
         }
 
         return $has_field_properties || $has_validation || $has_ui_element_properties;
+    }
+
+    /**
+     * Check if a value represents an actual form field (not just a UI element)
+     *
+     * @param array $value The array to check
+     * @return bool True if it's a form field
+     */
+    private function is_form_field($value) {
+        // Form fields have 'placeholder' or 'validation' properties
+        // UI elements (buttons, messages, headings) typically only have 'label' or 'text'
+        return isset($value['placeholder']) || isset($value['validation']) || 
+               (isset($value['label']) && (isset($value['placeholder']) || isset($value['validation'])));
+    }
+
+    /**
+     * Check if a set of labels contains any actual form fields
+     *
+     * @param array $labels The labels array to check
+     * @return bool True if there are form fields
+     */
+    private function contains_form_fields($labels) {
+        foreach ($labels as $key => $value) {
+            if (is_array($value)) {
+                // Check if this is a form field
+                if ($this->is_field_with_properties($value) && $this->is_form_field($value)) {
+                    return true;
+                }
+                // Recursively check nested arrays
+                if ($this->contains_form_fields($value)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
 

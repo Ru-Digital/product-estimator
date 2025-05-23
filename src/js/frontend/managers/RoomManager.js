@@ -227,8 +227,8 @@ class RoomManager {
         // Add default option using template with labelManager
         TemplateEngine.insert('select-option-template', {
           value: '',
-          text: labelManager.get('forms.select_room_option', '-- Select a room --'),
-          labelKey: 'forms.select_room_option'
+          text: labelManager.get('room_management.room_selection_form.fields.room_choice_field.default_option', '-- Select a room --'),
+          labelKey: 'room_management.room_selection_form.fields.room_choice_field.default_option'
         }, selectElement);
 
         // Add options for each room
@@ -320,7 +320,7 @@ class RoomManager {
                     type: 'product',
                     action: 'success',
                     showCancel: false,
-                    confirmText: labelManager.get('buttons.ok', 'OK')
+                    confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
                   });
                 }, 100); // Short delay to allow estimates list to render
               } else {
@@ -869,8 +869,8 @@ class RoomManager {
                 if (button) {
                   // Change button text based on selected state
                   button.textContent = variation.selected === true ? 
-                    labelManager.get('buttons.selected_additional_product', 'Selected') : 
-                    labelManager.get('buttons.select_additional_product', 'Select');
+                    labelManager.get('product_management.product_additions.buttons.remove_addition_button.label', 'Selected') : 
+                    labelManager.get('product_management.product_additions.buttons.add_addition_button.label', 'Select');
                   button.dataset.productId = variation.id;
                   button.dataset.estimateId = estimateId;
                   button.dataset.roomId = roomId;
@@ -970,7 +970,7 @@ class RoomManager {
             message: labelManager.get('messages.general_error', 'Failed to update the variation. Please try again.'),
             type: 'error',
             showCancel: false,
-            confirmText: labelManager.get('buttons.ok', 'OK')
+            confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
           });
         }
       });
@@ -1205,8 +1205,8 @@ class RoomManager {
           this.modalManager.confirmationDialog.show({
             title: labelManager.get('ui_elements.remove_product_title', 'Remove Product'),
             message: labelManager.format('messages.confirm_product_remove_with_name', { product_name: productName }, `Are you sure you want to remove "${productName}" from this room?`),
-            confirmText: labelManager.get('buttons.remove', 'Remove'),
-            cancelText: labelManager.get('buttons.cancel', 'Cancel'),
+            confirmText: labelManager.get('common_ui.general_actions.buttons.remove_button.label', 'Remove'),
+            cancelText: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
             type: 'product',
             action: 'delete',
             onConfirm: () => {
@@ -1510,7 +1510,7 @@ class RoomManager {
 
           // Update the submit button text if we're in the add product flow
           if (submitButton) {
-            submitButton.textContent = labelManager.get('buttons.add_room_and_product', 'Add Room & Product');
+            submitButton.textContent = labelManager.get('room_management.add_new_room_form.buttons.add_product_and_room_button.label', 'Add Room & Product');
           }
         } else {
           delete formElement.dataset.productId;
@@ -1625,7 +1625,7 @@ class RoomManager {
                         type: 'room',
                         action: 'success',
                         showCancel: false,
-                        confirmText: labelManager.get('buttons.ok', 'OK')
+                        confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
                       });
                     }, 100);
                   } else {
@@ -1666,7 +1666,7 @@ class RoomManager {
                     type: 'room',
                     action: 'success',
                     showCancel: false,
-                    confirmText: labelManager.get('buttons.ok', 'OK')
+                    confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
                   });
                 }, 100);
               } else {
@@ -1690,7 +1690,7 @@ class RoomManager {
                     type: 'room',
                     action: 'success',
                     showCancel: false,
-                    confirmText: labelManager.get('buttons.ok', 'OK')
+                    confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
                   });
                 }, 100);
               } else {
@@ -1705,7 +1705,7 @@ class RoomManager {
                   type: 'room',
                   action: 'success',
                   showCancel: false,
-                  confirmText: labelManager.get('buttons.ok', 'OK'),
+                  confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK'),
                   onConfirm: () => {
                     this.modalManager.closeModal();
                   }
@@ -1818,10 +1818,10 @@ class RoomManager {
 
     // Show the confirmation dialog using the dedicated component
     this.modalManager.confirmationDialog.show({
-      title: labelManager.get('ui_elements.remove_room_title', 'Remove Room'),
-      message: labelManager.get('ui_elements.remove_room_message', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'),
-      confirmText: labelManager.get('buttons.delete', 'Delete'),
-      cancelText: labelManager.get('buttons.cancel', 'Cancel'),
+      title: labelManager.get('room_management.room_actions.remove_room_dialog.title.text', 'Remove Room'),
+      message: labelManager.get('room_management.room_actions.remove_room_dialog.message.text', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'),
+      confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.delete_button.label', 'Delete'),
+      cancelText: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
       type: 'room',           // Specify the entity type (for proper styling)
       action: 'delete',       // Specify the action type (for proper styling)
       onConfirm: () => {
@@ -1926,7 +1926,7 @@ class RoomManager {
           this.modalManager.confirmationDialog.show({
             title: labelManager.get('ui_elements.error_title', 'Error'),
             message: labelManager.get('messages.general_error', 'Error removing room. Please try again.'),
-            confirmText: labelManager.get('buttons.ok', 'OK'),
+            confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK'),
             cancelText: false,
             onConfirm: () => {
               logger.log('Error dialog closed');

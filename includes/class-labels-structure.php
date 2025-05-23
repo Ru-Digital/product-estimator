@@ -12,7 +12,7 @@ namespace RuDigital\ProductEstimator\Includes;
  * @subpackage Product_Estimator/includes
  */
 class LabelsStructure {
-    
+
     /**
      * Get the complete hierarchical label structure
      *
@@ -127,6 +127,9 @@ class LabelsStructure {
                     'buttons' => [
                         'add_button' => [
                             'label' => __('Add Room', 'product-estimator')
+                        ],
+                        'add_product_and_room_button' => [
+                            'label' => __('Add Room & Product', 'product-estimator')
                         ]
                     ]
                 ],
@@ -312,6 +315,7 @@ class LabelsStructure {
                             'label' => __('Phone Number', 'product-estimator'),
                             'placeholder' => __('Your phone number', 'product-estimator'),
                             'validation' => [
+                                'required' => __('Phone number required', 'product-estimator'),
                                 'invalid' => __('Please enter a valid phone number', 'product-estimator')
                             ]
                         ],
@@ -347,8 +351,14 @@ class LabelsStructure {
                         'back_button' => [
                             'label' => __('Back', 'product-estimator')
                         ],
+                        'previous_button' => [
+                            'label' => __('Previous', 'product-estimator')
+                        ],
                         'next_button' => [
                             'label' => __('Next', 'product-estimator')
+                        ],
+                        'remove_button' => [
+                            'label' => __('Remove', 'product-estimator')
                         ]
                     ]
                 ],
@@ -400,7 +410,14 @@ class LabelsStructure {
                             'text' => __('Are you sure you want to delete this?', 'product-estimator'),
                             'description' => __('Generic delete confirmation message', 'product-estimator'),
                             'usage' => __('Default message for delete confirmation dialogs', 'product-estimator')
-                        ]
+                        ],
+                        'confirm_proceed' => [
+                            'text' => __('Are you sure you want to proceed?', 'product-estimator')
+                        ],
+
+                    ],
+                    'title' => [
+                        'text' => __('Confirm Action', 'product-estimator'),
                     ]
                 ],
                 'product_dialogs' => [
@@ -421,6 +438,9 @@ class LabelsStructure {
                             'text' => __('A flooring product already exists in the selected room', 'product-estimator'),
                             'description' => __('Dialog title for primary category conflict', 'product-estimator'),
                             'usage' => __('Used when adding a primary category product that conflicts with existing one', 'product-estimator')
+                        ],
+                        'message' => [
+                            'text' => __('The {room_name} Room already contains "{exiting_product_name}". Would you like to replace it with "{new_product_name}"?', 'product-estimator'),
                         ],
                         'buttons' => [
                             'replace_existing_button' => [
@@ -548,14 +568,14 @@ class LabelsStructure {
     public static function path_exists($path) {
         $keys = explode('.', $path);
         $current = self::get_structure();
-        
+
         foreach ($keys as $key) {
             if (!isset($current[$key])) {
                 return false;
             }
             $current = $current[$key];
         }
-        
+
         return true;
     }
 
@@ -568,16 +588,16 @@ class LabelsStructure {
     public static function get_flattened() {
         $structure = self::get_structure();
         $flattened = [];
-        
+
         self::flatten_recursive($structure, '', $flattened);
-        
+
         return $flattened;
     }
 
     /**
      * Get structure with only label values (no metadata like description/usage)
      * This is used for storing in the database - we don't need to store admin metadata
-     * 
+     *
      * @return array Structure with only label values
      */
     public static function get_label_values_only() {
@@ -587,13 +607,13 @@ class LabelsStructure {
 
     /**
      * Recursively strip metadata from structure, keeping only label values
-     * 
+     *
      * @param array $structure Structure to clean
      * @return array Cleaned structure
      */
     private static function strip_metadata($structure) {
         $cleaned = [];
-        
+
         foreach ($structure as $key => $value) {
             if (is_array($value)) {
                 // Check if this is a label definition (has 'label', 'text', 'placeholder', etc.)
@@ -609,13 +629,13 @@ class LabelsStructure {
                 $cleaned[$key] = $value;
             }
         }
-        
+
         return $cleaned;
     }
 
     /**
      * Check if an array represents a label definition
-     * 
+     *
      * @param array $array Array to check
      * @return bool True if this looks like a label definition
      */
@@ -627,7 +647,7 @@ class LabelsStructure {
 
     /**
      * Filter label values, removing metadata keys
-     * 
+     *
      * @param array $label_def Label definition array
      * @return array Filtered array with only label values
      */
@@ -635,19 +655,19 @@ class LabelsStructure {
         // Keep only actual label values, remove metadata
         $allowed_keys = ['label', 'text', 'placeholder', 'validation', 'default_option'];
         $filtered = [];
-        
+
         foreach ($label_def as $key => $value) {
             if (in_array($key, $allowed_keys)) {
                 $filtered[$key] = $value;
             }
         }
-        
+
         return $filtered;
     }
 
     /**
      * Get description for a specific label path
-     * 
+     *
      * @param string $path Dot notation path to the label
      * @return string Label description or empty string if not found
      */
@@ -657,7 +677,7 @@ class LabelsStructure {
 
     /**
      * Get usage information for a specific label path
-     * 
+     *
      * @param string $path Dot notation path to the label
      * @return string Label usage info or empty string if not found
      */
@@ -667,7 +687,7 @@ class LabelsStructure {
 
     /**
      * Get metadata for a specific label path and key
-     * 
+     *
      * @param string $path Dot notation path to the label
      * @param string $key Metadata key (description, usage, etc.)
      * @return string Metadata value or empty string if not found
@@ -676,7 +696,7 @@ class LabelsStructure {
         $structure = self::get_structure();
         $keys = explode('.', $path);
         $current = $structure;
-        
+
         // Navigate to the label
         foreach ($keys as $k) {
             if (isset($current[$k])) {
@@ -685,12 +705,12 @@ class LabelsStructure {
                 return '';
             }
         }
-        
+
         // Return the requested metadata key
         if (is_array($current) && isset($current[$key])) {
             return $current[$key];
         }
-        
+
         return '';
     }
 
@@ -706,7 +726,7 @@ class LabelsStructure {
     private static function flatten_recursive($array, $prefix, &$result) {
         foreach ($array as $key => $value) {
             $path = $prefix ? "{$prefix}.{$key}" : $key;
-            
+
             if (is_array($value)) {
                 self::flatten_recursive($value, $path, $result);
             } else {

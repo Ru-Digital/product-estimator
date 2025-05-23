@@ -1,16 +1,16 @@
 <template id="room-selection-form-template">
-  <h2 data-label="forms.select_room">Select a Room</h2>
+  <h2 data-label="room_management.room_selection_form.heading.title">Select a Room</h2>
   <form id="room-selection-form">
     <div class="form-group">
-      <label for="room-dropdown" data-label="forms.choose_room">Choose a room:</label>
+      <label for="room-dropdown" data-label="room_management.room_selection_form.fields.room_choice_field.label">Choose a room:</label>
       <select id="room-dropdown" name="room_id" required>
         <!-- Default option will be populated by RoomManager.loadRoomsForSelection -->
       </select>
     </div>
     <div class="form-actions">
       <button type="submit" class="button submit-btn" data-label="buttons.add_product_to_room">Add Product to Room</button>
-      <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection" data-label="buttons.back">Back</button>
-      <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate-id="" data-label="buttons.add_new_room">Add New Room</button>
+      <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection" data-label="common_ui.general_actions.buttons.back_button.label">Back</button>
+      <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate-id="" data-label="room_management.room_selection_form.buttons.create_new_room_button.label">Add New Room</button>
     </div>
   </form>
 </template>

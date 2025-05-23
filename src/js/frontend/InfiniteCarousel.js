@@ -75,13 +75,13 @@ class InfiniteCarousel {
     // Set default aria labels for navigation buttons if not already set
     if (this.prevBtn) {
       if (!this.prevBtn.getAttribute('aria-label')) {
-        this.prevBtn.setAttribute('aria-label', labelManager.get('ui_elements.previous', 'Previous'));
+        this.prevBtn.setAttribute('aria-label', labelManager.get('common_ui.general_actions.buttons.back_button.label', 'Previous'));
       }
     }
     
     if (this.nextBtn) {
       if (!this.nextBtn.getAttribute('aria-label')) {
-        this.nextBtn.setAttribute('aria-label', labelManager.get('ui_elements.next', 'Next'));
+        this.nextBtn.setAttribute('aria-label', labelManager.get('common_ui.general_actions.buttons.next_button.label', 'Next'));
       }
     }
   }

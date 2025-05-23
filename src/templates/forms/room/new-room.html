@@ -1,24 +1,24 @@
 <template id="new-room-form-template">
   <div id="new-room-form-wrapper">
-    <h2 data-label="buttons.add_new_room">Add New Room</h2>
+    <h2 data-label="room_management.room_selection_form.buttons.create_new_room_button.label">Add New Room</h2>
     <form id="new-room-form" method="post" data-estimate-id="" data-product-id="">
       <div class="form-group">
-        <label for="room-name" data-label="forms.room_name">Room Name</label>
-        <input type="text" id="room-name" name="room_name" data-placeholder-label="forms.placeholder_room_name" placeholder="e.g. Living Room" required>
+        <label for="room-name" data-label="room_management.add_new_room_form.fields.room_name_field.label">Room Name</label>
+        <input type="text" id="room-name" name="room_name" data-placeholder-label="room_management.add_new_room_form.fields.room_name_field.placeholder" placeholder="e.g. Living Room" required>
       </div>
       <div class="inline-group">
         <div class="form-group">
-          <label for="room-width" data-label="forms.room_width">Width (m)</label>
-          <input type="number" id="room-width" name="room_width" data-placeholder-label="forms.placeholder_width" placeholder="Width" required step="0.01" min="0.1">
+          <label for="room-width" data-label="room_management.add_new_room_form.fields.room_width_field.label">Width (m)</label>
+          <input type="number" id="room-width" name="room_width" data-placeholder-label="room_management.add_new_room_form.fields.room_width_field.placeholder" placeholder="Width" required step="0.01" min="0.1">
         </div>
         <div class="form-group">
-          <label for="room-length" data-label="forms.room_length">Length (m)</label>
-          <input type="number" id="room-length" name="room_length" data-placeholder-label="forms.placeholder_length" placeholder="Length" required step="0.01" min="0.1">
+          <label for="room-length" data-label="room_management.add_new_room_form.fields.room_length_field.label">Length (m)</label>
+          <input type="number" id="room-length" name="room_length" data-placeholder-label="room_management.add_new_room_form.fields.room_length_field.placeholder" placeholder="Length" required step="0.01" min="0.1">
         </div>
       </div>
       <div class="button-group">
-        <button type="submit" class="submit-btn" data-label="buttons.add_room">Add Room</button>
-        <button type="button" class="cancel-btn" data-form-type="room" data-label="buttons.cancel">Cancel</button>
+        <button type="submit" class="submit-btn" data-label="room_management.add_new_room_form.buttons.add_button.label">Add Room</button>
+        <button type="button" class="cancel-btn" data-form-type="room" data-label="common_ui.general_actions.buttons.cancel_button.label">Cancel</button>
       </div>
     </form>
   </div>

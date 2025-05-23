@@ -102,7 +102,7 @@ class ProductManager {
                 type: 'product',
                 action: 'add',
                 showCancel: false,
-                confirmText: labelManager.get('buttons.ok', 'OK')
+                confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
               });
             } else {
               logger.warn('ConfirmationDialog not available, using console log instead');
@@ -126,7 +126,7 @@ class ProductManager {
                 type: 'product',
                 action: 'error',
                 showCancel: false,
-                confirmText: labelManager.get('buttons.ok', 'OK')
+                confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
               });
             } else {
               logger.warn('ConfirmationDialog not available, using console log instead');
@@ -227,12 +227,12 @@ class ProductManager {
           // Show warning dialog instead of error
           if (this.modalManager && this.modalManager.confirmationDialog) {
             this.modalManager.confirmationDialog.show({
-              title: labelManager.get('ui_elements.product_exists_title', 'Product Already Exists'),
+              title: labelManager.get('common_ui.product_dialogs.product_exists_dialog.title.text', 'Product Already Exists'),
               message: error.message || labelManager.get('messages.product_already_exists', 'This product already exists in the selected room.'),
               type: 'product',
               action: 'warning',
               showCancel: false,
-              confirmText: labelManager.get('buttons.ok', 'OK')
+              confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
             });
           }
           
@@ -254,18 +254,18 @@ class ProductManager {
               this.modalManager.roomManager.getRoomName(error.estimateId, error.roomId) : 'selected room';
               
             this.modalManager.confirmationDialog.show({
-              title: labelManager.get('ui_elements.product_conflict_title', 'A flooring product already exists in the selected room'),
-              message: labelManager.format('messages.product_conflict', {
+              title: labelManager.get('common_ui.product_dialogs.product_conflict_dialog.title.text', 'A flooring product already exists in the selected room'),
+              message: labelManager.format('common_ui.product_dialogs.product_conflict_dialog.message.text', {
                 room_name: roomName,
                 existing_product: error.existingProductName,
                 new_product: error.newProductName
               }, `The ${roomName} already contains "${error.existingProductName}". Would you like to replace it with "${error.newProductName}"?`),
               type: 'product',
               action: 'replace',
-              confirmText: labelManager.get('buttons.replace_existing_product', 'Replace the existing product'),
-              cancelText: labelManager.get('buttons.go_back_to_room_select', 'Go back to room select'),
+              confirmText: labelManager.get('common_ui.product_dialogs.product_conflict_dialog.buttons.replace_existing_button.label', 'Replace the existing product'),
+              cancelText: labelManager.get('common_ui.product_dialogs.product_conflict_dialog.buttons.go_back_button.label', 'Go back to room select'),
               additionalButtons: [{
-                text: labelManager.get('buttons.cancel', 'Cancel'),
+                text: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
                 callback: () => {
                   // Simply close the dialog - no action needed
                 }
@@ -302,10 +302,10 @@ class ProductManager {
               message: error.message || error.data.message,
               type: 'product',
               action: 'replace',
-              confirmText: labelManager.get('buttons.replace_existing_product', 'Replace existing product'),
+              confirmText: labelManager.get('common_ui.product_dialogs.product_conflict_dialog.buttons.replace_existing_button.label', 'Replace existing product'),
               cancelText: labelManager.get('buttons.back', 'Back'),
               additionalButtons: [{
-                text: labelManager.get('buttons.cancel', 'Cancel'),
+                text: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
                 callback: () => {
                   // Simply close the dialog - no action needed
                 }
@@ -436,8 +436,8 @@ class ProductManager {
     this.modalManager.confirmationDialog.show({
       title: labelManager.get('ui_elements.remove_product_title', 'Remove Product'),
       message: labelManager.get('messages.confirm_product_remove', 'Are you sure you want to remove this product from the room?'),
-      confirmText: labelManager.get('buttons.delete', 'Delete'),
-      cancelText: labelManager.get('buttons.cancel', 'Cancel'),
+      confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.delete_button.label', 'Delete'),
+      cancelText: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
       type: 'product',
       action: 'delete',
       onConfirm: () => {
@@ -477,7 +477,7 @@ class ProductManager {
             type: 'product',
             action: 'error',
             showCancel: false,
-            confirmText: labelManager.get('buttons.ok', 'OK')
+            confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
           });
         }
       }
@@ -572,7 +572,7 @@ class ProductManager {
               type: 'product',
               action: 'error',
               showCancel: false,
-              confirmText: labelManager.get('buttons.ok', 'OK')
+              confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
             });
           } else {
             // Fallback to modalManager.showError
@@ -668,7 +668,7 @@ class ProductManager {
               type: 'product',
               action: 'error',
               showCancel: false,
-              confirmText: labelManager.get('buttons.ok', 'OK')
+              confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
             });
           } else {
             this.modalManager.showError('Error updating variation. Please try again.');
@@ -722,12 +722,12 @@ class ProductManager {
           setTimeout(() => {
             if (this.modalManager.confirmationDialog) {
               this.modalManager.confirmationDialog.show({
-                title: labelManager.get('ui_elements.product_replaced_title', 'Product Replaced Successfully'),
-                message: labelManager.get('messages.product_replaced_success', 'The product has been successfully replaced in your estimate.'),
+                title: labelManager.get('common_ui.product_dialogs.product_replaced_dialog.title.text', 'Product Replaced Successfully'),
+                message: labelManager.get('common_ui.product_dialogs.product_replaced_dialog.message.text', 'The product has been successfully replaced in your estimate.'),
                 type: 'success',
                 action: 'success',
                 showCancel: false,
-                confirmText: labelManager.get('buttons.ok', 'OK')
+                confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
               });
             }
           }, 200);
@@ -760,7 +760,7 @@ class ProductManager {
             type: 'product',
             action: 'error',
             showCancel: false,
-            confirmText: labelManager.get('buttons.ok', 'OK')
+            confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
           });
         }
       });
@@ -809,7 +809,7 @@ class ProductManager {
         disabled: button.disabled
       };
       button.disabled = true;
-      button.innerHTML = `<span class="spinner"></span> ${labelManager.get('ui_elements.loading', 'Loading...')}`;
+      button.innerHTML = `<span class="spinner"></span> ${labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...')}`;
       button.classList.add('loading');
     }
 
@@ -853,7 +853,7 @@ class ProductManager {
                 
                 // Re-disable button if provided
                 if (button) {
-                  button.innerHTML = `<span class="spinner"></span> ${labelManager.get('ui_elements.loading', 'Loading...')}`;
+                  button.innerHTML = `<span class="spinner"></span> ${labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...')}`;
                   button.disabled = true;
                   button.classList.add('loading');
                 }

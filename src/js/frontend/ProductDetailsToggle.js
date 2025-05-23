@@ -833,15 +833,15 @@ class ProductDetailsToggle {
 const instance = new ProductDetailsToggle({
   debug: window.productEstimatorVars?.debug || false,
   i18n: {
-    showProducts: labelManager.get('buttons.show_similar_products', 'Similar Products'),
-    hideProducts: labelManager.get('buttons.hide_similar_products', 'Similar Products'),
-    showNotes: labelManager.get('buttons.show_notes', 'Product Notes'),
-    hideNotes: labelManager.get('buttons.hide_notes', 'Product Notes'),
-    showIncludes: labelManager.get('buttons.show_includes', 'Product Includes'),
-    hideIncludes: labelManager.get('buttons.hide_includes', 'Product Includes'),
-    showSuggestions: labelManager.get('buttons.show_suggestions', 'Suggested Products'),
-    hideSuggestions: labelManager.get('buttons.hide_suggestions', 'Suggested Products'),
-    loading: labelManager.get('ui_elements.loading', 'Loading...')
+    showProducts: labelManager.get('product_management.similar_products.headings.similar_products_heading.text', 'Similar Products'),
+    hideProducts: labelManager.get('product_management.similar_products.headings.similar_products_heading.text', 'Similar Products'),
+    showNotes: labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Notes'),
+    hideNotes: labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Notes'),
+    showIncludes: labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Includes'),
+    hideIncludes: labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Includes'),
+    showSuggestions: labelManager.get('product_management.product_additions.headings.recommended_additions_heading.text', 'Suggested Products'),
+    hideSuggestions: labelManager.get('product_management.product_additions.headings.recommended_additions_heading.text', 'Suggested Products'),
+    loading: labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...')
   }
 });
 

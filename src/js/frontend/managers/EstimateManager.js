@@ -250,11 +250,11 @@ class EstimateManager {
         selectElement.innerHTML = '';
 
         // Add default option using TemplateEngine with proper label
-        const defaultOptionText = labelManager.get('forms.select_estimate_option', '-- Select an Estimate --');
+        const defaultOptionText = labelManager.get('estimate_management.estimate_selection_form.fields.estimate_choice_field.default_option', '-- Select an Estimate --');
         TemplateEngine.insert('select-option-template', {
           value: '',
           text: defaultOptionText,
-          labelKey: 'forms.select_estimate_option'
+          labelKey: 'estimate_management.estimate_selection_form.fields.estimate_choice_field.default_option'
         }, selectElement);
 
         // Add options for each estimate using TemplateEngine

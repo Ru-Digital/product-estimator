@@ -287,8 +287,8 @@ class EstimateActions {
           title: this.getDialogTitle(action),
           message: instruction,
           formFields: formFields,
-          confirmText: labelManager.get('buttons.continue', 'Continue'),
-          cancelText: labelManager.get('buttons.cancel', 'Cancel'),
+          confirmText: labelManager.get('common_ui.general_actions.buttons.continue_button.label', 'Continue'),
+          cancelText: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
           type: 'form',
           action: 'collect-details',
           showCancel: true,
@@ -480,9 +480,9 @@ class EstimateActions {
    */
   getFieldLabel(field) {
     const labels = {
-      'name': labelManager.get('forms.full_name', 'Full Name'),
-      'email': labelManager.get('forms.email_address', 'Email Address'),
-      'phone': labelManager.get('forms.phone_number', 'Phone Number')
+      'name': labelManager.get('customer_details.customer_details_form.fields.customer_name_field.label', 'Full Name'),
+      'email': labelManager.get('customer_details.customer_details_form.fields.customer_email_field.label', 'Email Address'),
+      'phone': labelManager.get('customer_details.customer_details_form.fields.customer_phone_field.label', 'Phone Number')
     };
 
     return labels[field] || field.charAt(0).toUpperCase() + field.slice(1);
@@ -1051,7 +1051,7 @@ class EstimateActions {
         message: message,
         type: 'estimate',
         action: 'confirm',
-        confirmText: labelManager.get('buttons.ok', 'OK'),
+        confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK'),
         cancelText: null,
         onConfirm: () => {
           if (typeof onConfirm === 'function') {

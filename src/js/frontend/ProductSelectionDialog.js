@@ -22,12 +22,12 @@ class ProductSelectionDialog {
         
         // Load default labels
         this.labels = {
-            selectOptionsTitle: labelManager.get('ui_elements.select_product_options', 'Select Product Options'),
-            addToEstimate: labelManager.get('buttons.add_to_estimate', 'Add to Estimate'),
-            replaceProduct: labelManager.get('buttons.replace_product', 'Replace Product'),
-            confirmAddMessage: labelManager.get('messages.confirm_proceed', 'Add this product to your estimate?'),
-            loadingTitle: labelManager.get('ui_elements.loading', 'Loading...'),
-            loadingMessage: labelManager.get('messages.loading_variations', 'Loading product variations...')
+            selectOptionsTitle: labelManager.get('product_management.product_actions.buttons.select_variation_button.label', 'Select Product Options'),
+            addToEstimate: labelManager.get('product_management.product_actions.buttons.add_to_room_button.label', 'Add to Estimate'),
+            replaceProduct: labelManager.get('common_ui.confirmation_dialogs.buttons.replace_button.label', 'Replace Product'),
+            confirmAddMessage: labelManager.get('common_ui.confirmation_dialogs.messages.confirm_delete.text', 'Add this product to your estimate?'),
+            loadingTitle: labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...'),
+            loadingMessage: labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading product variations...')
         };
     }
 

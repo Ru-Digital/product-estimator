@@ -1,17 +1,17 @@
 <template id="estimate-selection-template">
   <div id="estimate-selection-wrapper">
     <div id="estimate-selection-form-wrapper">
-      <h2 data-label="forms.select_estimate">Select an Estimate</h2>
+      <h2 data-label="estimate_management.estimate_selection_form.heading.title">Select an Estimate</h2>
       <form id="estimate-selection-form">
         <div class="form-group">
-          <label for="estimate-dropdown" data-label="forms.choose_estimate">Choose an estimate:</label>
+          <label for="estimate-dropdown" data-label="estimate_management.estimate_selection_form.fields.estimate_choice_field.label">Choose an estimate:</label>
           <select id="estimate-dropdown" name="estimate_id" required>
             <!-- Default option will be populated by EstimateManager.loadEstimatesData -->
           </select>
         </div>
         <div class="form-actions">
-          <button type="submit" class="button submit-btn" data-label="buttons.continue">Continue</button>
-          <button type="button" class="button cancel-btn" id="create-estimate-btn" data-label="buttons.create_new_estimate">
+          <button type="submit" class="button submit-btn" data-label="common_ui.general_actions.buttons.continue_button.label">Continue</button>
+          <button type="button" class="button cancel-btn" id="create-estimate-btn" data-label="estimate_management.create_new_estimate_form.buttons.create_button.label">
             Create New Estimate
           </button>
         </div>
@@ -19,19 +19,19 @@
     </div>
 
     <div id="room-selection-form-wrapper" style="display: none;">
-      <h2 data-label="forms.select_room">Select a Room</h2>
+      <h2 data-label="room_management.room_selection_form.heading.title">Select a Room</h2>
       <form id="room-selection-form">
         <div class="form-group">
-          <label for="room-dropdown" data-label="forms.choose_room">Choose a room:</label>
+          <label for="room-dropdown" data-label="room_management.room_selection_form.fields.room_choice_field.label">Choose a room:</label>
           <select id="room-dropdown" name="room_id" required>
             <!-- Default option will be populated by RoomManager.loadRoomsForSelection -->
           </select>
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="button submit-btn" data-label="buttons.add_product_to_room">Add Product to Room</button>
-          <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection" data-label="buttons.back">Back</button>
-          <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate="" data-label="buttons.add_new_room">Add New Room</button>
+          <button type="submit" class="button submit-btn" data-label="product_management.product_actions.buttons.add_to_room_button.label">Add Product to Room</button>
+          <button type="button" class="button cancel-btn back-btn" data-target="estimate-selection" data-label="common_ui.general_actions.buttons.back_button.label">Back</button>
+          <button type="button" class="button add-room" id="add-new-room-from-selection" data-estimate="" data-label="room_management.room_selection_form.buttons.create_new_room_button.label">Add New Room</button>
         </div>
       </form>
     </div>

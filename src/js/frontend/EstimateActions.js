@@ -1051,7 +1051,7 @@ class EstimateActions {
         message: message,
         type: 'estimate',
         action: 'confirm',
-        confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK'),
+        confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK'),
         cancelText: null,
         onConfirm: () => {
           if (typeof onConfirm === 'function') {

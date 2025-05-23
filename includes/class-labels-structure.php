@@ -281,6 +281,103 @@ class LabelsStructure {
                         ]
                     ]
                 ],
+                // Product-related dialogs
+                'product_added_success_dialog' => [
+                    'title' => [
+                        'text' => __('Success', 'product-estimator'),
+                        'description' => __('Dialog title for successful product addition', 'product-estimator'),
+                        'usage' => __('Used when a product is successfully added to a room', 'product-estimator')
+                    ],
+                    'message' => [
+                        'text' => __('Product added successfully!', 'product-estimator'),
+                        'description' => __('Success message when product is added', 'product-estimator'),
+                        'usage' => __('Shown after successfully adding a product to room', 'product-estimator')
+                    ]
+                ],
+                'product_add_error_dialog' => [
+                    'title' => [
+                        'text' => __('Error', 'product-estimator'),
+                        'description' => __('Dialog title for product addition error', 'product-estimator'),
+                        'usage' => __('Used when there is an error adding a product', 'product-estimator')
+                    ],
+                    'message' => [
+                        'text' => __('Error adding product. Please try again.', 'product-estimator'),
+                        'description' => __('Error message when product cannot be added', 'product-estimator'),
+                        'usage' => __('Shown when product addition fails', 'product-estimator')
+                    ]
+                ],
+                'product_remove_error_dialog' => [
+                    'title' => [
+                        'text' => __('Error', 'product-estimator'),
+                        'description' => __('Dialog title for product removal error', 'product-estimator'),
+                        'usage' => __('Used when there is an error removing a product', 'product-estimator')
+                    ],
+                    'message' => [
+                        'text' => __('Error removing product. Please try again.', 'product-estimator'),
+                        'description' => __('Error message when product cannot be removed', 'product-estimator'),
+                        'usage' => __('Shown when product removal fails', 'product-estimator')
+                    ]
+                ],
+                'product_exists_dialog' => [
+                    'title' => [
+                        'text' => __('Product Already Exists', 'product-estimator'),
+                        'description' => __('Dialog title when a product already exists in the room', 'product-estimator'),
+                        'usage' => __('Used in ProductManager when attempting to add a duplicate product', 'product-estimator')
+                    ],
+                    'message' => [
+                        'text' => __('This product already exists in the selected room.', 'product-estimator'),
+                        'description' => __('Dialog message when a product already exists in the room', 'product-estimator'),
+                        'usage' => __('Used in ProductManager to inform user about duplicate product', 'product-estimator')
+                    ]
+                ],
+                'primary_conflict_dialog' => [
+                    'title' => [
+                        'text' => __('A flooring product already exists in the selected room', 'product-estimator'),
+                        'description' => __('Dialog title for primary category conflict', 'product-estimator'),
+                        'usage' => __('Used when adding a primary category product that conflicts with existing one', 'product-estimator')
+                    ],
+                    'message' => [
+                        'text' => __('The {room_name} Room already contains "{existing_product_name}". Would you like to replace it with "{new_product_name}"?', 'product-estimator'),
+                        'description' => __('Message for primary category conflict with placeholders', 'product-estimator'),
+                        'usage' => __('Used when primary category conflict is detected', 'product-estimator')
+                    ],
+                    'buttons' => [
+                        'replace_existing_button' => [
+                            'label' => __('Replace the existing product', 'product-estimator'),
+                            'description' => __('Button to replace existing product with new one', 'product-estimator'),
+                            'usage' => __('Used in primary category conflict dialog', 'product-estimator')
+                        ],
+                        'go_back_button' => [
+                            'label' => __('Go back to room select', 'product-estimator'),
+                            'description' => __('Button to return to room selection', 'product-estimator'),
+                            'usage' => __('Used in primary category conflict dialog to cancel and go back', 'product-estimator')
+                        ]
+                    ]
+                ],
+                'remove_product_dialog' => [
+                    'title' => [
+                        'text' => __('Remove Product', 'product-estimator'),
+                        'description' => __('Dialog title for product removal confirmation', 'product-estimator'),
+                        'usage' => __('Used when user wants to remove a product from room', 'product-estimator')
+                    ],
+                    'message' => [
+                        'text' => __('Are you sure you want to remove this product from the room?', 'product-estimator'),
+                        'description' => __('Confirmation message for product removal', 'product-estimator'),
+                        'usage' => __('Used in product removal confirmation dialog', 'product-estimator')
+                    ]
+                ],
+                'product_replaced_dialog' => [
+                    'title' => [
+                        'text' => __('Product Replaced Successfully', 'product-estimator'),
+                        'description' => __('Success dialog title when product is replaced', 'product-estimator'),
+                        'usage' => __('Used after successful product replacement', 'product-estimator')
+                    ],
+                    'message' => [
+                        'text' => __('The product has been successfully replaced in your estimate.', 'product-estimator'),
+                        'description' => __('Success message when product is replaced', 'product-estimator'),
+                        'usage' => __('Used in success dialog after product replacement', 'product-estimator')
+                    ]
+                ],
                 'empty_states' => [
                     'no_products_message' => [
                         'text' => __('No products added to this room yet.', 'product-estimator')
@@ -336,48 +433,52 @@ class LabelsStructure {
             'common_ui' => [
                 'general_actions' => [
                     'buttons' => [
+                        // Basic action buttons
                         'save_button' => [
-                            'label' => __('Save', 'product-estimator')
-                        ],
-                        'cancel_button' => [
-                            'label' => __('Cancel', 'product-estimator')
-                        ],
-                        'close_button' => [
-                            'label' => __('Close', 'product-estimator')
-                        ],
-                        'continue_button' => [
-                            'label' => __('Continue', 'product-estimator')
-                        ],
-                        'back_button' => [
-                            'label' => __('Back', 'product-estimator')
-                        ],
-                        'previous_button' => [
-                            'label' => __('Previous', 'product-estimator')
-                        ],
-                        'next_button' => [
-                            'label' => __('Next', 'product-estimator')
-                        ],
-                        'remove_button' => [
-                            'label' => __('Remove', 'product-estimator')
-                        ]
-                    ]
-                ],
-                'confirmation_dialogs' => [
-                    'buttons' => [
-                        'confirm_button' => [
-                            'label' => __('Confirm', 'product-estimator'),
-                            'description' => __('Generic confirm button text', 'product-estimator'),
-                            'usage' => __('Default text for confirmation dialog confirm buttons', 'product-estimator')
+                            'label' => __('Save', 'product-estimator'),
+                            'description' => __('Generic save button text', 'product-estimator'),
+                            'usage' => __('Used for save actions across the application', 'product-estimator')
                         ],
                         'cancel_button' => [
                             'label' => __('Cancel', 'product-estimator'),
                             'description' => __('Generic cancel button text', 'product-estimator'),
-                            'usage' => __('Default text for confirmation dialog cancel buttons', 'product-estimator')
+                            'usage' => __('Used for cancel actions in forms and dialogs', 'product-estimator')
+                        ],
+                        'close_button' => [
+                            'label' => __('Close', 'product-estimator'),
+                            'description' => __('Generic close button text', 'product-estimator'),
+                            'usage' => __('Used to close windows, modals, or panels', 'product-estimator')
+                        ],
+                        'continue_button' => [
+                            'label' => __('Continue', 'product-estimator'),
+                            'description' => __('Generic continue button text', 'product-estimator'),
+                            'usage' => __('Used in multi-step processes', 'product-estimator')
+                        ],
+                        'back_button' => [
+                            'label' => __('Back', 'product-estimator'),
+                            'description' => __('Generic back button text', 'product-estimator'),
+                            'usage' => __('Used for navigation to previous step or page', 'product-estimator')
+                        ],
+                        'previous_button' => [
+                            'label' => __('Previous', 'product-estimator'),
+                            'description' => __('Generic previous button text', 'product-estimator'),
+                            'usage' => __('Used in paginated or stepped interfaces', 'product-estimator')
+                        ],
+                        'next_button' => [
+                            'label' => __('Next', 'product-estimator'),
+                            'description' => __('Generic next button text', 'product-estimator'),
+                            'usage' => __('Used in paginated or stepped interfaces', 'product-estimator')
+                        ],
+                        // Action-specific buttons
+                        'confirm_button' => [
+                            'label' => __('Confirm', 'product-estimator'),
+                            'description' => __('Generic confirm button text', 'product-estimator'),
+                            'usage' => __('Used in confirmation dialogs', 'product-estimator')
                         ],
                         'ok_button' => [
                             'label' => __('OK', 'product-estimator'),
                             'description' => __('Generic OK button text', 'product-estimator'),
-                            'usage' => __('Default text for single-button dialogs and acknowledgments', 'product-estimator')
+                            'usage' => __('Used in alert dialogs and acknowledgments', 'product-estimator')
                         ],
                         'yes_button' => [
                             'label' => __('Yes', 'product-estimator'),
@@ -389,6 +490,7 @@ class LabelsStructure {
                             'description' => __('No button for yes/no confirmations', 'product-estimator'),
                             'usage' => __('Used in yes/no confirmation dialogs', 'product-estimator')
                         ],
+                        // Destructive action buttons
                         'delete_button' => [
                             'label' => __('Delete', 'product-estimator'),
                             'description' => __('Delete button for destructive actions', 'product-estimator'),
@@ -397,7 +499,7 @@ class LabelsStructure {
                         'remove_button' => [
                             'label' => __('Remove', 'product-estimator'),
                             'description' => __('Remove button for removal actions', 'product-estimator'),
-                            'usage' => __('Used in remove confirmation dialogs', 'product-estimator')
+                            'usage' => __('Used in removal confirmation dialogs', 'product-estimator')
                         ],
                         'replace_button' => [
                             'label' => __('Replace', 'product-estimator'),
@@ -405,115 +507,65 @@ class LabelsStructure {
                             'usage' => __('Used in replacement confirmation dialogs', 'product-estimator')
                         ]
                     ],
-                    'messages' => [
-                        'confirm_delete' => [
-                            'text' => __('Are you sure you want to delete this?', 'product-estimator'),
-                            'description' => __('Generic delete confirmation message', 'product-estimator'),
-                            'usage' => __('Default message for delete confirmation dialogs', 'product-estimator')
-                        ],
-                        'confirm_proceed' => [
-                            'text' => __('Are you sure you want to proceed?', 'product-estimator')
-                        ],
-
+                    'loading_states' => [
+                        'generic_loading' => [
+                            'text' => __('Loading...', 'product-estimator')
+                        ]
                     ],
+                    'error_messages' => [
+                        'general_error' => [
+                            'text' => __('An error occurred. Please try again.', 'product-estimator')
+                        ],
+                        'network_error' => [
+                            'text' => __('Network error. Please check your connection.', 'product-estimator')
+                        ],
+                        'save_failed' => [
+                            'text' => __('Failed to save. Please try again.', 'product-estimator')
+                        ]
+                    ]
+                ],
+                // Generic dialog structures (buttons reference general_actions.buttons)
+                'generic_confirm_dialog' => [
                     'title' => [
                         'text' => __('Confirm Action', 'product-estimator'),
+                        'description' => __('Default title for generic confirmation dialogs', 'product-estimator'),
+                        'usage' => __('Used when no specific title is provided', 'product-estimator')
+                    ],
+                    'message' => [
+                        'text' => __('Are you sure you want to proceed?', 'product-estimator'),
+                        'description' => __('Default confirmation message', 'product-estimator'),
+                        'usage' => __('Used when no specific message is provided', 'product-estimator')
                     ]
+                    // Uses: general_actions.buttons.confirm_button and general_actions.buttons.cancel_button
                 ],
-                'product_dialogs' => [
-                    'product_exists_dialog' => [
-                        'title' => [
-                            'text' => __('Product Already Exists', 'product-estimator'),
-                            'description' => __('Dialog title when a product already exists in the room', 'product-estimator'),
-                            'usage' => __('Used in ProductManager when attempting to add a duplicate product', 'product-estimator')
-                        ],
-                        'message' => [
-                            'text' => __('This product already exists in the selected room.', 'product-estimator'),
-                            'description' => __('Dialog message when a product already exists in the room', 'product-estimator'),
-                            'usage' => __('Used in ProductManager to inform user about duplicate product', 'product-estimator')
-                        ]
+                'generic_delete_dialog' => [
+                    'title' => [
+                        'text' => __('Confirm Delete', 'product-estimator'),
+                        'description' => __('Default title for delete confirmation dialogs', 'product-estimator'),
+                        'usage' => __('Used for generic delete confirmations', 'product-estimator')
                     ],
-                    'product_conflict_dialog' => [
-                        'title' => [
-                            'text' => __('A flooring product already exists in the selected room', 'product-estimator'),
-                            'description' => __('Dialog title for primary category conflict', 'product-estimator'),
-                            'usage' => __('Used when adding a primary category product that conflicts with existing one', 'product-estimator')
-                        ],
-                        'message' => [
-                            'text' => __('The {room_name} Room already contains "{exiting_product_name}". Would you like to replace it with "{new_product_name}"?', 'product-estimator'),
-                        ],
-                        'buttons' => [
-                            'replace_existing_button' => [
-                                'label' => __('Replace the existing product', 'product-estimator'),
-                                'description' => __('Button to replace existing product with new one', 'product-estimator'),
-                                'usage' => __('Used in primary category conflict dialog', 'product-estimator')
-                            ],
-                            'go_back_button' => [
-                                'label' => __('Go back to room select', 'product-estimator'),
-                                'description' => __('Button to return to room selection', 'product-estimator'),
-                                'usage' => __('Used in primary category conflict dialog to cancel and go back', 'product-estimator')
-                            ]
-                        ]
-                    ],
-                    'primary_conflict_dialog' => [
-                        'title' => [
-                            'text' => __('Primary Product Category Conflict', 'product-estimator'),
-                            'description' => __('Dialog title for server-side primary category conflict', 'product-estimator'),
-                            'usage' => __('Used when server detects primary category conflict', 'product-estimator')
-                        ],
-                        'buttons' => [
-                            'replace_existing_button' => [
-                                'label' => __('Replace existing product', 'product-estimator'),
-                                'description' => __('Button to replace existing product (server conflict)', 'product-estimator'),
-                                'usage' => __('Used in server-side primary category conflict dialog', 'product-estimator')
-                            ],
-                            'back_button' => [
-                                'label' => __('Back', 'product-estimator'),
-                                'description' => __('Back button for server conflict dialog', 'product-estimator'),
-                                'usage' => __('Used in server-side primary category conflict dialog', 'product-estimator')
-                            ]
-                        ]
-                    ],
-                    'remove_product_dialog' => [
-                        'title' => [
-                            'text' => __('Remove Product', 'product-estimator'),
-                            'description' => __('Dialog title for product removal confirmation', 'product-estimator'),
-                            'usage' => __('Used when user wants to remove a product from room', 'product-estimator')
-                        ],
-                        'message' => [
-                            'text' => __('Are you sure you want to remove this product from the room?', 'product-estimator'),
-                            'description' => __('Confirmation message for product removal', 'product-estimator'),
-                            'usage' => __('Used in product removal confirmation dialog', 'product-estimator')
-                        ]
-                    ],
-                    'product_replaced_dialog' => [
-                        'title' => [
-                            'text' => __('Product Replaced Successfully', 'product-estimator'),
-                            'description' => __('Success dialog title when product is replaced', 'product-estimator'),
-                            'usage' => __('Used after successful product replacement', 'product-estimator')
-                        ],
-                        'message' => [
-                            'text' => __('The product has been successfully replaced in your estimate.', 'product-estimator'),
-                            'description' => __('Success message when product is replaced', 'product-estimator'),
-                            'usage' => __('Used in success dialog after product replacement', 'product-estimator')
-                        ]
+                    'message' => [
+                        'text' => __('Are you sure you want to delete this?', 'product-estimator'),
+                        'description' => __('Generic delete confirmation message', 'product-estimator'),
+                        'usage' => __('Default message for delete confirmation dialogs', 'product-estimator')
                     ]
+                    // Uses: general_actions.buttons.delete_button and general_actions.buttons.cancel_button
                 ],
-                'loading_states' => [
-                    'generic_loading' => [
-                        'text' => __('Loading...', 'product-estimator')
+                'generic_alert_dialog' => [
+                    'title' => [
+                        'text' => __('Alert', 'product-estimator'),
+                        'description' => __('Default title for alert dialogs', 'product-estimator'),
+                        'usage' => __('Used for informational alerts', 'product-estimator')
                     ]
+                    // Uses: general_actions.buttons.ok_button
                 ],
-                'error_messages' => [
-                    'general_error' => [
-                        'text' => __('An error occurred. Please try again.', 'product-estimator')
-                    ],
-                    'network_error' => [
-                        'text' => __('Network error. Please check your connection.', 'product-estimator')
-                    ],
-                    'save_failed' => [
-                        'text' => __('Failed to save. Please try again.', 'product-estimator')
+                'generic_yes_no_dialog' => [
+                    'title' => [
+                        'text' => __('Confirm', 'product-estimator'),
+                        'description' => __('Default title for yes/no dialogs', 'product-estimator'),
+                        'usage' => __('Used for yes/no confirmations', 'product-estimator')
                     ]
+                    // Uses: general_actions.buttons.yes_button and general_actions.buttons.no_button
                 ]
             ],
             'pdf' => [

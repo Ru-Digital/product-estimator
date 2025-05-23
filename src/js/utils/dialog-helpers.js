@@ -36,7 +36,7 @@ export function showSuccessDialog(modalManager, message, type = 'default', onCon
   modalManager.confirmationDialog.show({
     title: dialogTitle,
     message: message,
-    confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK'),
+    confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK'),
     cancelText: false, // No cancel button
     action: 'success',
     type: type,
@@ -131,7 +131,7 @@ export function showDeleteConfirmDialog(modalManager, message, onConfirm, type =
   modalManager.confirmationDialog.show({
     title: dialogTitle,
     message: message,
-    confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.delete_button.label', 'Delete'),
+    confirmText: labelManager.get('common_ui.general_actions.buttons.delete_button.label', 'Delete'),
     cancelText: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
     action: 'delete',
     type: type,

@@ -28,7 +28,7 @@ export class LabelManager {
             'customer_details.customer_details_form.fields.customer_email_field.label',
             'common_ui.general_actions.buttons.save_button.label',
             'common_ui.general_actions.buttons.cancel_button.label',
-            'common_ui.confirmation_dialogs.buttons.confirm_button.label'
+            'common_ui.general_actions.buttons.confirm_button.label'
         ];
         
         // Analytics configuration

@@ -841,7 +841,7 @@ const instance = new ProductDetailsToggle({
     hideIncludes: labelManager.get('product_management.product_actions.buttons.view_details_button.label', 'Product Includes'),
     showSuggestions: labelManager.get('product_management.product_additions.headings.recommended_additions_heading.text', 'Suggested Products'),
     hideSuggestions: labelManager.get('product_management.product_additions.headings.recommended_additions_heading.text', 'Suggested Products'),
-    loading: labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...')
+    loading: labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading...')
   }
 });
 

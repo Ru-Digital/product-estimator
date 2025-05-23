@@ -434,7 +434,7 @@ class ModalManager {
                     message: labelManager.get('errors.replace_product_error', 'Unable to replace product. Please try again.'),
                     type: 'error',
                     showCancel: false,
-                    confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
+                    confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
                   });
                 }
               })
@@ -490,7 +490,7 @@ class ModalManager {
         
         // Insert template content
         TemplateEngine.insert(loadingTemplateId, {
-          loadingText: labelManager.get('common_ui.loading_states.generic_loading.text', 'Loading...')
+          loadingText: labelManager.get('common_ui.general_actions.loading_states.generic_loading.text', 'Loading...')
         }, loadingContainer);
         
         this.modal.appendChild(loadingContainer);

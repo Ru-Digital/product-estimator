@@ -51,7 +51,7 @@ class ConfirmationDialog {
     this.show({
       title: title,
       message: message,
-      confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'Confirm'),
+      confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'Confirm'),
       cancelText: labelManager.get('buttons.cancel', 'Cancel'),
       action: 'default',
       onConfirm: onConfirm,
@@ -256,10 +256,10 @@ class ConfirmationDialog {
     const i18n = window.productEstimatorVars?.i18n || {};
 
     const defaults = {
-      title: labelManager.get('common_ui.confirmation_dialogs.title.text', 'Confirm Action'),
-      message: labelManager.get('common_ui.confirmation_dialogs.messages.confirm_proceed.text', 'Are you sure you want to proceed?'),
+      title: labelManager.get('common_ui.generic_confirm_dialog.title.text', 'Confirm Action'),
+      message: labelManager.get('common_ui.generic_confirm_dialog.message.text', 'Are you sure you want to proceed?'),
       type: '', // product, room, estimate - entity type for context
-      confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', i18n.confirm || 'Confirm'),
+      confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', i18n.confirm || 'Confirm'),
       cancelText: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', i18n.cancel || 'Cancel'),
       onConfirm: null,
       onCancel: null,

@@ -320,7 +320,7 @@ class RoomManager {
                     type: 'product',
                     action: 'success',
                     showCancel: false,
-                    confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
+                    confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
                   });
                 }, 100); // Short delay to allow estimates list to render
               } else {
@@ -970,7 +970,7 @@ class RoomManager {
             message: labelManager.get('messages.general_error', 'Failed to update the variation. Please try again.'),
             type: 'error',
             showCancel: false,
-            confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
+            confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
           });
         }
       });
@@ -1625,7 +1625,7 @@ class RoomManager {
                         type: 'room',
                         action: 'success',
                         showCancel: false,
-                        confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
+                        confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
                       });
                     }, 100);
                   } else {
@@ -1666,7 +1666,7 @@ class RoomManager {
                     type: 'room',
                     action: 'success',
                     showCancel: false,
-                    confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
+                    confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
                   });
                 }, 100);
               } else {
@@ -1690,7 +1690,7 @@ class RoomManager {
                     type: 'room',
                     action: 'success',
                     showCancel: false,
-                    confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK')
+                    confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK')
                   });
                 }, 100);
               } else {
@@ -1705,7 +1705,7 @@ class RoomManager {
                   type: 'room',
                   action: 'success',
                   showCancel: false,
-                  confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK'),
+                  confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK'),
                   onConfirm: () => {
                     this.modalManager.closeModal();
                   }
@@ -1820,7 +1820,7 @@ class RoomManager {
     this.modalManager.confirmationDialog.show({
       title: labelManager.get('room_management.room_actions.remove_room_dialog.title.text', 'Remove Room'),
       message: labelManager.get('room_management.room_actions.remove_room_dialog.message.text', 'Are you sure you want to remove this room? All products in this room will also be removed. This action cannot be undone.'),
-      confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.delete_button.label', 'Delete'),
+      confirmText: labelManager.get('common_ui.general_actions.buttons.delete_button.label', 'Delete'),
       cancelText: labelManager.get('common_ui.general_actions.buttons.cancel_button.label', 'Cancel'),
       type: 'room',           // Specify the entity type (for proper styling)
       action: 'delete',       // Specify the action type (for proper styling)
@@ -1926,7 +1926,7 @@ class RoomManager {
           this.modalManager.confirmationDialog.show({
             title: labelManager.get('ui_elements.error_title', 'Error'),
             message: labelManager.get('messages.general_error', 'Error removing room. Please try again.'),
-            confirmText: labelManager.get('common_ui.confirmation_dialogs.buttons.ok_button.label', 'OK'),
+            confirmText: labelManager.get('common_ui.general_actions.buttons.ok_button.label', 'OK'),
             cancelText: false,
             onConfirm: () => {
               logger.log('Error dialog closed');

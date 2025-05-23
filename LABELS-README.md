@@ -74,18 +74,86 @@ customer_details/
 └── general_validation/
 ```
 
-#### 4. **product_management** (Phase 2)
-Future expansion for product-related features
+#### 4. **product_management**
+Handles all product-related functionality:
+```
+product_management/
+├── product_actions/
+│   └── buttons/
+│       ├── add_to_room_button/
+│       ├── remove_from_room_button/
+│       ├── view_details_button/
+│       └── select_variation_button/
+├── product_added_success_dialog/
+│   ├── title/
+│   └── message/
+├── product_add_error_dialog/
+│   ├── title/
+│   └── message/
+├── product_remove_error_dialog/
+│   ├── title/
+│   └── message/
+├── product_exists_dialog/
+│   ├── title/
+│   └── message/
+├── primary_conflict_dialog/
+│   ├── title/
+│   ├── message/
+│   └── buttons/
+│       ├── replace_existing_button/
+│       └── go_back_button/
+├── remove_product_dialog/
+│   ├── title/
+│   └── message/
+├── product_replaced_dialog/
+│   ├── title/
+│   └── message/
+├── similar_products/
+├── product_additions/
+├── empty_states/
+└── success_messages/
+```
 
 #### 5. **common_ui**
 Shared UI elements:
 ```
 common_ui/
-├── confirmation_dialogs/
 ├── general_actions/
-├── navigation/
-├── loading_states/
-├── error_handling/
+│   ├── buttons/
+│   │   ├── save_button/
+│   │   ├── cancel_button/
+│   │   ├── close_button/
+│   │   ├── continue_button/
+│   │   ├── back_button/
+│   │   ├── previous_button/
+│   │   ├── next_button/
+│   │   ├── confirm_button/
+│   │   ├── ok_button/
+│   │   ├── yes_button/
+│   │   ├── no_button/
+│   │   ├── delete_button/
+│   │   ├── remove_button/
+│   │   └── replace_button/
+│   ├── loading_states/
+│   │   └── generic_loading/
+│   └── error_messages/
+│       ├── general_error/
+│       ├── network_error/
+│       └── save_failed/
+├── generic_confirm_dialog/
+│   ├── title/
+│   └── message/
+│   (uses buttons from general_actions.buttons)
+├── generic_delete_dialog/
+│   ├── title/
+│   └── message/
+│   (uses buttons from general_actions.buttons)
+├── generic_alert_dialog/
+│   └── title/
+│   (uses buttons from general_actions.buttons)
+├── generic_yes_no_dialog/
+│   └── title/
+│   (uses buttons from general_actions.buttons)
 └── validation/
 ```
 
@@ -358,6 +426,38 @@ The system automatically handles migration from older flat label structures:
 'buttons.save_estimate' → 'estimate_management.estimate_actions.buttons.save_button.label'
 'forms.estimate_name' → 'estimate_management.create_new_estimate_form.fields.estimate_name_field.label'
 'messages.product_added' → 'product_management.messages.success.product_added'
+
+// Product dialog migrations (v3.0 reorganization)
+'common_ui.product_dialogs.product_exists_dialog' → 'product_management.product_exists_dialog'
+'common_ui.product_dialogs.product_conflict_dialog' → 'product_management.primary_conflict_dialog'
+'ui_elements.remove_product_title' → 'product_management.remove_product_dialog.title.text'
+'ui_elements.primary_conflict_title' → 'product_management.primary_conflict_dialog.title.text'
+
+// Product message migrations (v3.0 reorganization)
+'messages.product_added_success' → 'product_management.product_added_success_dialog.message.text'
+'messages.product_add_error' → 'product_management.product_add_error_dialog.message.text'
+'messages.product_remove_error' → 'product_management.product_remove_error_dialog.message.text'
+'messages.product_already_exists' → 'product_management.product_exists_dialog.message.text'
+'messages.confirm_product_remove' → 'product_management.remove_product_dialog.message.text'
+
+// Common UI dialog migrations (v3.0 reorganization)
+'common_ui.confirmation_dialogs.buttons.ok_button' → 'common_ui.general_actions.buttons.ok_button'
+'common_ui.confirmation_dialogs.buttons.delete_button' → 'common_ui.general_actions.buttons.delete_button'
+'common_ui.confirmation_dialogs.buttons.confirm_button' → 'common_ui.general_actions.buttons.confirm_button'
+'common_ui.confirmation_dialogs.buttons.cancel_button' → 'common_ui.general_actions.buttons.cancel_button'
+'common_ui.confirmation_dialogs.buttons.yes_button' → 'common_ui.general_actions.buttons.yes_button'
+'common_ui.confirmation_dialogs.buttons.no_button' → 'common_ui.general_actions.buttons.no_button'
+'common_ui.confirmation_dialogs.buttons.replace_button' → 'common_ui.general_actions.buttons.replace_button'
+'common_ui.confirmation_dialogs.buttons.remove_button' → 'common_ui.general_actions.buttons.remove_button'
+'common_ui.confirmation_dialogs.title.text' → 'common_ui.generic_confirm_dialog.title.text'
+'common_ui.confirmation_dialogs.messages.confirm_delete' → 'common_ui.generic_delete_dialog.message'
+'common_ui.confirmation_dialogs.messages.confirm_proceed' → 'common_ui.generic_confirm_dialog.message'
+
+// Button consolidation (v3.0 - removed duplicates)
+'common_ui.generic_alert_dialog.buttons.ok_button' → 'common_ui.general_actions.buttons.ok_button'
+'common_ui.generic_delete_dialog.buttons.delete_button' → 'common_ui.general_actions.buttons.delete_button'
+'common_ui.generic_confirm_dialog.buttons.confirm_button' → 'common_ui.general_actions.buttons.confirm_button'
+'common_ui.dialog_buttons.replace_button' → 'common_ui.general_actions.buttons.replace_button'
 ```
 
 ### Legacy Support Timeline
@@ -464,8 +564,9 @@ error_log('Label structure: ' . print_r($labels, true));
 - **estimate_management**: Estimate creation, selection, actions
 - **room_management**: Room creation, selection, actions  
 - **customer_details**: Customer forms and validation
+- **product_management**: Product actions, dialogs, states
 - **common_ui**: Shared buttons, messages, validation
-- **modal_system**: Dialog titles and messages
+- **modal_system**: General modal dialog management
 
 #### 2. Follow Naming Conventions
 ```php
